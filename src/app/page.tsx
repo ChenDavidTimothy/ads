@@ -1,5 +1,4 @@
 import Link from "next/link";
-
 import { SceneGenerator } from "@/components/editor/scene-generator";
 import { api, HydrateClient } from "@/trpc/server";
 
@@ -39,7 +38,6 @@ export default async function Home() {
             </p>
           </div>
 
-          {/* Scene Generator */}
           <div className="w-full max-w-4xl">
             <SceneGenerator />
           </div>

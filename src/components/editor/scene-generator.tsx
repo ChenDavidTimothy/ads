@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 
 export function SceneGenerator() {
@@ -50,7 +51,6 @@ export function SceneGenerator() {
         },
       ],
       animations: [
-        // Sequential execution: First animation container (0-3s)
         {
           objectId: "red-triangle",
           type: "move" as const,
@@ -74,7 +74,6 @@ export function SceneGenerator() {
             rotations: 2,
           },
         },
-        // Second animation container (3-6s)
         {
           objectId: "blue-circle",
           type: "move" as const,
@@ -125,13 +124,14 @@ export function SceneGenerator() {
       </h3>
       
       <div className="flex gap-3">
-        <button
+        <Button
           onClick={generateExampleScene}
           disabled={generateScene.isPending}
-          className="flex-1 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 font-semibold text-white transition hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          size="lg"
         >
           Generate Sequential Demo
-        </button>
+        </Button>
       </div>
 
       {generateScene.isPending && (
@@ -157,18 +157,20 @@ export function SceneGenerator() {
           </video>
           
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={handleDownload}
-              className="flex-1 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+              variant="success"
+              className="flex-1"
             >
               Download MP4
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => window.open(videoUrl, '_blank')}
-              className="flex-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              variant="primary"
+              className="flex-1"
             >
               Open in New Tab
-            </button>
+            </Button>
           </div>
         </div>
       )}

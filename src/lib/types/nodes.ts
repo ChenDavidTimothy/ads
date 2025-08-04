@@ -1,0 +1,108 @@
+import type { Point2D } from "@/animation/types";
+
+// Base node data interface
+export interface BaseNodeData {
+  id: string;
+}
+
+// Geometry node data types
+export interface TriangleNodeData extends BaseNodeData {
+  size: number;
+  color: string;
+  strokeColor: string;
+  strokeWidth: number;
+  position: Point2D;
+}
+
+export interface CircleNodeData extends BaseNodeData {
+  radius: number;
+  color: string;
+  strokeColor: string;
+  strokeWidth: number;
+  position: Point2D;
+}
+
+export interface RectangleNodeData extends BaseNodeData {
+  width: number;
+  height: number;
+  color: string;
+  strokeColor: string;
+  strokeWidth: number;
+  position: Point2D;
+}
+
+export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
+
+// Animation track types
+export interface BaseAnimationTrack {
+  id: string;
+  startTime: number;
+  duration: number;
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+}
+
+export interface MoveTrack extends BaseAnimationTrack {
+  type: 'move';
+  properties: {
+    from: Point2D;
+    to: Point2D;
+  };
+}
+
+export interface RotateTrack extends BaseAnimationTrack {
+  type: 'rotate';
+  properties: {
+    rotations: number;
+  };
+}
+
+export interface ScaleTrack extends BaseAnimationTrack {
+  type: 'scale';
+  properties: {
+    from: number;
+    to: number;
+  };
+}
+
+export interface FadeTrack extends BaseAnimationTrack {
+  type: 'fade';
+  properties: {
+    from: number;
+    to: number;
+  };
+}
+
+export interface ColorTrack extends BaseAnimationTrack {
+  type: 'color';
+  properties: {
+    from: string;
+    to: string;
+    property: 'fill' | 'stroke';
+  };
+}
+
+export type AnimationTrack = MoveTrack | RotateTrack | ScaleTrack | FadeTrack | ColorTrack;
+
+// Animation node data
+export interface AnimationNodeData extends BaseNodeData {
+  duration: number;
+  tracks: AnimationTrack[];
+}
+
+// Scene node data
+export interface SceneNodeData extends BaseNodeData {
+  width: number;
+  height: number;
+  fps: number;
+  duration: number;
+  backgroundColor: string;
+  videoPreset: string;
+  videoCrf: number;
+}
+
+// Union type for all node data
+export type NodeData = GeometryNodeData | AnimationNodeData | SceneNodeData;
+
+// Node type literal types
+export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
+export type NodeType = GeometryNodeType | 'animation' | 'scene';

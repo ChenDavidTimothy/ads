@@ -1,4 +1,3 @@
-// src/app/editor/page.tsx
 import { FlowEditor } from "@/components/editor/flow-editor";
 
 export default function EditorPage() {

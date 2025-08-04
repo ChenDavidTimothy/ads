@@ -1,33 +1,26 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-
-interface TriangleNodeData {
-  size: number;
-  color: string;
-  strokeColor: string;
-  strokeWidth: number;
-  position: { x: number; y: number };
-}
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { NODE_COLORS } from "@/lib/constants/editor";
+import type { TriangleNodeData } from "@/lib/types/nodes";
 
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
   return (
-    <div className={`bg-gray-800 border-2 rounded-lg p-4 min-w-[180px] ${
-      selected ? "border-blue-500" : "border-gray-600"
-    }`}>
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <div 
-          className="w-6 h-6 flex items-center justify-center rounded text-white font-bold"
-          style={{ backgroundColor: data.color }}
-        >
-          ▲
+    <Card selected={selected} className="p-4 min-w-[180px]">
+      <CardHeader className="p-0 pb-3">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-6 h-6 flex items-center justify-center rounded text-white font-bold"
+            style={{ backgroundColor: data.color }}
+          >
+            ▲
+          </div>
+          <span className="font-semibold text-white">Triangle</span>
         </div>
-        <span className="font-semibold text-white">Triangle</span>
-      </div>
+      </CardHeader>
 
-      {/* Properties Display */}
-      <div className="space-y-1 text-xs text-gray-300">
+      <CardContent className="p-0 space-y-1 text-xs text-gray-300">
         <div>Size: {data.size}px</div>
         <div>Position: ({data.position.x}, {data.position.y})</div>
         <div className="flex items-center gap-2">
@@ -37,15 +30,14 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
             style={{ backgroundColor: data.color }}
           />
         </div>
-      </div>
+      </CardContent>
 
-      {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}
         id="object"
-        className="w-3 h-3 !bg-red-500 !border-2 !border-white"
+        className={`w-3 h-3 ${NODE_COLORS.triangle.handle} !border-2 !border-white`}
       />
-    </div>
+    </Card>
   );
 }
