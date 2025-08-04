@@ -14,36 +14,21 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { TriangleNode } from "./nodes/triangle-node";
-import { CircleNode } from "./nodes/circle-node";
-import { RectangleNode } from "./nodes/rectangle-node";
-import { MoveNode } from "./nodes/move-node";
-import { RotateNode } from "./nodes/rotate-node";
-import { ScaleNode } from "./nodes/scale-node";
-import { FadeNode } from "./nodes/fade-node";
-import { ColorNode } from "./nodes/color-node";
-import { SceneNode } from "./nodes/scene-node";
+import { TriangleNode, CircleNode, RectangleNode, AnimationNode, SceneNode } from "./nodes";
 import { NodePalette } from "./node-palette";
+import { TimelineEditorModal } from "./timeline-editor-modal";
 import { useFlowToScene } from "./hooks/use-flow-to-scene";
 import { api } from "@/trpc/react";
-
-const nodeTypes: NodeTypes = {
-  triangle: TriangleNode,
-  circle: CircleNode,
-  rectangle: RectangleNode,
-  move: MoveNode,
-  rotate: RotateNode,
-  scale: ScaleNode,
-  fade: FadeNode,
-  color: ColorNode,
-  scene: SceneNode,
-};
 
 export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [timelineModalState, setTimelineModalState] = useState<{
+    isOpen: boolean;
+    nodeId: string | null;
+  }>({ isOpen: false, nodeId: null });
 
   const { convertFlowToScene } = useFlowToScene();
 
@@ -57,21 +42,61 @@ export function FlowEditor() {
     },
   });
 
+  const updateNodeData = useCallback((nodeId: string, newData: any) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      )
+    );
+  }, [setNodes]);
+
+  const handleOpenTimelineEditor = useCallback((nodeId: string) => {
+    setTimelineModalState({ isOpen: true, nodeId });
+  }, []);
+
+  const handleCloseTimelineEditor = useCallback(() => {
+    setTimelineModalState({ isOpen: false, nodeId: null });
+  }, []);
+
+  const handleSaveTimeline = useCallback((duration: number, tracks: any[]) => {
+    if (timelineModalState.nodeId) {
+      updateNodeData(timelineModalState.nodeId, { duration, tracks });
+    }
+    handleCloseTimelineEditor();
+  }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
+
+  // Get current timeline data for modal
+  const timelineNode = timelineModalState.nodeId 
+    ? nodes.find(n => n.id === timelineModalState.nodeId)
+    : null;
+
+  const nodeTypes: NodeTypes = useMemo(() => ({
+    triangle: TriangleNode,
+    circle: CircleNode,
+    rectangle: RectangleNode,
+    animation: (props: any) => (
+      <AnimationNode 
+        {...props} 
+        onOpenEditor={() => handleOpenTimelineEditor(props.id)} 
+      />
+    ),
+    scene: SceneNode,
+  }), [handleOpenTimelineEditor]);
+
   const onConnect = useCallback(
     (params: Connection) => {
-      // Validate connection types
       const sourceNode = nodes.find((n) => n.id === params.source);
       const targetNode = nodes.find((n) => n.id === params.target);
       
       if (!sourceNode || !targetNode) return;
       
-      // Only allow geometry nodes to connect to animation nodes
-      // and animation nodes to connect to scene nodes
+      // Validate connections: geometry → animation → scene
       const isValidConnection = 
         (["triangle", "circle", "rectangle"].includes(sourceNode.type!) &&
-         ["move", "rotate", "scale", "fade", "color"].includes(targetNode.type!)) ||
-        (["move", "rotate", "scale", "fade", "color"].includes(sourceNode.type!) &&
-         targetNode.type === "scene");
+         targetNode.type === "animation") ||
+        (sourceNode.type === "animation" && targetNode.type === "scene");
       
       if (isValidConnection) {
         setEdges((eds) => addEdge(params, eds));
@@ -139,6 +164,8 @@ export function FlowEditor() {
           nodeTypes={nodeTypes}
           fitView
           className="bg-gray-900"
+          deleteKeyCode={timelineModalState.isOpen ? null : ['Backspace', 'Delete']}
+          multiSelectionKeyCode={timelineModalState.isOpen ? null : 'Meta'}
         >
           <Background color="#374151" />
           <Controls className="bg-gray-800 border-gray-600" />
@@ -192,98 +219,24 @@ export function FlowEditor() {
           </h3>
           <NodePropertyPanel 
             node={selectedNode}
-            onChange={(newData) => {
-              setNodes((nds) =>
-                nds.map((node) =>
-                  node.id === selectedNode.id
-                    ? { ...node, data: { ...node.data, ...newData } }
-                    : node
-                )
-              );
-            }}
+            onChange={(newData) => updateNodeData(selectedNode.id, newData)}
           />
         </div>
       )}
+
+      {/* Timeline Editor Modal */}
+      <TimelineEditorModal
+        isOpen={timelineModalState.isOpen}
+        onClose={handleCloseTimelineEditor}
+        duration={timelineNode?.data?.duration || 3}
+        tracks={timelineNode?.data?.tracks || []}
+        onSave={handleSaveTimeline}
+      />
     </div>
   );
 }
 
-function getDefaultNodeData(nodeType: string) {
-  switch (nodeType) {
-    case "triangle":
-      return {
-        size: 80,
-        color: "#ff4444",
-        strokeColor: "#ffffff",
-        strokeWidth: 3,
-        position: { x: 960, y: 540 },
-      };
-    case "circle":
-      return {
-        radius: 50,
-        color: "#4444ff",
-        strokeColor: "#ffffff",
-        strokeWidth: 2,
-        position: { x: 960, y: 540 },
-      };
-    case "rectangle":
-      return {
-        width: 100,
-        height: 60,
-        color: "#44ff44",
-        strokeColor: "#ffffff",
-        strokeWidth: 2,
-        position: { x: 960, y: 540 },
-      };
-    case "move":
-      return {
-        from: { x: 200, y: 400 },
-        to: { x: 1600, y: 400 },
-        startTime: 0,
-        duration: 3,
-        easing: "easeInOut",
-      };
-    case "rotate":
-      return {
-        rotations: 2,
-        startTime: 0,
-        duration: 3,
-        easing: "linear",
-      };
-    case "scale":
-      return {
-        from: 1,
-        to: 1.5,
-        startTime: 0,
-        duration: 2,
-        easing: "easeInOut",
-      };
-    case "fade":
-      return {
-        from: 1,
-        to: 0.3,
-        startTime: 0,
-        duration: 2,
-        easing: "easeOut",
-      };
-    case "color":
-      return {
-        from: "#ff0000",
-        to: "#00ff00",
-        property: "fill",
-        startTime: 0,
-        duration: 2,
-        easing: "easeInOut",
-      };
-    case "scene":
-      return {
-        duration: 4,
-        backgroundColor: "#1a1a2e",
-      };
-    default:
-      return {};
-  }
-}
+
 
 function NodePropertyPanel({ 
   node, 
@@ -430,57 +383,11 @@ function NodePropertyPanel({
         </div>
       );
     
-    case "move":
+    case "animation":
       return (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">From X</label>
-            <input
-              type="number"
-              value={data.from.x}
-              onChange={(e) => onChange({ from: { ...data.from, x: Number(e.target.value) } })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">From Y</label>
-            <input
-              type="number"
-              value={data.from.y}
-              onChange={(e) => onChange({ from: { ...data.from, y: Number(e.target.value) } })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">To X</label>
-            <input
-              type="number"
-              value={data.to.x}
-              onChange={(e) => onChange({ to: { ...data.to, x: Number(e.target.value) } })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">To Y</label>
-            <input
-              type="number"
-              value={data.to.y}
-              onChange={(e) => onChange({ to: { ...data.to, y: Number(e.target.value) } })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Start Time</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.startTime}
-              onChange={(e) => onChange({ startTime: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Duration (seconds)</label>
             <input
               type="number"
               step="0.1"
@@ -490,256 +397,13 @@ function NodePropertyPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Easing</label>
-            <select
-              value={data.easing}
-              onChange={(e) => onChange({ easing: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInOut">Ease In Out</option>
-              <option value="easeIn">Ease In</option>
-              <option value="easeOut">Ease Out</option>
-            </select>
-          </div>
-        </div>
-      );
-
-    case "rotate":
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Rotations</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.rotations}
-              onChange={(e) => onChange({ rotations: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Start Time</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.startTime}
-              onChange={(e) => onChange({ startTime: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.duration}
-              onChange={(e) => onChange({ duration: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Easing</label>
-            <select
-              value={data.easing}
-              onChange={(e) => onChange({ easing: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInOut">Ease In Out</option>
-              <option value="easeIn">Ease In</option>
-              <option value="easeOut">Ease Out</option>
-            </select>
-          </div>
-        </div>
-      );
-
-    case "scale":
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">From Scale</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.from}
-              onChange={(e) => onChange({ from: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">To Scale</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.to}
-              onChange={(e) => onChange({ to: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Start Time</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.startTime}
-              onChange={(e) => onChange({ startTime: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.duration}
-              onChange={(e) => onChange({ duration: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Easing</label>
-            <select
-              value={data.easing}
-              onChange={(e) => onChange({ easing: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInOut">Ease In Out</option>
-              <option value="easeIn">Ease In</option>
-              <option value="easeOut">Ease Out</option>
-            </select>
-          </div>
-        </div>
-      );
-
-    case "fade":
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">From Opacity</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1"
-              value={data.from}
-              onChange={(e) => onChange({ from: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">To Opacity</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1"
-              value={data.to}
-              onChange={(e) => onChange({ to: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Start Time</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.startTime}
-              onChange={(e) => onChange({ startTime: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.duration}
-              onChange={(e) => onChange({ duration: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Easing</label>
-            <select
-              value={data.easing}
-              onChange={(e) => onChange({ easing: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInOut">Ease In Out</option>
-              <option value="easeIn">Ease In</option>
-              <option value="easeOut">Ease Out</option>
-            </select>
-          </div>
-        </div>
-      );
-
-    case "color":
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">From Color</label>
-            <input
-              type="color"
-              value={data.from}
-              onChange={(e) => onChange({ from: e.target.value })}
-              className="w-full h-10 rounded-md bg-gray-700 border-gray-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">To Color</label>
-            <input
-              type="color"
-              value={data.to}
-              onChange={(e) => onChange({ to: e.target.value })}
-              className="w-full h-10 rounded-md bg-gray-700 border-gray-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Property</label>
-            <select
-              value={data.property}
-              onChange={(e) => onChange({ property: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="fill">Fill</option>
-              <option value="stroke">Stroke</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Start Time</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.startTime}
-              onChange={(e) => onChange({ startTime: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration</label>
-            <input
-              type="number"
-              step="0.1"
-              value={data.duration}
-              onChange={(e) => onChange({ duration: Number(e.target.value) })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Easing</label>
-            <select
-              value={data.easing}
-              onChange={(e) => onChange({ easing: e.target.value })}
-              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
-            >
-              <option value="linear">Linear</option>
-              <option value="easeInOut">Ease In Out</option>
-              <option value="easeIn">Ease In</option>
-              <option value="easeOut">Ease Out</option>
-            </select>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Tracks</label>
+            <div className="text-xs text-gray-400">
+              {data.tracks?.length || 0} animation tracks defined
+            </div>
+            <div className="text-xs text-blue-400 mt-2">
+              Double-click the node to edit timeline
+            </div>
           </div>
         </div>
       );
@@ -775,5 +439,47 @@ function NodePropertyPanel({
           Select a node to edit its properties
         </div>
       );
+  }
+}
+
+function getDefaultNodeData(nodeType: string) {
+  switch (nodeType) {
+    case "triangle":
+      return {
+        size: 80,
+        color: "#ff4444",
+        strokeColor: "#ffffff",
+        strokeWidth: 3,
+        position: { x: 960, y: 540 },
+      };
+    case "circle":
+      return {
+        radius: 50,
+        color: "#4444ff",
+        strokeColor: "#ffffff",
+        strokeWidth: 2,
+        position: { x: 960, y: 540 },
+      };
+    case "rectangle":
+      return {
+        width: 100,
+        height: 60,
+        color: "#44ff44",
+        strokeColor: "#ffffff",
+        strokeWidth: 2,
+        position: { x: 960, y: 540 },
+      };
+    case "animation":
+      return {
+        duration: 3,
+        tracks: [],
+      };
+    case "scene":
+      return {
+        duration: 4,
+        backgroundColor: "#1a1a2e",
+      };
+    default:
+      return {};
   }
 }

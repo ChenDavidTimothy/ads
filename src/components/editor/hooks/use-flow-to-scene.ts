@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import type { Node, Edge } from "reactflow";
 import type { AnimationScene } from "@/animation/scene/scene";
+import type { AnimationTrack } from "../nodes/animation-node";
 
 export function useFlowToScene() {
   const convertFlowToScene = useCallback((nodes: Node[], edges: Edge[]): AnimationScene | null => {
@@ -16,9 +17,7 @@ export function useFlowToScene() {
     );
 
     // Get animation nodes
-    const animationNodes = nodes.filter(node => 
-      ["move", "rotate", "scale", "fade", "color"].includes(node.type!)
-    );
+    const animationNodes = nodes.filter(node => node.type === "animation");
 
     // Build objects from geometry nodes
     const objects = geometryNodes.map(node => {
@@ -69,68 +68,42 @@ export function useFlowToScene() {
     });
 
     // Build animations from animation nodes and their connections
-    const animations = animationNodes.map(animNode => {
+    const animations: any[] = [];
+    let globalTimeOffset = 0;
+
+    for (const animNode of animationNodes) {
       // Find the geometry node connected to this animation
       const incomingEdge = edges.find(edge => edge.target === animNode.id);
       if (!incomingEdge) {
         throw new Error(`Animation node ${animNode.id} has no connected object`);
       }
 
-      const baseAnimation = {
-        objectId: incomingEdge.source,
-        type: animNode.type as "move" | "rotate" | "scale" | "fade" | "color",
-        startTime: animNode.data.startTime,
-        duration: animNode.data.duration,
-        easing: animNode.data.easing as "linear" | "easeInOut" | "easeIn" | "easeOut",
-      };
+      const geometryObjectId = incomingEdge.source;
+      const tracks: AnimationTrack[] = animNode.data.tracks || [];
 
-      switch (animNode.type) {
-        case "move":
-          return {
-            ...baseAnimation,
-            properties: {
-              from: animNode.data.from,
-              to: animNode.data.to,
-            },
-          };
-        case "rotate":
-          return {
-            ...baseAnimation,
-            properties: {
-              from: 0,
-              to: 0,
-              rotations: animNode.data.rotations,
-            },
-          };
-        case "scale":
-          return {
-            ...baseAnimation,
-            properties: {
-              from: animNode.data.from,
-              to: animNode.data.to,
-            },
-          };
-        case "fade":
-          return {
-            ...baseAnimation,
-            properties: {
-              from: animNode.data.from,
-              to: animNode.data.to,
-            },
-          };
-        case "color":
-          return {
-            ...baseAnimation,
-            properties: {
-              from: animNode.data.from,
-              to: animNode.data.to,
-              property: animNode.data.property,
-            },
-          };
-        default:
-          throw new Error(`Unknown animation type: ${animNode.type}`);
+      // Convert each track to global animation with offset
+      for (const track of tracks) {
+        const globalAnimation = {
+          objectId: geometryObjectId,
+          type: track.type,
+          startTime: globalTimeOffset + track.startTime,
+          duration: track.duration,
+          easing: track.easing,
+          properties: convertTrackProperties(track)
+        };
+
+        animations.push(globalAnimation);
       }
-    });
+
+      // Move global time forward by this animation node's duration
+      globalTimeOffset += animNode.data.duration;
+    }
+
+    // Calculate total scene duration
+    const maxAnimationTime = animations.length > 0 
+      ? Math.max(...animations.map(anim => anim.startTime + anim.duration))
+      : 0;
+    const totalDuration = Math.max(globalTimeOffset, maxAnimationTime, sceneNode.data.duration);
 
     // Validate that all animations have valid object connections
     const objectIds = new Set(objects.map(obj => obj.id));
@@ -142,7 +115,7 @@ export function useFlowToScene() {
 
     // Build final scene
     const scene: AnimationScene = {
-      duration: sceneNode.data.duration,
+      duration: totalDuration,
       objects,
       animations,
       background: {
@@ -154,4 +127,38 @@ export function useFlowToScene() {
   }, []);
 
   return { convertFlowToScene };
+}
+
+function convertTrackProperties(track: AnimationTrack) {
+  switch (track.type) {
+    case 'move':
+      return {
+        from: track.properties.from,
+        to: track.properties.to,
+      };
+    case 'rotate':
+      return {
+        from: 0,
+        to: 0,
+        rotations: track.properties.rotations,
+      };
+    case 'scale':
+      return {
+        from: track.properties.from,
+        to: track.properties.to,
+      };
+    case 'fade':
+      return {
+        from: track.properties.from,
+        to: track.properties.to,
+      };
+    case 'color':
+      return {
+        from: track.properties.from,
+        to: track.properties.to,
+        property: track.properties.property,
+      };
+    default:
+      return track.properties;
+  }
 }

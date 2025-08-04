@@ -14,19 +14,14 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
   ];
 
   const animationNodes = [
-    { type: "move", label: "Move", icon: "→", color: "bg-purple-600" },
-    { type: "rotate", label: "Rotate", icon: "↻", color: "bg-indigo-600" },
-    { type: "scale", label: "Scale", icon: "⚹", color: "bg-pink-600" },
-    { type: "fade", label: "Fade", icon: "◐", color: "bg-yellow-600" },
-    { type: "color", label: "Color", icon: "🎨", color: "bg-orange-600" },
+    { type: "animation", label: "Animation", icon: "🎬", color: "bg-purple-600" },
   ];
 
   const utilityNodes = [
-    { type: "scene", label: "Scene", icon: "🎬", color: "bg-gray-600" },
+    { type: "scene", label: "Scene", icon: "🎭", color: "bg-gray-600" },
   ];
 
   const handleNodeClick = (nodeType: string) => {
-    // Add node at center of canvas
     onAddNode(nodeType, { x: 250, y: 250 });
   };
 
@@ -56,7 +51,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       {/* Animation Nodes */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
-          Animations
+          Animation
         </h3>
         <div className="space-y-2">
           {animationNodes.map((node) => (
@@ -72,10 +67,10 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         </div>
       </div>
 
-      {/* Utility Nodes */}
+      {/* Scene Nodes */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
-          Scene
+          Output
         </h3>
         <div className="space-y-2">
           {utilityNodes.map((node) => (
@@ -95,10 +90,10 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       <div className="mt-8 p-3 bg-gray-700 rounded-lg">
         <h4 className="text-sm font-semibold text-white mb-2">How to Use</h4>
         <ul className="text-xs text-gray-300 space-y-1">
-          <li>• Click nodes to add them</li>
-          <li>• Connect geometry to animations</li>
-          <li>• Connect animations to scene</li>
-          <li>• Click generate to render</li>
+          <li>• Add geometry shapes</li>
+          <li>• Connect to animation nodes</li>
+          <li>• Build internal timelines</li>
+          <li>• Connect to scene output</li>
         </ul>
       </div>
     </div>
