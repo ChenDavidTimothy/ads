@@ -42,6 +42,21 @@ export function FlowEditor() {
     },
   });
 
+  // Validate scene node constraints
+  const validateSceneNodes = useCallback(() => {
+    const sceneNodes = nodes.filter(node => node.type === "scene");
+    
+    if (sceneNodes.length === 0) {
+      throw new Error("Scene node is required. Please add a scene node to generate video.");
+    }
+    
+    if (sceneNodes.length > 1) {
+      throw new Error("Only one scene node allowed per workspace. Please remove extra scene nodes.");
+    }
+    
+    return sceneNodes[0]!;
+  }, [nodes]);
+
   const updateNodeData = useCallback((nodeId: string, newData: any) => {
     setNodes((nds) =>
       nds.map((node) =>
@@ -92,11 +107,9 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Validate connections: geometry → animation → scene
-      const isValidConnection = 
-        (["triangle", "circle", "rectangle"].includes(sourceNode.type!) &&
-         targetNode.type === "animation") ||
-        (sourceNode.type === "animation" && targetNode.type === "scene");
+      // Future-proof validation: allow all connections
+      // Individual node handlers will validate their specific requirements
+      const isValidConnection = true;
       
       if (isValidConnection) {
         setEdges((eds) => addEdge(params, eds));
@@ -109,17 +122,50 @@ export function FlowEditor() {
     setSelectedNodeId(node.id);
   }, []);
 
+  const handleAddNode = useCallback((nodeType: string, position: any) => {
+    // Prevent adding multiple scene nodes
+    if (nodeType === "scene") {
+      const existingSceneNodes = nodes.filter(node => node.type === "scene");
+      if (existingSceneNodes.length > 0) {
+        alert("Only one scene node is allowed per workspace. Please remove the existing scene node first.");
+        return;
+      }
+    }
+
+    const newNode: Node = {
+      id: `${nodeType}-${Date.now()}`,
+      type: nodeType,
+      position,
+      data: getDefaultNodeData(nodeType),
+    };
+    setNodes((nds) => [...nds, newNode]);
+  }, [nodes, setNodes]);
+
   const handleGenerateScene = useCallback(() => {
     try {
+      // Validate scene node constraints
+      const sceneNode = validateSceneNodes();
+      
       const scene = convertFlowToScene(nodes, edges);
       if (scene) {
         setVideoUrl(null);
-        generateScene.mutate({ scene });
+        
+        // Use scene node properties for video configuration
+        const config = {
+          width: sceneNode.data.width,
+          height: sceneNode.data.height,
+          fps: sceneNode.data.fps,
+          backgroundColor: sceneNode.data.backgroundColor,
+          videoPreset: sceneNode.data.videoPreset,
+          videoCrf: sceneNode.data.videoCrf,
+        };
+        
+        generateScene.mutate({ scene, config });
       }
     } catch (error) {
       alert(`Scene generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [nodes, edges, convertFlowToScene, generateScene]);
+  }, [nodes, edges, convertFlowToScene, generateScene, validateSceneNodes]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {
@@ -140,17 +186,7 @@ export function FlowEditor() {
   return (
     <div className="flex h-full">
       {/* Node Palette */}
-      <NodePalette 
-        onAddNode={(nodeType, position) => {
-          const newNode: Node = {
-            id: `${nodeType}-${Date.now()}`,
-            type: nodeType,
-            position,
-            data: getDefaultNodeData(nodeType),
-          };
-          setNodes((nds) => [...nds, newNode]);
-        }}
-      />
+      <NodePalette onAddNode={handleAddNode} />
 
       {/* Main Flow Canvas */}
       <div className="flex-1 relative">
@@ -213,7 +249,7 @@ export function FlowEditor() {
 
       {/* Property Panel */}
       {selectedNode && (
-        <div className="w-80 bg-gray-800 border-l border-gray-600 p-4">
+        <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
           <h3 className="text-lg font-semibold text-white mb-4">
             {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
           </h3>
@@ -235,8 +271,6 @@ export function FlowEditor() {
     </div>
   );
 }
-
-
 
 function NodePropertyPanel({ 
   node, 
@@ -410,25 +444,125 @@ function NodePropertyPanel({
     
     case "scene":
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Video Resolution */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Duration (seconds)</label>
+            <h4 className="text-sm font-semibold text-white mb-3">Video Resolution</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Width</label>
+                <input
+                  type="number"
+                  value={data.width}
+                  onChange={(e) => onChange({ width: Number(e.target.value) })}
+                  className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Height</label>
+                <input
+                  type="number"
+                  value={data.height}
+                  onChange={(e) => onChange({ height: Number(e.target.value) })}
+                  className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
+                />
+              </div>
+            </div>
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {[
+                { label: "HD", width: 1280, height: 720 },
+                { label: "FHD", width: 1920, height: 1080 },
+                { label: "4K", width: 3840, height: 2160 },
+                { label: "Square", width: 1080, height: 1080 },
+              ].map(preset => (
+                <button
+                  key={preset.label}
+                  onClick={() => onChange({ width: preset.width, height: preset.height })}
+                  className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+                >
+                  {preset.label} ({preset.width}×{preset.height})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Frame Rate */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Frame Rate (FPS)</label>
+            <select
+              value={data.fps}
+              onChange={(e) => onChange({ fps: Number(e.target.value) })}
+              className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
+            >
+              <option value={24}>24 FPS (Cinema)</option>
+              <option value={30}>30 FPS (Standard)</option>
+              <option value={60}>60 FPS (Smooth)</option>
+              <option value={120}>120 FPS (Ultra Smooth)</option>
+            </select>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Duration (seconds)</label>
             <input
               type="number"
               step="0.1"
+              min="0.1"
               value={data.duration}
               onChange={(e) => onChange({ duration: Number(e.target.value) })}
               className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2"
             />
+            <div className="text-xs text-gray-400 mt-1">
+              Minimum scene duration. Video will be longer if animations extend beyond this time.
+            </div>
           </div>
+
+          {/* Background */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Background Color</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Background Color</label>
             <input
               type="color"
               value={data.backgroundColor}
               onChange={(e) => onChange({ backgroundColor: e.target.value })}
-              className="w-full h-10 rounded-md bg-gray-700 border-gray-600"
+              className="w-full h-12 rounded-md bg-gray-700 border-gray-600"
             />
+          </div>
+
+          {/* Video Quality */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-3">Video Quality</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Encoding Speed</label>
+                <select
+                  value={data.videoPreset}
+                  onChange={(e) => onChange({ videoPreset: e.target.value })}
+                  className="w-full rounded-md bg-gray-700 border-gray-600 text-white px-3 py-2 text-sm"
+                >
+                  <option value="ultrafast">Ultrafast (Low quality, fast render)</option>
+                  <option value="fast">Fast</option>
+                  <option value="medium">Medium (Balanced)</option>
+                  <option value="slow">Slow (High quality, slow render)</option>
+                  <option value="veryslow">Very Slow (Best quality)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Quality Level (CRF: {data.videoCrf})</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="51"
+                  value={data.videoCrf}
+                  onChange={(e) => onChange({ videoCrf: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Highest (0)</span>
+                  <span>Medium (23)</span>
+                  <span>Lowest (51)</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -476,8 +610,20 @@ function getDefaultNodeData(nodeType: string) {
       };
     case "scene":
       return {
+        // Video Resolution
+        width: 1920,
+        height: 1080,
+        
+        // Timing
+        fps: 60,
         duration: 4,
+        
+        // Visual
         backgroundColor: "#1a1a2e",
+        
+        // Export Quality
+        videoPreset: "medium",
+        videoCrf: 18,
       };
     default:
       return {};
