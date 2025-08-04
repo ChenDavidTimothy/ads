@@ -3,8 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
 import { TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
 import { getDefaultTrackProperties } from "@/lib/defaults/nodes";
@@ -168,16 +167,15 @@ export function TimelineEditorModal({
         <div className="flex-1 p-4 overflow-auto">
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-300">Duration:</label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0.1"
+              <NumberField
+                label="Duration (seconds)"
                 value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-20 text-sm"
+                onChange={setDuration}
+                min={0.1}
+                step={0.1}
+                defaultValue={3}
+                className="w-32"
               />
-              <span className="text-sm text-gray-400">seconds</span>
             </div>
             <div className="flex gap-2">
               <Button onClick={handleSave} variant="success" size="sm">
@@ -333,81 +331,70 @@ function TrackProperties({
   track: AnimationTrack; 
   onChange: (updates: Partial<AnimationTrack>) => void; 
 }) {
+  const easingOptions = [
+    { value: "linear", label: "Linear" },
+    { value: "easeInOut", label: "Ease In Out" },
+    { value: "easeIn", label: "Ease In" },
+    { value: "easeOut", label: "Ease Out" }
+  ];
+
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Easing</label>
-        <Select
-          value={track.easing}
-          onChange={(e) => onChange({ easing: e.target.value as any })}
-        >
-          <option value="linear">Linear</option>
-          <option value="easeInOut">Ease In Out</option>
-          <option value="easeIn">Ease In</option>
-          <option value="easeOut">Ease Out</option>
-        </Select>
-      </div>
+      <SelectField
+        label="Easing"
+        value={track.easing}
+        onChange={(easing) => onChange({ easing: easing as any })}
+        options={easingOptions}
+      />
 
       {track.type === 'move' && (
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Move Properties</div>
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From X</label>
-              <Input
-                type="number"
-                value={track.properties.from?.x ?? 0}
-                onChange={(e) => onChange({ 
-                  properties: { 
-                    ...track.properties, 
-                    from: { ...track.properties.from, x: Number(e.target.value) }
-                  }
-                })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From Y</label>
-              <Input
-                type="number"
-                value={track.properties.from?.y ?? 0}
-                onChange={(e) => onChange({ 
-                  properties: { 
-                    ...track.properties, 
-                    from: { ...track.properties.from, y: Number(e.target.value) }
-                  }
-                })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To X</label>
-              <Input
-                type="number"
-                value={track.properties.to?.x ?? 0}
-                onChange={(e) => onChange({ 
-                  properties: { 
-                    ...track.properties, 
-                    to: { ...track.properties.to, x: Number(e.target.value) }
-                  }
-                })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To Y</label>
-              <Input
-                type="number"
-                value={track.properties.to?.y ?? 0}
-                onChange={(e) => onChange({ 
-                  properties: { 
-                    ...track.properties, 
-                    to: { ...track.properties.to, y: Number(e.target.value) }
-                  }
-                })}
-                className="text-sm"
-              />
-            </div>
+            <NumberField
+              label="From X"
+              value={track.properties.from?.x ?? 0}
+              onChange={(x) => onChange({ 
+                properties: { 
+                  ...track.properties, 
+                  from: { ...track.properties.from, x }
+                }
+              })}
+              defaultValue={0}
+            />
+            <NumberField
+              label="From Y"
+              value={track.properties.from?.y ?? 0}
+              onChange={(y) => onChange({ 
+                properties: { 
+                  ...track.properties, 
+                  from: { ...track.properties.from, y }
+                }
+              })}
+              defaultValue={0}
+            />
+            <NumberField
+              label="To X"
+              value={track.properties.to?.x ?? 0}
+              onChange={(x) => onChange({ 
+                properties: { 
+                  ...track.properties, 
+                  to: { ...track.properties.to, x }
+                }
+              })}
+              defaultValue={100}
+            />
+            <NumberField
+              label="To Y"
+              value={track.properties.to?.y ?? 0}
+              onChange={(y) => onChange({ 
+                properties: { 
+                  ...track.properties, 
+                  to: { ...track.properties.to, y }
+                }
+              })}
+              defaultValue={100}
+            />
           </div>
         </div>
       )}
@@ -415,18 +402,15 @@ function TrackProperties({
       {track.type === 'rotate' && (
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Rotate Properties</div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Rotations</label>
-            <Input
-              type="number"
-              step="0.1"
-              value={track.properties.rotations ?? 1}
-              onChange={(e) => onChange({ 
-                properties: { ...track.properties, rotations: Number(e.target.value) }
-              })}
-              className="text-sm"
-            />
-          </div>
+          <NumberField
+            label="Rotations"
+            value={track.properties.rotations ?? 1}
+            onChange={(rotations) => onChange({ 
+              properties: { ...track.properties, rotations }
+            })}
+            step={0.1}
+            defaultValue={1}
+          />
         </div>
       )}
 
@@ -434,30 +418,26 @@ function TrackProperties({
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Scale Properties</div>
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From</label>
-              <Input
-                type="number"
-                step="0.1"
-                value={track.properties.from ?? 1}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, from: Number(e.target.value) }
-                })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To</label>
-              <Input
-                type="number"
-                step="0.1"
-                value={track.properties.to ?? 1}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, to: Number(e.target.value) }
-                })}
-                className="text-sm"
-              />
-            </div>
+            <NumberField
+              label="From"
+              value={track.properties.from ?? 1}
+              onChange={(from) => onChange({ 
+                properties: { ...track.properties, from }
+              })}
+              step={0.1}
+              min={0}
+              defaultValue={1}
+            />
+            <NumberField
+              label="To"
+              value={track.properties.to ?? 1}
+              onChange={(to) => onChange({ 
+                properties: { ...track.properties, to }
+              })}
+              step={0.1}
+              min={0}
+              defaultValue={1.5}
+            />
           </div>
         </div>
       )}
@@ -466,34 +446,28 @@ function TrackProperties({
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Fade Properties</div>
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From Opacity</label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={track.properties.from ?? 1}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, from: Number(e.target.value) }
-                })}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To Opacity</label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={track.properties.to ?? 0.5}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, to: Number(e.target.value) }
-                })}
-                className="text-sm"
-              />
-            </div>
+            <NumberField
+              label="From Opacity"
+              value={track.properties.from ?? 1}
+              onChange={(from) => onChange({ 
+                properties: { ...track.properties, from }
+              })}
+              step={0.1}
+              min={0}
+              max={1}
+              defaultValue={1}
+            />
+            <NumberField
+              label="To Opacity"
+              value={track.properties.to ?? 0.5}
+              onChange={(to) => onChange({ 
+                properties: { ...track.properties, to }
+              })}
+              step={0.1}
+              min={0}
+              max={1}
+              defaultValue={0.5}
+            />
           </div>
         </div>
       )}
@@ -501,42 +475,32 @@ function TrackProperties({
       {track.type === 'color' && (
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Color Properties</div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Property</label>
-            <Select
-              value={track.properties.property || 'fill'}
-              onChange={(e) => onChange({ 
-                properties: { ...track.properties, property: e.target.value }
-              })}
-              className="text-sm"
-            >
-              <option value="fill">Fill</option>
-              <option value="stroke">Stroke</option>
-            </Select>
-          </div>
+          <SelectField
+            label="Property"
+            value={track.properties.property || 'fill'}
+            onChange={(property) => onChange({ 
+              properties: { ...track.properties, property }
+            })}
+            options={[
+              { value: 'fill', label: 'Fill' },
+              { value: 'stroke', label: 'Stroke' }
+            ]}
+          />
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From Color</label>
-              <Input
-                type="color"
-                value={track.properties.from || '#ff0000'}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, from: e.target.value }
-                })}
-                className="h-10"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To Color</label>
-              <Input
-                type="color"
-                value={track.properties.to || '#00ff00'}
-                onChange={(e) => onChange({ 
-                  properties: { ...track.properties, to: e.target.value }
-                })}
-                className="h-10"
-              />
-            </div>
+            <ColorField
+              label="From Color"
+              value={track.properties.from || '#ff0000'}
+              onChange={(from) => onChange({ 
+                properties: { ...track.properties, from }
+              })}
+            />
+            <ColorField
+              label="To Color"
+              value={track.properties.to || '#00ff00'}
+              onChange={(to) => onChange({ 
+                properties: { ...track.properties, to }
+              })}
+            />
           </div>
         </div>
       )}
