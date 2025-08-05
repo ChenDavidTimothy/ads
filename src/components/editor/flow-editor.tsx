@@ -21,6 +21,7 @@ import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "./property-panel";
 import { Button } from "@/components/ui/button";
 import { useFlowToScene } from "@/hooks/use-flow-to-scene";
+import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
 import { arePortsCompatible } from "@/lib/types/ports";
@@ -38,6 +39,7 @@ export function FlowEditor() {
   }>({ isOpen: false, nodeId: null });
 
   const { convertFlowToScene } = useFlowToScene();
+  const { toast } = useNotifications();
 
   const generateScene = api.animation.generateScene.useMutation({
     onSuccess: (data) => {
@@ -45,7 +47,7 @@ export function FlowEditor() {
     },
     onError: (error) => {
       console.error("Scene generation failed:", error);
-      alert(`Failed to generate scene: ${error.message}`);
+      toast.error("Video generation failed", error.message);
     },
   });
 
@@ -128,7 +130,7 @@ export function FlowEditor() {
       const targetNodeDef = getNodeDefinition(targetNode.type!);
       
       if (!sourceNodeDef || !targetNodeDef) {
-        alert("Cannot connect: Unknown node type");
+        toast.error("Connection failed", "Unknown node type");
         return;
       }
       
@@ -136,18 +138,18 @@ export function FlowEditor() {
       const targetPort = targetNodeDef.ports.inputs.find(p => p.id === params.targetHandle);
       
       if (!sourcePort || !targetPort) {
-        alert("Cannot connect: Invalid port");
+        toast.error("Connection failed", "Invalid port");
         return;
       }
       
       if (!arePortsCompatible(sourcePort.type, targetPort.type)) {
-        alert(`Cannot connect: ${sourcePort.type} output incompatible with ${targetPort.type} input`);
+        toast.error("Connection failed", `${sourcePort.type} output incompatible with ${targetPort.type} input`);
         return;
       }
       
       setEdges((eds) => addEdge(params, eds));
     },
-    [nodes, setEdges]
+    [nodes, setEdges, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -158,14 +160,14 @@ export function FlowEditor() {
     if (nodeType === "scene") {
       const existingSceneNodes = nodes.filter(node => node.type === "scene");
       if (existingSceneNodes.length > 0) {
-        alert("Only one scene node is allowed per workspace. Please remove the existing scene node first.");
+        toast.warning("Scene limit reached", "Only one scene node allowed per workspace");
         return;
       }
     }
 
     const nodeDefinition = getNodeDefinition(nodeType as NodeType);
     if (!nodeDefinition) {
-      alert(`Unknown node type: ${nodeType}`);
+      toast.error("Node creation failed", `Unknown node type: ${nodeType}`);
       return;
     }
 
@@ -176,7 +178,7 @@ export function FlowEditor() {
       data: getDefaultNodeData(nodeType as NodeType),
     };
     setNodes((nds) => [...nds, newNode]);
-  }, [nodes, setNodes]);
+  }, [nodes, setNodes, toast]);
 
   const handleGenerateScene = useCallback(async () => {
     try {
@@ -198,9 +200,9 @@ export function FlowEditor() {
         generateScene.mutate({ scene, config });
       }
     } catch (error) {
-      alert(`Scene generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, convertFlowToScene, generateScene, validateSceneNodes]);
+  }, [nodes, edges, convertFlowToScene, generateScene, validateSceneNodes, toast]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {

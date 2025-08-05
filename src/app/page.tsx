@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SceneGenerator } from "@/components/editor/scene-generator";
 import { api, HydrateClient } from "@/trpc/server";
 
 export default async function Home() {
@@ -15,7 +14,7 @@ export default async function Home() {
           
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
             <Link
-              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
+              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20 transition-colors"
               href="/editor"
             >
               <h3 className="text-2xl font-bold">Visual Editor →</h3>
@@ -25,21 +24,23 @@ export default async function Home() {
             </Link>
             
             <div className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4">
-              <h3 className="text-2xl font-bold">Timeline System</h3>
+              <h3 className="text-2xl font-bold">Node-Based System</h3>
               <div className="text-lg">
-                Each animation node contains its own timeline with draggable tracks for parallel animations.
+                Connect geometry, timing, and animation nodes to build complex sequences without code.
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-2">
+          <div className="text-center space-y-4">
             <p className="text-2xl text-white">
               {hello ? hello.greeting : "Loading tRPC query..."}
             </p>
-          </div>
-
-          <div className="w-full max-w-4xl">
-            <SceneGenerator />
+            
+            <Link href="/editor">
+              <div className="inline-flex items-center justify-center rounded-md bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 text-lg font-semibold text-white transition-colors">
+                Start Creating →
+              </div>
+            </Link>
           </div>
         </div>
       </main>
