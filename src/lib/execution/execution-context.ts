@@ -1,9 +1,10 @@
 // src/lib/execution/execution-context.ts
 import type { PortType } from "../types/ports";
+import type { SceneAnimationTrack } from "@/animation/scene/types";
 
 export interface ExecutionValue {
   type: PortType;
-  data: any;
+  data: unknown;
   nodeId: string;
   portId: string;
 }
@@ -13,15 +14,24 @@ export interface ExecutionContext {
   nodeOutputs: Map<string, ExecutionValue>;
   
   // Global variables for logic nodes
-  variables: Map<string, any>;
+  variables: Map<string, unknown>;
   
   // Execution state
   executedNodes: Set<string>;
   currentTime: number;
   
-  // Scene building
-  sceneObjects: any[];
-  sceneAnimations: any[];
+  // Scene building - now properly typed
+  sceneObjects: Array<{
+    id: string;
+    type: 'triangle' | 'circle' | 'rectangle';
+    properties: Record<string, unknown>;
+    initialPosition: { x: number; y: number };
+    initialRotation?: number;
+    initialScale?: { x: number; y: number };
+    initialOpacity?: number;
+    appearanceTime?: number;
+  }>;
+  sceneAnimations: SceneAnimationTrack[];
 }
 
 export function createExecutionContext(): ExecutionContext {
@@ -40,7 +50,7 @@ export function setNodeOutput(
   nodeId: string,
   portId: string,
   type: PortType,
-  data: any
+  data: unknown
 ): void {
   const key = `${nodeId}.${portId}`;
   context.nodeOutputs.set(key, {
@@ -62,7 +72,7 @@ export function getNodeOutput(
 
 export function getConnectedInput(
   context: ExecutionContext,
-  connections: any[],
+  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue | undefined {
@@ -77,7 +87,7 @@ export function getConnectedInput(
 
 export function getConnectedInputs(
   context: ExecutionContext,
-  connections: any[],
+  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue[] {
@@ -99,7 +109,7 @@ export function getConnectedInputs(
 export function setVariable(
   context: ExecutionContext,
   name: string,
-  value: any
+  value: unknown
 ): void {
   context.variables.set(name, value);
 }
@@ -107,7 +117,7 @@ export function setVariable(
 export function getVariable(
   context: ExecutionContext,
   name: string
-): any {
+): unknown {
   return context.variables.get(name);
 }
 

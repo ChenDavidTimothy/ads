@@ -1,14 +1,8 @@
-// src/animation/scene/timeline.ts - Add visibility evaluation
+// src/animation/scene/timeline.ts
 import type { 
   AnimationScene, 
-  AnimationTrack, 
   ObjectState, 
   SceneObject,
-  MoveAnimation,
-  RotateAnimation,
-  ScaleAnimation,
-  FadeAnimation,
-  ColorAnimation,
   GeometryProperties,
   TriangleProperties,
   CircleProperties,
@@ -16,6 +10,15 @@ import type {
 } from './scene';
 
 import type { Point2D } from '../types';
+import type { 
+  SceneAnimationTrack,
+  SceneMoveTrack,
+  SceneRotateTrack,
+  SceneScaleTrack,
+  SceneFadeTrack,
+  SceneColorTrack
+} from './types';
+
 import { 
   linear, 
   easeInOutCubic, 
@@ -27,6 +30,27 @@ import {
 
 type EasingType = 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 type AnimationValue = Point2D | number | string | null;
+
+// Type guards for scene animation tracks
+function isSceneMoveTrack(track: SceneAnimationTrack): track is SceneMoveTrack {
+  return track.type === 'move';
+}
+
+function isSceneRotateTrack(track: SceneAnimationTrack): track is SceneRotateTrack {
+  return track.type === 'rotate';
+}
+
+function isSceneScaleTrack(track: SceneAnimationTrack): track is SceneScaleTrack {
+  return track.type === 'scale';
+}
+
+function isSceneFadeTrack(track: SceneAnimationTrack): track is SceneFadeTrack {
+  return track.type === 'fade';
+}
+
+function isSceneColorTrack(track: SceneAnimationTrack): track is SceneColorTrack {
+  return track.type === 'color';
+}
 
 // Get easing function by name
 function getEasingFunction(easing: string) {
@@ -41,7 +65,6 @@ function getEasingFunction(easing: string) {
 
 // Color interpolation helper
 function lerpColor(startColor: string, endColor: string, t: number): string {
-  // Simple RGB interpolation
   const start = hexToRgb(startColor);
   const end = hexToRgb(endColor);
   
@@ -64,20 +87,17 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 }
 
 // Evaluate a single animation track at a specific time
-function evaluateAnimation(animation: AnimationTrack, time: number): AnimationValue {
+function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
   const animationEndTime = animation.startTime + animation.duration;
   
-  // Animation hasn't started yet
   if (time < animation.startTime) {
     return null;
   }
   
-  // Animation has finished
   if (time >= animationEndTime) {
     return getAnimationEndValue(animation);
   }
   
-  // Animation is active - calculate progress
   const localTime = time - animation.startTime;
   const progress = localTime / animation.duration;
   const easingFunction = getEasingFunction(animation.easing);
@@ -86,63 +106,43 @@ function evaluateAnimation(animation: AnimationTrack, time: number): AnimationVa
   return interpolateAnimation(animation, easedProgress);
 }
 
-function getAnimationEndValue(animation: AnimationTrack): AnimationValue {
-  switch (animation.type) {
-    case 'move':
-      return (animation.properties as MoveAnimation).to;
-    case 'rotate':
-      const rotateProps = animation.properties as RotateAnimation;
-      return rotateProps.rotations 
-        ? rotateProps.from + (rotateProps.rotations * Math.PI * 2)
-        : rotateProps.to;
-    case 'scale':
-      return (animation.properties as ScaleAnimation).to;
-    case 'fade':
-      return (animation.properties as FadeAnimation).to;
-    case 'color':
-      return (animation.properties as ColorAnimation).to;
-    default:
-      return null;
+function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
+  if (isSceneMoveTrack(animation)) {
+    return animation.properties.to;
+  } else if (isSceneRotateTrack(animation)) {
+    return animation.properties.rotations 
+      ? animation.properties.from + (animation.properties.rotations * Math.PI * 2)
+      : animation.properties.to;
+  } else if (isSceneScaleTrack(animation)) {
+    return animation.properties.to;
+  } else if (isSceneFadeTrack(animation)) {
+    return animation.properties.to;
+  } else if (isSceneColorTrack(animation)) {
+    return animation.properties.to;
   }
+  return null;
 }
 
-function interpolateAnimation(animation: AnimationTrack, progress: number): AnimationValue {
-  switch (animation.type) {
-    case 'move': {
-      const props = animation.properties as MoveAnimation;
-      return lerpPoint(props.from, props.to, progress);
+function interpolateAnimation(animation: SceneAnimationTrack, progress: number): AnimationValue {
+  if (isSceneMoveTrack(animation)) {
+    return lerpPoint(animation.properties.from, animation.properties.to, progress);
+  } else if (isSceneRotateTrack(animation)) {
+    if (animation.properties.rotations) {
+      return animation.properties.from + (progress * animation.properties.rotations * Math.PI * 2);
     }
-    
-    case 'rotate': {
-      const props = animation.properties as RotateAnimation;
-      if (props.rotations) {
-        return props.from + (progress * props.rotations * Math.PI * 2);
-      }
-      return lerp(props.from, props.to, progress);
+    return lerp(animation.properties.from, animation.properties.to, progress);
+  } else if (isSceneScaleTrack(animation)) {
+    if (typeof animation.properties.from === 'number' && typeof animation.properties.to === 'number') {
+      const scaleValue = lerp(animation.properties.from, animation.properties.to, progress);
+      return { x: scaleValue, y: scaleValue };
     }
-    
-    case 'scale': {
-      const props = animation.properties as ScaleAnimation;
-      if (typeof props.from === 'number' && typeof props.to === 'number') {
-        const scaleValue = lerp(props.from, props.to, progress);
-        return { x: scaleValue, y: scaleValue };
-      }
-      return lerpPoint(props.from as Point2D, props.to as Point2D, progress);
-    }
-    
-    case 'fade': {
-      const props = animation.properties as FadeAnimation;
-      return lerp(props.from, props.to, progress);
-    }
-    
-    case 'color': {
-      const props = animation.properties as ColorAnimation;
-      return lerpColor(props.from, props.to, progress);
-    }
-    
-    default:
-      return null;
+    return lerpPoint(animation.properties.from as Point2D, animation.properties.to as Point2D, progress);
+  } else if (isSceneFadeTrack(animation)) {
+    return lerp(animation.properties.from, animation.properties.to, progress);
+  } else if (isSceneColorTrack(animation)) {
+    return lerpColor(animation.properties.from, animation.properties.to, progress);
   }
+  return null;
 }
 
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
@@ -158,66 +158,53 @@ function getStrokeColor(properties: GeometryProperties, objectType: string): str
   }
 }
 
-// PROFESSIONAL VISIBILITY EVALUATION
 function evaluateVisibility(object: SceneObject, time: number): number {
-  // Check if object has appearance time (from Insert node)
-  const appearanceTime = (object as any).appearanceTime || 0;
+  const appearanceTime = (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;
   
-  // Object not yet visible
   if (time < appearanceTime) {
     return 0;
   }
   
-  // Object is visible - return initial opacity or 1
   return object.initialOpacity ?? 1;
 }
 
 // Get the state of an object at a specific time
 export function getObjectStateAtTime(
   object: SceneObject, 
-  animations: AnimationTrack[], 
+  animations: SceneAnimationTrack[], 
   time: number
 ): ObjectState {
-  // Start with initial object state
   const state: ObjectState = {
     position: { ...object.initialPosition },
     rotation: object.initialRotation ?? 0,
     scale: object.initialScale ?? { x: 1, y: 1 },
-    opacity: evaluateVisibility(object, time), // PROFESSIONAL VISIBILITY
+    opacity: evaluateVisibility(object, time),
     colors: {
       fill: object.properties.color,
       stroke: getStrokeColor(object.properties, object.type)
     }
   };
   
-  // Apply all active animations for this object
   const objectAnimations = animations.filter(anim => anim.objectId === object.id);
   
   for (const animation of objectAnimations) {
     const value = evaluateAnimation(animation, time);
     if (value === null) continue;
     
-    switch (animation.type) {
-      case 'move':
-        state.position = value as Point2D;
-        break;
-      case 'rotate':
-        state.rotation = value as number;
-        break;
-      case 'scale':
-        state.scale = value as Point2D;
-        break;
-      case 'fade':
-        state.opacity = value as number;
-        break;
-      case 'color':
-        const colorProps = animation.properties as ColorAnimation;
-        if (colorProps.property === 'fill') {
-          state.colors.fill = value as string;
-        } else {
-          state.colors.stroke = value as string;
-        }
-        break;
+    if (isSceneMoveTrack(animation)) {
+      state.position = value as Point2D;
+    } else if (isSceneRotateTrack(animation)) {
+      state.rotation = value as number;
+    } else if (isSceneScaleTrack(animation)) {
+      state.scale = value as Point2D;
+    } else if (isSceneFadeTrack(animation)) {
+      state.opacity = value as number;
+    } else if (isSceneColorTrack(animation)) {
+      if (animation.properties.property === 'fill') {
+        state.colors.fill = value as string;
+      } else {
+        state.colors.stroke = value as string;
+      }
     }
   }
   
@@ -244,7 +231,7 @@ export function createMoveAnimation(
   startTime: number,
   duration: number,
   easing = 'easeInOut'
-): AnimationTrack {
+): SceneMoveTrack {
   return {
     objectId,
     type: 'move',
@@ -261,7 +248,7 @@ export function createRotateAnimation(
   startTime: number,
   duration: number,
   easing = 'linear'
-): AnimationTrack {
+): SceneRotateTrack {
   return {
     objectId,
     type: 'rotate',
@@ -279,7 +266,7 @@ export function createScaleAnimation(
   startTime: number,
   duration: number,
   easing = 'easeInOut'
-): AnimationTrack {
+): SceneScaleTrack {
   return {
     objectId,
     type: 'scale',

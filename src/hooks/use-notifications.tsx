@@ -1,7 +1,8 @@
 // src/hooks/use-notifications.ts
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
+import type { ReactNode } from "react";
 
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -36,10 +37,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     setNotifications(prev => [...prev, newNotification]);
 
-    if (newNotification.duration > 0) {
+    if ((newNotification.duration ?? 0) > 0) {
       setTimeout(() => {
         setNotifications(prev => prev.filter(n => n.id !== id));
-      }, newNotification.duration);
+      }, newNotification.duration ?? 0);
     }
   }, []);
 

@@ -8,8 +8,8 @@ import {
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
-import { getNodeDefinition } from "../types/node-definitions";
-import type { NodeData } from "../types/nodes";
+import type { NodeData, AnimationTrack } from "../types/nodes";
+import type { SceneAnimationTrack } from "@/animation/scene/types";
 
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
@@ -28,8 +28,7 @@ class GeometryNodeExecutor implements NodeExecutor {
 
   async execute(
     node: Node<NodeData>, 
-    context: ExecutionContext, 
-    connections: Edge[]
+    context: ExecutionContext
   ): Promise<void> {
     const sceneObject = this.buildSceneObject(node);
     context.sceneObjects.push(sceneObject);
@@ -38,11 +37,11 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 
   private buildSceneObject(node: Node<NodeData>) {
-    const data = node.data as any;
+    const data = node.data as Record<string, unknown>;
     const baseObject = {
       id: node.id,
       type: node.type as "triangle" | "circle" | "rectangle",
-      initialPosition: data.position,
+      initialPosition: data.position as { x: number; y: number },
       initialRotation: 0,
       initialScale: { x: 1, y: 1 },
       initialOpacity: 1,
@@ -53,31 +52,31 @@ class GeometryNodeExecutor implements NodeExecutor {
         return {
           ...baseObject,
           properties: {
-            size: data.size,
-            color: data.color,
-            strokeColor: data.strokeColor,
-            strokeWidth: data.strokeWidth,
+            size: data.size as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
           },
         };
       case "circle":
         return {
           ...baseObject,
           properties: {
-            radius: data.radius,
-            color: data.color,
-            strokeColor: data.strokeColor,
-            strokeWidth: data.strokeWidth,
+            radius: data.radius as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
           },
         };
       case "rectangle":
         return {
           ...baseObject,
           properties: {
-            width: data.width,
-            height: data.height,
-            color: data.color,
-            strokeColor: data.strokeColor,
-            strokeWidth: data.strokeWidth,
+            width: data.width as number,
+            height: data.height as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
           },
         };
       default:
@@ -97,7 +96,7 @@ class InsertNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
-    const data = node.data as any;
+    const data = node.data as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.id, 'object');
     
     if (inputs.length === 0) {
@@ -110,7 +109,7 @@ class InsertNodeExecutor implements NodeExecutor {
       // Store appearance time on object - timeline will handle visibility
       const timedObject = {
         ...input.data,
-        appearanceTime: data.appearanceTime
+        appearanceTime: data.appearanceTime as number
       };
 
       // Update object in scene
@@ -122,7 +121,7 @@ class InsertNodeExecutor implements NodeExecutor {
       timedObjects.push(timedObject);
     }
 
-    context.currentTime = Math.max(context.currentTime, data.appearanceTime);
+    context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
     setNodeOutput(context, node.id, 'timed_object', 'timed_object', timedObjects);
   }
 }
@@ -138,22 +137,22 @@ class AnimationNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
-    const data = node.data as any;
+    const data = node.data as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.id, 'timed_object');
     
     if (inputs.length === 0) {
       throw new Error(`Animation node ${node.id} missing required timed object input(s)`);
     }
 
-    const allAnimations = [];
+    const allAnimations: SceneAnimationTrack[] = [];
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const timedObject of inputData) {
         const objectStartTime = timedObject.appearanceTime || 0;
-        const animations = this.convertTracksToAnimations(
-          data.tracks || [],
+        const animations = this.convertTracksToSceneAnimations(
+          (data.tracks as AnimationTrack[]) || [],
           timedObject.id,
           objectStartTime
         );
@@ -168,49 +167,75 @@ class AnimationNodeExecutor implements NodeExecutor {
     setNodeOutput(context, node.id, 'animation', 'animation', allAnimations);
   }
 
-  private convertTracksToAnimations(tracks: any[], objectId: string, objectStartTime: number) {
-    return tracks.map((track: any) => ({
-      objectId,
-      type: track.type,
-      startTime: objectStartTime + track.startTime,
-      duration: track.duration,
-      easing: track.easing,
-      properties: this.convertTrackProperties(track)
-    }));
-  }
-
-  private convertTrackProperties(track: any) {
-    switch (track.type) {
-      case 'move':
-        return {
-          from: track.properties.from,
-          to: track.properties.to,
-        };
-      case 'rotate':
-        return {
-          from: 0,
-          to: 0,
-          rotations: track.properties.rotations,
-        };
-      case 'scale':
-        return {
-          from: track.properties.from,
-          to: track.properties.to,
-        };
-      case 'fade':
-        return {
-          from: track.properties.from,
-          to: track.properties.to,
-        };
-      case 'color':
-        return {
-          from: track.properties.from,
-          to: track.properties.to,
-          property: track.properties.property,
-        };
-      default:
-        return track.properties;
-    }
+  private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
+    return tracks.map((track): SceneAnimationTrack => {
+      switch (track.type) {
+        case 'move':
+          return {
+            objectId,
+            type: 'move',
+            startTime: objectStartTime + track.startTime,
+            duration: track.duration,
+            easing: track.easing,
+            properties: {
+              from: track.properties.from,
+              to: track.properties.to,
+            }
+          };
+        case 'rotate':
+          return {
+            objectId,
+            type: 'rotate',
+            startTime: objectStartTime + track.startTime,
+            duration: track.duration,
+            easing: track.easing,
+            properties: {
+              from: 0,
+              to: 0,
+              rotations: track.properties.rotations,
+            }
+          };
+        case 'scale':
+          return {
+            objectId,
+            type: 'scale',
+            startTime: objectStartTime + track.startTime,
+            duration: track.duration,
+            easing: track.easing,
+            properties: {
+              from: track.properties.from,
+              to: track.properties.to,
+            }
+          };
+        case 'fade':
+          return {
+            objectId,
+            type: 'fade',
+            startTime: objectStartTime + track.startTime,
+            duration: track.duration,
+            easing: track.easing,
+            properties: {
+              from: track.properties.from,
+              to: track.properties.to,
+            }
+          };
+        case 'color':
+          return {
+            objectId,
+            type: 'color',
+            startTime: objectStartTime + track.startTime,
+            duration: track.duration,
+            easing: track.easing,
+            properties: {
+              from: track.properties.from,
+              to: track.properties.to,
+              property: track.properties.property,
+            }
+          };
+        default:
+          throw new Error(`Unknown track type: ${track.type}`);
+      }
+    });
   }
 }
 
@@ -226,7 +251,7 @@ class SceneNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     // Scene node can optionally receive animation inputs for validation
-    const animationInputs = getConnectedInputs(context, connections, node.id, 'animation');
+    getConnectedInputs(context, connections, node.id, 'animation');
     
     // All animations should already be in context from previous executions
     setNodeOutput(context, node.id, 'scene', 'scene', node.data);

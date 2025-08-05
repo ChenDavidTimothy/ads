@@ -15,7 +15,7 @@ export interface BasePropertySchema {
   label: string;
   type: PropertyType;
   required?: boolean;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean | Point2D;
 }
 
 export interface NumberPropertySchema extends BasePropertySchema {
@@ -76,8 +76,8 @@ export interface NodePropertyConfig {
 // Helper to get default values from schema
 export function getDefaultPropertiesFromSchema(
   schemas: PropertySchema[]
-): Record<string, any> {
-  const defaults: Record<string, any> = {};
+): Record<string, string | number | boolean | Point2D> {
+  const defaults: Record<string, string | number | boolean | Point2D> = {};
   
   for (const schema of schemas) {
     if (schema.defaultValue !== undefined) {

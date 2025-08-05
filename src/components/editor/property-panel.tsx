@@ -6,7 +6,11 @@ import { NumberField, ColorField, SelectField } from "@/components/ui/form-field
 import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
 import { RESOLUTION_PRESETS } from "@/lib/constants/editor";
-import type { NodeData } from "@/lib/types/nodes";
+import type { 
+  NodeData, 
+  AnimationNodeData, 
+  SceneNodeData 
+} from "@/lib/types/nodes";
 import type { PropertySchema } from "@/lib/types/property-schemas";
 
 interface PropertyPanelProps {
@@ -35,27 +39,35 @@ export function PropertyPanel({ node, onChange }: PropertyPanelProps) {
       
       {/* Special handling for complex properties */}
       {node.type === 'animation' && (
-        <AnimationSpecialProperties data={node.data as any} onChange={onChange} />
+        <AnimationSpecialProperties 
+          data={node.data as AnimationNodeData} 
+          onChange={onChange} 
+        />
       )}
       
       {node.type === 'scene' && (
-        <SceneSpecialProperties data={node.data as any} onChange={onChange} />
+        <SceneSpecialProperties 
+          data={node.data as SceneNodeData} 
+          onChange={onChange} 
+        />
       )}
     </div>
   );
+}
+
+interface SchemaBasedProps {
+  properties: PropertySchema[];
+  data: NodeData;
+  onChange: (data: Partial<NodeData>) => void;
 }
 
 function SchemaBasedProperties({ 
   properties, 
   data, 
   onChange 
-}: { 
-  properties: PropertySchema[]; 
-  data: any; 
-  onChange: (data: any) => void; 
-}) {
+}: SchemaBasedProps) {
   const renderProperty = (schema: PropertySchema) => {
-    const value = data[schema.key] ?? schema.defaultValue;
+    const value = (data as unknown as Record<string, unknown>)[schema.key] ?? schema.defaultValue;
 
     switch (schema.type) {
       case 'number':
@@ -63,12 +75,12 @@ function SchemaBasedProperties({
           <NumberField
             key={schema.key}
             label={schema.label}
-            value={value}
-            onChange={(newValue) => onChange({ [schema.key]: newValue })}
+            value={value as number}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             min={schema.min}
             max={schema.max}
             step={schema.step}
-            defaultValue={schema.defaultValue}
+            defaultValue={schema.defaultValue as number}
           />
         );
 
@@ -77,8 +89,8 @@ function SchemaBasedProperties({
           <ColorField
             key={schema.key}
             label={schema.label}
-            value={value}
-            onChange={(newValue) => onChange({ [schema.key]: newValue })}
+            value={value as string}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
           />
         );
 
@@ -87,14 +99,14 @@ function SchemaBasedProperties({
           <SelectField
             key={schema.key}
             label={schema.label}
-            value={value}
-            onChange={(newValue) => onChange({ [schema.key]: newValue })}
+            value={value as string}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             options={schema.options}
           />
         );
 
       case 'point2d':
-        const point = value || { x: 0, y: 0 };
+        const point = (value as { x: number; y: number }) ?? { x: 0, y: 0 };
         return (
           <div key={schema.key} className="space-y-2">
             <label className="block text-sm font-medium text-gray-300">
@@ -104,13 +116,13 @@ function SchemaBasedProperties({
               <NumberField
                 label="X"
                 value={point.x}
-                onChange={(x) => onChange({ [schema.key]: { ...point, x } })}
+                onChange={(x) => onChange({ [schema.key]: { ...point, x } } as Partial<NodeData>)}
                 defaultValue={0}
               />
               <NumberField
                 label="Y"
                 value={point.y}
-                onChange={(y) => onChange({ [schema.key]: { ...point, y } })}
+                onChange={(y) => onChange({ [schema.key]: { ...point, y } } as Partial<NodeData>)}
                 defaultValue={0}
               />
             </div>
@@ -128,8 +140,8 @@ function SchemaBasedProperties({
               min={schema.min}
               max={schema.max}
               step={schema.step}
-              value={value}
-              onChange={(e) => onChange({ [schema.key]: Number(e.target.value) })}
+              value={value as number}
+              onChange={(e) => onChange({ [schema.key]: Number(e.target.value) } as Partial<NodeData>)}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500">
@@ -145,8 +157,8 @@ function SchemaBasedProperties({
           <div key={schema.key} className="flex items-center space-x-2">
             <input
               type="checkbox"
-              checked={value}
-              onChange={(e) => onChange({ [schema.key]: e.target.checked })}
+              checked={value as boolean}
+              onChange={(e) => onChange({ [schema.key]: e.target.checked } as Partial<NodeData>)}
               className="rounded"
             />
             <label className="text-sm text-gray-300">{schema.label}</label>
@@ -158,7 +170,7 @@ function SchemaBasedProperties({
           <div key={schema.key} className="text-gray-400 text-sm">
             Unsupported property type: {schema.type}
           </div>
-        );
+        ) as React.ReactElement;
     }
   };
 
@@ -169,12 +181,17 @@ function SchemaBasedProperties({
   );
 }
 
-function AnimationSpecialProperties({ data, onChange }: { data: any; onChange: (data: any) => void }) {
+interface AnimationSpecialProps {
+  data: AnimationNodeData;
+  onChange: (data: Partial<NodeData>) => void;
+}
+
+function AnimationSpecialProperties({ data }: AnimationSpecialProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">Tracks</label>
       <div className="text-xs text-gray-400">
-        {data.tracks?.length || 0} animation tracks defined
+        {data.tracks?.length ?? 0} animation tracks defined
       </div>
       <div className="text-xs text-blue-400 mt-2">
         Double-click the node to edit timeline
@@ -183,7 +200,12 @@ function AnimationSpecialProperties({ data, onChange }: { data: any; onChange: (
   );
 }
 
-function SceneSpecialProperties({ data, onChange }: { data: any; onChange: (data: any) => void }) {
+interface SceneSpecialProps {
+  data: SceneNodeData;
+  onChange: (data: Partial<NodeData>) => void;
+}
+
+function SceneSpecialProperties({ data, onChange }: SceneSpecialProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -192,7 +214,10 @@ function SceneSpecialProperties({ data, onChange }: { data: any; onChange: (data
           {RESOLUTION_PRESETS.map(preset => (
             <Button
               key={preset.label}
-              onClick={() => onChange({ width: preset.width, height: preset.height })}
+              onClick={() => onChange({ 
+                width: preset.width, 
+                height: preset.height 
+              } as Partial<NodeData>)}
               variant="ghost"
               size="sm"
               className="text-xs"

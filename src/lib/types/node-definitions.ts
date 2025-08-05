@@ -1,6 +1,6 @@
 // src/lib/types/node-definitions.ts
 import type { NodePortConfig } from "./ports";
-import type { NodePropertyConfig, PropertySchema } from "./property-schemas";
+import type { NodePropertyConfig } from "./property-schemas";
 import { VIDEO_PRESETS, FPS_OPTIONS } from "@/lib/constants/editor";
 
 export interface NodeDefinition {

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
 import { TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
-import { getDefaultTrackProperties } from "@/lib/defaults/nodes";
 import type { 
   AnimationTrack,
   MoveTrack,
@@ -61,6 +60,31 @@ function isColorTrack(track: AnimationTrack): track is ColorTrack {
   return track.type === 'color';
 }
 
+// Type-safe default properties function with overloads
+function getDefaultTrackProperties(trackType: 'move'): MoveTrackProperties;
+function getDefaultTrackProperties(trackType: 'rotate'): RotateTrackProperties;
+function getDefaultTrackProperties(trackType: 'scale'): ScaleTrackProperties;
+function getDefaultTrackProperties(trackType: 'fade'): FadeTrackProperties;
+function getDefaultTrackProperties(trackType: 'color'): ColorTrackProperties;
+function getDefaultTrackProperties(
+  trackType: AnimationTrack['type']
+): MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
+  switch (trackType) {
+    case 'move':
+      return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
+    case 'rotate':
+      return { rotations: 1 };
+    case 'scale':
+      return { from: 1, to: 1.5 };
+    case 'fade':
+      return { from: 1, to: 0.5 };
+    case 'color':
+      return { from: '#ff0000', to: '#00ff00', property: 'fill' };
+    default:
+      throw new Error(`Unknown track type: ${trackType}`);
+  }
+}
+
 export function TimelineEditorModal({
   isOpen,
   onClose,
@@ -85,16 +109,61 @@ export function TimelineEditorModal({
   }, [isOpen, initialDuration, initialTracks]);
 
   const addTrack = useCallback((type: AnimationTrack['type']) => {
-    const properties = getDefaultTrackProperties(type);
-    
-    const newTrack: AnimationTrack = {
-      id: `${type}-${Date.now()}`,
-      type,
+    const id = `${type}-${Date.now()}`;
+    const baseTrack = {
+      id,
       startTime: 0,
       duration: Math.min(2, duration),
-      easing: type === 'rotate' ? 'linear' : 'easeInOut',
-      properties
-    } as AnimationTrack;
+    };
+
+    let newTrack: AnimationTrack;
+
+    switch (type) {
+      case 'move':
+        newTrack = {
+          ...baseTrack,
+          type: 'move' as const,
+          easing: 'easeInOut' as const,
+          properties: getDefaultTrackProperties('move')
+        };
+        break;
+      case 'rotate':
+        newTrack = {
+          ...baseTrack,
+          type: 'rotate' as const,
+          easing: 'linear' as const,
+          properties: getDefaultTrackProperties('rotate')
+        };
+        break;
+      case 'scale':
+        newTrack = {
+          ...baseTrack,
+          type: 'scale' as const,
+          easing: 'easeInOut' as const,
+          properties: getDefaultTrackProperties('scale')
+        };
+        break;
+      case 'fade':
+        newTrack = {
+          ...baseTrack,
+          type: 'fade' as const,
+          easing: 'easeInOut' as const,
+          properties: getDefaultTrackProperties('fade')
+        };
+        break;
+      case 'color':
+        newTrack = {
+          ...baseTrack,
+          type: 'color' as const,
+          easing: 'easeInOut' as const,
+          properties: getDefaultTrackProperties('color')
+        };
+        break;
+      default:
+        // Type assertion to help TypeScript narrow the never case
+        const exhaustiveCheck: never = type;
+        throw new Error(`Unknown track type: ${exhaustiveCheck}`);
+    }
     
     setTracks(prev => [...prev, newTrack]);
   }, [duration]);
