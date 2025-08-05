@@ -126,6 +126,24 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
+      // Check for object → multiple Insert violation
+      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
+          targetNode.type === 'insert') {
+        
+        const existingInsertConnection = edges.find(edge => 
+          edge.source === sourceNode.id && 
+          nodes.find(n => n.id === edge.target)?.type === 'insert'
+        );
+        
+        if (existingInsertConnection) {
+          toast.error(
+            "Connection not allowed", 
+            `Object already connected to Insert node. Each object can only connect to one Insert node.`
+          );
+          return;
+        }
+      }
+      
       const sourceNodeDef = getNodeDefinition(sourceNode.type!);
       const targetNodeDef = getNodeDefinition(targetNode.type!);
       
@@ -149,7 +167,7 @@ export function FlowEditor() {
       
       setEdges((eds) => addEdge(params, eds));
     },
-    [nodes, setEdges, toast]
+    [nodes, edges, setEdges, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {

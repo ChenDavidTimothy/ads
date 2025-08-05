@@ -1,4 +1,4 @@
-// src/animation/scene/timeline.ts
+// src/animation/scene/timeline.ts - Add visibility evaluation
 import type { 
   AnimationScene, 
   AnimationTrack, 
@@ -158,6 +158,20 @@ function getStrokeColor(properties: GeometryProperties, objectType: string): str
   }
 }
 
+// PROFESSIONAL VISIBILITY EVALUATION
+function evaluateVisibility(object: SceneObject, time: number): number {
+  // Check if object has appearance time (from Insert node)
+  const appearanceTime = (object as any).appearanceTime || 0;
+  
+  // Object not yet visible
+  if (time < appearanceTime) {
+    return 0;
+  }
+  
+  // Object is visible - return initial opacity or 1
+  return object.initialOpacity ?? 1;
+}
+
 // Get the state of an object at a specific time
 export function getObjectStateAtTime(
   object: SceneObject, 
@@ -169,7 +183,7 @@ export function getObjectStateAtTime(
     position: { ...object.initialPosition },
     rotation: object.initialRotation ?? 0,
     scale: object.initialScale ?? { x: 1, y: 1 },
-    opacity: object.initialOpacity ?? 1,
+    opacity: evaluateVisibility(object, time), // PROFESSIONAL VISIBILITY
     colors: {
       fill: object.properties.color,
       stroke: getStrokeColor(object.properties, object.type)

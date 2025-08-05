@@ -4,7 +4,7 @@ import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
-  getConnectedInput,
+  getConnectedInputs,
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
@@ -93,7 +93,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor
+// Insert node executor - handles multiple inputs, no fade logic
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -105,51 +105,36 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as any;
-    const input = getConnectedInput(context, connections, node.id, 'object');
+    const inputs = getConnectedInputs(context, connections, node.id, 'object');
     
-    if (!input) {
-      throw new Error(`Insert node ${node.id} missing required object input`);
+    if (inputs.length === 0) {
+      throw new Error(`Insert node ${node.id} missing required object input(s)`);
     }
 
-    let timedObject;
-
-    if (data.appearanceTime > 0) {
-      timedObject = {
+    const timedObjects = [];
+    
+    for (const input of inputs) {
+      // Store appearance time on object - timeline will handle visibility
+      const timedObject = {
         ...input.data,
-        initialOpacity: 0
+        appearanceTime: data.appearanceTime
       };
 
-      const appearAnimation = {
-        objectId: input.data.id,
-        type: 'fade' as const,
-        startTime: data.appearanceTime,
-        duration: 0.01,
-        easing: 'linear' as const,
-        properties: {
-          from: 0,
-          to: 1
-        }
-      };
+      // Update object in scene
+      const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
+      if (objectIndex !== -1) {
+        context.sceneObjects[objectIndex] = timedObject;
+      }
 
-      context.sceneAnimations.push(appearAnimation);
-    } else {
-      timedObject = {
-        ...input.data,
-        initialOpacity: 1
-      };
-    }
-
-    const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
-    if (objectIndex !== -1) {
-      context.sceneObjects[objectIndex] = timedObject;
+      timedObjects.push(timedObject);
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime);
-    setNodeOutput(context, node.id, 'object', 'timed_object', timedObject);
+    setNodeOutput(context, node.id, 'object', 'timed_object', timedObjects);
   }
 }
 
-// Animation node executor
+// Animation node executor - handles multiple inputs
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -161,30 +146,40 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as any;
-    const input = getConnectedInput(context, connections, node.id, 'object');
+    const inputs = getConnectedInputs(context, connections, node.id, 'object');
     
-    if (!input) {
-      throw new Error(`Animation node ${node.id} missing required timed object input`);
+    if (inputs.length === 0) {
+      throw new Error(`Animation node ${node.id} missing required timed object input(s)`);
     }
 
-    const objectId = input.data.id;
-    const animations = this.convertTracksToAnimations(
-      data.tracks || [],
-      objectId,
-      context.currentTime
-    );
+    const allAnimations = [];
+    
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      
+      for (const timedObject of inputData) {
+        const objectStartTime = timedObject.appearanceTime || 0;
+        const animations = this.convertTracksToAnimations(
+          data.tracks || [],
+          timedObject.id,
+          objectStartTime
+        );
+        allAnimations.push(...animations);
+      }
+    }
 
-    context.sceneAnimations.push(...animations);
-    context.currentTime += data.duration;
+    context.sceneAnimations.push(...allAnimations);
+    const maxDuration = Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime);
+    context.currentTime = maxDuration;
 
-    setNodeOutput(context, node.id, 'animation', 'animation', animations);
+    setNodeOutput(context, node.id, 'animation', 'animation', allAnimations);
   }
 
-  private convertTracksToAnimations(tracks: any[], objectId: string, startTime: number) {
+  private convertTracksToAnimations(tracks: any[], objectId: string, objectStartTime: number) {
     return tracks.map((track: any) => ({
       objectId,
       type: track.type,
-      startTime: startTime + track.startTime,
+      startTime: objectStartTime + track.startTime,
       duration: track.duration,
       easing: track.easing,
       properties: this.convertTrackProperties(track)
@@ -251,6 +246,7 @@ export class ExecutionEngine {
 
   async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
     this.validateScene(nodes);
+    this.validateConnections(nodes, edges);
     
     const globalContext = createExecutionContext();
     const executionPaths = this.findConnectedPaths(nodes, edges);
@@ -271,6 +267,32 @@ export class ExecutionEngine {
     }
     
     return globalContext;
+  }
+
+  private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
+    // Track object -> insert mappings
+    const objectToInsertMap = new Map<string, string>();
+    
+    for (const edge of edges) {
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const targetNode = nodes.find(n => n.id === edge.target);
+      
+      if (!sourceNode || !targetNode) continue;
+      
+      // Check for object -> multiple insert violations
+      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
+          targetNode.type === 'insert') {
+        
+        const existingInsert = objectToInsertMap.get(sourceNode.id);
+        if (existingInsert && existingInsert !== targetNode.id) {
+          throw new Error(
+            `Object ${sourceNode.id} cannot connect to multiple Insert nodes. ` +
+            `Already connected to ${existingInsert}, attempted connection to ${targetNode.id}.`
+          );
+        }
+        objectToInsertMap.set(sourceNode.id, targetNode.id);
+      }
+    }
   }
 
   private findConnectedPaths(nodes: Node<NodeData>[], edges: Edge[]): ExecutionPath[] {

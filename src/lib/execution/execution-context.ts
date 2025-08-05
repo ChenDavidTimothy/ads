@@ -75,6 +75,27 @@ export function getConnectedInput(
   return getNodeOutput(context, connection.source, connection.sourceHandle);
 }
 
+export function getConnectedInputs(
+  context: ExecutionContext,
+  connections: any[],
+  targetNodeId: string,
+  targetPortId: string
+): ExecutionValue[] {
+  const matchingConnections = connections.filter(
+    conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
+  );
+  
+  const inputs: ExecutionValue[] = [];
+  for (const connection of matchingConnections) {
+    const input = getNodeOutput(context, connection.source, connection.sourceHandle);
+    if (input) {
+      inputs.push(input);
+    }
+  }
+  
+  return inputs;
+}
+
 export function setVariable(
   context: ExecutionContext,
   name: string,
