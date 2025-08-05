@@ -301,7 +301,7 @@ export class ExecutionEngine {
     // Build adjacency list and in-degree count
     for (const edge of edges) {
       adjList.get(edge.source)?.push(edge.target);
-      inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+      inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
     }
     
     // Kahn's algorithm for topological sorting
@@ -320,8 +320,8 @@ export class ExecutionEngine {
       result.push(current);
       
       // Reduce in-degree for neighbors
-      for (const neighborId of adjList.get(current.id) || []) {
-        const newInDegree = (inDegree.get(neighborId) || 1) - 1;
+      for (const neighborId of adjList.get(current.id) ?? []) {
+        const newInDegree = (inDegree.get(neighborId) ?? 1) - 1;
         inDegree.set(neighborId, newInDegree);
         
         if (newInDegree === 0) {
