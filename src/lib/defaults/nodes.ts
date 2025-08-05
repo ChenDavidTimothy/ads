@@ -1,4 +1,14 @@
-import type { NodeData, NodeType, AnimationTrack } from "../types/nodes";
+// src/lib/defaults/nodes.ts
+import type { 
+  NodeData, 
+  NodeType, 
+  AnimationTrack,
+  MoveTrackProperties,
+  RotateTrackProperties,
+  ScaleTrackProperties,
+  FadeTrackProperties,
+  ColorTrackProperties
+} from "../types/nodes";
 
 export function getDefaultNodeData(nodeType: NodeType): NodeData {
   const id = `${nodeType}-${Date.now()}`;
@@ -59,7 +69,8 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
   }
 }
 
-export function getDefaultTrackProperties(trackType: AnimationTrack['type']): any {
+export function getDefaultTrackProperties(trackType: AnimationTrack['type']): 
+  MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
   switch (trackType) {
     case 'move':
       return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
@@ -72,6 +83,6 @@ export function getDefaultTrackProperties(trackType: AnimationTrack['type']): an
     case 'color':
       return { from: '#ff0000', to: '#00ff00', property: 'fill' };
     default:
-      return {};
+      throw new Error(`Unknown track type: ${trackType}`);
   }
 }

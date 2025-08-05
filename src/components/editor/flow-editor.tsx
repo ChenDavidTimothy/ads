@@ -18,7 +18,7 @@ import "reactflow/dist/style.css";
 import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, SceneNode } from "./nodes";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
-import { PropertyPanel } from "./property-panel";
+import { PropertyPanel } from "@/components/editor/property-panel";
 import { Button } from "@/components/ui/button";
 import { useFlowToScene } from "@/hooks/use-flow-to-scene";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -26,17 +26,47 @@ import { getDefaultNodeData } from "@/lib/defaults/nodes";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
 import { arePortsCompatible } from "@/lib/types/ports";
 import { api } from "@/trpc/react";
-import type { NodeData, NodeType } from "@/lib/types/nodes";
+import type { 
+  NodeData, 
+  NodeType, 
+  AnimationNodeData, 
+  SceneNodeData,
+  AnimationTrack 
+} from "@/lib/types/nodes";
+
+// Type guard functions
+function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
+  return 'duration' in data && 'tracks' in data;
+}
+
+function isSceneNodeData(data: NodeData): data is SceneNodeData {
+  return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
+}
+
+// Interfaces for timeline modal
+interface TimelineModalState {
+  isOpen: boolean;
+  nodeId: string | null;
+}
+
+interface SceneConfig {
+  width: number;
+  height: number;
+  fps: number;
+  backgroundColor: string;
+  videoPreset: string;
+  videoCrf: number;
+}
 
 export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [timelineModalState, setTimelineModalState] = useState<{
-    isOpen: boolean;
-    nodeId: string | null;
-  }>({ isOpen: false, nodeId: null });
+  const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
+    isOpen: false, 
+    nodeId: null 
+  });
 
   const { convertFlowToScene } = useFlowToScene();
   const { toast } = useNotifications();
@@ -94,7 +124,7 @@ export function FlowEditor() {
     setTimelineModalState({ isOpen: false, nodeId: null });
   }, []);
 
-  const handleSaveTimeline = useCallback((duration: number, tracks: any[]) => {
+  const handleSaveTimeline = useCallback((duration: number, tracks: AnimationTrack[]) => {
     if (timelineModalState.nodeId) {
       updateNodeData(timelineModalState.nodeId, { duration, tracks });
     }
@@ -110,7 +140,7 @@ export function FlowEditor() {
     circle: CircleNode,
     rectangle: RectangleNode,
     insert: InsertNode,
-    animation: (props: any) => (
+    animation: (props: Parameters<typeof AnimationNode>[0]) => (
       <AnimationNode 
         {...props} 
         onOpenEditor={() => handleOpenTimelineEditor(props.id)} 
@@ -174,7 +204,7 @@ export function FlowEditor() {
     setSelectedNodeId(node.id);
   }, []);
 
-  const handleAddNode = useCallback((nodeType: string, position: any) => {
+  const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
     if (nodeType === "scene") {
       const existingSceneNodes = nodes.filter(node => node.type === "scene");
       if (existingSceneNodes.length > 0) {
@@ -202,17 +232,21 @@ export function FlowEditor() {
     try {
       const sceneNode = validateSceneNodes();
       
+      if (!isSceneNodeData(sceneNode.data)) {
+        throw new Error("Invalid scene node data");
+      }
+
       const scene = await convertFlowToScene(nodes, edges);
       if (scene) {
         setVideoUrl(null);
         
-        const config = {
-          width: (sceneNode.data as any).width,
-          height: (sceneNode.data as any).height,
-          fps: (sceneNode.data as any).fps,
-          backgroundColor: (sceneNode.data as any).backgroundColor,
-          videoPreset: (sceneNode.data as any).videoPreset,
-          videoCrf: (sceneNode.data as any).videoCrf,
+        const config: SceneConfig = {
+          width: sceneNode.data.width,
+          height: sceneNode.data.height,
+          fps: sceneNode.data.fps,
+          backgroundColor: sceneNode.data.backgroundColor,
+          videoPreset: sceneNode.data.videoPreset,
+          videoCrf: sceneNode.data.videoCrf,
         };
         
         generateScene.mutate({ scene, config });
@@ -237,6 +271,22 @@ export function FlowEditor() {
     () => nodes.find((node) => node.id === selectedNodeId),
     [nodes, selectedNodeId]
   );
+
+  // Get timeline node data with proper type checking
+  const getTimelineNodeData = useCallback(() => {
+    if (!timelineNode) return { duration: 3, tracks: [] };
+    
+    if (isAnimationNodeData(timelineNode.data)) {
+      return {
+        duration: timelineNode.data.duration,
+        tracks: timelineNode.data.tracks
+      };
+    }
+    
+    return { duration: 3, tracks: [] };
+  }, [timelineNode]);
+
+  const timelineNodeData = getTimelineNodeData();
 
   return (
     <div className="flex h-full">
@@ -316,7 +366,7 @@ export function FlowEditor() {
           </h3>
           <PropertyPanel 
             node={selectedNode}
-            onChange={(newData) => updateNodeData(selectedNode.id, newData)}
+            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.id, newData)}
           />
         </div>
       )}
@@ -324,8 +374,8 @@ export function FlowEditor() {
       <TimelineEditorModal
         isOpen={timelineModalState.isOpen}
         onClose={handleCloseTimelineEditor}
-        duration={timelineNode?.data?.duration || 3}
-        tracks={timelineNode?.data?.tracks || []}
+        duration={timelineNodeData.duration}
+        tracks={timelineNodeData.tracks}
         onSave={handleSaveTimeline}
       />
     </div>

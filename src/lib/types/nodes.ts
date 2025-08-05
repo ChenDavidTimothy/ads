@@ -1,3 +1,4 @@
+// src/lib/types/nodes.ts - Updated to match API schema
 import type { Point2D } from "@/animation/types";
 
 // Base node data interface
@@ -38,7 +39,33 @@ export interface InsertNodeData extends BaseNodeData {
   appearanceTime: number;
 }
 
-// Animation track types
+// Animation track properties - aligned with API schema
+export interface MoveTrackProperties {
+  from: Point2D;
+  to: Point2D;
+}
+
+export interface RotateTrackProperties {
+  rotations: number;
+}
+
+export interface ScaleTrackProperties {
+  from: number;
+  to: number;
+}
+
+export interface FadeTrackProperties {
+  from: number;
+  to: number;
+}
+
+export interface ColorTrackProperties {
+  from: string;
+  to: string;
+  property: 'fill' | 'stroke';
+}
+
+// Animation track types - aligned with API schema
 export interface BaseAnimationTrack {
   id: string;
   startTime: number;
@@ -48,42 +75,27 @@ export interface BaseAnimationTrack {
 
 export interface MoveTrack extends BaseAnimationTrack {
   type: 'move';
-  properties: {
-    from: Point2D;
-    to: Point2D;
-  };
+  properties: MoveTrackProperties;
 }
 
 export interface RotateTrack extends BaseAnimationTrack {
   type: 'rotate';
-  properties: {
-    rotations: number;
-  };
+  properties: RotateTrackProperties;
 }
 
 export interface ScaleTrack extends BaseAnimationTrack {
   type: 'scale';
-  properties: {
-    from: number;
-    to: number;
-  };
+  properties: ScaleTrackProperties;
 }
 
 export interface FadeTrack extends BaseAnimationTrack {
   type: 'fade';
-  properties: {
-    from: number;
-    to: number;
-  };
+  properties: FadeTrackProperties;
 }
 
 export interface ColorTrack extends BaseAnimationTrack {
   type: 'color';
-  properties: {
-    from: string;
-    to: string;
-    property: 'fill' | 'stroke';
-  };
+  properties: ColorTrackProperties;
 }
 
 export type AnimationTrack = MoveTrack | RotateTrack | ScaleTrack | FadeTrack | ColorTrack;
