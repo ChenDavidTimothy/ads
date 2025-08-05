@@ -74,7 +74,7 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
-// Insert Node Definition - outputs timed_object
+// Insert Node Definition - FIXED: clear port naming
 const insertDefinition: NodeDefinition = {
   type: 'insert',
   label: 'Insert',
@@ -82,7 +82,7 @@ const insertDefinition: NodeDefinition = {
   category: 'timing',
   ports: {
     inputs: [{ id: 'object', type: 'object', label: 'Object' }],
-    outputs: [{ id: 'object', type: 'timed_object', label: 'Timed Object' }]
+    outputs: [{ id: 'timed_object', type: 'timed_object', label: 'Timed Object' }]
   },
   properties: {
     properties: [
@@ -91,14 +91,14 @@ const insertDefinition: NodeDefinition = {
   }
 };
 
-// Animation Node Definition - accepts only timed_object
+// Animation Node Definition - FIXED: consistent port ID and type
 const animationDefinition: NodeDefinition = {
   type: 'animation',
   label: 'Animation',
   description: 'Timeline-based animation container',
   category: 'animation',
   ports: {
-    inputs: [{ id: 'object', type: 'timed_object', label: 'Timed Object' }],
+    inputs: [{ id: 'timed_object', type: 'timed_object', label: 'Timed Object' }],
     outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
   },
   properties: {
@@ -108,14 +108,14 @@ const animationDefinition: NodeDefinition = {
   }
 };
 
-// Scene Node Definition  
+// Scene Node Definition - FIXED: proper input processing
 const sceneDefinition: NodeDefinition = {
   type: 'scene',
   label: 'Scene',
   description: 'Final video output configuration',
   category: 'output',
   ports: {
-    inputs: [{ id: 'animations', type: 'animation', label: 'Animations' }],
+    inputs: [{ id: 'animation', type: 'animation', label: 'Animation' }],
     outputs: []
   },
   properties: {

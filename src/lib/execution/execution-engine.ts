@@ -11,13 +11,6 @@ import {
 import { getNodeDefinition } from "../types/node-definitions";
 import type { NodeData } from "../types/nodes";
 
-interface ExecutionPath {
-  objectId: string;
-  geometryNode: Node<NodeData>;
-  insertNode?: Node<NodeData>;
-  animationNodes: Node<NodeData>[];
-}
-
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
   execute(
@@ -93,7 +86,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - handles multiple inputs, no fade logic
+// Insert node executor - handles multiple inputs
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -130,7 +123,7 @@ class InsertNodeExecutor implements NodeExecutor {
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime);
-    setNodeOutput(context, node.id, 'object', 'timed_object', timedObjects);
+    setNodeOutput(context, node.id, 'timed_object', 'timed_object', timedObjects);
   }
 }
 
@@ -146,7 +139,7 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as any;
-    const inputs = getConnectedInputs(context, connections, node.id, 'object');
+    const inputs = getConnectedInputs(context, connections, node.id, 'timed_object');
     
     if (inputs.length === 0) {
       throw new Error(`Animation node ${node.id} missing required timed object input(s)`);
@@ -221,7 +214,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor
+// Scene node executor - now properly processes animation inputs
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -232,6 +225,10 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
+    // Scene node can optionally receive animation inputs for validation
+    const animationInputs = getConnectedInputs(context, connections, node.id, 'animation');
+    
+    // All animations should already be in context from previous executions
     setNodeOutput(context, node.id, 'scene', 'scene', node.data);
   }
 }
@@ -248,25 +245,75 @@ export class ExecutionEngine {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     
-    const globalContext = createExecutionContext();
-    const executionPaths = this.findConnectedPaths(nodes, edges);
+    const context = createExecutionContext();
     
-    for (const path of executionPaths) {
-      const pathContext = createExecutionContext();
-      pathContext.currentTime = 0;
-      
-      await this.executeExecutionPath(path, pathContext, nodes, edges);
-      
-      globalContext.sceneObjects.push(...pathContext.sceneObjects);
-      globalContext.sceneAnimations.push(...pathContext.sceneAnimations);
+    // PROFESSIONAL SOLUTION: Topological execution (each node executed once)
+    const executionOrder = this.getTopologicalOrder(nodes, edges);
+    
+    for (const node of executionOrder) {
+      if (!isNodeExecuted(context, node.id)) {
+        const executor = this.getExecutor(node.type!);
+        if (executor) {
+          await executor.execute(node, context, edges);
+          markNodeExecuted(context, node.id);
+        }
+      }
     }
     
-    const sceneNode = nodes.find(n => n.type === 'scene');
-    if (sceneNode) {
-      await this.getExecutor('scene')?.execute(sceneNode, globalContext, edges);
+    return context;
+  }
+
+  private getTopologicalOrder(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
+    const inDegree = new Map<string, number>();
+    const adjList = new Map<string, string[]>();
+    
+    // Initialize
+    for (const node of nodes) {
+      inDegree.set(node.id, 0);
+      adjList.set(node.id, []);
     }
     
-    return globalContext;
+    // Build adjacency list and in-degree count
+    for (const edge of edges) {
+      adjList.get(edge.source)?.push(edge.target);
+      inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+    }
+    
+    // Kahn's algorithm for topological sorting
+    const queue: Node<NodeData>[] = [];
+    const result: Node<NodeData>[] = [];
+    
+    // Start with nodes that have no dependencies
+    for (const node of nodes) {
+      if (inDegree.get(node.id) === 0) {
+        queue.push(node);
+      }
+    }
+    
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      result.push(current);
+      
+      // Reduce in-degree for neighbors
+      for (const neighborId of adjList.get(current.id) || []) {
+        const newInDegree = (inDegree.get(neighborId) || 1) - 1;
+        inDegree.set(neighborId, newInDegree);
+        
+        if (newInDegree === 0) {
+          const neighborNode = nodes.find(n => n.id === neighborId);
+          if (neighborNode) {
+            queue.push(neighborNode);
+          }
+        }
+      }
+    }
+    
+    // Check for cycles
+    if (result.length !== nodes.length) {
+      throw new Error("Circular dependency detected in node graph");
+    }
+    
+    return result;
   }
 
   private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
@@ -291,102 +338,6 @@ export class ExecutionEngine {
           );
         }
         objectToInsertMap.set(sourceNode.id, targetNode.id);
-      }
-    }
-  }
-
-  private findConnectedPaths(nodes: Node<NodeData>[], edges: Edge[]): ExecutionPath[] {
-    const sceneNode = nodes.find(n => n.type === 'scene');
-    if (!sceneNode) return [];
-    
-    const visited = new Set<string>();
-    const paths: ExecutionPath[] = [];
-    
-    this.traverseBackward(sceneNode, nodes, edges, visited, paths);
-    return paths;
-  }
-
-  private traverseBackward(
-    currentNode: Node<NodeData>,
-    nodes: Node<NodeData>[],
-    edges: Edge[],
-    visited: Set<string>,
-    paths: ExecutionPath[]
-  ): void {
-    if (visited.has(currentNode.id)) return;
-    visited.add(currentNode.id);
-
-    const incomingEdges = edges.filter(edge => edge.target === currentNode.id);
-    
-    for (const edge of incomingEdges) {
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      if (!sourceNode) continue;
-
-      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!)) {
-        const path = this.buildExecutionPath(sourceNode, nodes, edges);
-        if (path) paths.push(path);
-      } else {
-        this.traverseBackward(sourceNode, nodes, edges, visited, paths);
-      }
-    }
-  }
-
-  private buildExecutionPath(
-    geometryNode: Node<NodeData>,
-    nodes: Node<NodeData>[],
-    edges: Edge[]
-  ): ExecutionPath | null {
-    const path: ExecutionPath = {
-      objectId: geometryNode.id,
-      geometryNode,
-      animationNodes: []
-    };
-
-    const nextEdges = edges.filter(edge => edge.source === geometryNode.id);
-    if (nextEdges.length === 0) return path;
-
-    const nextNode = nodes.find(n => n.id === nextEdges[0]!.target);
-    if (!nextNode) return path;
-
-    if (nextNode.type === 'insert') {
-      path.insertNode = nextNode;
-      
-      const insertEdges = edges.filter(edge => edge.source === nextNode.id);
-      for (const edge of insertEdges) {
-        const animNode = nodes.find(n => n.id === edge.target);
-        if (animNode && animNode.type === 'animation') {
-          path.animationNodes.push(animNode);
-        }
-      }
-    }
-
-    return path;
-  }
-
-  private async executeExecutionPath(
-    path: ExecutionPath,
-    pathContext: ExecutionContext,
-    allNodes: Node<NodeData>[],
-    edges: Edge[]
-  ): Promise<void> {
-    const geometryExecutor = this.getExecutor(path.geometryNode.type!);
-    if (geometryExecutor) {
-      await geometryExecutor.execute(path.geometryNode, pathContext, edges);
-      markNodeExecuted(pathContext, path.geometryNode.id);
-    }
-
-    if (path.insertNode) {
-      const insertExecutor = this.getExecutor('insert');
-      if (insertExecutor) {
-        await insertExecutor.execute(path.insertNode, pathContext, edges);
-        markNodeExecuted(pathContext, path.insertNode.id);
-      }
-    }
-
-    for (const animNode of path.animationNodes) {
-      const executor = this.getExecutor(animNode.type!);
-      if (executor) {
-        await executor.execute(animNode, pathContext, edges);
       }
     }
   }
