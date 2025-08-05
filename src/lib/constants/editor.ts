@@ -11,6 +11,10 @@ export const NODE_COLORS = {
     primary: "bg-green-600",
     handle: "!bg-green-500", 
   },
+  insert: {
+    primary: "bg-orange-600",
+    handle: "!bg-orange-500",
+  },
   animation: {
     primary: "bg-purple-600",
     handle: "!bg-purple-500",

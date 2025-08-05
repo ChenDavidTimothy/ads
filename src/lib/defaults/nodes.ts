@@ -32,6 +32,11 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
         strokeWidth: 2,
         position: { x: 960, y: 540 },
       };
+    case "insert":
+      return {
+        id,
+        appearanceTime: 0,
+      };
     case "animation":
       return {
         id,

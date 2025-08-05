@@ -15,6 +15,10 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
     { type: "rectangle", label: "Rectangle", icon: "▬" },
   ];
 
+  const timingNodes = [
+    { type: "insert", label: "Insert", icon: "⏰" },
+  ];
+
   const animationNodes = [
     { type: "animation", label: "Animation", icon: "🎬" },
   ];
@@ -37,6 +41,25 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         </h3>
         <div className="space-y-2">
           {geometryNodes.map((node) => (
+            <Button
+              key={node.type}
+              onClick={() => handleNodeClick(node.type)}
+              className={`w-full justify-start gap-3 ${NODE_COLORS[node.type as keyof typeof NODE_COLORS].primary} hover:opacity-90`}
+              size="md"
+            >
+              <span className="text-lg">{node.icon}</span>
+              <span>{node.label}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
+          Timing
+        </h3>
+        <div className="space-y-2">
+          {timingNodes.map((node) => (
             <Button
               key={node.type}
               onClick={() => handleNodeClick(node.type)}
@@ -89,11 +112,11 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       </div>
 
       <div className="mt-8 p-3 bg-gray-700 rounded-lg">
-        <h4 className="text-sm font-semibold text-white mb-2">How to Use</h4>
+        <h4 className="text-sm font-semibold text-white mb-2">Flow</h4>
         <ul className="text-xs text-gray-300 space-y-1">
-          <li>• Add geometry shapes</li>
-          <li>• Connect to animation nodes</li>
-          <li>• Build internal timelines</li>
+          <li>• Geometry → Insert → Animation</li>
+          <li>• Set appearance timing</li>
+          <li>• Build animation sequences</li>
           <li>• Connect to scene output</li>
         </ul>
       </div>

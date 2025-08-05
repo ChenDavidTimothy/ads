@@ -33,6 +33,11 @@ export interface RectangleNodeData extends BaseNodeData {
 
 export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
 
+// Insert node data
+export interface InsertNodeData extends BaseNodeData {
+  appearanceTime: number;
+}
+
 // Animation track types
 export interface BaseAnimationTrack {
   id: string;
@@ -101,8 +106,8 @@ export interface SceneNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | AnimationNodeData | SceneNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | AnimationNodeData | SceneNodeData;
 
 // Node type literal types
 export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
-export type NodeType = GeometryNodeType | 'animation' | 'scene';
+export type NodeType = GeometryNodeType | 'insert' | 'animation' | 'scene';

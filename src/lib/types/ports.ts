@@ -29,10 +29,10 @@ export interface TypedConnection {
   targetPortType: PortType;
 }
 
-// Port compatibility rules
+// Port compatibility rules - REMOVED object → animation direct connection
 export const PORT_COMPATIBILITY: Record<PortType, PortType[]> = {
-  object: ['object', 'animation', 'data'],
-  animation: ['animation', 'object', 'scene', 'data'], // Animation can connect to object (smart ports)
+  object: ['object', 'data'], // Removed 'animation' - must go through Insert node
+  animation: ['animation', 'scene', 'data'],
   data: ['data', 'boolean', 'trigger'],
   boolean: ['boolean', 'trigger', 'data'],
   trigger: ['trigger', 'animation', 'data'],

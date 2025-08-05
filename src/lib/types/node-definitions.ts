@@ -7,7 +7,7 @@ export interface NodeDefinition {
   type: string;
   label: string;
   description: string;
-  category: 'geometry' | 'animation' | 'logic' | 'output';
+  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output';
   ports: NodePortConfig;
   properties: NodePropertyConfig;
 }
@@ -74,6 +74,23 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
+// Insert Node Definition
+const insertDefinition: NodeDefinition = {
+  type: 'insert',
+  label: 'Insert',
+  description: 'Controls when an object appears in the timeline',
+  category: 'timing',
+  ports: {
+    inputs: [{ id: 'object', type: 'object', label: 'Object' }],
+    outputs: [{ id: 'object', type: 'object', label: 'Timed Object' }]
+  },
+  properties: {
+    properties: [
+      { key: 'appearanceTime', type: 'number', label: 'Appearance Time (seconds)', min: 0, step: 0.1, defaultValue: 0 }
+    ]
+  }
+};
+
 // Animation Node Definition
 const animationDefinition: NodeDefinition = {
   type: 'animation',
@@ -81,13 +98,12 @@ const animationDefinition: NodeDefinition = {
   description: 'Timeline-based animation container',
   category: 'animation',
   ports: {
-    inputs: [{ id: 'input', type: 'object', label: 'Input' }], // Single smart port
+    inputs: [{ id: 'object', type: 'object', label: 'Object' }],
     outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
   },
   properties: {
     properties: [
       { key: 'duration', type: 'number', label: 'Duration (seconds)', min: 0.1, step: 0.1, defaultValue: 3 }
-      // tracks property handled separately as it's complex
     ]
   }
 };
@@ -132,6 +148,7 @@ export const NODE_DEFINITIONS: Record<string, NodeDefinition> = {
   triangle: triangleDefinition,
   circle: circleDefinition,
   rectangle: rectangleDefinition,
+  insert: insertDefinition,
   animation: animationDefinition,
   scene: sceneDefinition
 };

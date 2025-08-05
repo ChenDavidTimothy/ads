@@ -14,6 +14,7 @@ import type { NodeData } from "../types/nodes";
 interface ExecutionPath {
   objectId: string;
   geometryNode: Node<NodeData>;
+  insertNode?: Node<NodeData>;
   animationNodes: Node<NodeData>[];
 }
 
@@ -93,6 +94,69 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
+// Insert node executor
+class InsertNodeExecutor implements NodeExecutor {
+  canHandle(nodeType: string): boolean {
+    return nodeType === 'insert';
+  }
+
+  async execute(
+    node: Node<NodeData>, 
+    context: ExecutionContext, 
+    connections: Edge[]
+  ): Promise<void> {
+    const data = node.data as any;
+    const input = getConnectedInput(context, connections, node.id, 'object');
+    
+    if (!input) {
+      throw new Error(`Insert node ${node.id} missing required object input`);
+    }
+
+    let timedObject;
+
+    if (data.appearanceTime > 0) {
+      // Object appears later - start invisible
+      timedObject = {
+        ...input.data,
+        initialOpacity: 0
+      };
+
+      // Create instant appearance animation at specified time
+      const appearAnimation = {
+        objectId: input.data.id,
+        type: 'fade' as const,
+        startTime: data.appearanceTime,
+        duration: 0.01, // Nearly instant
+        easing: 'linear' as const,
+        properties: {
+          from: 0,
+          to: 1
+        }
+      };
+
+      context.sceneAnimations.push(appearAnimation);
+    } else {
+      // Object appears immediately (t=0) - fully visible
+      timedObject = {
+        ...input.data,
+        initialOpacity: 1
+      };
+    }
+
+    // Update scene object in context
+    const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
+    if (objectIndex !== -1) {
+      context.sceneObjects[objectIndex] = timedObject;
+    }
+
+    // CRITICAL: Advance currentTime to when object becomes present
+    context.currentTime = Math.max(context.currentTime, data.appearanceTime);
+
+    // Output the timed object
+    setNodeOutput(context, node.id, 'object', 'object', timedObject);
+  }
+}
+
 // Animation node executor
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
@@ -106,28 +170,16 @@ class AnimationNodeExecutor implements NodeExecutor {
   ): Promise<void> {
     const data = node.data as any;
     
-    // Get input from single smart port
-    const input = getConnectedInput(context, connections, node.id, 'input');
+    // Get input from object port
+    const input = getConnectedInput(context, connections, node.id, 'object');
     
     if (!input) {
-      throw new Error(`Animation node ${node.id} missing required input`);
+      throw new Error(`Animation node ${node.id} missing required object input`);
     }
 
-    let objectId: string;
-    
-    if (input.type === 'object') {
-      // Direct connection from geometry object
-      objectId = input.data.id;
-    } else if (input.type === 'animation') {
-      // Chained from previous animation - inherit object ID
-      objectId = input.data[0]?.objectId; // Get from first animation in chain
-      if (!objectId) {
-        throw new Error(`Animation node ${node.id} cannot determine target object from animation chain`);
-      }
-    } else {
-      throw new Error(`Animation node ${node.id} received unsupported input type: ${input.type}`);
-    }
+    const objectId = input.data.id;
 
+    // CRITICAL FIX: Use accumulated currentTime as base (after Insert timing)
     const animations = this.convertTracksToAnimations(
       data.tracks || [],
       objectId,
@@ -136,7 +188,7 @@ class AnimationNodeExecutor implements NodeExecutor {
 
     context.sceneAnimations.push(...animations);
     
-    // Advance time for this execution path only
+    // Advance time for this execution path
     context.currentTime += data.duration;
 
     // Output animation for chaining
@@ -208,18 +260,22 @@ class SceneNodeExecutor implements NodeExecutor {
 export class ExecutionEngine {
   private executors: NodeExecutor[] = [
     new GeometryNodeExecutor(),
+    new InsertNodeExecutor(),
     new AnimationNodeExecutor(),
     new SceneNodeExecutor()
   ];
 
   async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
+    // CRITICAL FIX: Validate no invalid connections exist
+    this.validateConnections(nodes, edges);
+    
     // Validate scene requirements
     this.validateScene(nodes);
     
     // Create global context for final scene assembly
     const globalContext = createExecutionContext();
     
-    // Find execution paths per geometry object (like original)
+    // Find execution paths per geometry object
     const executionPaths = this.findExecutionPaths(nodes, edges);
     
     // Execute each path independently with separate timing
@@ -243,6 +299,21 @@ export class ExecutionEngine {
     return globalContext;
   }
 
+  private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
+    for (const edge of edges) {
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const targetNode = nodes.find(n => n.id === edge.target);
+      
+      if (!sourceNode || !targetNode) continue;
+      
+      // CRITICAL FIX: Block geometry -> animation direct connections
+      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
+          targetNode.type === 'animation') {
+        throw new Error(`Invalid connection: ${sourceNode.type} must connect to Insert node before Animation. Direct geometry -> animation connections are not allowed.`);
+      }
+    }
+  }
+
   private findExecutionPaths(nodes: Node<NodeData>[], edges: Edge[]): ExecutionPath[] {
     const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
     const paths: ExecutionPath[] = [];
@@ -254,13 +325,24 @@ export class ExecutionEngine {
         .filter(Boolean) as Node<NodeData>[];
 
       if (startingNodes.length > 0) {
-        paths.push({
-          objectId: geoNode.id,
-          geometryNode: geoNode,
-          animationNodes: startingNodes
-        });
+        // Check if first connected node is insert
+        const firstNode = startingNodes[0];
+        if (firstNode?.type === 'insert') {
+          paths.push({
+            objectId: geoNode.id,
+            geometryNode: geoNode,
+            insertNode: firstNode,
+            animationNodes: []
+          });
+        } else {
+          paths.push({
+            objectId: geoNode.id,
+            geometryNode: geoNode,
+            animationNodes: startingNodes
+          });
+        }
       } else {
-        // Geometry with no animations still needs to be in scene
+        // Geometry with no connections still needs to be in scene
         paths.push({
           objectId: geoNode.id,
           geometryNode: geoNode,
@@ -285,7 +367,24 @@ export class ExecutionEngine {
       markNodeExecuted(pathContext, path.geometryNode.id);
     }
 
-    // Execute animation nodes for this object
+    // Execute insert node if present
+    if (path.insertNode) {
+      const insertExecutor = this.getExecutor('insert');
+      if (insertExecutor) {
+        await insertExecutor.execute(path.insertNode, pathContext, edges);
+        markNodeExecuted(pathContext, path.insertNode.id);
+        
+        // Find nodes connected to insert
+        const insertEdges = edges.filter(edge => edge.source === path.insertNode!.id);
+        const nextNodes = insertEdges
+          .map(edge => allNodes.find(n => n.id === edge.target))
+          .filter(Boolean) as Node<NodeData>[];
+        
+        path.animationNodes.push(...nextNodes);
+      }
+    }
+
+    // Execute remaining nodes in this path
     const nodesToExecute = [...path.animationNodes];
     const executedNodes = new Set<string>();
 

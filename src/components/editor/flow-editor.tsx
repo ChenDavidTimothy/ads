@@ -15,11 +15,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { TriangleNode } from "./nodes/triangle-node";
-import { CircleNode } from "./nodes/circle-node";
-import { RectangleNode } from "./nodes/rectangle-node";
-import { AnimationNode } from "./nodes/animation-node";
-import { SceneNode } from "./nodes/scene-node";
+import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, SceneNode } from "./nodes";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "./property-panel";
@@ -100,6 +96,7 @@ export function FlowEditor() {
     triangle: TriangleNode,
     circle: CircleNode,
     rectangle: RectangleNode,
+    insert: InsertNode,
     animation: (props: any) => (
       <AnimationNode 
         {...props} 
