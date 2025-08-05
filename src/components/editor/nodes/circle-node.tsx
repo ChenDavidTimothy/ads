@@ -1,4 +1,4 @@
-// src/components/editor/nodes/circle-node.tsx
+// src/components/editor/nodes/circle-node.tsx - Updated with user-defined names
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -10,6 +10,10 @@ import type { CircleNodeData } from "@/lib/types/nodes";
 export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
   const nodeDefinition = getNodeDefinition('circle');
   
+  // Display both node name and object name
+  const nodeName = data.userDefinedName || "Circle";
+  const objectName = data.objectName || "Circle Object";
+  
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
       <CardHeader className="p-0 pb-3">
@@ -20,7 +24,10 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
           >
             ●
           </div>
-          <span className="font-semibold text-white">Circle</span>
+          <div className="flex flex-col">
+            <span className="font-semibold text-white text-sm">{nodeName}</span>
+            <span className="text-xs text-gray-400">{objectName}</span>
+          </div>
         </div>
       </CardHeader>
 
@@ -36,7 +43,6 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
         </div>
       </CardContent>
 
-      {/* Render output ports */}
       {nodeDefinition?.ports.outputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -45,6 +51,7 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.circle.handle} !border-2 !border-white`}
           style={{ top: `${50 + (index * 20)}%` }}
+          title={`Output: ${objectName}`}
         />
       ))}
     </Card>

@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx
+// src/components/editor/flow-editor.tsx - River flow aware editor
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -10,6 +10,7 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   type Node,
+  type Edge,
   type Connection,
   type NodeTypes,
 } from "reactflow";
@@ -24,7 +25,7 @@ import { useFlowToScene } from "@/hooks/use-flow-to-scene";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
-import { arePortsCompatible } from "@/lib/types/ports";
+import { arePortsCompatible, type PathFilter } from "@/lib/types/ports";
 import { api } from "@/trpc/react";
 import type { 
   NodeData, 
@@ -33,6 +34,11 @@ import type {
   SceneNodeData,
   AnimationTrack 
 } from "@/lib/types/nodes";
+
+// River flow aware edge type
+interface RiverFlowEdge extends Edge {
+  pathFilter?: PathFilter;
+}
 
 // Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
@@ -43,7 +49,6 @@ function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
 }
 
-// Interfaces for timeline modal
 interface TimelineModalState {
   isOpen: boolean;
   nodeId: string | null;
@@ -58,10 +63,17 @@ interface SceneConfig {
   videoCrf: number;
 }
 
+type SelectionType = 'node' | 'edge';
+
+interface SelectionState {
+  type: SelectionType;
+  id: string;
+}
+
 export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<RiverFlowEdge>([]);
+  const [selection, setSelection] = useState<SelectionState | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
     isOpen: false, 
@@ -116,6 +128,39 @@ export function FlowEditor() {
     );
   }, [setNodes]);
 
+  // River flow aware edge path filter update
+  const updateEdgePathFilter = useCallback((edgeId: string, pathFilter: PathFilter) => {
+    setEdges((eds) => {
+      const updatedEdges = eds.map((edge) =>
+        edge.id === edgeId
+          ? { ...edge, pathFilter }
+          : edge
+      );
+      
+      // Implement automatic exclusive routing
+      const updatedEdge = updatedEdges.find(e => e.id === edgeId);
+      if (updatedEdge && pathFilter.filterEnabled && pathFilter.selectedObjectIds.length > 0) {
+        // Find parallel paths from same source
+        const parallelPaths = updatedEdges.filter(e => 
+          e.source === updatedEdge.source && 
+          e.sourceHandle === updatedEdge.sourceHandle && 
+          e.id !== edgeId
+        );
+        
+        // Remove selected objects from parallel paths
+        for (const parallelEdge of parallelPaths) {
+          if (parallelEdge.pathFilter?.filterEnabled) {
+            parallelEdge.pathFilter.selectedObjectIds = parallelEdge.pathFilter.selectedObjectIds.filter(
+              objId => !pathFilter.selectedObjectIds.includes(objId)
+            );
+          }
+        }
+      }
+      
+      return updatedEdges;
+    });
+  }, [setEdges]);
+
   const handleOpenTimelineEditor = useCallback((nodeId: string) => {
     setTimelineModalState({ isOpen: true, nodeId });
   }, []);
@@ -156,24 +201,6 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Check for object → multiple Insert violation
-      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
-          targetNode.type === 'insert') {
-        
-        const existingInsertConnection = edges.find(edge => 
-          edge.source === sourceNode.id && 
-          nodes.find(n => n.id === edge.target)?.type === 'insert'
-        );
-        
-        if (existingInsertConnection) {
-          toast.error(
-            "Connection not allowed", 
-            `Object already connected to Insert node. Each object can only connect to one Insert node.`
-          );
-          return;
-        }
-      }
-      
       const sourceNodeDef = getNodeDefinition(sourceNode.type!);
       const targetNodeDef = getNodeDefinition(targetNode.type!);
       
@@ -195,13 +222,40 @@ export function FlowEditor() {
         return;
       }
       
-      setEdges((eds) => addEdge(params, eds));
+      // Create river flow aware edge
+      const newEdge: RiverFlowEdge = {
+        ...params,
+        id: `${params.source}-${params.target}-${Date.now()}`,
+        pathFilter: {
+          selectedObjectIds: [],
+          filterEnabled: false
+        }
+      };
+      
+      setEdges((eds) => addEdge(newEdge, eds) as RiverFlowEdge[]);
+      
+      // Check if this creates branching - suggest filtering
+      const existingBranches = edges.filter(e => 
+        e.source === params.source && e.sourceHandle === params.sourceHandle
+      );
+      
+      if (existingBranches.length > 0) {
+        toast.info("Branching detected", "Consider enabling path filtering for exclusive object routing");
+      }
     },
     [nodes, edges, setEdges, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
+    setSelection({ type: 'node', id: node.id });
+  }, []);
+
+  const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelection({ type: 'edge', id: edge.id });
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelection(null);
   }, []);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
@@ -268,11 +322,15 @@ export function FlowEditor() {
   }, [videoUrl]);
 
   const selectedNode = useMemo(
-    () => nodes.find((node) => node.id === selectedNodeId),
-    [nodes, selectedNodeId]
+    () => selection?.type === 'node' ? nodes.find((node) => node.id === selection.id) : undefined,
+    [nodes, selection]
   );
 
-  // Get timeline node data with proper type checking
+  const selectedEdge = useMemo(
+    () => selection?.type === 'edge' ? edges.find((edge) => edge.id === selection.id) : undefined,
+    [edges, selection]
+  );
+
   const getTimelineNodeData = useCallback(() => {
     if (!timelineNode) return { duration: 3, tracks: [] };
     
@@ -300,6 +358,8 @@ export function FlowEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
           className="bg-gray-900"
@@ -359,15 +419,34 @@ export function FlowEditor() {
         )}
       </div>
 
-      {selectedNode && (
+      {(selectedNode || selectedEdge) && (
         <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
-          </h3>
-          <PropertyPanel 
-            node={selectedNode}
-            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.id, newData)}
-          />
+          {selectedNode && (
+            <>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {(selectedNode.data as Record<string, unknown>).userDefinedName as string || 
+                 `${selectedNode.type?.charAt(0).toUpperCase()}${selectedNode.type?.slice(1)}`} Properties
+              </h3>
+              <PropertyPanel 
+                node={selectedNode}
+                onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.id, newData)}
+              />
+            </>
+          )}
+          
+          {selectedEdge && (
+            <>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Connection Properties
+              </h3>
+              <PropertyPanel 
+                edge={selectedEdge}
+                nodes={nodes}
+                edges={edges}
+                onChange={(pathFilter: PathFilter) => updateEdgePathFilter(selectedEdge.id, pathFilter)}
+              />
+            </>
+          )}
         </div>
       )}
 

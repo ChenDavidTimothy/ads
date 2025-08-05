@@ -1,4 +1,4 @@
-// src/components/editor/nodes/insert-node.tsx
+// src/components/editor/nodes/insert-node.tsx - Updated with user-defined names
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -9,10 +9,10 @@ import type { InsertNodeData } from "@/lib/types/nodes";
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const nodeDefinition = getNodeDefinition('insert');
+  const displayName = data.userDefinedName || "Insert";
   
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
-      {/* Render input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -29,7 +29,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           <div className="w-6 h-6 bg-orange-600 flex items-center justify-center rounded text-white font-bold text-sm">
             ⏰
           </div>
-          <span className="font-semibold text-white">Insert</span>
+          <span className="font-semibold text-white">{displayName}</span>
         </div>
       </CardHeader>
 
@@ -42,7 +42,6 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         )}
       </CardContent>
 
-      {/* Render output ports */}
       {nodeDefinition?.ports.outputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -51,6 +50,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.insert.handle} !border-2 !border-white`}
           style={{ top: `${50 + (index * 20)}%` }}
+          title={`Output: Timed ${displayName}`}
         />
       ))}
     </Card>

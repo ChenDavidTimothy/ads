@@ -1,18 +1,20 @@
-// src/lib/types/nodes.ts - Updated to match API schema
+// src/lib/types/nodes.ts - Proper dual naming system as per feature spec
 import type { Point2D } from "@/animation/types";
 
-// Base node data interface
+// Base node data interface with node naming
 export interface BaseNodeData {
   id: string;
+  userDefinedName?: string; // Node name (e.g., "Intro Animation")
 }
 
-// Geometry node data types
+// Geometry node data types with object naming
 export interface TriangleNodeData extends BaseNodeData {
   size: number;
   color: string;
   strokeColor: string;
   strokeWidth: number;
   position: Point2D;
+  objectName?: string; // Object name (e.g., "Main Logo")
 }
 
 export interface CircleNodeData extends BaseNodeData {
@@ -21,6 +23,7 @@ export interface CircleNodeData extends BaseNodeData {
   strokeColor: string;
   strokeWidth: number;
   position: Point2D;
+  objectName?: string;
 }
 
 export interface RectangleNodeData extends BaseNodeData {
@@ -30,6 +33,7 @@ export interface RectangleNodeData extends BaseNodeData {
   strokeColor: string;
   strokeWidth: number;
   position: Point2D;
+  objectName?: string;
 }
 
 export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
@@ -39,7 +43,7 @@ export interface InsertNodeData extends BaseNodeData {
   appearanceTime: number;
 }
 
-// Animation track properties - aligned with API schema
+// Animation track properties
 export interface MoveTrackProperties {
   from: Point2D;
   to: Point2D;
@@ -65,7 +69,7 @@ export interface ColorTrackProperties {
   property: 'fill' | 'stroke';
 }
 
-// Animation track types - aligned with API schema
+// Animation track types
 export interface BaseAnimationTrack {
   id: string;
   startTime: number;
@@ -123,3 +127,19 @@ export type NodeData = GeometryNodeData | InsertNodeData | AnimationNodeData | S
 // Node type literal types
 export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
 export type NodeType = GeometryNodeType | 'insert' | 'animation' | 'scene';
+
+// Object stream types - names propagate through connections
+export interface StreamObject {
+  objectId: string;
+  objectName?: string; // Object name propagates through flow
+  nodeName?: string;   // Source node name for context
+  data: unknown;
+  effectiveStartTime: number;
+  completionTime?: number;
+}
+
+export interface ObjectStream {
+  objects: StreamObject[];
+  sourceNodeId: string;
+  sourcePortId: string;
+}
