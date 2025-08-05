@@ -41,7 +41,6 @@ class GeometryNodeExecutor implements NodeExecutor {
     const sceneObject = this.buildSceneObject(node);
     context.sceneObjects.push(sceneObject);
     
-    // Output the geometry object
     setNodeOutput(context, node.id, 'object', 'object', sceneObject);
   }
 
@@ -115,18 +114,16 @@ class InsertNodeExecutor implements NodeExecutor {
     let timedObject;
 
     if (data.appearanceTime > 0) {
-      // Object appears later - start invisible
       timedObject = {
         ...input.data,
         initialOpacity: 0
       };
 
-      // Create instant appearance animation at specified time
       const appearAnimation = {
         objectId: input.data.id,
         type: 'fade' as const,
         startTime: data.appearanceTime,
-        duration: 0.01, // Nearly instant
+        duration: 0.01,
         easing: 'linear' as const,
         properties: {
           from: 0,
@@ -136,24 +133,19 @@ class InsertNodeExecutor implements NodeExecutor {
 
       context.sceneAnimations.push(appearAnimation);
     } else {
-      // Object appears immediately (t=0) - fully visible
       timedObject = {
         ...input.data,
         initialOpacity: 1
       };
     }
 
-    // Update scene object in context
     const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
     if (objectIndex !== -1) {
       context.sceneObjects[objectIndex] = timedObject;
     }
 
-    // CRITICAL: Advance currentTime to when object becomes present
     context.currentTime = Math.max(context.currentTime, data.appearanceTime);
-
-    // Output the timed object
-    setNodeOutput(context, node.id, 'object', 'object', timedObject);
+    setNodeOutput(context, node.id, 'object', 'timed_object', timedObject);
   }
 }
 
@@ -169,17 +161,13 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as any;
-    
-    // Get input from object port
     const input = getConnectedInput(context, connections, node.id, 'object');
     
     if (!input) {
-      throw new Error(`Animation node ${node.id} missing required object input`);
+      throw new Error(`Animation node ${node.id} missing required timed object input`);
     }
 
     const objectId = input.data.id;
-
-    // CRITICAL FIX: Use accumulated currentTime as base (after Insert timing)
     const animations = this.convertTracksToAnimations(
       data.tracks || [],
       objectId,
@@ -187,11 +175,8 @@ class AnimationNodeExecutor implements NodeExecutor {
     );
 
     context.sceneAnimations.push(...animations);
-    
-    // Advance time for this execution path
     context.currentTime += data.duration;
 
-    // Output animation for chaining
     setNodeOutput(context, node.id, 'animation', 'animation', animations);
   }
 
@@ -252,7 +237,6 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
-    // Scene node just collects configuration
     setNodeOutput(context, node.id, 'scene', 'scene', node.data);
   }
 }
@@ -266,31 +250,21 @@ export class ExecutionEngine {
   ];
 
   async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
-    // CRITICAL FIX: Validate no invalid connections exist
-    this.validateConnections(nodes, edges);
-    
-    // Validate scene requirements
     this.validateScene(nodes);
     
-    // Create global context for final scene assembly
     const globalContext = createExecutionContext();
+    const executionPaths = this.findConnectedPaths(nodes, edges);
     
-    // Find execution paths per geometry object
-    const executionPaths = this.findExecutionPaths(nodes, edges);
-    
-    // Execute each path independently with separate timing
     for (const path of executionPaths) {
       const pathContext = createExecutionContext();
-      pathContext.currentTime = 0; // Independent timing per path
+      pathContext.currentTime = 0;
       
       await this.executeExecutionPath(path, pathContext, nodes, edges);
       
-      // Merge path results into global context
       globalContext.sceneObjects.push(...pathContext.sceneObjects);
       globalContext.sceneAnimations.push(...pathContext.sceneAnimations);
     }
     
-    // Execute scene node separately (only once)
     const sceneNode = nodes.find(n => n.type === 'scene');
     if (sceneNode) {
       await this.getExecutor('scene')?.execute(sceneNode, globalContext, edges);
@@ -299,59 +273,72 @@ export class ExecutionEngine {
     return globalContext;
   }
 
-  private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
-    for (const edge of edges) {
+  private findConnectedPaths(nodes: Node<NodeData>[], edges: Edge[]): ExecutionPath[] {
+    const sceneNode = nodes.find(n => n.type === 'scene');
+    if (!sceneNode) return [];
+    
+    const visited = new Set<string>();
+    const paths: ExecutionPath[] = [];
+    
+    this.traverseBackward(sceneNode, nodes, edges, visited, paths);
+    return paths;
+  }
+
+  private traverseBackward(
+    currentNode: Node<NodeData>,
+    nodes: Node<NodeData>[],
+    edges: Edge[],
+    visited: Set<string>,
+    paths: ExecutionPath[]
+  ): void {
+    if (visited.has(currentNode.id)) return;
+    visited.add(currentNode.id);
+
+    const incomingEdges = edges.filter(edge => edge.target === currentNode.id);
+    
+    for (const edge of incomingEdges) {
       const sourceNode = nodes.find(n => n.id === edge.source);
-      const targetNode = nodes.find(n => n.id === edge.target);
-      
-      if (!sourceNode || !targetNode) continue;
-      
-      // CRITICAL FIX: Block geometry -> animation direct connections
-      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
-          targetNode.type === 'animation') {
-        throw new Error(`Invalid connection: ${sourceNode.type} must connect to Insert node before Animation. Direct geometry -> animation connections are not allowed.`);
+      if (!sourceNode) continue;
+
+      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!)) {
+        const path = this.buildExecutionPath(sourceNode, nodes, edges);
+        if (path) paths.push(path);
+      } else {
+        this.traverseBackward(sourceNode, nodes, edges, visited, paths);
       }
     }
   }
 
-  private findExecutionPaths(nodes: Node<NodeData>[], edges: Edge[]): ExecutionPath[] {
-    const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
-    const paths: ExecutionPath[] = [];
+  private buildExecutionPath(
+    geometryNode: Node<NodeData>,
+    nodes: Node<NodeData>[],
+    edges: Edge[]
+  ): ExecutionPath | null {
+    const path: ExecutionPath = {
+      objectId: geometryNode.id,
+      geometryNode,
+      animationNodes: []
+    };
 
-    for (const geoNode of geometryNodes) {
-      const connectedEdges = edges.filter(edge => edge.source === geoNode.id);
-      const startingNodes = connectedEdges
-        .map(edge => nodes.find(n => n.id === edge.target))
-        .filter(Boolean) as Node<NodeData>[];
+    const nextEdges = edges.filter(edge => edge.source === geometryNode.id);
+    if (nextEdges.length === 0) return path;
 
-      if (startingNodes.length > 0) {
-        // Check if first connected node is insert
-        const firstNode = startingNodes[0];
-        if (firstNode?.type === 'insert') {
-          paths.push({
-            objectId: geoNode.id,
-            geometryNode: geoNode,
-            insertNode: firstNode,
-            animationNodes: []
-          });
-        } else {
-          paths.push({
-            objectId: geoNode.id,
-            geometryNode: geoNode,
-            animationNodes: startingNodes
-          });
+    const nextNode = nodes.find(n => n.id === nextEdges[0]!.target);
+    if (!nextNode) return path;
+
+    if (nextNode.type === 'insert') {
+      path.insertNode = nextNode;
+      
+      const insertEdges = edges.filter(edge => edge.source === nextNode.id);
+      for (const edge of insertEdges) {
+        const animNode = nodes.find(n => n.id === edge.target);
+        if (animNode && animNode.type === 'animation') {
+          path.animationNodes.push(animNode);
         }
-      } else {
-        // Geometry with no connections still needs to be in scene
-        paths.push({
-          objectId: geoNode.id,
-          geometryNode: geoNode,
-          animationNodes: []
-        });
       }
     }
 
-    return paths;
+    return path;
   }
 
   private async executeExecutionPath(
@@ -360,52 +347,24 @@ export class ExecutionEngine {
     allNodes: Node<NodeData>[],
     edges: Edge[]
   ): Promise<void> {
-    // Execute geometry node first
     const geometryExecutor = this.getExecutor(path.geometryNode.type!);
     if (geometryExecutor) {
       await geometryExecutor.execute(path.geometryNode, pathContext, edges);
       markNodeExecuted(pathContext, path.geometryNode.id);
     }
 
-    // Execute insert node if present
     if (path.insertNode) {
       const insertExecutor = this.getExecutor('insert');
       if (insertExecutor) {
         await insertExecutor.execute(path.insertNode, pathContext, edges);
         markNodeExecuted(pathContext, path.insertNode.id);
-        
-        // Find nodes connected to insert
-        const insertEdges = edges.filter(edge => edge.source === path.insertNode!.id);
-        const nextNodes = insertEdges
-          .map(edge => allNodes.find(n => n.id === edge.target))
-          .filter(Boolean) as Node<NodeData>[];
-        
-        path.animationNodes.push(...nextNodes);
       }
     }
 
-    // Execute remaining nodes in this path
-    const nodesToExecute = [...path.animationNodes];
-    const executedNodes = new Set<string>();
-
-    while (nodesToExecute.length > 0) {
-      const currentNode = nodesToExecute.shift()!;
-      
-      if (executedNodes.has(currentNode.id)) continue;
-      executedNodes.add(currentNode.id);
-
-      const executor = this.getExecutor(currentNode.type!);
+    for (const animNode of path.animationNodes) {
+      const executor = this.getExecutor(animNode.type!);
       if (executor) {
-        await executor.execute(currentNode, pathContext, edges);
-        
-        // Find next nodes in this path
-        const nextEdges = edges.filter(edge => edge.source === currentNode.id);
-        const nextNodes = nextEdges
-          .map(edge => allNodes.find(n => n.id === edge.target))
-          .filter(node => node && node.type !== 'scene') // Scene handled separately
-          .filter(Boolean) as Node<NodeData>[];
-        
-        nodesToExecute.push(...nextNodes);
+        await executor.execute(animNode, pathContext, edges);
       }
     }
   }

@@ -63,6 +63,17 @@ export function FlowEditor() {
     return sceneNodes[0]!;
   }, [nodes]);
 
+  const isSceneConnected = useMemo(() => {
+    const sceneNode = nodes.find(n => n.type === 'scene');
+    if (!sceneNode) return false;
+    return edges.some(edge => edge.target === sceneNode.id);
+  }, [nodes, edges]);
+
+  const canGenerate = useMemo(() => {
+    const hasScene = nodes.some(n => n.type === 'scene');
+    return hasScene && isSceneConnected;
+  }, [nodes, isSceneConnected]);
+
   const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
     setNodes((nds) =>
       nds.map((node) =>
@@ -113,7 +124,6 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Validate port compatibility
       const sourceNodeDef = getNodeDefinition(sourceNode.type!);
       const targetNodeDef = getNodeDefinition(targetNode.type!);
       
@@ -153,7 +163,6 @@ export function FlowEditor() {
       }
     }
 
-    // Validate node type exists in definitions
     const nodeDefinition = getNodeDefinition(nodeType as NodeType);
     if (!nodeDefinition) {
       alert(`Unknown node type: ${nodeType}`);
@@ -238,12 +247,20 @@ export function FlowEditor() {
         <div className="absolute top-4 right-4 space-y-2">
           <Button
             onClick={handleGenerateScene}
-            disabled={generateScene.isPending}
+            disabled={generateScene.isPending || !canGenerate}
             variant="success"
             size="sm"
           >
             {generateScene.isPending ? "Generating..." : "Generate Video"}
           </Button>
+          
+          {!canGenerate && (
+            <div className="text-xs text-yellow-400 bg-gray-800 p-2 rounded max-w-48">
+              {!nodes.some(n => n.type === 'scene') ? 
+                "Add Scene node to generate video" :
+                "Connect animation to Scene node"}
+            </div>
+          )}
           
           {videoUrl && (
             <Button

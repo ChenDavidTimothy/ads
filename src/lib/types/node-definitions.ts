@@ -74,7 +74,7 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
-// Insert Node Definition
+// Insert Node Definition - outputs timed_object
 const insertDefinition: NodeDefinition = {
   type: 'insert',
   label: 'Insert',
@@ -82,7 +82,7 @@ const insertDefinition: NodeDefinition = {
   category: 'timing',
   ports: {
     inputs: [{ id: 'object', type: 'object', label: 'Object' }],
-    outputs: [{ id: 'object', type: 'object', label: 'Timed Object' }]
+    outputs: [{ id: 'object', type: 'timed_object', label: 'Timed Object' }]
   },
   properties: {
     properties: [
@@ -91,14 +91,14 @@ const insertDefinition: NodeDefinition = {
   }
 };
 
-// Animation Node Definition
+// Animation Node Definition - accepts only timed_object
 const animationDefinition: NodeDefinition = {
   type: 'animation',
   label: 'Animation',
   description: 'Timeline-based animation container',
   category: 'animation',
   ports: {
-    inputs: [{ id: 'object', type: 'object', label: 'Object' }],
+    inputs: [{ id: 'object', type: 'timed_object', label: 'Timed Object' }],
     outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
   },
   properties: {
