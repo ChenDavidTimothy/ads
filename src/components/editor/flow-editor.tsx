@@ -1,3 +1,4 @@
+// src/components/editor/flow-editor.tsx
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -25,6 +26,8 @@ import { PropertyPanel } from "./property-panel";
 import { Button } from "@/components/ui/button";
 import { useFlowToScene } from "@/hooks/use-flow-to-scene";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
+import { getNodeDefinition } from "@/lib/types/node-definitions";
+import { arePortsCompatible } from "@/lib/types/ports";
 import { api } from "@/trpc/react";
 import type { NodeData, NodeType } from "@/lib/types/nodes";
 
@@ -113,6 +116,28 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
+      // Validate port compatibility
+      const sourceNodeDef = getNodeDefinition(sourceNode.type!);
+      const targetNodeDef = getNodeDefinition(targetNode.type!);
+      
+      if (!sourceNodeDef || !targetNodeDef) {
+        alert("Cannot connect: Unknown node type");
+        return;
+      }
+      
+      const sourcePort = sourceNodeDef.ports.outputs.find(p => p.id === params.sourceHandle);
+      const targetPort = targetNodeDef.ports.inputs.find(p => p.id === params.targetHandle);
+      
+      if (!sourcePort || !targetPort) {
+        alert("Cannot connect: Invalid port");
+        return;
+      }
+      
+      if (!arePortsCompatible(sourcePort.type, targetPort.type)) {
+        alert(`Cannot connect: ${sourcePort.type} output incompatible with ${targetPort.type} input`);
+        return;
+      }
+      
       setEdges((eds) => addEdge(params, eds));
     },
     [nodes, setEdges]
@@ -131,6 +156,13 @@ export function FlowEditor() {
       }
     }
 
+    // Validate node type exists in definitions
+    const nodeDefinition = getNodeDefinition(nodeType as NodeType);
+    if (!nodeDefinition) {
+      alert(`Unknown node type: ${nodeType}`);
+      return;
+    }
+
     const newNode: Node<NodeData> = {
       id: `${nodeType}-${Date.now()}`,
       type: nodeType,
@@ -140,11 +172,11 @@ export function FlowEditor() {
     setNodes((nds) => [...nds, newNode]);
   }, [nodes, setNodes]);
 
-  const handleGenerateScene = useCallback(() => {
+  const handleGenerateScene = useCallback(async () => {
     try {
       const sceneNode = validateSceneNodes();
       
-      const scene = convertFlowToScene(nodes, edges);
+      const scene = await convertFlowToScene(nodes, edges);
       if (scene) {
         setVideoUrl(null);
         

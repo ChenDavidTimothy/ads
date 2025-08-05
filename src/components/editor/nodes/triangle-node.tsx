@@ -1,11 +1,15 @@
+// src/components/editor/nodes/triangle-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS } from "@/lib/constants/editor";
+import { getNodeDefinition } from "@/lib/types/node-definitions";
 import type { TriangleNodeData } from "@/lib/types/nodes";
 
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
+  const nodeDefinition = getNodeDefinition('triangle');
+  
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
       <CardHeader className="p-0 pb-3">
@@ -32,12 +36,17 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
         </div>
       </CardContent>
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="object"
-        className={`w-3 h-3 ${NODE_COLORS.triangle.handle} !border-2 !border-white`}
-      />
+      {/* Render output ports */}
+      {nodeDefinition?.ports.outputs.map((port, index) => (
+        <Handle
+          key={port.id}
+          type="source"
+          position={Position.Right}
+          id={port.id}
+          className={`w-3 h-3 ${NODE_COLORS.triangle.handle} !border-2 !border-white`}
+          style={{ top: `${50 + (index * 20)}%` }}
+        />
+      ))}
     </Card>
   );
 }

@@ -1,8 +1,10 @@
+// src/components/editor/nodes/animation-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS, TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
+import { getNodeDefinition } from "@/lib/types/node-definitions";
 import type { AnimationNodeData } from "@/lib/types/nodes";
 
 interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
@@ -10,6 +12,8 @@ interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
 }
 
 export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNodeProps) {
+  const nodeDefinition = getNodeDefinition('animation');
+  
   const handleDoubleClick = () => {
     if (onOpenEditor && id) {
       onOpenEditor(id);
@@ -26,12 +30,17 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
       className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-gray-750" 
       onDoubleClick={handleDoubleClick}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="object"
-        className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
-      />
+      {/* Render input ports */}
+      {nodeDefinition?.ports.inputs.map((port, index) => (
+        <Handle
+          key={port.id}
+          type="target"
+          position={Position.Left}
+          id={port.id}
+          className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
+          style={{ top: `50%` }}
+        />
+      ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center justify-between">
@@ -77,12 +86,17 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
         </div>
       </CardContent>
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="animation"
-        className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
-      />
+      {/* Render output ports */}
+      {nodeDefinition?.ports.outputs.map((port, index) => (
+        <Handle
+          key={port.id}
+          type="source"
+          position={Position.Right}
+          id={port.id}
+          className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
+          style={{ top: `${50}%` }}
+        />
+      ))}
     </Card>
   );
 }

@@ -1,11 +1,15 @@
+// src/components/editor/nodes/scene-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS } from "@/lib/constants/editor";
+import { getNodeDefinition } from "@/lib/types/node-definitions";
 import type { SceneNodeData } from "@/lib/types/nodes";
 
 export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
+  const nodeDefinition = getNodeDefinition('scene');
+  
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
     if (width === 1280 && height === 720) return "HD";
@@ -22,13 +26,17 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
 
   return (
     <Card selected={selected} className="p-4 min-w-[220px]">
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="animations"
-        className={`w-3 h-3 ${NODE_COLORS.scene.handle} !border-2 !border-white`}
-        style={{ top: "50%" }}
-      />
+      {/* Render input ports */}
+      {nodeDefinition?.ports.inputs.map((port, index) => (
+        <Handle
+          key={port.id}
+          type="target"
+          position={Position.Left}
+          id={port.id}
+          className={`w-3 h-3 ${NODE_COLORS.scene.handle} !border-2 !border-white`}
+          style={{ top: `${50 + (index * 20)}%` }}
+        />
+      ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
