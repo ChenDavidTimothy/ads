@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with tracking system
+// src/components/editor/flow-editor.tsx - Updated with backend execution
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -20,11 +20,10 @@ import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
 import { Button } from "@/components/ui/button";
-import { useFlowToScene } from "@/hooks/use-flow-to-scene";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
-import { getNodeDefinition } from "@/lib/types/node-definitions";
-import { arePortsCompatible } from "@/lib/types/ports";
+import { getNodeDefinition } from "@/shared/types/definitions";
+import { arePortsCompatible } from "@/shared/types/ports";
 import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { api } from "@/trpc/react";
 import type { 
@@ -33,7 +32,7 @@ import type {
   AnimationNodeData, 
   SceneNodeData,
   AnimationTrack
-} from "@/lib/types/nodes";
+} from "@/shared/types";
 
 // Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
@@ -70,12 +69,12 @@ export function FlowEditor() {
   });
   const [flowTracker] = useState(() => new FlowTracker());
 
-  const { convertFlowToScene } = useFlowToScene();
   const { toast } = useNotifications();
 
   const generateScene = api.animation.generateScene.useMutation({
     onSuccess: (data) => {
       setVideoUrl(data.videoUrl);
+      toast.success("Video generated successfully!");
     },
     onError: (error) => {
       console.error("Scene generation failed:", error);
@@ -306,25 +305,43 @@ export function FlowEditor() {
         throw new Error("Invalid scene node data");
       }
 
-      const scene = await convertFlowToScene(nodes, edges);
-      if (scene) {
-        setVideoUrl(null);
-        
-        const config: SceneConfig = {
-          width: sceneNode.data.width,
-          height: sceneNode.data.height,
-          fps: sceneNode.data.fps,
-          backgroundColor: sceneNode.data.backgroundColor,
-          videoPreset: sceneNode.data.videoPreset,
-          videoCrf: sceneNode.data.videoCrf,
-        };
-        
-        generateScene.mutate({ scene, config });
-      }
+      // UPDATED: Send raw nodes and edges to backend
+      setVideoUrl(null);
+      
+      const config: Partial<SceneConfig> = {
+        width: sceneNode.data.width,
+        height: sceneNode.data.height,
+        fps: sceneNode.data.fps,
+        backgroundColor: sceneNode.data.backgroundColor,
+        videoPreset: sceneNode.data.videoPreset,
+        videoCrf: sceneNode.data.videoCrf,
+      };
+      
+      // Convert ReactFlow nodes/edges to format expected by backend
+      const backendNodes = nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: node.data
+      }));
+      
+      const backendEdges = edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle
+      }));
+      
+      generateScene.mutate({ 
+        nodes: backendNodes, 
+        edges: backendEdges, 
+        config 
+      });
     } catch (error) {
       toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, convertFlowToScene, generateScene, validateSceneNodes, toast]);
+  }, [nodes, edges, generateScene, validateSceneNodes, toast]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {

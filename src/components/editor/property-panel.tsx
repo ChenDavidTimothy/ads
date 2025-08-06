@@ -6,14 +6,14 @@ import type { Node } from "reactflow";
 import { NumberField, ColorField, SelectField } from "@/components/ui/form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getNodeDefinition } from "@/lib/types/node-definitions";
+import { getNodeDefinition } from "@/shared/types/definitions";
 import { RESOLUTION_PRESETS } from "@/lib/constants/editor";
 import type { 
   NodeData, 
   AnimationNodeData, 
   SceneNodeData 
-} from "@/lib/types/nodes";
-import type { PropertySchema } from "@/lib/types/property-schemas";
+} from "@/shared/types/nodes";
+import type { PropertySchema } from "@/shared/types/properties";
 
 interface PropertyPanelProps {
   node: Node<NodeData>;

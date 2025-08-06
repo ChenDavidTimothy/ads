@@ -1,9 +1,9 @@
 // src/animation/scene-generator.ts
 import path from 'path';
-import type { AnimationScene } from './scene/scene';
+import type { AnimationScene } from '@/shared/types/scene';
 import { FrameGenerator, type FrameConfig } from './renderer/frame-generator';
 import { SceneRenderer, type SceneRenderConfig } from './execution/scene-renderer';
-import { validateScene } from './scene/scene';
+import { validateScene } from '@/shared/types/scene';
 import { linear } from './core/interpolation';
 
 export interface SceneAnimationConfig {

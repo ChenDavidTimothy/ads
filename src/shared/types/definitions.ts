@@ -1,7 +1,6 @@
-// src/lib/types/node-definitions.ts
-import type { NodePortConfig } from "./ports";
-import type { NodePropertyConfig } from "./property-schemas";
-import { VIDEO_PRESETS, FPS_OPTIONS } from "@/lib/constants/editor";
+// src/shared/types/definitions.ts
+import type { NodePortConfig } from './ports';
+import type { NodePropertyConfig } from './properties';
 
 export interface NodeDefinition {
   type: string;
@@ -11,6 +10,22 @@ export interface NodeDefinition {
   ports: NodePortConfig;
   properties: NodePropertyConfig;
 }
+
+// Video presets and options
+export const VIDEO_PRESETS = [
+  { value: "ultrafast", label: "Ultrafast (Low quality, fast render)" },
+  { value: "fast", label: "Fast" },
+  { value: "medium", label: "Medium (Balanced)" },
+  { value: "slow", label: "Slow (High quality, slow render)" },
+  { value: "veryslow", label: "Very Slow (Best quality)" },
+] as const;
+
+export const FPS_OPTIONS = [
+  { value: 24, label: "24 FPS (Cinema)" },
+  { value: 30, label: "30 FPS (Standard)" },
+  { value: 60, label: "60 FPS (Smooth)" },
+  { value: 120, label: "120 FPS (Ultra Smooth)" },
+] as const;
 
 // Geometry Node Definitions
 const triangleDefinition: NodeDefinition = {
@@ -74,7 +89,6 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
-// Insert Node Definition - FIXED: clear port naming
 const insertDefinition: NodeDefinition = {
   type: 'insert',
   label: 'Insert',
@@ -91,7 +105,6 @@ const insertDefinition: NodeDefinition = {
   }
 };
 
-// Animation Node Definition - FIXED: consistent port ID and type
 const animationDefinition: NodeDefinition = {
   type: 'animation',
   label: 'Animation',
@@ -108,7 +121,6 @@ const animationDefinition: NodeDefinition = {
   }
 };
 
-// Scene Node Definition - FIXED: proper input processing
 const sceneDefinition: NodeDefinition = {
   type: 'scene',
   label: 'Scene',

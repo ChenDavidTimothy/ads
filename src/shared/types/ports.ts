@@ -1,4 +1,4 @@
-// src/lib/types/ports.ts
+// src/shared/types/ports.ts
 export type PortType = 
   | 'object'        // Geometry objects
   | 'timed_object'  // Objects with timing applied by Insert node

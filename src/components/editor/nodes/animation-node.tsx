@@ -4,8 +4,8 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS, TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
-import { getNodeDefinition } from "@/lib/types/node-definitions";
-import type { AnimationNodeData } from "@/lib/types/nodes";
+import { getNodeDefinition } from "@/shared/types/definitions";
+import type { AnimationNodeData } from "@/shared/types/nodes";
 
 interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
   onOpenEditor?: (nodeId: string) => void;

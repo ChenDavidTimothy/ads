@@ -4,8 +4,8 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS } from "@/lib/constants/editor";
-import { getNodeDefinition } from "@/lib/types/node-definitions";
-import type { SceneNodeData } from "@/lib/types/nodes";
+import { getNodeDefinition } from "@/shared/types/definitions";
+import type { SceneNodeData } from "@/shared/types/nodes";
 
 export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
   const nodeDefinition = getNodeDefinition('scene');

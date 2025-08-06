@@ -11,7 +11,7 @@ import type {
   ScaleTrackProperties,
   FadeTrackProperties,
   ColorTrackProperties
-} from "../types/nodes";
+} from "@/shared/types";
 
 // Utility functions for node identification
 function getNodeShortId(nodeType: NodeType): string {

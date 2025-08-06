@@ -4,8 +4,8 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS } from "@/lib/constants/editor";
-import { getNodeDefinition } from "@/lib/types/node-definitions";
-import type { InsertNodeData } from "@/lib/types/nodes";
+import { getNodeDefinition } from "@/shared/types/definitions";
+import type { InsertNodeData } from "@/shared/types/nodes";
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const nodeDefinition = getNodeDefinition('insert');

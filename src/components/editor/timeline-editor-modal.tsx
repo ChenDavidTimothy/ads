@@ -19,7 +19,7 @@ import type {
   ScaleTrackProperties,
   FadeTrackProperties,
   ColorTrackProperties
-} from "@/lib/types/nodes";
+} from "@/shared/types/nodes";
 
 interface TimelineEditorModalProps {
   isOpen: boolean;

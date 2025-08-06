@@ -1,5 +1,5 @@
-// src/lib/execution/execution-engine.ts - CORRECTED: Proper flow architecture
-import type { Node, Edge } from "reactflow";
+// src/server/animation-processing/execution-engine.ts - CORRECTED: Proper flow architecture
+import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
@@ -8,15 +8,29 @@ import {
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
-import type { NodeData, AnimationTrack } from "../types/nodes";
-import type { SceneAnimationTrack } from "@/animation/scene/types";
+
+// ReactFlow-compatible types for server
+export interface ReactFlowNode<T = unknown> {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data: T;
+}
+
+export interface ReactFlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
 
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
   execute(
-    node: Node<NodeData>, 
+    node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: ReactFlowEdge[]
   ): Promise<void>;
 }
 
@@ -27,7 +41,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 
   async execute(
-    node: Node<NodeData>, 
+    node: ReactFlowNode<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
     // CRITICAL FIX: Only create object definition, DO NOT add to scene
@@ -38,7 +52,7 @@ class GeometryNodeExecutor implements NodeExecutor {
     setNodeOutput(context, node.data.identifier.id, 'object', 'object', objectDefinition);
   }
 
-  private buildObjectDefinition(node: Node<NodeData>) {
+  private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
     const data = node.data as Record<string, unknown>;
     const baseObject = {
       id: node.data.identifier.id,
@@ -94,9 +108,9 @@ class InsertNodeExecutor implements NodeExecutor {
   }
 
   async execute(
-    node: Node<NodeData>, 
+    node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
@@ -131,9 +145,9 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 
   async execute(
-    node: Node<NodeData>, 
+    node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
@@ -244,9 +258,9 @@ class SceneNodeExecutor implements NodeExecutor {
   }
 
   async execute(
-    node: Node<NodeData>, 
+    node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: ReactFlowEdge[]
   ): Promise<void> {
     // Scene node should receive animation inputs
     const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
@@ -279,7 +293,7 @@ export class ExecutionEngine {
     new SceneNodeExecutor()
   ];
 
-  async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
+  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     this.validateProperFlow(nodes, edges);
@@ -303,7 +317,7 @@ export class ExecutionEngine {
   }
 
   // NEW: Validate that the flow architecture is respected
-  private validateProperFlow(nodes: Node<NodeData>[], edges: Edge[]): void {
+  private validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
     const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
     const insertNodes = nodes.filter(n => n.type === 'insert');
     const sceneNodes = nodes.filter(n => n.type === 'scene');
@@ -328,7 +342,7 @@ export class ExecutionEngine {
   }
 
   // Helper to check if a node is ultimately connected to scene
-  private isNodeConnectedToScene(nodeId: string, edges: Edge[], nodes: Node<NodeData>[]): boolean {
+  private isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): boolean {
     const visited = new Set<string>();
     
     const traverse = (currentNodeId: string): boolean => {
@@ -345,7 +359,7 @@ export class ExecutionEngine {
     return traverse(nodeId);
   }
 
-  private getTopologicalOrder(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
+  private getTopologicalOrder(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): ReactFlowNode<NodeData>[] {
     const inDegree = new Map<string, number>();
     const adjList = new Map<string, string[]>();
     
@@ -362,8 +376,8 @@ export class ExecutionEngine {
     }
     
     // Kahn's algorithm for topological sorting
-    const queue: Node<NodeData>[] = [];
-    const result: Node<NodeData>[] = [];
+    const queue: ReactFlowNode<NodeData>[] = [];
+    const result: ReactFlowNode<NodeData>[] = [];
     
     // Start with nodes that have no dependencies
     for (const node of nodes) {
@@ -398,7 +412,7 @@ export class ExecutionEngine {
     return result;
   }
 
-  private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
+  private validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
     // Track object -> insert mappings
     const objectToInsertMap = new Map<string, string>();
     
@@ -424,7 +438,7 @@ export class ExecutionEngine {
     }
   }
 
-  private validateScene(nodes: Node<NodeData>[]): void {
+  private validateScene(nodes: ReactFlowNode<NodeData>[]): void {
     const sceneNodes = nodes.filter(node => node.type === "scene");
     
     if (sceneNodes.length === 0) {

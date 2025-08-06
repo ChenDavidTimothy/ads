@@ -1,5 +1,5 @@
-// src/lib/types/property-schemas.ts
-import type { Point2D } from "@/animation/types";
+// src/shared/types/properties.ts
+import type { Point2D } from './core';
 
 export type PropertyType = 
   | 'number'

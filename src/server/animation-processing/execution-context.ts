@@ -1,6 +1,5 @@
-// src/lib/execution/execution-context.ts
-import type { PortType } from "../types/ports";
-import type { SceneAnimationTrack } from "@/animation/scene/types";
+// src/server/animation-processing/execution-context.ts
+import type { PortType, SceneAnimationTrack } from "@/shared/types";
 
 export interface ExecutionValue {
   type: PortType;

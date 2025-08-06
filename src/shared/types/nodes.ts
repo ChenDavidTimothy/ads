@@ -1,5 +1,5 @@
-// src/lib/types/nodes.ts - Updated with unified tracking
-import type { Point2D } from "@/animation/types";
+// src/shared/types/nodes.ts
+import type { Point2D } from './core';
 
 // Node identifier system
 export interface NodeIdentifier {

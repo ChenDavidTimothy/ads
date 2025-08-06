@@ -6,7 +6,9 @@ import {
   DEFAULT_SCENE_CONFIG,
   type SceneAnimationConfig 
 } from "@/animation/scene-generator";
-import { validateScene } from "@/animation/scene/scene";
+import { validateScene } from "@/shared/types";
+import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
+import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 
 // Scene config schema
 const sceneConfigSchema = z.object({
@@ -18,145 +20,85 @@ const sceneConfigSchema = z.object({
   videoCrf: z.number().optional(),
 });
 
-// Scene object schemas
-const point2DSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-});
-
-const trianglePropertiesSchema = z.object({
-  size: z.number(),
-  color: z.string(),
-  strokeColor: z.string().optional(),
-  strokeWidth: z.number().optional(),
-});
-
-const circlePropertiesSchema = z.object({
-  radius: z.number(),
-  color: z.string(),
-  strokeColor: z.string().optional(),
-  strokeWidth: z.number().optional(),
-});
-
-const rectanglePropertiesSchema = z.object({
-  width: z.number(),
-  height: z.number(),
-  color: z.string(),
-  strokeColor: z.string().optional(),
-  strokeWidth: z.number().optional(),
-});
-
-const sceneObjectSchema = z.object({
+// ReactFlow Node schema - flexible data property to accommodate all node types
+const reactFlowNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(['triangle', 'circle', 'rectangle']),
-  properties: z.union([trianglePropertiesSchema, circlePropertiesSchema, rectanglePropertiesSchema]),
-  initialPosition: point2DSchema,
-  initialRotation: z.number().optional(),
-  initialScale: point2DSchema.optional(),
-  initialOpacity: z.number().min(0).max(1).optional(),
-});
-
-// Animation property schemas
-const moveAnimationSchema = z.object({
-  from: point2DSchema,
-  to: point2DSchema,
-});
-
-const rotateAnimationSchema = z.object({
-  from: z.number(),
-  to: z.number(),
-  rotations: z.number().optional(),
-});
-
-const scaleAnimationSchema = z.object({
-  from: z.union([point2DSchema, z.number()]),
-  to: z.union([point2DSchema, z.number()]),
-});
-
-const fadeAnimationSchema = z.object({
-  from: z.number().min(0).max(1),
-  to: z.number().min(0).max(1),
-});
-
-const colorAnimationSchema = z.object({
-  from: z.string(),
-  to: z.string(),
-  property: z.enum(['fill', 'stroke']),
-});
-
-// Discriminated union for animation tracks
-const animationTrackSchema = z.discriminatedUnion('type', [
-  z.object({
-    objectId: z.string(),
-    type: z.literal('move'),
-    startTime: z.number().min(0),
-    duration: z.number().min(0),
-    easing: z.enum(['linear', 'easeInOut', 'easeIn', 'easeOut']),
-    properties: moveAnimationSchema,
+  type: z.string().optional(),
+  position: z.object({
+    x: z.number(),
+    y: z.number()
   }),
-  z.object({
-    objectId: z.string(),
-    type: z.literal('rotate'),
-    startTime: z.number().min(0),
-    duration: z.number().min(0),
-    easing: z.enum(['linear', 'easeInOut', 'easeIn', 'easeOut']),
-    properties: rotateAnimationSchema,
-  }),
-  z.object({
-    objectId: z.string(),
-    type: z.literal('scale'),
-    startTime: z.number().min(0),
-    duration: z.number().min(0),
-    easing: z.enum(['linear', 'easeInOut', 'easeIn', 'easeOut']),
-    properties: scaleAnimationSchema,
-  }),
-  z.object({
-    objectId: z.string(),
-    type: z.literal('fade'),
-    startTime: z.number().min(0),
-    duration: z.number().min(0),
-    easing: z.enum(['linear', 'easeInOut', 'easeIn', 'easeOut']),
-    properties: fadeAnimationSchema,
-  }),
-  z.object({
-    objectId: z.string(),
-    type: z.literal('color'),
-    startTime: z.number().min(0),
-    duration: z.number().min(0),
-    easing: z.enum(['linear', 'easeInOut', 'easeIn', 'easeOut']),
-    properties: colorAnimationSchema,
-  }),
-]);
+  data: z.object({}).passthrough() // Flexible to accommodate all node properties
+});
 
-const animationSceneSchema = z.object({
-  duration: z.number().min(0),
-  objects: z.array(sceneObjectSchema),
-  animations: z.array(animationTrackSchema),
-  background: z.object({
-    color: z.string(),
-  }).optional(),
+// ReactFlow Edge schema
+const reactFlowEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+  sourceHandle: z.string().optional(),
+  targetHandle: z.string().optional()
 });
 
 export const animationRouter = createTRPCRouter({
-  // Main scene-based endpoint
+  // Main scene-based endpoint - UPDATED to accept nodes/edges
   generateScene: publicProcedure
     .input(z.object({
-      scene: animationSceneSchema,
+      nodes: z.array(reactFlowNodeSchema),
+      edges: z.array(reactFlowEdgeSchema),
       config: sceneConfigSchema.optional(),
     }))
     .mutation(async ({ input }) => {
       try {
+        // Use backend ExecutionEngine to process the graph
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlow(
+          input.nodes as Array<{ id: string; type?: string; position: { x: number; y: number }; data: NodeData }>,
+          input.edges
+        );
+        
+        // Find scene node to get configuration
+        const sceneNode = input.nodes.find(node => node.type === 'scene');
+        if (!sceneNode) {
+          throw new Error("Scene node is required");
+        }
+        
+        const sceneData = sceneNode.data as SceneNodeData;
+        
+        // Calculate total duration
+        const maxAnimationTime = executionContext.sceneAnimations.length > 0 
+          ? Math.max(...executionContext.sceneAnimations.map(anim => anim.startTime + anim.duration))
+          : 0;
+        const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
+        
+        // Build AnimationScene from execution context
+        const scene: AnimationScene = {
+          duration: totalDuration,
+          objects: executionContext.sceneObjects,
+          animations: executionContext.sceneAnimations,
+          background: {
+            color: sceneData.backgroundColor,
+          },
+        };
+        
+        // Prepare scene config
         const config: SceneAnimationConfig = {
           ...DEFAULT_SCENE_CONFIG,
+          width: sceneData.width,
+          height: sceneData.height,
+          fps: sceneData.fps,
+          backgroundColor: sceneData.backgroundColor,
+          videoPreset: sceneData.videoPreset,
+          videoCrf: sceneData.videoCrf,
           ...input.config,
         };
         
-        const videoUrl = await generateSceneAnimation(input.scene, config);
+        const videoUrl = await generateSceneAnimation(scene, config);
         
         return {
           success: true,
           videoUrl,
-          scene: input.scene,
+          scene,
           config,
         };
       } catch (error) {
@@ -195,12 +137,44 @@ export const animationRouter = createTRPCRouter({
     }),
 
   validateScene: publicProcedure
-    .input(animationSceneSchema)
-    .query(({ input }) => {
-      const errors = validateScene(input);
-      return {
-        valid: errors.length === 0,
-        errors,
-      };
+    .input(z.object({
+      nodes: z.array(reactFlowNodeSchema),
+      edges: z.array(reactFlowEdgeSchema),
+    }))
+    .query(async ({ input }) => {
+      try {
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlow(
+          input.nodes as Array<{ id: string; type?: string; position: { x: number; y: number }; data: NodeData }>,
+          input.edges
+        );
+        
+        // Build scene for validation
+        const sceneNode = input.nodes.find(node => node.type === 'scene');
+        if (!sceneNode) {
+          return { valid: false, errors: ["Scene node is required"] };
+        }
+        
+        const sceneData = sceneNode.data as SceneNodeData;
+        const maxAnimationTime = executionContext.sceneAnimations.length > 0 
+          ? Math.max(...executionContext.sceneAnimations.map(anim => anim.startTime + anim.duration))
+          : 0;
+        const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
+        
+        const scene: AnimationScene = {
+          duration: totalDuration,
+          objects: executionContext.sceneObjects,
+          animations: executionContext.sceneAnimations,
+          background: { color: sceneData.backgroundColor },
+        };
+        
+        const errors = validateScene(scene);
+        return { valid: errors.length === 0, errors };
+      } catch (error) {
+        return { 
+          valid: false, 
+          errors: [error instanceof Error ? error.message : 'Unknown validation error'] 
+        };
+      }
     }),
 });
