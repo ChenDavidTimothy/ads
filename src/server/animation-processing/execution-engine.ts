@@ -149,7 +149,7 @@ class AnimationNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    const data = node.data as Record<string, unknown>;
+    const data = node.data as unknown as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
     
     if (inputs.length === 0) {

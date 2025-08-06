@@ -1,14 +1,16 @@
 // src/server/api/routers/animation.ts
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { 
-  generateSceneAnimation, 
+import {
+  generateSceneAnimation,
   DEFAULT_SCENE_CONFIG,
-  type SceneAnimationConfig 
+  type SceneAnimationConfig,
 } from "@/animation/scene-generator";
 import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
+// Import ReactFlowNode type from execution-engine for proper casting
+import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 
 // Scene config schema
 const sceneConfigSchema = z.object({
@@ -26,9 +28,10 @@ const reactFlowNodeSchema = z.object({
   type: z.string().optional(),
   position: z.object({
     x: z.number(),
-    y: z.number()
+    y: z.number(),
   }),
-  data: z.record(z.unknown()).passthrough() // Flexible to accommodate all node properties
+  // FIX: Removed .passthrough() as z.record(z.unknown()) inherently allows all key-value pairs
+  data: z.record(z.unknown()), // Flexible to accommodate all node properties
 });
 
 // ReactFlow Edge schema
@@ -37,50 +40,60 @@ const reactFlowEdgeSchema = z.object({
   source: z.string(),
   target: z.string(),
   sourceHandle: z.string().optional(),
-  targetHandle: z.string().optional()
+  targetHandle: z.string().optional(),
 });
 
 export const animationRouter = createTRPCRouter({
   // Main scene-based endpoint - UPDATED to accept nodes/edges
   generateScene: publicProcedure
-    .input(z.object({
-      nodes: z.array(reactFlowNodeSchema),
-      edges: z.array(reactFlowEdgeSchema),
-      config: sceneConfigSchema.optional(),
-    }))
+    .input(
+      z.object({
+        nodes: z.array(reactFlowNodeSchema),
+        edges: z.array(reactFlowEdgeSchema),
+        config: sceneConfigSchema.optional(),
+      }),
+    )
     .mutation(async ({ input }) => {
       try {
         // Use backend ExecutionEngine to process the graph
         const engine = new ExecutionEngine();
+        // FIX: Explicitly cast input.nodes to ReactFlowNode<NodeData>[] to satisfy TypeScript
+        // The Zod schema `reactFlowNodeSchema` validates the runtime shape,
+        // and we are asserting here that the data property will conform to `NodeData` after processing.
         const executionContext = await engine.executeFlow(
-          input.nodes as Array<{ id: string; type?: string; position: { x: number; y: number }; data: NodeData }>,
-          input.edges
+          input.nodes as unknown as ReactFlowNode<NodeData>[],
+          input.edges,
         );
-        
+
         // Find scene node to get configuration
-        const sceneNode = input.nodes.find(node => node.type === 'scene');
+        const sceneNode = input.nodes.find((node) => node.type === "scene");
         if (!sceneNode) {
           throw new Error("Scene node is required");
         }
-        
-        const sceneData = sceneNode.data as SceneNodeData;
-        
+
+        const sceneData = sceneNode.data as unknown as SceneNodeData;
+
         // Calculate total duration
-        const maxAnimationTime = executionContext.sceneAnimations.length > 0 
-          ? Math.max(...executionContext.sceneAnimations.map(anim => anim.startTime + anim.duration))
-          : 0;
+        const maxAnimationTime =
+          executionContext.sceneAnimations.length > 0
+            ? Math.max(
+                ...executionContext.sceneAnimations.map(
+                  (anim) => anim.startTime + anim.duration,
+                ),
+              )
+            : 0;
         const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
-        
+
         // Build AnimationScene from execution context
         const scene: AnimationScene = {
           duration: totalDuration,
-          objects: executionContext.sceneObjects,
+          objects: executionContext.sceneObjects as SceneObject[],
           animations: executionContext.sceneAnimations,
           background: {
             color: sceneData.backgroundColor,
           },
         };
-        
+
         // Prepare scene config
         const config: SceneAnimationConfig = {
           ...DEFAULT_SCENE_CONFIG,
@@ -92,9 +105,9 @@ export const animationRouter = createTRPCRouter({
           videoCrf: sceneData.videoCrf,
           ...input.config,
         };
-        
+
         const videoUrl = await generateSceneAnimation(scene, config);
-        
+
         return {
           success: true,
           videoUrl,
@@ -104,76 +117,84 @@ export const animationRouter = createTRPCRouter({
       } catch (error) {
         console.error("Scene animation generation failed:", error);
         throw new Error(
-          error instanceof Error 
+          error instanceof Error
             ? `Scene animation generation failed: ${error.message}`
-            : "Scene animation generation failed with unknown error"
+            : "Scene animation generation failed with unknown error",
         );
       }
     }),
 
   // Utility endpoints
-  getDefaultSceneConfig: publicProcedure
-    .query(() => {
-      return DEFAULT_SCENE_CONFIG;
-    }),
+  getDefaultSceneConfig: publicProcedure.query(() => {
+    return DEFAULT_SCENE_CONFIG;
+  }),
 
-  getDefaultTriangleConfig: publicProcedure
-    .query(() => {
-      return {
-        width: 1920,
-        height: 1080,
-        fps: 60,
-        duration: 3,
-        triangleSize: 80,
-        margin: 100,
-        rotations: 2,
-        backgroundColor: '#000000',
-        triangleColor: '#ff4444',
-        strokeColor: '#ffffff',
-        strokeWidth: 3,
-        videoPreset: 'medium',
-        videoCrf: 18,
-      };
-    }),
+  getDefaultTriangleConfig: publicProcedure.query(() => {
+    return {
+      width: 1920,
+      height: 1080,
+      fps: 60,
+      duration: 3,
+      triangleSize: 80,
+      margin: 100,
+      rotations: 2,
+      backgroundColor: "#000000",
+      triangleColor: "#ff4444",
+      strokeColor: "#ffffff",
+      strokeWidth: 3,
+      videoPreset: "medium",
+      videoCrf: 18,
+    };
+  }),
 
   validateScene: publicProcedure
-    .input(z.object({
-      nodes: z.array(reactFlowNodeSchema),
-      edges: z.array(reactFlowEdgeSchema),
-    }))
+    .input(
+      z.object({
+        nodes: z.array(reactFlowNodeSchema),
+        edges: z.array(reactFlowEdgeSchema),
+      }),
+    )
     .query(async ({ input }) => {
       try {
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlow(
-          input.nodes as Array<{ id: string; type?: string; position: { x: number; y: number }; data: NodeData }>,
-          input.edges
+          input.nodes as unknown as ReactFlowNode<NodeData>[],
+          input.edges,
         );
-        
+
         // Build scene for validation
-        const sceneNode = input.nodes.find(node => node.type === 'scene');
+        const sceneNode = input.nodes.find((node) => node.type === "scene");
         if (!sceneNode) {
           return { valid: false, errors: ["Scene node is required"] };
         }
-        
-        const sceneData = sceneNode.data as SceneNodeData;
-        const maxAnimationTime = executionContext.sceneAnimations.length > 0 
-          ? Math.max(...executionContext.sceneAnimations.map(anim => anim.startTime + anim.duration))
-          : 0;
+
+        // FIX: Explicitly cast sceneNode.data to SceneNodeData
+        const sceneData = sceneNode.data as unknown as SceneNodeData;
+        const maxAnimationTime =
+          executionContext.sceneAnimations.length > 0
+            ? Math.max(
+                ...executionContext.sceneAnimations.map(
+                  (anim) => anim.startTime + anim.duration,
+                ),
+              )
+            : 0;
         const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
-        
+
         const scene: AnimationScene = {
           duration: totalDuration,
           objects: executionContext.sceneObjects,
           animations: executionContext.sceneAnimations,
           background: { color: sceneData.backgroundColor },
         };
-        
+
         const errors = validateScene(scene);
         return { valid: errors.length === 0, errors };
       } catch (error) {
-        return { 
-          valid: false, 
-          errors: [error instanceof Error ? error.message : 'Unknown validation error'] 
+        return {
+          valid: false,
+          errors: [
+            error instanceof Error ? error.message : "Unknown validation error",
+          ],
         };
       }
     }),
