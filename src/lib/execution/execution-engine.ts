@@ -1,4 +1,4 @@
-// src/lib/execution/execution-engine.ts
+// src/lib/execution/execution-engine.ts - CORRECTED: Proper flow architecture
 import type { Node, Edge } from "reactflow";
 import type { ExecutionContext } from "./execution-context";
 import { 
@@ -20,7 +20,7 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor
+// Geometry node executor - CORRECTED: Only creates object definitions
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -30,16 +30,18 @@ class GeometryNodeExecutor implements NodeExecutor {
     node: Node<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
-    const sceneObject = this.buildSceneObject(node);
-    context.sceneObjects.push(sceneObject);
+    // CRITICAL FIX: Only create object definition, DO NOT add to scene
+    // Only Insert nodes should add objects to the scene
+    const objectDefinition = this.buildObjectDefinition(node);
     
-    setNodeOutput(context, node.id, 'object', 'object', sceneObject);
+    // Output the object definition for Insert nodes to consume
+    setNodeOutput(context, node.data.identifier.id, 'object', 'object', objectDefinition);
   }
 
-  private buildSceneObject(node: Node<NodeData>) {
+  private buildObjectDefinition(node: Node<NodeData>) {
     const data = node.data as Record<string, unknown>;
     const baseObject = {
-      id: node.id,
+      id: node.data.identifier.id,
       type: node.type as "triangle" | "circle" | "rectangle",
       initialPosition: data.position as { x: number; y: number },
       initialRotation: 0,
@@ -85,7 +87,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - handles multiple inputs
+// Insert node executor - CORRECTED: This is the ONLY place objects are added to scene
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -97,32 +99,28 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.id, 'object');
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
     
     if (inputs.length === 0) {
-      throw new Error(`Insert node ${node.id} missing required object input(s)`);
+      throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
     }
 
     const timedObjects = [];
     
     for (const input of inputs) {
-      // Store appearance time on object - timeline will handle visibility
-      const timedObject = {
+      // CRITICAL FIX: Insert node is the ONLY place where objects are added to the scene
+      const sceneObject = {
         ...input.data,
         appearanceTime: data.appearanceTime as number
       };
 
-      // Update object in scene
-      const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
-      if (objectIndex !== -1) {
-        context.sceneObjects[objectIndex] = timedObject;
-      }
-
-      timedObjects.push(timedObject);
+      // Add object to scene - THIS IS THE ONLY PLACE THIS SHOULD HAPPEN
+      context.sceneObjects.push(sceneObject);
+      timedObjects.push(sceneObject);
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
-    setNodeOutput(context, node.id, 'timed_object', 'timed_object', timedObjects);
+    setNodeOutput(context, node.data.identifier.id, 'timed_object', 'timed_object', timedObjects);
   }
 }
 
@@ -138,10 +136,10 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.id, 'timed_object');
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
     
     if (inputs.length === 0) {
-      throw new Error(`Animation node ${node.id} missing required timed object input(s)`);
+      throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
     }
 
     const allAnimations: SceneAnimationTrack[] = [];
@@ -164,7 +162,7 @@ class AnimationNodeExecutor implements NodeExecutor {
     const maxDuration = Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime);
     context.currentTime = maxDuration;
 
-    setNodeOutput(context, node.id, 'animation', 'animation', allAnimations);
+    setNodeOutput(context, node.data.identifier.id, 'animation', 'animation', allAnimations);
   }
 
   private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
@@ -239,7 +237,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - now properly processes animation inputs
+// Scene node executor - validates the complete flow
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -250,11 +248,26 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
-    // Scene node can optionally receive animation inputs for validation
-    getConnectedInputs(context, connections, node.id, 'animation');
+    // Scene node should receive animation inputs
+    const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
     
-    // All animations should already be in context from previous executions
-    setNodeOutput(context, node.id, 'scene', 'scene', node.data);
+    // Validate that scene has objects (they should come through proper flow)
+    if (context.sceneObjects.length === 0) {
+      throw new Error(
+        `Scene ${node.data.identifier.displayName} has no objects. ` +
+        `Objects must flow through: Geometry → Insert → Animation → Scene`
+      );
+    }
+    
+    // Validate that we have at least one animation input if we have objects
+    if (animationInputs.length === 0 && context.sceneObjects.length > 0) {
+      throw new Error(
+        `Scene ${node.data.identifier.displayName} has objects but no animation input. ` +
+        `Connect Animation nodes to Scene for proper flow.`
+      );
+    }
+    
+    setNodeOutput(context, node.data.identifier.id, 'scene', 'scene', node.data);
   }
 }
 
@@ -269,18 +282,19 @@ export class ExecutionEngine {
   async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
+    this.validateProperFlow(nodes, edges);
     
     const context = createExecutionContext();
     
-    // PROFESSIONAL SOLUTION: Topological execution (each node executed once)
+    // Topological execution order
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
     for (const node of executionOrder) {
-      if (!isNodeExecuted(context, node.id)) {
+      if (!isNodeExecuted(context, node.data.identifier.id)) {
         const executor = this.getExecutor(node.type!);
         if (executor) {
           await executor.execute(node, context, edges);
-          markNodeExecuted(context, node.id);
+          markNodeExecuted(context, node.data.identifier.id);
         }
       }
     }
@@ -288,14 +302,57 @@ export class ExecutionEngine {
     return context;
   }
 
+  // NEW: Validate that the flow architecture is respected
+  private validateProperFlow(nodes: Node<NodeData>[], edges: Edge[]): void {
+    const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
+    const insertNodes = nodes.filter(n => n.type === 'insert');
+    const sceneNodes = nodes.filter(n => n.type === 'scene');
+    
+    // Check that all geometry nodes that should appear in scene are connected to insert nodes
+    for (const geoNode of geometryNodes) {
+      const hasInsertConnection = edges.some(edge => 
+        edge.source === geoNode.data.identifier.id && 
+        insertNodes.some(insert => insert.data.identifier.id === edge.target)
+      );
+      
+      // Check if this geometry node is ultimately connected to scene
+      const isConnectedToScene = this.isNodeConnectedToScene(geoNode.data.identifier.id, edges, nodes);
+      
+      if (isConnectedToScene && !hasInsertConnection) {
+        throw new Error(
+          `Geometry node ${geoNode.data.identifier.displayName} must connect to an Insert node ` +
+          `to appear in the scene. Insert nodes control when objects appear in the timeline.`
+        );
+      }
+    }
+  }
+
+  // Helper to check if a node is ultimately connected to scene
+  private isNodeConnectedToScene(nodeId: string, edges: Edge[], nodes: Node<NodeData>[]): boolean {
+    const visited = new Set<string>();
+    
+    const traverse = (currentNodeId: string): boolean => {
+      if (visited.has(currentNodeId)) return false;
+      visited.add(currentNodeId);
+      
+      const currentNode = nodes.find(n => n.data.identifier.id === currentNodeId);
+      if (currentNode?.type === 'scene') return true;
+      
+      const outgoingEdges = edges.filter(e => e.source === currentNodeId);
+      return outgoingEdges.some(edge => traverse(edge.target));
+    };
+    
+    return traverse(nodeId);
+  }
+
   private getTopologicalOrder(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
     const inDegree = new Map<string, number>();
     const adjList = new Map<string, string[]>();
     
-    // Initialize
+    // Initialize using identifier.id
     for (const node of nodes) {
-      inDegree.set(node.id, 0);
-      adjList.set(node.id, []);
+      inDegree.set(node.data.identifier.id, 0);
+      adjList.set(node.data.identifier.id, []);
     }
     
     // Build adjacency list and in-degree count
@@ -310,7 +367,7 @@ export class ExecutionEngine {
     
     // Start with nodes that have no dependencies
     for (const node of nodes) {
-      if (inDegree.get(node.id) === 0) {
+      if (inDegree.get(node.data.identifier.id) === 0) {
         queue.push(node);
       }
     }
@@ -320,12 +377,12 @@ export class ExecutionEngine {
       result.push(current);
       
       // Reduce in-degree for neighbors
-      for (const neighborId of adjList.get(current.id) ?? []) {
+      for (const neighborId of adjList.get(current.data.identifier.id) ?? []) {
         const newInDegree = (inDegree.get(neighborId) ?? 1) - 1;
         inDegree.set(neighborId, newInDegree);
         
         if (newInDegree === 0) {
-          const neighborNode = nodes.find(n => n.id === neighborId);
+          const neighborNode = nodes.find(n => n.data.identifier.id === neighborId);
           if (neighborNode) {
             queue.push(neighborNode);
           }
@@ -346,8 +403,8 @@ export class ExecutionEngine {
     const objectToInsertMap = new Map<string, string>();
     
     for (const edge of edges) {
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const targetNode = nodes.find(n => n.id === edge.target);
+      const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
+      const targetNode = nodes.find(n => n.data.identifier.id === edge.target);
       
       if (!sourceNode || !targetNode) continue;
       
@@ -355,14 +412,14 @@ export class ExecutionEngine {
       if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
           targetNode.type === 'insert') {
         
-        const existingInsert = objectToInsertMap.get(sourceNode.id);
-        if (existingInsert && existingInsert !== targetNode.id) {
+        const existingInsert = objectToInsertMap.get(sourceNode.data.identifier.id);
+        if (existingInsert && existingInsert !== targetNode.data.identifier.id) {
           throw new Error(
-            `Object ${sourceNode.id} cannot connect to multiple Insert nodes. ` +
-            `Already connected to ${existingInsert}, attempted connection to ${targetNode.id}.`
+            `Object ${sourceNode.data.identifier.displayName} cannot connect to multiple Insert nodes. ` +
+            `Already connected to ${existingInsert}, attempted connection to ${targetNode.data.identifier.id}.`
           );
         }
-        objectToInsertMap.set(sourceNode.id, targetNode.id);
+        objectToInsertMap.set(sourceNode.data.identifier.id, targetNode.data.identifier.id);
       }
     }
   }

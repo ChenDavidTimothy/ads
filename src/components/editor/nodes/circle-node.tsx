@@ -1,4 +1,4 @@
-// src/components/editor/nodes/circle-node.tsx
+// src/components/editor/nodes/circle-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -20,7 +20,9 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
           >
             ●
           </div>
-          <span className="font-semibold text-white">Circle</span>
+          <span className="font-semibold text-white">
+            {data.identifier.displayName}
+          </span>
         </div>
       </CardHeader>
 

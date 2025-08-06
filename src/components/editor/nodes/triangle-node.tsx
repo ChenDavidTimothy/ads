@@ -1,4 +1,4 @@
-// src/components/editor/nodes/triangle-node.tsx
+// src/components/editor/nodes/triangle-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -20,7 +20,9 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           >
             ▲
           </div>
-          <span className="font-semibold text-white">Triangle</span>
+          <span className="font-semibold text-white">
+            {data.identifier.displayName}
+          </span>
         </div>
       </CardHeader>
 

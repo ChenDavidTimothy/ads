@@ -1,4 +1,4 @@
-// src/components/editor/nodes/animation-node.tsx
+// src/components/editor/nodes/animation-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -11,12 +11,12 @@ interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
   onOpenEditor?: (nodeId: string) => void;
 }
 
-export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNodeProps) {
+export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodeProps) {
   const nodeDefinition = getNodeDefinition('animation');
   
   const handleDoubleClick = () => {
-    if (onOpenEditor && id) {
-      onOpenEditor(id);
+    if (onOpenEditor) {
+      onOpenEditor(data.identifier.id);
     }
   };
 
@@ -44,11 +44,13 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="w-6 h-6 bg-purple-600 flex items-center justify-center rounded text-white font-bold text-sm">
               🎬
             </div>
-            <span className="font-semibold text-white">Animation</span>
+            <span className="font-semibold text-white">
+              {data.identifier.displayName}
+            </span>
           </div>
           <div className="text-xs text-gray-400">{data.duration}s</div>
         </div>

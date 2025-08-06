@@ -1,9 +1,11 @@
-// src/components/editor/property-panel.tsx
+// src/components/editor/property-panel.tsx - Updated with display name editing
 "use client";
 
+import { useState } from "react";
 import type { Node } from "reactflow";
 import { NumberField, ColorField, SelectField } from "@/components/ui/form-fields";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
 import { RESOLUTION_PRESETS } from "@/lib/constants/editor";
 import type { 
@@ -16,9 +18,19 @@ import type { PropertySchema } from "@/lib/types/property-schemas";
 interface PropertyPanelProps {
   node: Node<NodeData>;
   onChange: (data: Partial<NodeData>) => void;
+  onDisplayNameChange: (nodeId: string, newDisplayName: string) => boolean;
+  validateDisplayName: (newName: string, nodeId: string) => string | null;
 }
 
-export function PropertyPanel({ node, onChange }: PropertyPanelProps) {
+export function PropertyPanel({ 
+  node, 
+  onChange, 
+  onDisplayNameChange, 
+  validateDisplayName 
+}: PropertyPanelProps) {
+  const [editingName, setEditingName] = useState(false);
+  const [tempDisplayName, setTempDisplayName] = useState(node.data.identifier.displayName);
+  
   const nodeDefinition = getNodeDefinition(node.type!);
   
   if (!nodeDefinition) {
@@ -29,8 +41,87 @@ export function PropertyPanel({ node, onChange }: PropertyPanelProps) {
     );
   }
 
+  const handleSaveDisplayName = () => {
+    const success = onDisplayNameChange(node.data.identifier.id, tempDisplayName);
+    if (success) {
+      setEditingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setTempDisplayName(node.data.identifier.displayName);
+    setEditingName(false);
+  };
+
+  const currentError = editingName ? validateDisplayName(tempDisplayName, node.data.identifier.id) : null;
+
   return (
     <div className="space-y-4">
+      {/* Node Identification Section */}
+      <div className="space-y-3 pb-4 border-b border-gray-600">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Node Name
+          </label>
+          {editingName ? (
+            <div className="space-y-2">
+              <Input
+                value={tempDisplayName}
+                onChange={(e) => setTempDisplayName(e.target.value)}
+                error={!!currentError}
+                placeholder="Enter node name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !currentError) {
+                    handleSaveDisplayName();
+                  } else if (e.key === 'Escape') {
+                    handleCancelEdit();
+                  }
+                }}
+                autoFocus
+              />
+              {currentError && (
+                <div className="text-xs text-red-400">{currentError}</div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveDisplayName}
+                  disabled={!!currentError}
+                  variant="success"
+                  size="sm"
+                >
+                  Save
+                </Button>
+                <Button
+                  onClick={handleCancelEdit}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-white font-medium">
+                {node.data.identifier.displayName}
+              </span>
+              <Button
+                onClick={() => setEditingName(true)}
+                variant="ghost"
+                size="sm"
+              >
+                Edit
+              </Button>
+            </div>
+          )}
+        </div>
+        
+        <div className="text-xs text-gray-400">
+          {node.data.identifier.type.charAt(0).toUpperCase() + node.data.identifier.type.slice(1)} • #{node.data.identifier.sequence}
+        </div>
+      </div>
+
+      {/* Properties Section */}
       <SchemaBasedProperties 
         properties={nodeDefinition.properties.properties}
         data={node.data}

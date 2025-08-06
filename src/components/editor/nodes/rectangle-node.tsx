@@ -1,4 +1,4 @@
-// src/components/editor/nodes/rectangle-node.tsx
+// src/components/editor/nodes/rectangle-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -20,7 +20,9 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           >
             ▬
           </div>
-          <span className="font-semibold text-white">Rectangle</span>
+          <span className="font-semibold text-white">
+            {data.identifier.displayName}
+          </span>
         </div>
       </CardHeader>
 

@@ -1,7 +1,10 @@
-// src/lib/defaults/nodes.ts
+// src/lib/defaults/nodes.ts - Updated with unified ID system
+import type { Node } from "reactflow";
 import type { 
   NodeData, 
   NodeType, 
+  NodeIdentifier,
+  NodeLineage,
   AnimationTrack,
   MoveTrackProperties,
   RotateTrackProperties,
@@ -10,13 +13,106 @@ import type {
   ColorTrackProperties
 } from "../types/nodes";
 
-export function getDefaultNodeData(nodeType: NodeType): NodeData {
-  const id = `${nodeType}-${Date.now()}`;
+// Utility functions for node identification
+function getNodeShortId(nodeType: NodeType): string {
+  const prefixes: Record<NodeType, string> = {
+    triangle: 'tri',
+    circle: 'cir',
+    rectangle: 'rec',
+    insert: 'ins',
+    animation: 'ani',
+    scene: 'scn'
+  };
+  return prefixes[nodeType];
+}
+
+function getNodeDisplayLabel(nodeType: NodeType): string {
+  const labels: Record<NodeType, string> = {
+    triangle: 'Triangle',
+    circle: 'Circle',
+    rectangle: 'Rectangle',
+    insert: 'Insert',
+    animation: 'Animation',
+    scene: 'Scene'
+  };
+  return labels[nodeType];
+}
+
+// Generate structured node identifier
+export function generateNodeIdentifier(
+  nodeType: NodeType,
+  existingNodes: Node<NodeData>[]
+): NodeIdentifier {
+  const year = new Date().getFullYear();
+  const shortId = getNodeShortId(nodeType);
+  
+  // Calculate sequence number for this node type
+  const sameTypeNodes = existingNodes.filter(node => 
+    node.data.identifier.type === nodeType
+  );
+  const sequence = sameTypeNodes.length + 1;
+  
+  // Generate unique suffix
+  const suffix = Math.random().toString(36).substr(2, 8);
+  
+  // Create structured ID: "tri_2024_001_a1b2c3d4"
+  const id = `${shortId}_${year}_${sequence.toString().padStart(3, '0')}_${suffix}`;
+  
+  // Generate unique display name
+  const displayName = generateUniqueDisplayName(nodeType, existingNodes);
+  
+  return {
+    id,
+    type: nodeType,
+    createdAt: Date.now(),
+    sequence,
+    displayName
+  };
+}
+
+// Generate unique display name with auto-incrementing
+function generateUniqueDisplayName(
+  nodeType: NodeType,
+  existingNodes: Node<NodeData>[]
+): string {
+  const baseName = getNodeDisplayLabel(nodeType);
+  const existingNames = new Set(
+    existingNodes.map(node => node.data.identifier.displayName.toLowerCase())
+  );
+  
+  let counter = 1;
+  let candidateName = `${baseName} ${counter}`;
+  
+  while (existingNames.has(candidateName.toLowerCase())) {
+    counter++;
+    candidateName = `${baseName} ${counter}`;
+  }
+  
+  return candidateName;
+}
+
+// Create initial node lineage
+function createInitialLineage(): NodeLineage {
+  return {
+    parentNodes: [],
+    childNodes: [],
+    flowPath: []
+  };
+}
+
+// Main function to get default node data
+export function getDefaultNodeData(
+  nodeType: NodeType,
+  existingNodes: Node<NodeData>[]
+): NodeData {
+  const identifier = generateNodeIdentifier(nodeType, existingNodes);
+  const lineage = createInitialLineage();
   
   switch (nodeType) {
     case "triangle":
       return {
-        id,
+        identifier,
+        lineage,
         size: 80,
         color: "#ff4444",
         strokeColor: "#ffffff",
@@ -25,7 +121,8 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
       };
     case "circle":
       return {
-        id,
+        identifier,
+        lineage,
         radius: 50,
         color: "#4444ff",
         strokeColor: "#ffffff", 
@@ -34,7 +131,8 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
       };
     case "rectangle":
       return {
-        id,
+        identifier,
+        lineage,
         width: 100,
         height: 60,
         color: "#44ff44",
@@ -44,18 +142,21 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
       };
     case "insert":
       return {
-        id,
+        identifier,
+        lineage,
         appearanceTime: 0,
       };
     case "animation":
       return {
-        id,
+        identifier,
+        lineage,
         duration: 3,
         tracks: [],
       };
     case "scene":
       return {
-        id,
+        identifier,
+        lineage,
         width: 1920,
         height: 1080,
         fps: 60,
@@ -69,6 +170,7 @@ export function getDefaultNodeData(nodeType: NodeType): NodeData {
   }
 }
 
+// Get default track properties (unchanged functionality)
 export function getDefaultTrackProperties(trackType: AnimationTrack['type']): 
   MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
   switch (trackType) {

@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx
+// src/components/editor/flow-editor.tsx - Updated with tracking system
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -25,13 +25,14 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
 import { getNodeDefinition } from "@/lib/types/node-definitions";
 import { arePortsCompatible } from "@/lib/types/ports";
+import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { api } from "@/trpc/react";
 import type { 
   NodeData, 
   NodeType, 
   AnimationNodeData, 
   SceneNodeData,
-  AnimationTrack 
+  AnimationTrack
 } from "@/lib/types/nodes";
 
 // Type guard functions
@@ -67,6 +68,7 @@ export function FlowEditor() {
     isOpen: false, 
     nodeId: null 
   });
+  const [flowTracker] = useState(() => new FlowTracker());
 
   const { convertFlowToScene } = useFlowToScene();
   const { toast } = useNotifications();
@@ -98,7 +100,7 @@ export function FlowEditor() {
   const isSceneConnected = useMemo(() => {
     const sceneNode = nodes.find(n => n.type === 'scene');
     if (!sceneNode) return false;
-    return edges.some(edge => edge.target === sceneNode.id);
+    return edges.some(edge => edge.target === sceneNode.data.identifier.id);
   }, [nodes, edges]);
 
   const canGenerate = useMemo(() => {
@@ -109,12 +111,44 @@ export function FlowEditor() {
   const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
     setNodes((nds) =>
       nds.map((node) =>
-        node.id === nodeId
+        node.data.identifier.id === nodeId
           ? { ...node, data: { ...node.data, ...newData } }
           : node
       )
     );
   }, [setNodes]);
+
+  // Validate display name uniqueness
+  const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
+    return flowTracker.validateDisplayName(newName, nodeId, nodes);
+  }, [flowTracker, nodes]);
+
+  // Update display name with validation
+  const updateDisplayName = useCallback((nodeId: string, newDisplayName: string): boolean => {
+    const error = validateDisplayName(newDisplayName, nodeId);
+    if (error) {
+      toast.error("Name validation failed", error);
+      return false;
+    }
+
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.data.identifier.id === nodeId
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                identifier: { 
+                  ...node.data.identifier, 
+                  displayName: newDisplayName 
+                }
+              }
+            }
+          : node
+      )
+    );
+    return true;
+  }, [validateDisplayName, setNodes, toast]);
 
   const handleOpenTimelineEditor = useCallback((nodeId: string) => {
     setTimelineModalState({ isOpen: true, nodeId });
@@ -132,7 +166,7 @@ export function FlowEditor() {
   }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
 
   const timelineNode = timelineModalState.nodeId 
-    ? nodes.find(n => n.id === timelineModalState.nodeId)
+    ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
 
   const nodeTypes: NodeTypes = useMemo(() => ({
@@ -143,7 +177,7 @@ export function FlowEditor() {
     animation: (props: Parameters<typeof AnimationNode>[0]) => (
       <AnimationNode 
         {...props} 
-        onOpenEditor={() => handleOpenTimelineEditor(props.id)} 
+        onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} 
       />
     ),
     scene: SceneNode,
@@ -151,8 +185,8 @@ export function FlowEditor() {
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const sourceNode = nodes.find((n) => n.id === params.source);
-      const targetNode = nodes.find((n) => n.id === params.target);
+      const sourceNode = nodes.find((n) => n.data.identifier.id === params.source);
+      const targetNode = nodes.find((n) => n.data.identifier.id === params.target);
       
       if (!sourceNode || !targetNode) return;
       
@@ -161,8 +195,8 @@ export function FlowEditor() {
           targetNode.type === 'insert') {
         
         const existingInsertConnection = edges.find(edge => 
-          edge.source === sourceNode.id && 
-          nodes.find(n => n.id === edge.target)?.type === 'insert'
+          edge.source === sourceNode.data.identifier.id && 
+          nodes.find(n => n.data.identifier.id === edge.target)?.type === 'insert'
         );
         
         if (existingInsertConnection) {
@@ -195,14 +229,44 @@ export function FlowEditor() {
         return;
       }
       
-      setEdges((eds) => addEdge(params, eds));
+      // Create edge with node IDs
+      const newEdge = addEdge({
+        ...params,
+        source: sourceNode.data.identifier.id,
+        target: targetNode.data.identifier.id
+      }, edges);
+      
+      // Track the connection
+      const edgeId = `${sourceNode.data.identifier.id}-${targetNode.data.identifier.id}`;
+      flowTracker.trackConnection(
+        edgeId,
+        sourceNode.data.identifier.id,
+        targetNode.data.identifier.id,
+        params.sourceHandle!,
+        params.targetHandle!
+      );
+      
+      setEdges(newEdge);
     },
-    [nodes, edges, setEdges, toast]
+    [nodes, edges, setEdges, flowTracker, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
+    setSelectedNodeId(node.data.identifier.id);
   }, []);
+
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    deletedNodes.forEach(node => {
+      flowTracker.removeNode(node.data.identifier.id);
+    });
+  }, [flowTracker]);
+
+  const onEdgesDelete = useCallback((deletedEdges: typeof edges) => {
+    deletedEdges.forEach(edge => {
+      const edgeId = `${edge.source}-${edge.target}`;
+      flowTracker.removeConnection(edgeId);
+    });
+  }, [flowTracker]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
     if (nodeType === "scene") {
@@ -219,14 +283,20 @@ export function FlowEditor() {
       return;
     }
 
+    const nodeData = getDefaultNodeData(nodeType as NodeType, nodes);
+    
     const newNode: Node<NodeData> = {
-      id: `${nodeType}-${Date.now()}`,
+      id: nodeData.identifier.id,
       type: nodeType,
       position,
-      data: getDefaultNodeData(nodeType as NodeType),
+      data: nodeData,
     };
+
+    // Track node creation
+    flowTracker.trackNodeCreation(nodeData.identifier.id);
+    
     setNodes((nds) => [...nds, newNode]);
-  }, [nodes, setNodes, toast]);
+  }, [nodes, setNodes, flowTracker, toast]);
 
   const handleGenerateScene = useCallback(async () => {
     try {
@@ -268,7 +338,7 @@ export function FlowEditor() {
   }, [videoUrl]);
 
   const selectedNode = useMemo(
-    () => nodes.find((node) => node.id === selectedNodeId),
+    () => nodes.find((node) => node.data.identifier.id === selectedNodeId),
     [nodes, selectedNodeId]
   );
 
@@ -300,6 +370,8 @@ export function FlowEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onNodesDelete={onNodesDelete}
+          onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
           fitView
           className="bg-gray-900"
@@ -366,7 +438,9 @@ export function FlowEditor() {
           </h3>
           <PropertyPanel 
             node={selectedNode}
-            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.id, newData)}
+            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
+            onDisplayNameChange={updateDisplayName}
+            validateDisplayName={validateDisplayName}
           />
         </div>
       )}

@@ -1,4 +1,4 @@
-// src/components/editor/nodes/insert-node.tsx
+// src/components/editor/nodes/insert-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -29,7 +29,9 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           <div className="w-6 h-6 bg-orange-600 flex items-center justify-center rounded text-white font-bold text-sm">
             ⏰
           </div>
-          <span className="font-semibold text-white">Insert</span>
+          <span className="font-semibold text-white">
+            {data.identifier.displayName}
+          </span>
         </div>
       </CardHeader>
 

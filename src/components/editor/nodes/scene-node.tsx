@@ -1,4 +1,4 @@
-// src/components/editor/nodes/scene-node.tsx
+// src/components/editor/nodes/scene-node.tsx - Updated with display name
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -43,7 +43,14 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
           <div className="w-6 h-6 bg-gray-600 flex items-center justify-center rounded text-white font-bold text-sm">
             🎬
           </div>
-          <span className="font-semibold text-white">Scene</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-white truncate">
+              {data.identifier.displayName}
+            </div>
+            <div className="text-xs text-gray-400 font-mono">
+              {data.identifier.id.split('_').pop()}
+            </div>
+          </div>
         </div>
       </CardHeader>
 

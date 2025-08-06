@@ -1,9 +1,26 @@
-// src/lib/types/nodes.ts - Updated to match API schema
+// src/lib/types/nodes.ts - Updated with unified tracking
 import type { Point2D } from "@/animation/types";
 
-// Base node data interface
+// Node identifier system
+export interface NodeIdentifier {
+  readonly id: string;           // Immutable: "tri_2024_001_a1b2c3d4"
+  readonly type: NodeType;       // "triangle", "circle", etc.
+  readonly createdAt: number;    // Timestamp
+  readonly sequence: number;     // Auto-incrementing per type
+  displayName: string;           // User-editable: "Marketing Triangle"
+}
+
+// Flow tracking for nodes
+export interface NodeLineage {
+  parentNodes: string[];         // Which nodes created this
+  childNodes: string[];          // Which nodes this creates
+  flowPath: string[];            // Edge IDs this node flows through
+}
+
+// Base node data interface with tracking
 export interface BaseNodeData {
-  id: string;
+  identifier: NodeIdentifier;
+  lineage: NodeLineage;
 }
 
 // Geometry node data types
