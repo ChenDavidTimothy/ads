@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with tracking system
+// src/components/editor/flow-editor.tsx
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -10,15 +10,19 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   type Node,
+  type Edge,
   type Connection,
   type NodeTypes,
+  type EdgeTypes,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
 import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, SceneNode } from "./nodes";
+import { FilterableEdge } from "./edges/filterable-edge";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
+import { EdgePropertyPanel } from "@/components/editor/edge-property-panel";
 import { Button } from "@/components/ui/button";
 import { useFlowToScene } from "@/hooks/use-flow-to-scene";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -35,7 +39,6 @@ import type {
   AnimationTrack
 } from "@/lib/types/nodes";
 
-// Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
   return 'duration' in data && 'tracks' in data;
 }
@@ -44,7 +47,6 @@ function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
 }
 
-// Interfaces for timeline modal
 interface TimelineModalState {
   isOpen: boolean;
   nodeId: string | null;
@@ -63,6 +65,7 @@ export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
     isOpen: false, 
@@ -118,12 +121,10 @@ export function FlowEditor() {
     );
   }, [setNodes]);
 
-  // Validate display name uniqueness
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
   }, [flowTracker, nodes]);
 
-  // Update display name with validation
   const updateDisplayName = useCallback((nodeId: string, newDisplayName: string): boolean => {
     const error = validateDisplayName(newDisplayName, nodeId);
     if (error) {
@@ -165,9 +166,40 @@ export function FlowEditor() {
     handleCloseTimelineEditor();
   }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
 
+  const handleUpdateEdgeFiltering = useCallback((edgeId: string, selectedNodeIds: string[]) => {
+    flowTracker.updateEdgeFiltering(edgeId, selectedNodeIds);
+    // Clear node selection when edge filtering changes
+    setSelectedNodeId(null);
+  }, [flowTracker]);
+
   const timelineNode = timelineModalState.nodeId 
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
+
+  const selectedEdge = useMemo(
+    () => edges.find((edge) => edge.id === selectedEdgeId),
+    [edges, selectedEdgeId]
+  );
+
+  const edgeTypes: EdgeTypes = useMemo(() => ({
+    default: (props) => {
+      const edgeFlow = flowTracker.getNodesFlowingThroughEdge(props.id);
+      const hasFiltering = edgeFlow.length > 0;
+      
+      return (
+        <FilterableEdge
+          {...props}
+          selected={selectedEdgeId === props.id}
+          onClick={(_, edge) => {
+            setSelectedEdgeId(edge.id);
+            setSelectedNodeId(null); // Clear node selection
+          }}
+          hasFiltering={hasFiltering}
+          filterCount={edgeFlow.length}
+        />
+      );
+    }
+  }), [flowTracker, selectedEdgeId]);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     triangle: TriangleNode,
@@ -190,7 +222,6 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Check for object → multiple Insert violation
       if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
           targetNode.type === 'insert') {
         
@@ -229,30 +260,49 @@ export function FlowEditor() {
         return;
       }
       
-      // Create edge with node IDs
-      const newEdge = addEdge({
+      const newEdges = addEdge({
         ...params,
         source: sourceNode.data.identifier.id,
         target: targetNode.data.identifier.id
       }, edges);
       
-      // Track the connection
-      const edgeId = `${sourceNode.data.identifier.id}-${targetNode.data.identifier.id}`;
-      flowTracker.trackConnection(
-        edgeId,
-        sourceNode.data.identifier.id,
-        targetNode.data.identifier.id,
-        params.sourceHandle!,
-        params.targetHandle!
+      // Get the actual edge ID that ReactFlow generated
+      const newEdge = newEdges.find(e => 
+        e.source === sourceNode.data.identifier.id && 
+        e.target === targetNode.data.identifier.id &&
+        e.sourceHandle === params.sourceHandle &&
+        e.targetHandle === params.targetHandle
       );
       
-      setEdges(newEdge);
+      if (newEdge) {
+        flowTracker.trackConnection(
+          newEdge.id,
+          sourceNode.data.identifier.id,
+          targetNode.data.identifier.id,
+          params.sourceHandle!,
+          params.targetHandle!
+        );
+      }
+      
+      setEdges(newEdges);
     },
     [nodes, edges, setEdges, flowTracker, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.data.identifier.id);
+    setSelectedEdgeId(null); // Clear edge selection
+  }, []);
+
+  const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.stopPropagation();
+    setSelectedEdgeId(edge.id);
+    setSelectedNodeId(null); // Clear node selection
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
   }, []);
 
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
@@ -263,8 +313,7 @@ export function FlowEditor() {
 
   const onEdgesDelete = useCallback((deletedEdges: typeof edges) => {
     deletedEdges.forEach(edge => {
-      const edgeId = `${edge.source}-${edge.target}`;
-      flowTracker.removeConnection(edgeId);
+      flowTracker.removeConnection(edge.id);
     });
   }, [flowTracker]);
 
@@ -292,9 +341,7 @@ export function FlowEditor() {
       data: nodeData,
     };
 
-    // Track node creation
     flowTracker.trackNodeCreation(nodeData.identifier.id);
-    
     setNodes((nds) => [...nds, newNode]);
   }, [nodes, setNodes, flowTracker, toast]);
 
@@ -306,7 +353,7 @@ export function FlowEditor() {
         throw new Error("Invalid scene node data");
       }
 
-      const scene = await convertFlowToScene(nodes, edges);
+      const scene = await convertFlowToScene(nodes, edges, flowTracker);
       if (scene) {
         setVideoUrl(null);
         
@@ -324,7 +371,7 @@ export function FlowEditor() {
     } catch (error) {
       toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, convertFlowToScene, generateScene, validateSceneNodes, toast]);
+  }, [nodes, edges, flowTracker, convertFlowToScene, generateScene, validateSceneNodes, toast]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {
@@ -342,7 +389,6 @@ export function FlowEditor() {
     [nodes, selectedNodeId]
   );
 
-  // Get timeline node data with proper type checking
   const getTimelineNodeData = useCallback(() => {
     if (!timelineNode) return { duration: 3, tracks: [] };
     
@@ -370,9 +416,12 @@ export function FlowEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={onPaneClick}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           className="bg-gray-900"
           deleteKeyCode={timelineModalState.isOpen ? null : ['Backspace', 'Delete']}
@@ -431,19 +480,46 @@ export function FlowEditor() {
         )}
       </div>
 
-      {selectedNode && (
-        <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
-          </h3>
-          <PropertyPanel 
-            node={selectedNode}
-            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
-            onDisplayNameChange={updateDisplayName}
-            validateDisplayName={validateDisplayName}
-          />
-        </div>
-      )}
+      <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
+        {selectedNode && (
+          <>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
+            </h3>
+            <PropertyPanel 
+              node={selectedNode}
+              onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
+              onDisplayNameChange={updateDisplayName}
+              validateDisplayName={validateDisplayName}
+            />
+          </>
+        )}
+
+        {selectedEdge && (
+          <>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Connection Properties
+            </h3>
+            <EdgePropertyPanel
+              edge={selectedEdge}
+              nodes={nodes}
+              flowTracker={flowTracker}
+              onUpdateFiltering={handleUpdateEdgeFiltering}
+            />
+          </>
+        )}
+
+        {!selectedNode && !selectedEdge && (
+          <div className="text-gray-400 text-sm">
+            <div className="mb-4">Select a node or connection to edit properties</div>
+            <div className="space-y-2 text-xs">
+              <div>• Click nodes to edit their properties</div>
+              <div>• Click connections to filter object flow</div>
+              <div>• Double-click animation nodes to edit timeline</div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <TimelineEditorModal
         isOpen={timelineModalState.isOpen}

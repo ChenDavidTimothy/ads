@@ -1,6 +1,7 @@
 // src/lib/execution/execution-context.ts
 import type { PortType } from "../types/ports";
 import type { SceneAnimationTrack } from "@/animation/scene/types";
+import type { FlowTracker } from "../flow/flow-tracking";
 
 export interface ExecutionValue {
   type: PortType;
@@ -10,17 +11,11 @@ export interface ExecutionValue {
 }
 
 export interface ExecutionContext {
-  // Node outputs stored by nodeId.portId
   nodeOutputs: Map<string, ExecutionValue>;
-  
-  // Global variables for logic nodes
   variables: Map<string, unknown>;
-  
-  // Execution state
   executedNodes: Set<string>;
   currentTime: number;
   
-  // Scene building - now properly typed
   sceneObjects: Array<{
     id: string;
     type: 'triangle' | 'circle' | 'rectangle';
@@ -70,27 +65,72 @@ export function getNodeOutput(
   return context.nodeOutputs.get(key);
 }
 
-export function getConnectedInput(
+// CRITICAL FIX: Respect edge filtering for "river flow" behavior
+export function getFilteredConnectedInputs(
   context: ExecutionContext,
-  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+  connections: Array<{ id: string; target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
-  targetPortId: string
-): ExecutionValue | undefined {
-  const connection = connections.find(
+  targetPortId: string,
+  flowTracker: FlowTracker
+): ExecutionValue[] {
+  const matchingConnections = connections.filter(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   
-  if (!connection) return undefined;
+  const filteredInputs: ExecutionValue[] = [];
   
-  return getNodeOutput(context, connection.source, connection.sourceHandle);
+  for (const connection of matchingConnections) {
+    const allowedNodeIds = flowTracker.getNodesFlowingThroughEdge(connection.id);
+    
+    const sourceOutput = getNodeOutput(context, connection.source, connection.sourceHandle);
+    if (!sourceOutput) continue;
+    
+    // Filter the data based on edge filtering
+    const filteredData = filterDataByAllowedNodes(sourceOutput.data, allowedNodeIds);
+    
+    if (filteredData !== null) {
+      filteredInputs.push({
+        ...sourceOutput,
+        data: filteredData
+      });
+    }
+  }
+  
+  return filteredInputs;
 }
 
+// Filter output data to only include allowed nodes
+function filterDataByAllowedNodes(data: unknown, allowedNodeIds: string[]): unknown {
+  if (!data) return null;
+  
+  // Handle arrays of objects (common case)
+  if (Array.isArray(data)) {
+    const filtered = data.filter(item => {
+      if (typeof item === 'object' && item !== null && 'id' in item) {
+        return allowedNodeIds.includes(item.id as string);
+      }
+      return true; // Non-object data passes through
+    });
+    return filtered.length > 0 ? filtered : null;
+  }
+  
+  // Handle single object
+  if (typeof data === 'object' && data !== null && 'id' in data) {
+    return allowedNodeIds.includes((data as { id: string }).id) ? data : null;
+  }
+  
+  // Non-object data passes through unchanged
+  return data;
+}
+
+// Legacy function for backward compatibility - redirects to filtered version
 export function getConnectedInputs(
   context: ExecutionContext,
-  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+  connections: Array<{ id: string; target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue[] {
+  // Fallback for when flowTracker is not available
   const matchingConnections = connections.filter(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
@@ -104,6 +144,21 @@ export function getConnectedInputs(
   }
   
   return inputs;
+}
+
+export function getConnectedInput(
+  context: ExecutionContext,
+  connections: Array<{ id: string; target: string; targetHandle: string; source: string; sourceHandle: string }>,
+  targetNodeId: string,
+  targetPortId: string
+): ExecutionValue | undefined {
+  const connection = connections.find(
+    conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
+  );
+  
+  if (!connection) return undefined;
+  
+  return getNodeOutput(context, connection.source, connection.sourceHandle);
 }
 
 export function setVariable(

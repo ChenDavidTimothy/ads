@@ -1,26 +1,27 @@
-// src/lib/execution/execution-engine.ts - CORRECTED: Proper flow architecture
+// src/lib/execution/execution-engine.ts
 import type { Node, Edge } from "reactflow";
 import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
-  getConnectedInputs,
+  getFilteredConnectedInputs,
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
 import type { NodeData, AnimationTrack } from "../types/nodes";
 import type { SceneAnimationTrack } from "@/animation/scene/types";
+import type { FlowTracker } from "../flow/flow-tracking";
 
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
   execute(
     node: Node<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: Edge[],
+    flowTracker: FlowTracker
   ): Promise<void>;
 }
 
-// Geometry node executor - CORRECTED: Only creates object definitions
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -30,11 +31,7 @@ class GeometryNodeExecutor implements NodeExecutor {
     node: Node<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
-    // CRITICAL FIX: Only create object definition, DO NOT add to scene
-    // Only Insert nodes should add objects to the scene
     const objectDefinition = this.buildObjectDefinition(node);
-    
-    // Output the object definition for Insert nodes to consume
     setNodeOutput(context, node.data.identifier.id, 'object', 'object', objectDefinition);
   }
 
@@ -87,7 +84,6 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - CORRECTED: This is the ONLY place objects are added to scene
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -96,10 +92,17 @@ class InsertNodeExecutor implements NodeExecutor {
   async execute(
     node: Node<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: Edge[],
+    flowTracker: FlowTracker
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
+    const inputs = getFilteredConnectedInputs(
+      context, 
+      connections, 
+      node.data.identifier.id, 
+      'object',
+      flowTracker
+    );
     
     if (inputs.length === 0) {
       throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
@@ -108,13 +111,11 @@ class InsertNodeExecutor implements NodeExecutor {
     const timedObjects = [];
     
     for (const input of inputs) {
-      // CRITICAL FIX: Insert node is the ONLY place where objects are added to the scene
       const sceneObject = {
         ...input.data,
         appearanceTime: data.appearanceTime as number
       };
 
-      // Add object to scene - THIS IS THE ONLY PLACE THIS SHOULD HAPPEN
       context.sceneObjects.push(sceneObject);
       timedObjects.push(sceneObject);
     }
@@ -124,7 +125,6 @@ class InsertNodeExecutor implements NodeExecutor {
   }
 }
 
-// Animation node executor - handles multiple inputs
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -133,10 +133,17 @@ class AnimationNodeExecutor implements NodeExecutor {
   async execute(
     node: Node<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: Edge[],
+    flowTracker: FlowTracker
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
+    const inputs = getFilteredConnectedInputs(
+      context, 
+      connections, 
+      node.data.identifier.id, 
+      'timed_object',
+      flowTracker
+    );
     
     if (inputs.length === 0) {
       throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
@@ -237,7 +244,6 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - validates the complete flow
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -246,12 +252,17 @@ class SceneNodeExecutor implements NodeExecutor {
   async execute(
     node: Node<NodeData>, 
     context: ExecutionContext, 
-    connections: Edge[]
+    connections: Edge[],
+    flowTracker: FlowTracker
   ): Promise<void> {
-    // Scene node should receive animation inputs
-    const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
+    const animationInputs = getFilteredConnectedInputs(
+      context, 
+      connections, 
+      node.data.identifier.id, 
+      'animation',
+      flowTracker
+    );
     
-    // Validate that scene has objects (they should come through proper flow)
     if (context.sceneObjects.length === 0) {
       throw new Error(
         `Scene ${node.data.identifier.displayName} has no objects. ` +
@@ -259,7 +270,6 @@ class SceneNodeExecutor implements NodeExecutor {
       );
     }
     
-    // Validate that we have at least one animation input if we have objects
     if (animationInputs.length === 0 && context.sceneObjects.length > 0) {
       throw new Error(
         `Scene ${node.data.identifier.displayName} has objects but no animation input. ` +
@@ -279,21 +289,19 @@ export class ExecutionEngine {
     new SceneNodeExecutor()
   ];
 
-  async executeFlow(nodes: Node<NodeData>[], edges: Edge[]): Promise<ExecutionContext> {
+  async executeFlow(nodes: Node<NodeData>[], edges: Edge[], flowTracker: FlowTracker): Promise<ExecutionContext> {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     this.validateProperFlow(nodes, edges);
     
     const context = createExecutionContext();
-    
-    // Topological execution order
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
     for (const node of executionOrder) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
         const executor = this.getExecutor(node.type!);
         if (executor) {
-          await executor.execute(node, context, edges);
+          await executor.execute(node, context, edges, flowTracker);
           markNodeExecuted(context, node.data.identifier.id);
         }
       }
@@ -302,20 +310,16 @@ export class ExecutionEngine {
     return context;
   }
 
-  // NEW: Validate that the flow architecture is respected
   private validateProperFlow(nodes: Node<NodeData>[], edges: Edge[]): void {
     const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
     const insertNodes = nodes.filter(n => n.type === 'insert');
-    const sceneNodes = nodes.filter(n => n.type === 'scene');
     
-    // Check that all geometry nodes that should appear in scene are connected to insert nodes
     for (const geoNode of geometryNodes) {
       const hasInsertConnection = edges.some(edge => 
         edge.source === geoNode.data.identifier.id && 
         insertNodes.some(insert => insert.data.identifier.id === edge.target)
       );
       
-      // Check if this geometry node is ultimately connected to scene
       const isConnectedToScene = this.isNodeConnectedToScene(geoNode.data.identifier.id, edges, nodes);
       
       if (isConnectedToScene && !hasInsertConnection) {
@@ -327,7 +331,6 @@ export class ExecutionEngine {
     }
   }
 
-  // Helper to check if a node is ultimately connected to scene
   private isNodeConnectedToScene(nodeId: string, edges: Edge[], nodes: Node<NodeData>[]): boolean {
     const visited = new Set<string>();
     
@@ -349,23 +352,19 @@ export class ExecutionEngine {
     const inDegree = new Map<string, number>();
     const adjList = new Map<string, string[]>();
     
-    // Initialize using identifier.id
     for (const node of nodes) {
       inDegree.set(node.data.identifier.id, 0);
       adjList.set(node.data.identifier.id, []);
     }
     
-    // Build adjacency list and in-degree count
     for (const edge of edges) {
       adjList.get(edge.source)?.push(edge.target);
       inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
     }
     
-    // Kahn's algorithm for topological sorting
     const queue: Node<NodeData>[] = [];
     const result: Node<NodeData>[] = [];
     
-    // Start with nodes that have no dependencies
     for (const node of nodes) {
       if (inDegree.get(node.data.identifier.id) === 0) {
         queue.push(node);
@@ -376,7 +375,6 @@ export class ExecutionEngine {
       const current = queue.shift()!;
       result.push(current);
       
-      // Reduce in-degree for neighbors
       for (const neighborId of adjList.get(current.data.identifier.id) ?? []) {
         const newInDegree = (inDegree.get(neighborId) ?? 1) - 1;
         inDegree.set(neighborId, newInDegree);
@@ -390,7 +388,6 @@ export class ExecutionEngine {
       }
     }
     
-    // Check for cycles
     if (result.length !== nodes.length) {
       throw new Error("Circular dependency detected in node graph");
     }
@@ -399,7 +396,6 @@ export class ExecutionEngine {
   }
 
   private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
-    // Track object -> insert mappings
     const objectToInsertMap = new Map<string, string>();
     
     for (const edge of edges) {
@@ -408,7 +404,6 @@ export class ExecutionEngine {
       
       if (!sourceNode || !targetNode) continue;
       
-      // Check for object -> multiple insert violations
       if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
           targetNode.type === 'insert') {
         
