@@ -1,13 +1,28 @@
-// src/server/animation-processing/execution-engine.ts - CORRECTED: Proper flow architecture
+// src/server/animation-processing/execution-engine.ts - Updated with FlowTracker support
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
   getConnectedInputs,
+  getFilteredConnectedInputs,
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
+
+// FlowTracker data type for backend
+export interface FlowTrackerData {
+  [edgeId: string]: {
+    edgeId: string;
+    sourceNodeId: string;
+    targetNodeId: string;
+    sourcePort: string;
+    targetPort: string;
+    availableNodeIds: string[];
+    selectedNodeIds: string[];
+    timestamp: number;
+  };
+}
 
 // ReactFlow-compatible types for server
 export interface ReactFlowNode<T = unknown> {
@@ -34,7 +49,7 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor - CORRECTED: Only creates object definitions
+// Geometry node executor - creates object definitions
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -44,8 +59,7 @@ class GeometryNodeExecutor implements NodeExecutor {
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
-    // CRITICAL FIX: Only create object definition, DO NOT add to scene
-    // Only Insert nodes should add objects to the scene
+    // Only create object definition, DO NOT add to scene
     const objectDefinition = this.buildObjectDefinition(node);
     
     // Output the object definition for Insert nodes to consume
@@ -101,7 +115,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - CORRECTED: This is the ONLY place objects are added to scene
+// Insert node executor - adds objects to scene with filtering
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -113,22 +127,31 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
+    
+    // Use filtered inputs if FlowTracker data is available
+    const inputs = context.flowTrackerData 
+      ? getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'object')
+      : getConnectedInputs(context, connections, node.data.identifier.id, 'object');
     
     if (inputs.length === 0) {
-      throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
+      throw new Error(
+        `Insert node ${node.data.identifier.displayName} missing required object input(s). ` +
+        `Objects must be connected to Insert nodes to appear in the scene.`
+      );
     }
 
     const timedObjects = [];
     
     for (const input of inputs) {
-      // CRITICAL FIX: Insert node is the ONLY place where objects are added to the scene
+      if (!input.data) continue; // Skip filtered-out objects
+      
+      // Insert node is where objects are added to the scene
       const sceneObject = {
         ...input.data,
         appearanceTime: data.appearanceTime as number
       };
 
-      // Add object to scene - THIS IS THE ONLY PLACE THIS SHOULD HAPPEN
+      // Add object to scene
       context.sceneObjects.push(sceneObject);
       timedObjects.push(sceneObject);
     }
@@ -138,7 +161,7 @@ class InsertNodeExecutor implements NodeExecutor {
   }
 }
 
-// Animation node executor - handles multiple inputs
+// Animation node executor - handles multiple inputs with filtering
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -150,15 +173,24 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
+    
+    // Use filtered inputs if FlowTracker data is available
+    const inputs = context.flowTrackerData
+      ? getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'timed_object')
+      : getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
     
     if (inputs.length === 0) {
-      throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
+      throw new Error(
+        `Animation node ${node.data.identifier.displayName} missing required timed object input(s). ` +
+        `Connect Insert nodes to Animation nodes.`
+      );
     }
 
     const allAnimations: SceneAnimationTrack[] = [];
     
     for (const input of inputs) {
+      if (!input.data) continue; // Skip filtered-out objects
+      
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const timedObject of inputData) {
@@ -265,7 +297,7 @@ class SceneNodeExecutor implements NodeExecutor {
     // Scene node should receive animation inputs
     const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
     
-    // Validate that scene has objects (they should come through proper flow)
+    // Validate that scene has objects
     if (context.sceneObjects.length === 0) {
       throw new Error(
         `Scene ${node.data.identifier.displayName} has no objects. ` +
@@ -273,7 +305,7 @@ class SceneNodeExecutor implements NodeExecutor {
       );
     }
     
-    // Validate that we have at least one animation input if we have objects
+    // Validate that we have animation input if we have objects
     if (animationInputs.length === 0 && context.sceneObjects.length > 0) {
       throw new Error(
         `Scene ${node.data.identifier.displayName} has objects but no animation input. ` +
@@ -293,12 +325,21 @@ export class ExecutionEngine {
     new SceneNodeExecutor()
   ];
 
-  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
+  async executeFlow(
+    nodes: ReactFlowNode<NodeData>[], 
+    edges: ReactFlowEdge[],
+    flowTrackerData?: FlowTrackerData // NEW: Optional FlowTracker data
+  ): Promise<ExecutionContext> {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     this.validateProperFlow(nodes, edges);
     
     const context = createExecutionContext();
+    
+    // Store FlowTracker data in context for filtering
+    if (flowTrackerData) {
+      context.flowTrackerData = flowTrackerData;
+    }
     
     // Topological execution order
     const executionOrder = this.getTopologicalOrder(nodes, edges);
@@ -316,20 +357,17 @@ export class ExecutionEngine {
     return context;
   }
 
-  // NEW: Validate that the flow architecture is respected
   private validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
     const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
     const insertNodes = nodes.filter(n => n.type === 'insert');
-    const sceneNodes = nodes.filter(n => n.type === 'scene');
     
-    // Check that all geometry nodes that should appear in scene are connected to insert nodes
+    // Check that all geometry nodes connected to scene are connected to insert nodes
     for (const geoNode of geometryNodes) {
       const hasInsertConnection = edges.some(edge => 
         edge.source === geoNode.data.identifier.id && 
         insertNodes.some(insert => insert.data.identifier.id === edge.target)
       );
       
-      // Check if this geometry node is ultimately connected to scene
       const isConnectedToScene = this.isNodeConnectedToScene(geoNode.data.identifier.id, edges, nodes);
       
       if (isConnectedToScene && !hasInsertConnection) {
@@ -341,7 +379,6 @@ export class ExecutionEngine {
     }
   }
 
-  // Helper to check if a node is ultimately connected to scene
   private isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): boolean {
     const visited = new Set<string>();
     

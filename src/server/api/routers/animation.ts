@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts
+// src/server/api/routers/animation.ts - Updated with FlowTracker support
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
@@ -9,7 +9,6 @@ import {
 import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
-// Import ReactFlowNode type from execution-engine for proper casting
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 
 // Scene config schema
@@ -30,7 +29,6 @@ const reactFlowNodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  // FIX: Removed .passthrough() as z.record(z.unknown()) inherently allows all key-value pairs
   data: z.record(z.unknown()), // Flexible to accommodate all node properties
 });
 
@@ -43,26 +41,40 @@ const reactFlowEdgeSchema = z.object({
   targetHandle: z.string().optional(),
 });
 
+// FlowTracker EdgeFlow schema
+const edgeFlowSchema = z.object({
+  edgeId: z.string(),
+  sourceNodeId: z.string(),
+  targetNodeId: z.string(),
+  sourcePort: z.string(),
+  targetPort: z.string(),
+  availableNodeIds: z.array(z.string()),
+  selectedNodeIds: z.array(z.string()),
+  timestamp: z.number(),
+});
+
+// FlowTracker data schema
+const flowTrackerSchema = z.record(edgeFlowSchema);
+
 export const animationRouter = createTRPCRouter({
-  // Main scene-based endpoint - UPDATED to accept nodes/edges
+  // Main scene-based endpoint - UPDATED to accept FlowTracker data
   generateScene: publicProcedure
     .input(
       z.object({
         nodes: z.array(reactFlowNodeSchema),
         edges: z.array(reactFlowEdgeSchema),
+        flowTracker: flowTrackerSchema.optional(), // NEW: FlowTracker edge filtering data
         config: sceneConfigSchema.optional(),
       }),
     )
     .mutation(async ({ input }) => {
       try {
-        // Use backend ExecutionEngine to process the graph
+        // Use backend ExecutionEngine to process the graph with FlowTracker data
         const engine = new ExecutionEngine();
-        // FIX: Explicitly cast input.nodes to ReactFlowNode<NodeData>[] to satisfy TypeScript
-        // The Zod schema `reactFlowNodeSchema` validates the runtime shape,
-        // and we are asserting here that the data property will conform to `NodeData` after processing.
         const executionContext = await engine.executeFlow(
           input.nodes as unknown as ReactFlowNode<NodeData>[],
           input.edges,
+          input.flowTracker // Pass FlowTracker data to execution engine
         );
 
         // Find scene node to get configuration
@@ -87,7 +99,7 @@ export const animationRouter = createTRPCRouter({
         // Build AnimationScene from execution context
         const scene: AnimationScene = {
           duration: totalDuration,
-          objects: executionContext.sceneObjects as SceneObject[],
+          objects: executionContext.sceneObjects as any[], // Type assertion for SceneObject[]
           animations: executionContext.sceneAnimations,
           background: {
             color: sceneData.backgroundColor,
@@ -152,6 +164,7 @@ export const animationRouter = createTRPCRouter({
       z.object({
         nodes: z.array(reactFlowNodeSchema),
         edges: z.array(reactFlowEdgeSchema),
+        flowTracker: flowTrackerSchema.optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -160,6 +173,7 @@ export const animationRouter = createTRPCRouter({
         const executionContext = await engine.executeFlow(
           input.nodes as unknown as ReactFlowNode<NodeData>[],
           input.edges,
+          input.flowTracker
         );
 
         // Build scene for validation
@@ -168,7 +182,6 @@ export const animationRouter = createTRPCRouter({
           return { valid: false, errors: ["Scene node is required"] };
         }
 
-        // FIX: Explicitly cast sceneNode.data to SceneNodeData
         const sceneData = sceneNode.data as unknown as SceneNodeData;
         const maxAnimationTime =
           executionContext.sceneAnimations.length > 0

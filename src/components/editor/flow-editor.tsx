@@ -1,7 +1,7 @@
-// src/components/editor/flow-editor.tsx - Updated with backend execution
+// src/components/editor/flow-editor.tsx - Updated with edge filtering support
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -12,6 +12,7 @@ import ReactFlow, {
   type Node,
   type Connection,
   type NodeTypes,
+  type EdgeTypes,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -19,6 +20,8 @@ import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, Sce
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
+import { EdgePropertyPanel } from "@/components/editor/edge-property-panel";
+import { FilterableEdge } from "@/components/editor/edges";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
@@ -33,6 +36,16 @@ import type {
   SceneNodeData,
   AnimationTrack
 } from "@/shared/types";
+import type { EdgeFlow } from "@/lib/flow/flow-tracking";
+
+// Helper to extract selectedNodeIds from EdgeFlow objects
+function extractSelectedIds(edgeFlows: Record<string, EdgeFlow>): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  Object.entries(edgeFlows).forEach(([edgeId, flow]) => {
+    result[edgeId] = flow.selectedNodeIds;
+  });
+  return result;
+}
 
 // Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
@@ -62,6 +75,7 @@ export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
     isOpen: false, 
@@ -69,7 +83,15 @@ export function FlowEditor() {
   });
   const [flowTracker] = useState(() => new FlowTracker());
 
+  // NEW: React state for edge filtering (single source of truth for UI)
+  const [activeEdgeFilters, setActiveEdgeFilters] = useState<Record<string, string[]>>({});
+
   const { toast } = useNotifications();
+
+  // NEW: Initialize activeEdgeFilters from FlowTracker on mount
+  useEffect(() => {
+    setActiveEdgeFilters(extractSelectedIds(flowTracker.getAllEdgeFlows()));
+  }, [flowTracker]);
 
   const generateScene = api.animation.generateScene.useMutation({
     onSuccess: (data) => {
@@ -149,6 +171,53 @@ export function FlowEditor() {
     return true;
   }, [validateDisplayName, setNodes, toast]);
 
+  // NEW: onEdgeClick handler
+  const onEdgeClick = useCallback((event: React.MouseEvent, edgeId: string) => {
+    event.stopPropagation(); // Prevent canvas click
+    setSelectedEdgeId(edgeId);
+    setSelectedNodeId(null); // Deselect any node
+  }, []);
+
+  // NEW: onFilterChange callback - handles edge filtering updates
+  const onFilterChange = useCallback((edgeId: string, newSelectedNodeIds: string[]) => {
+    // Update FlowTracker's internal state (triggers propagation)
+    flowTracker.updateEdgeFiltering(edgeId, newSelectedNodeIds);
+    
+    // CRITICAL: Re-sync ALL edge filters after propagation to ensure UI consistency
+    setActiveEdgeFilters(extractSelectedIds(flowTracker.getAllEdgeFlows()));
+  }, [flowTracker]);
+
+  // NEW: Derived edge visual state for performance optimization
+  const edgeVisualStates = useMemo(() => {
+    const states: Record<string, { 
+      isFiltered: boolean; 
+      isSelected: boolean; 
+      sourceNodeId: string; 
+      targetNodeId: string;
+    }> = {};
+    
+    edges.forEach(edge => {
+      const edgeFlow = flowTracker.getEdgeFlow(edge.id);
+      
+      // Use activeEdgeFilters as source of truth for current selection state
+      const currentSelectedIds = activeEdgeFilters[edge.id] || [];
+      
+      // Determine if filtered: some objects were deselected by user
+      const isFiltered = edgeFlow 
+        ? currentSelectedIds.length < edgeFlow.availableNodeIds.length
+        : false;
+          
+      states[edge.id] = {
+        isFiltered,
+        isSelected: selectedEdgeId === edge.id,
+        sourceNodeId: edge.source,
+        targetNodeId: edge.target,
+      };
+    });
+    
+    return states;
+  }, [edges, selectedEdgeId, activeEdgeFilters, flowTracker]);
+
   const handleOpenTimelineEditor = useCallback((nodeId: string) => {
     setTimelineModalState({ isOpen: true, nodeId });
   }, []);
@@ -182,6 +251,23 @@ export function FlowEditor() {
     scene: SceneNode,
   }), [handleOpenTimelineEditor]);
 
+  // NEW: Custom edge types configuration
+  const edgeTypes: EdgeTypes = useMemo(() => ({
+    filterable: (props) => (
+      <FilterableEdge
+        {...props}
+        flowTracker={flowTracker}
+        onEdgeClick={onEdgeClick}
+        edgeState={edgeVisualStates[props.id] || { 
+          isFiltered: false, 
+          isSelected: false, 
+          sourceNodeId: props.source || '',
+          targetNodeId: props.target || ''
+        }}
+      />
+    ),
+  }), [flowTracker, onEdgeClick, edgeVisualStates]);
+
   const onConnect = useCallback(
     (params: Connection) => {
       const sourceNode = nodes.find((n) => n.data.identifier.id === params.source);
@@ -189,19 +275,20 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Check for object → multiple Insert violation
+      // Check for object → multiple Insert violation (same object to different inserts)
       if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
           targetNode.type === 'insert') {
         
         const existingInsertConnection = edges.find(edge => 
           edge.source === sourceNode.data.identifier.id && 
-          nodes.find(n => n.data.identifier.id === edge.target)?.type === 'insert'
+          nodes.find(n => n.data.identifier.id === edge.target)?.type === 'insert' &&
+          edge.target !== targetNode.data.identifier.id // Allow same insert, block different inserts
         );
         
         if (existingInsertConnection) {
           toast.error(
             "Connection not allowed", 
-            `Object already connected to Insert node. Each object can only connect to one Insert node.`
+            `Object already connected to a different Insert node. Each object can only connect to one Insert node.`
           );
           return;
         }
@@ -228,43 +315,59 @@ export function FlowEditor() {
         return;
       }
       
-      // Create edge with node IDs
-      const newEdge = addEdge({
+      // Create edge first, then get the actual ID ReactFlow assigns
+      const newEdges = addEdge({
         ...params,
+        type: 'filterable', // CRITICAL: Assign filterable type
         source: sourceNode.data.identifier.id,
         target: targetNode.data.identifier.id
       }, edges);
       
-      // Track the connection
-      const edgeId = `${sourceNode.data.identifier.id}-${targetNode.data.identifier.id}`;
+      // Get the actual edge ID from the newly created edge
+      const actualEdge = newEdges[newEdges.length - 1];
+      if (!actualEdge) {
+        toast.error("Connection failed", "Could not create edge");
+        return;
+      }
+      
+      const actualEdgeId = actualEdge.id;
+      
+      // Track the connection in FlowTracker using the real edge ID
       flowTracker.trackConnection(
-        edgeId,
+        actualEdgeId,
         sourceNode.data.identifier.id,
         targetNode.data.identifier.id,
         params.sourceHandle!,
         params.targetHandle!
       );
       
-      setEdges(newEdge);
+      // Update React state with new filtering data
+      setActiveEdgeFilters(extractSelectedIds(flowTracker.getAllEdgeFlows()));
+      
+      setEdges(newEdges);
     },
     [nodes, edges, setEdges, flowTracker, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.data.identifier.id);
+    setSelectedEdgeId(null); // Deselect any edge
   }, []);
 
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
     deletedNodes.forEach(node => {
       flowTracker.removeNode(node.data.identifier.id);
     });
+    // Update edge filters after node deletion
+    setActiveEdgeFilters(extractSelectedIds(flowTracker.getAllEdgeFlows()));
   }, [flowTracker]);
 
   const onEdgesDelete = useCallback((deletedEdges: typeof edges) => {
     deletedEdges.forEach(edge => {
-      const edgeId = `${edge.source}-${edge.target}`;
-      flowTracker.removeConnection(edgeId);
+      flowTracker.removeConnection(edge.id);
     });
+    // Update edge filters after edge deletion
+    setActiveEdgeFilters(extractSelectedIds(flowTracker.getAllEdgeFlows()));
   }, [flowTracker]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
@@ -305,7 +408,6 @@ export function FlowEditor() {
         throw new Error("Invalid scene node data");
       }
 
-      // UPDATED: Send raw nodes and edges to backend
       setVideoUrl(null);
       
       const config: Partial<SceneConfig> = {
@@ -333,15 +435,19 @@ export function FlowEditor() {
         targetHandle: edge.targetHandle
       }));
       
+      // Include FlowTracker data for backend
+      const flowTrackerData = flowTracker.getAllEdgeFlows();
+      
       generateScene.mutate({ 
         nodes: backendNodes, 
-        edges: backendEdges, 
+        edges: backendEdges,
+        flowTracker: flowTrackerData,
         config 
       });
     } catch (error) {
       toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, generateScene, validateSceneNodes, toast]);
+  }, [nodes, edges, flowTracker, generateScene, validateSceneNodes, toast]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {
@@ -387,9 +493,11 @@ export function FlowEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           className="bg-gray-900"
           deleteKeyCode={timelineModalState.isOpen ? null : ['Backspace', 'Delete']}
@@ -448,7 +556,8 @@ export function FlowEditor() {
         )}
       </div>
 
-      {selectedNode && (
+      {/* Node Property Panel */}
+      {selectedNodeId && selectedNode && (
         <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
           <h3 className="text-lg font-semibold text-white mb-4">
             {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
@@ -458,6 +567,20 @@ export function FlowEditor() {
             onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
             onDisplayNameChange={updateDisplayName}
             validateDisplayName={validateDisplayName}
+          />
+        </div>
+      )}
+
+      {/* NEW: Edge Property Panel */}
+      {selectedEdgeId && !selectedNodeId && (
+        <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
+          <EdgePropertyPanel
+            edgeId={selectedEdgeId}
+            nodes={nodes}
+            flowTracker={flowTracker}
+            activeEdgeFilters={activeEdgeFilters}
+            onFilterChange={onFilterChange}
+            onClosePanel={() => setSelectedEdgeId(null)}
           />
         </div>
       )}
