@@ -1,8 +1,8 @@
-// src/lib/types/ports.ts - Updated to support AnimationNode chaining
+// src/lib/types/ports.ts
 export type PortType = 
   | 'object'        // Geometry objects
   | 'timed_object'  // Objects with timing applied by Insert node
-  | 'animation'     // Animation timeline - now can chain with other animations
+  | 'animation'     // Animation timeline
   | 'data'         // Generic data
   | 'boolean'      // True/false values
   | 'trigger'      // Execution trigger
@@ -30,21 +30,11 @@ export interface TypedConnection {
   targetPortType: PortType;
 }
 
-// Path filtering for exclusive routing
-export interface PathFilter {
-  selectedObjectIds: string[];
-  filterEnabled: boolean;
-}
-
-export interface FilteredConnection extends TypedConnection {
-  pathFilter?: PathFilter;
-}
-
-// Updated port compatibility rules - CRITICAL: Enable animation chaining
+// Base port compatibility rules
 const PORT_COMPATIBILITY: Record<PortType, PortType[]> = {
   object: ['object', 'data'],
   timed_object: ['timed_object', 'data'],
-  animation: ['animation', 'timed_object', 'scene', 'data'], // Key change: animation can connect to animation
+  animation: ['animation', 'scene', 'data'],
   data: ['data', 'boolean', 'trigger'],
   boolean: ['boolean', 'trigger', 'data'],
   trigger: ['trigger', 'animation', 'data'],
@@ -56,17 +46,4 @@ export function arePortsCompatible(
   targetType: PortType
 ): boolean {
   return PORT_COMPATIBILITY[sourceType]?.includes(targetType) ?? false;
-}
-
-// Helper to determine if a port accepts multiple input types
-export function getAcceptedInputTypes(targetType: PortType): PortType[] {
-  const acceptedTypes: PortType[] = [];
-  
-  for (const [sourceType, compatibleTargets] of Object.entries(PORT_COMPATIBILITY)) {
-    if (compatibleTargets.includes(targetType)) {
-      acceptedTypes.push(sourceType as PortType);
-    }
-  }
-  
-  return acceptedTypes;
 }

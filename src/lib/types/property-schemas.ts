@@ -1,9 +1,9 @@
-// src/lib/types/property-schemas.ts - Updated to support string properties for naming
+// src/lib/types/property-schemas.ts
 import type { Point2D } from "@/animation/types";
 
 export type PropertyType = 
   | 'number'
-  | 'string'  // Essential for user-defined naming
+  | 'string' 
   | 'color'
   | 'boolean'
   | 'point2d'
@@ -29,8 +29,6 @@ export interface NumberPropertySchema extends BasePropertySchema {
 export interface StringPropertySchema extends BasePropertySchema {
   type: 'string';
   defaultValue?: string;
-  maxLength?: number;
-  placeholder?: string;
 }
 
 export interface ColorPropertySchema extends BasePropertySchema {

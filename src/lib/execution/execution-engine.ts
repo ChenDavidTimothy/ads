@@ -1,4 +1,4 @@
-// src/lib/execution/execution-engine.ts - River flow execution with automatic exclusive routing
+// src/lib/execution/execution-engine.ts
 import type { Node, Edge } from "reactflow";
 import type { ExecutionContext } from "./execution-context";
 import { 
@@ -6,12 +6,9 @@ import {
   setNodeOutput, 
   getConnectedInputs,
   markNodeExecuted,
-  isNodeExecuted,
-  createObjectStream,
-  setPathFilter,
-  recomputeRiverFlow 
+  isNodeExecuted 
 } from "./execution-context";
-import type { NodeData, AnimationTrack, StreamObject, ObjectStream } from "../types/nodes";
+import type { NodeData, AnimationTrack } from "../types/nodes";
 import type { SceneAnimationTrack } from "@/animation/scene/types";
 
 export interface NodeExecutor {
@@ -23,7 +20,7 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor - creates object streams
+// Geometry node executor
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -36,25 +33,13 @@ class GeometryNodeExecutor implements NodeExecutor {
     const sceneObject = this.buildSceneObject(node);
     context.sceneObjects.push(sceneObject);
     
-    // Create stream with single object
-    const streamObject: StreamObject = {
-      objectId: node.id,
-      objectName: (node.data as Record<string, unknown>).objectName as string | undefined,
-      nodeName: (node.data as Record<string, unknown>).userDefinedName as string | undefined,
-      data: sceneObject,
-      effectiveStartTime: 0
-    };
-    
-    const stream = createObjectStream(node.id, 'object', [streamObject]);
-    setNodeOutput(context, node.id, 'object', 'object', stream);
+    setNodeOutput(context, node.id, 'object', 'object', sceneObject);
   }
 
   private buildSceneObject(node: Node<NodeData>) {
     const data = node.data as Record<string, unknown>;
     const baseObject = {
       id: node.id,
-      objectName: data.objectName as string | undefined,
-      nodeName: data.userDefinedName as string | undefined,
       type: node.type as "triangle" | "circle" | "rectangle",
       initialPosition: data.position as { x: number; y: number },
       initialRotation: 0,
@@ -100,7 +85,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - river flow aware
+// Insert node executor - handles multiple inputs
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -118,35 +103,30 @@ class InsertNodeExecutor implements NodeExecutor {
       throw new Error(`Insert node ${node.id} missing required object input(s)`);
     }
 
-    const appearanceTime = data.appearanceTime as number;
-    const allTimedObjects: StreamObject[] = [];
+    const timedObjects = [];
     
-    // Process all input streams - only objects that flowed through filters
     for (const input of inputs) {
-      for (const streamObject of input.data.objects) {
-        // Update scene object with appearance time
-        const objectIndex = context.sceneObjects.findIndex(obj => obj.id === streamObject.objectId);
-        if (objectIndex !== -1) {
-          context.sceneObjects[objectIndex].appearanceTime = appearanceTime;
-        }
+      // Store appearance time on object - timeline will handle visibility
+      const timedObject = {
+        ...input.data,
+        appearanceTime: data.appearanceTime as number
+      };
 
-        // Create timed object
-        const timedObject: StreamObject = {
-          ...streamObject,
-          effectiveStartTime: appearanceTime
-        };
-
-        allTimedObjects.push(timedObject);
+      // Update object in scene
+      const objectIndex = context.sceneObjects.findIndex(obj => obj.id === input.data.id);
+      if (objectIndex !== -1) {
+        context.sceneObjects[objectIndex] = timedObject;
       }
+
+      timedObjects.push(timedObject);
     }
 
-    context.currentTime = Math.max(context.currentTime, appearanceTime);
-    const stream = createObjectStream(node.id, 'timed_object', allTimedObjects);
-    setNodeOutput(context, node.id, 'timed_object', 'timed_object', stream);
+    context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
+    setNodeOutput(context, node.id, 'timed_object', 'timed_object', timedObjects);
   }
 }
 
-// Animation node executor - supports chaining and river flow
+// Animation node executor - handles multiple inputs
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -158,65 +138,36 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: Edge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.id, 'input');
+    const inputs = getConnectedInputs(context, connections, node.id, 'timed_object');
     
     if (inputs.length === 0) {
-      throw new Error(`Animation node ${node.id} missing required input(s)`);
+      throw new Error(`Animation node ${node.id} missing required timed object input(s)`);
     }
 
     const allAnimations: SceneAnimationTrack[] = [];
-    const allOutputObjects: StreamObject[] = [];
     
-    // Process all input streams - respects river flow filtering
     for (const input of inputs) {
-      for (const streamObject of input.data.objects) {
-        const objectStartTime = streamObject.effectiveStartTime;
-        const nodeDuration = data.duration as number;
-        
-        // Convert tracks to scene animations relative to object's effective start time
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      
+      for (const timedObject of inputData) {
+        const objectStartTime = timedObject.appearanceTime || 0;
         const animations = this.convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],
-          streamObject.objectId,
+          timedObject.id,
           objectStartTime
         );
         allAnimations.push(...animations);
-        
-        // Calculate completion time for this object
-        const maxAnimationEndTime = animations.length > 0 
-          ? Math.max(...animations.map(a => a.startTime + a.duration))
-          : objectStartTime;
-        
-        const completionTime = Math.max(maxAnimationEndTime, objectStartTime + nodeDuration);
-        
-        // Create output object for potential chaining - preserve names
-        const outputObject: StreamObject = {
-          ...streamObject,
-          effectiveStartTime: objectStartTime,
-          completionTime: completionTime
-        };
-        
-        allOutputObjects.push(outputObject);
       }
     }
 
     context.sceneAnimations.push(...allAnimations);
-    
-    // Update context time to latest completion
-    const maxCompletionTime = Math.max(
-      ...allOutputObjects.map(obj => obj.completionTime || obj.effectiveStartTime),
-      context.currentTime
-    );
-    context.currentTime = maxCompletionTime;
+    const maxDuration = Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime);
+    context.currentTime = maxDuration;
 
-    const stream = createObjectStream(node.id, 'animation', allOutputObjects);
-    setNodeOutput(context, node.id, 'animation', 'animation', stream);
+    setNodeOutput(context, node.id, 'animation', 'animation', allAnimations);
   }
 
-  private convertTracksToSceneAnimations(
-    tracks: AnimationTrack[], 
-    objectId: string, 
-    objectStartTime: number
-  ): SceneAnimationTrack[] {
+  private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
     return tracks.map((track): SceneAnimationTrack => {
       switch (track.type) {
         case 'move':
@@ -288,7 +239,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - final validation
+// Scene node executor - now properly processes animation inputs
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -299,23 +250,11 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: Edge[]
   ): Promise<void> {
-    // Process animation inputs for validation
-    const inputs = getConnectedInputs(context, connections, node.id, 'animation');
+    // Scene node can optionally receive animation inputs for validation
+    getConnectedInputs(context, connections, node.id, 'animation');
     
-    // Scene validation - ensure all objects have animations
-    for (const input of inputs) {
-      for (const streamObject of input.data.objects) {
-        const hasAnimations = context.sceneAnimations.some(
-          anim => anim.objectId === streamObject.objectId
-        );
-        if (!hasAnimations) {
-          console.warn(`Object ${streamObject.objectId} has no animations`);
-        }
-      }
-    }
-    
-    const stream = createObjectStream(node.id, 'scene', []);
-    setNodeOutput(context, node.id, 'scene', 'scene', stream);
+    // All animations should already be in context from previous executions
+    setNodeOutput(context, node.id, 'scene', 'scene', node.data);
   }
 }
 
@@ -333,10 +272,7 @@ export class ExecutionEngine {
     
     const context = createExecutionContext();
     
-    // Initialize path filters from edges and compute river flow
-    this.initializeRiverFlow(context, edges);
-    
-    // Topological execution order
+    // PROFESSIONAL SOLUTION: Topological execution (each node executed once)
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
     for (const node of executionOrder) {
@@ -350,18 +286,6 @@ export class ExecutionEngine {
     }
     
     return context;
-  }
-
-  private initializeRiverFlow(context: ExecutionContext, edges: Edge[]): void {
-    // Initialize path filters from edge data
-    for (const edge of edges) {
-      const filteredEdge = edge as Edge & { pathFilter?: import("../types/ports").PathFilter };
-      if (filteredEdge.pathFilter) {
-        setPathFilter(context, edge.id, filteredEdge.pathFilter);
-      }
-    }
-    
-    // Initial river flow computation will be done during execution
   }
 
   private getTopologicalOrder(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
@@ -418,29 +342,27 @@ export class ExecutionEngine {
   }
 
   private validateConnections(nodes: Node<NodeData>[], edges: Edge[]): void {
-    // River flow validation - ensure exclusive routing is possible
-    const sourcePortBranches = new Map<string, Edge[]>();
+    // Track object -> insert mappings
+    const objectToInsertMap = new Map<string, string>();
     
     for (const edge of edges) {
-      const sourceKey = `${edge.source}.${edge.sourceHandle}`;
-      if (!sourcePortBranches.has(sourceKey)) {
-        sourcePortBranches.set(sourceKey, []);
-      }
-      sourcePortBranches.get(sourceKey)!.push(edge);
-    }
-    
-    // Validate that branching points have proper filtering
-    for (const [sourceKey, branchEdges] of sourcePortBranches) {
-      if (branchEdges.length > 1) {
-        // Multiple branches - ensure at least one has filtering enabled
-        const hasFiltering = branchEdges.some(edge => {
-          const filteredEdge = edge as Edge & { pathFilter?: import("../types/ports").PathFilter };
-          return filteredEdge.pathFilter?.filterEnabled;
-        });
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const targetNode = nodes.find(n => n.id === edge.target);
+      
+      if (!sourceNode || !targetNode) continue;
+      
+      // Check for object -> multiple insert violations
+      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
+          targetNode.type === 'insert') {
         
-        if (!hasFiltering) {
-          console.warn(`Multiple branches from ${sourceKey} without filtering - objects will be duplicated`);
+        const existingInsert = objectToInsertMap.get(sourceNode.id);
+        if (existingInsert && existingInsert !== targetNode.id) {
+          throw new Error(
+            `Object ${sourceNode.id} cannot connect to multiple Insert nodes. ` +
+            `Already connected to ${existingInsert}, attempted connection to ${targetNode.id}.`
+          );
         }
+        objectToInsertMap.set(sourceNode.id, targetNode.id);
       }
     }
   }

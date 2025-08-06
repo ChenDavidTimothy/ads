@@ -1,4 +1,4 @@
-// src/components/editor/nodes/scene-node.tsx - Updated with user-defined names
+// src/components/editor/nodes/scene-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -9,7 +9,6 @@ import type { SceneNodeData } from "@/lib/types/nodes";
 
 export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
   const nodeDefinition = getNodeDefinition('scene');
-  const displayName = data.userDefinedName || "Scene";
   
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
@@ -27,6 +26,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
 
   return (
     <Card selected={selected} className="p-4 min-w-[220px]">
+      {/* Render input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -43,7 +43,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
           <div className="w-6 h-6 bg-gray-600 flex items-center justify-center rounded text-white font-bold text-sm">
             🎬
           </div>
-          <span className="font-semibold text-white">{displayName}</span>
+          <span className="font-semibold text-white">Scene</span>
         </div>
       </CardHeader>
 

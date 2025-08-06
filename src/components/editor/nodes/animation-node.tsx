@@ -1,4 +1,4 @@
-// src/components/editor/nodes/animation-node.tsx - Updated with user-defined names
+// src/components/editor/nodes/animation-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -13,7 +13,6 @@ interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
 
 export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNodeProps) {
   const nodeDefinition = getNodeDefinition('animation');
-  const displayName = data.userDefinedName || "Animation";
   
   const handleDoubleClick = () => {
     if (onOpenEditor && id) {
@@ -31,6 +30,7 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
       className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-gray-750" 
       onDoubleClick={handleDoubleClick}
     >
+      {/* Render input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -48,7 +48,7 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
             <div className="w-6 h-6 bg-purple-600 flex items-center justify-center rounded text-white font-bold text-sm">
               🎬
             </div>
-            <span className="font-semibold text-white">{displayName}</span>
+            <span className="font-semibold text-white">Animation</span>
           </div>
           <div className="text-xs text-gray-400">{data.duration}s</div>
         </div>
@@ -86,6 +86,7 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
         </div>
       </CardContent>
 
+      {/* Render output ports */}
       {nodeDefinition?.ports.outputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -94,7 +95,6 @@ export function AnimationNode({ data, selected, id, onOpenEditor }: AnimationNod
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
           style={{ top: `${50}%` }}
-          title={`Output: ${displayName}`}
         />
       ))}
     </Card>

@@ -1,4 +1,4 @@
-// src/components/editor/nodes/triangle-node.tsx - Updated with user-defined names
+// src/components/editor/nodes/triangle-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -10,10 +10,6 @@ import type { TriangleNodeData } from "@/lib/types/nodes";
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
   const nodeDefinition = getNodeDefinition('triangle');
   
-  // Display both node name and object name
-  const nodeName = data.userDefinedName || "Triangle";
-  const objectName = data.objectName || "Triangle Object";
-  
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
       <CardHeader className="p-0 pb-3">
@@ -24,10 +20,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           >
             ▲
           </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-white text-sm">{nodeName}</span>
-            <span className="text-xs text-gray-400">{objectName}</span>
-          </div>
+          <span className="font-semibold text-white">Triangle</span>
         </div>
       </CardHeader>
 
@@ -52,7 +45,6 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.triangle.handle} !border-2 !border-white`}
           style={{ top: `${50 + (index * 20)}%` }}
-          title={`Output: ${objectName}`}
         />
       ))}
     </Card>

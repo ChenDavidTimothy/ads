@@ -1,4 +1,4 @@
-// src/components/editor/nodes/rectangle-node.tsx - Updated with user-defined names
+// src/components/editor/nodes/rectangle-node.tsx
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -10,10 +10,6 @@ import type { RectangleNodeData } from "@/lib/types/nodes";
 export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) {
   const nodeDefinition = getNodeDefinition('rectangle');
   
-  // Display both node name and object name  
-  const nodeName = data.userDefinedName || "Rectangle";
-  const objectName = data.objectName || "Rectangle Object";
-  
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
       <CardHeader className="p-0 pb-3">
@@ -24,10 +20,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           >
             ▬
           </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-white text-sm">{nodeName}</span>
-            <span className="text-xs text-gray-400">{objectName}</span>
-          </div>
+          <span className="font-semibold text-white">Rectangle</span>
         </div>
       </CardHeader>
 
@@ -43,6 +36,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
         </div>
       </CardContent>
 
+      {/* Render output ports */}
       {nodeDefinition?.ports.outputs.map((port, index) => (
         <Handle
           key={port.id}
@@ -51,7 +45,6 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.rectangle.handle} !border-2 !border-white`}
           style={{ top: `${50 + (index * 20)}%` }}
-          title={`Output: ${objectName}`}
         />
       ))}
     </Card>

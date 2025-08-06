@@ -1,4 +1,4 @@
-// src/lib/types/node-definitions.ts - Simplified naming system
+// src/lib/types/node-definitions.ts
 import type { NodePortConfig } from "./ports";
 import type { NodePropertyConfig } from "./property-schemas";
 import { VIDEO_PRESETS, FPS_OPTIONS } from "@/lib/constants/editor";
@@ -12,7 +12,7 @@ export interface NodeDefinition {
   properties: NodePropertyConfig;
 }
 
-// Geometry Node Definitions - dual naming system with uniqueness
+// Geometry Node Definitions
 const triangleDefinition: NodeDefinition = {
   type: 'triangle',
   label: 'Triangle',
@@ -24,8 +24,6 @@ const triangleDefinition: NodeDefinition = {
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Triangle 1' },
-      { key: 'objectName', type: 'string', label: 'Object Name', defaultValue: 'Triangle Object 1' },
       { key: 'size', type: 'number', label: 'Size', min: 1, defaultValue: 80 },
       { key: 'color', type: 'color', label: 'Color', defaultValue: '#ff4444' },
       { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#ffffff' },
@@ -46,8 +44,6 @@ const circleDefinition: NodeDefinition = {
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Circle 1' },
-      { key: 'objectName', type: 'string', label: 'Object Name', defaultValue: 'Circle Object 1' },
       { key: 'radius', type: 'number', label: 'Radius', min: 1, defaultValue: 50 },
       { key: 'color', type: 'color', label: 'Color', defaultValue: '#4444ff' },
       { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#ffffff' },
@@ -68,8 +64,6 @@ const rectangleDefinition: NodeDefinition = {
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Rectangle 1' },
-      { key: 'objectName', type: 'string', label: 'Object Name', defaultValue: 'Rectangle Object 1' },
       { key: 'width', type: 'number', label: 'Width', min: 1, defaultValue: 100 },
       { key: 'height', type: 'number', label: 'Height', min: 1, defaultValue: 60 },
       { key: 'color', type: 'color', label: 'Color', defaultValue: '#44ff44' },
@@ -80,6 +74,7 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
+// Insert Node Definition - FIXED: clear port naming
 const insertDefinition: NodeDefinition = {
   type: 'insert',
   label: 'Insert',
@@ -91,29 +86,29 @@ const insertDefinition: NodeDefinition = {
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Insert 1' },
       { key: 'appearanceTime', type: 'number', label: 'Appearance Time (seconds)', min: 0, step: 0.1, defaultValue: 0 }
     ]
   }
 };
 
+// Animation Node Definition - FIXED: consistent port ID and type
 const animationDefinition: NodeDefinition = {
   type: 'animation',
   label: 'Animation',
-  description: 'Timeline-based animation container with chaining support',
+  description: 'Timeline-based animation container',
   category: 'animation',
   ports: {
-    inputs: [{ id: 'input', type: 'timed_object', label: 'Input' }],
+    inputs: [{ id: 'timed_object', type: 'timed_object', label: 'Timed Object' }],
     outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Animation 1' },
       { key: 'duration', type: 'number', label: 'Duration (seconds)', min: 0.1, step: 0.1, defaultValue: 3 }
     ]
   }
 };
 
+// Scene Node Definition - FIXED: proper input processing
 const sceneDefinition: NodeDefinition = {
   type: 'scene',
   label: 'Scene',
@@ -125,7 +120,6 @@ const sceneDefinition: NodeDefinition = {
   },
   properties: {
     properties: [
-      { key: 'userDefinedName', type: 'string', label: 'Node Name', defaultValue: 'Scene 1' },
       { key: 'width', type: 'number', label: 'Width', min: 1, defaultValue: 1920 },
       { key: 'height', type: 'number', label: 'Height', min: 1, defaultValue: 1080 },
       { 
@@ -149,6 +143,7 @@ const sceneDefinition: NodeDefinition = {
   }
 };
 
+// Node Registry
 export const NODE_DEFINITIONS: Record<string, NodeDefinition> = {
   triangle: triangleDefinition,
   circle: circleDefinition,
