@@ -1,6 +1,6 @@
 // src/lib/flow/flow-tracking.ts - Enhanced with edge filtering
-import type { Node, Edge } from "reactflow";
-import type { NodeData, NodeIdentifier, NodeLineage, NodeType } from "../types/nodes";
+import type { Node} from "reactflow";
+import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 
 // Enhanced edge flow tracking with filtering
 export interface EdgeFlow {
@@ -216,7 +216,7 @@ export class FlowTracker {
   // Get nodes actually flowing through specific edge (for execution)
   getNodesFlowingThroughEdge(edgeId: string): string[] {
     const edgeFlow = this.edgeFlows.get(edgeId);
-    return edgeFlow?.selectedNodeIds || [];
+    return edgeFlow?.selectedNodeIds ?? [];
   }
 
   // Remove connection tracking

@@ -1,5 +1,5 @@
 // src/animation/core/animation.ts
-import type { Transform, EasingFunction } from '../types';
+import type { Transform, EasingFunction } from '@/shared/types/core';
 import { linear } from './interpolation';
 
 export abstract class Animation {

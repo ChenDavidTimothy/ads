@@ -1,5 +1,5 @@
 // src/animation/geometry/rectangle.ts
-import type { Point2D, NodeCanvasContext } from '../types';
+import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
 
 export interface RectangleStyle {
   fillColor: string;

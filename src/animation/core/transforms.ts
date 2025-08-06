@@ -1,5 +1,5 @@
 // src/animation/core/transforms.ts
-import type { Point2D, Transform, NodeCanvasContext } from '../types';
+import type { Point2D, Transform, NodeCanvasContext } from '@/shared/types/core';
 
 export function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,

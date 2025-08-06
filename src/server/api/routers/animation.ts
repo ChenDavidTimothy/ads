@@ -28,7 +28,7 @@ const reactFlowNodeSchema = z.object({
     x: z.number(),
     y: z.number()
   }),
-  data: z.object({}).passthrough() // Flexible to accommodate all node properties
+  data: z.record(z.unknown()).passthrough() // Flexible to accommodate all node properties
 });
 
 // ReactFlow Edge schema

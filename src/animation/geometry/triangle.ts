@@ -1,5 +1,5 @@
 // src/animation/geometry/triangle.ts
-import type { Point2D, NodeCanvasContext } from '../types';
+import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
 
 export interface TriangleStyle {
   fillColor: string;

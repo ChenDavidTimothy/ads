@@ -1,6 +1,6 @@
 // src/animation/execution/scene-renderer.ts
-import type { NodeCanvasContext, Point2D } from '../types';
-import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties } from '.@/shared/types/scene';
+import type { NodeCanvasContext, Point2D } from '@/shared/types/core';
+import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
 import { getSceneStateAtTime } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';

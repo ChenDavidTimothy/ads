@@ -296,7 +296,7 @@ interface SceneSpecialProps {
   onChange: (data: Partial<NodeData>) => void;
 }
 
-function SceneSpecialProperties({ data, onChange }: SceneSpecialProps) {
+function SceneSpecialProperties({onChange }: SceneSpecialProps) {
   return (
     <div className="space-y-4">
       <div>

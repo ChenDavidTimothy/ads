@@ -1,6 +1,6 @@
 // src/animation/renderer/frame-generator.ts
 import { createCanvas } from 'canvas';
-import type { NodeCanvasContext, EasingFunction } from '../types';
+import type { NodeCanvasContext, EasingFunction } from '@/shared/types/core';
 import { VideoEncoder, convertImageDataToRGB, type VideoConfig } from './video-encoder';
 import { linear } from '../core/interpolation';
 

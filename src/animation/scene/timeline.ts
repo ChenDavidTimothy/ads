@@ -7,9 +7,9 @@ import type {
   TriangleProperties,
   CircleProperties,
   RectangleProperties
-} from './scene';
+} from '@/shared/types/scene';
 
-import type { Point2D } from '../types';
+import type { Point2D } from '@/shared/types/core';
 import type { 
   SceneAnimationTrack,
   SceneMoveTrack,
@@ -17,7 +17,7 @@ import type {
   SceneScaleTrack,
   SceneFadeTrack,
   SceneColorTrack
-} from './types';
+} from '@/shared/types';
 
 import { 
   linear, 

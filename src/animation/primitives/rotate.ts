@@ -1,5 +1,5 @@
 // src/animation/primitives/rotate.ts
-import type { Transform, EasingFunction } from '../types';
+import type { Transform, EasingFunction } from '@/shared/types/core';
 import { Animation } from '../core/animation';
 import { lerp } from '../core/interpolation';
 

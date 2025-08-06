@@ -1,5 +1,5 @@
 // src/animation/primitives/translate.ts
-import type { Point2D, Transform, EasingFunction } from '../types';
+import type { Point2D, Transform, EasingFunction } from '@/shared/types/core';
 import { Animation } from '../core/animation';
 import { lerpPoint } from '../core/interpolation';
 

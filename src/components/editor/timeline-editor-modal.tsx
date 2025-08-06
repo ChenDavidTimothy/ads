@@ -81,7 +81,7 @@ function getDefaultTrackProperties(
     case 'color':
       return { from: '#ff0000', to: '#00ff00', property: 'fill' };
     default:
-      throw new Error(`Unknown track type: ${trackType}`);
+      throw new Error(`Unknown track type: ${String(trackType)}`);
   }
 }
 
@@ -162,16 +162,18 @@ export function TimelineEditorModal({
       default:
         // Type assertion to help TypeScript narrow the never case
         const exhaustiveCheck: never = type;
-        throw new Error(`Unknown track type: ${exhaustiveCheck}`);
+        throw new Error(`Unknown track type: ${String(exhaustiveCheck)}`);
     }
     
     setTracks(prev => [...prev, newTrack]);
   }, [duration]);
 
-  const updateTrack = useCallback((trackId: string, updates: Partial<AnimationTrack>) => {
-    setTracks(prev => prev.map(track =>
-      track.id === trackId ? { ...track, ...updates } : track
-    ));
+  const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
+    setTracks(prev => prev.map(track => {
+      if (track.id !== trackId) return track;
+      if (track.type !== (updates.type ?? track.type)) return track;
+      return { ...track, ...updates } as AnimationTrack;
+    }));
   }, []);
 
   const deleteTrack = useCallback((trackId: string) => {
