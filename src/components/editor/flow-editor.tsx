@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated for simplified single-port architecture
+// src/components/editor/flow-editor.tsx - Dynamic component registration
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -23,7 +23,7 @@ import { PropertyPanel } from "@/components/editor/property-panel";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
-import { getNodeDefinition } from "@/shared/types/definitions";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { arePortsCompatible } from "@/shared/types/ports";
 import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { api } from "@/trpc/react";
@@ -49,7 +49,7 @@ function isFilterNodeData(data: NodeData): data is FilterNodeData {
   return 'selectedObjectIds' in data;
 }
 
-// Interfaces for timeline modal
+// Timeline modal interfaces
 interface TimelineModalState {
   isOpen: boolean;
   nodeId: string | null;
@@ -62,6 +62,35 @@ interface SceneConfig {
   backgroundColor: string;
   videoPreset: string;
   videoCrf: number;
+}
+
+// Dynamic node component registration - replaces hardcoded mapping
+function createDynamicNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
+  // This could be fully generated from registry in the future
+  // For now, we map existing components to support incremental migration
+  return {
+    // Geometry nodes
+    triangle: TriangleNode,
+    circle: CircleNode,
+    rectangle: RectangleNode,
+    
+    // Timing nodes
+    insert: InsertNode,
+    
+    // Logic nodes
+    filter: FilterNode,
+    
+    // Animation nodes - special handling for timeline editor
+    animation: (props: Parameters<typeof AnimationNode>[0]) => (
+      <AnimationNode 
+        {...props} 
+        onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} 
+      />
+    ),
+    
+    // Output nodes
+    scene: SceneNode,
+  };
 }
 
 export function FlowEditor() {
@@ -123,12 +152,10 @@ export function FlowEditor() {
     );
   }, [setNodes]);
 
-  // Validate display name uniqueness
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
   }, [flowTracker, nodes]);
 
-  // Update display name with validation
   const updateDisplayName = useCallback((nodeId: string, newDisplayName: string): boolean => {
     const error = validateDisplayName(newDisplayName, nodeId);
     if (error) {
@@ -174,33 +201,21 @@ export function FlowEditor() {
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
 
-  const nodeTypes: NodeTypes = useMemo(() => ({
-    triangle: TriangleNode,
-    circle: CircleNode,
-    rectangle: RectangleNode,
-    insert: InsertNode,
-    filter: FilterNode,
-    animation: (props: Parameters<typeof AnimationNode>[0]) => (
-      <AnimationNode 
-        {...props} 
-        onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} 
-      />
-    ),
-    scene: SceneNode,
-  }), [handleOpenTimelineEditor]);
+  // Dynamic node types - generated instead of hardcoded
+  const nodeTypes: NodeTypes = useMemo(
+    () => createDynamicNodeTypes(handleOpenTimelineEditor), 
+    [handleOpenTimelineEditor]
+  );
 
-  // Check if a potential connection would create duplicate object IDs at target node
+  // Connection validation with registry support
   const wouldConnectionCreateDuplicateObjectIds = useCallback((
     sourceNodeId: string,
     targetNodeId: string, 
     edgesWithNewConnection: Edge[],
     allNodes: Node<NodeData>[]
   ): string[] => {
-    // Get all upstream geometry objects that would reach the target node
     const upstreamObjects = flowTracker.getUpstreamGeometryObjects(targetNodeId, allNodes, edgesWithNewConnection);
     const objectIds = upstreamObjects.map(obj => obj.data.identifier.id);
-    
-    // Find duplicates
     return objectIds.filter((id, index) => objectIds.indexOf(id) !== index);
   }, [flowTracker]);
 
@@ -211,10 +226,12 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Check for object → multiple Insert violation (simplified - any geometry to insert)
-      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
-          targetNode.type === 'insert') {
-        
+      // Registry-aware validation
+      const sourceDefinition = getNodeDefinition(sourceNode.type!);
+      const targetDefinition = getNodeDefinition(targetNode.type!);
+      
+      // Check geometry → insert connection rules
+      if (sourceDefinition?.execution.category === 'geometry' && targetNode.type === 'insert') {
         const existingInsertConnection = edges.find(edge => 
           edge.source === sourceNode.data.identifier.id && 
           nodes.find(n => n.data.identifier.id === edge.target)?.type === 'insert'
@@ -229,8 +246,8 @@ export function FlowEditor() {
         }
       }
 
-      // Check for duplicate object IDs reaching target node
-      if (!['triangle', 'circle', 'rectangle', 'merge'].includes(targetNode.type!)) {
+      // Check for duplicate object IDs
+      if (targetDefinition?.execution.category !== 'geometry' && targetNode.type !== 'merge') {
         const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
           sourceNode.data.identifier.id,
           targetNode.data.identifier.id,
@@ -253,16 +270,14 @@ export function FlowEditor() {
         }
       }
       
-      const sourceNodeDef = getNodeDefinition(sourceNode.type!);
-      const targetNodeDef = getNodeDefinition(targetNode.type!);
-      
-      if (!sourceNodeDef || !targetNodeDef) {
+      // Port compatibility validation
+      if (!sourceDefinition || !targetDefinition) {
         toast.error("Connection failed", "Unknown node type");
         return;
       }
       
-      const sourcePort = sourceNodeDef.ports.outputs.find(p => p.id === params.sourceHandle);
-      const targetPort = targetNodeDef.ports.inputs.find(p => p.id === params.targetHandle);
+      const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === params.sourceHandle);
+      const targetPort = targetDefinition.ports.inputs.find(p => p.id === params.targetHandle);
       
       if (!sourcePort || !targetPort) {
         toast.error("Connection failed", "Invalid port");
@@ -274,21 +289,18 @@ export function FlowEditor() {
         return;
       }
       
-      // Create edge with node IDs
       const newEdges = addEdge({
         ...params,
         source: sourceNode.data.identifier.id,
         target: targetNode.data.identifier.id
       }, edges);
       
-      // Find the newly created edge
       const newEdge = newEdges.find(edge => !edges.some(existingEdge => existingEdge.id === edge.id));
       if (!newEdge) {
         toast.error("Connection failed", "Failed to create edge");
         return;
       }
       
-      // Track the connection
       flowTracker.trackConnection(
         newEdge.id,
         sourceNode.data.identifier.id,
@@ -328,6 +340,7 @@ export function FlowEditor() {
   }, [flowTracker]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
+    // Registry-aware scene validation
     if (nodeType === "scene") {
       const existingSceneNodes = nodes.filter(node => node.type === "scene");
       if (existingSceneNodes.length > 0) {
@@ -336,6 +349,7 @@ export function FlowEditor() {
       }
     }
 
+    // Use registry to validate node type
     const nodeDefinition = getNodeDefinition(nodeType as NodeType);
     if (!nodeDefinition) {
       toast.error("Node creation failed", `Unknown node type: ${nodeType}`);
@@ -351,9 +365,7 @@ export function FlowEditor() {
       data: nodeData,
     };
 
-    // Track node creation
     flowTracker.trackNodeCreation(nodeData.identifier.id);
-    
     setNodes((nds) => [...nds, newNode]);
   }, [nodes, setNodes, flowTracker, toast]);
 
@@ -365,7 +377,6 @@ export function FlowEditor() {
         throw new Error("Invalid scene node data");
       }
 
-      // Send raw nodes and edges to backend
       setVideoUrl(null);
       
       const config: Partial<SceneConfig> = {
@@ -377,7 +388,6 @@ export function FlowEditor() {
         videoCrf: sceneNode.data.videoCrf,
       };
       
-      // Convert ReactFlow nodes to format expected by backend
       const backendNodes = nodes.map(node => ({
         id: node.id,
         type: node.type,
@@ -385,7 +395,6 @@ export function FlowEditor() {
         data: node.data
       }));
       
-      // Convert ReactFlow edges  
       const backendEdges = edges.map(edge => ({
         id: edge.id,
         source: edge.source,
@@ -420,7 +429,6 @@ export function FlowEditor() {
     [nodes, selectedNodeId]
   );
 
-  // Get timeline node data with proper type checking
   const getTimelineNodeData = useCallback(() => {
     if (!timelineNode) return { duration: 3, tracks: [] };
     

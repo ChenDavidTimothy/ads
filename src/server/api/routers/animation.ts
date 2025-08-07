@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts - Updated with selectedNodeIds completely removed
+// src/server/api/routers/animation.ts - Registry-aware animation router
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
@@ -8,11 +8,11 @@ import {
 } from "@/animation/scene-generator";
 import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
+import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
-// Import ReactFlowNode type from execution-engine for proper casting
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 
-// Scene config schema
+// Scene config schema (unchanged)
 const sceneConfigSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
@@ -22,7 +22,7 @@ const sceneConfigSchema = z.object({
   videoCrf: z.number().optional(),
 });
 
-// ReactFlow Node schema - flexible data property to accommodate all node types
+// Registry-aware ReactFlow Node schema
 const reactFlowNodeSchema = z.object({
   id: z.string(),
   type: z.string().optional(),
@@ -30,10 +30,10 @@ const reactFlowNodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  data: z.record(z.unknown()), // Flexible to accommodate all node properties
+  data: z.record(z.unknown()), // Flexible to accommodate all registry-defined node types
 });
 
-// ReactFlow Edge schema - Updated with selectedNodeIds completely removed
+// ReactFlow Edge schema (unchanged)
 const reactFlowEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
@@ -43,7 +43,7 @@ const reactFlowEdgeSchema = z.object({
 });
 
 export const animationRouter = createTRPCRouter({
-  // Main scene-based endpoint - accepts nodes/edges without filtering
+  // Main scene-based endpoint - registry-aware
   generateScene: publicProcedure
     .input(
       z.object({
@@ -54,15 +54,21 @@ export const animationRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       try {
-        // Use backend ExecutionEngine to process the graph
+        // Registry-aware node validation
+        const validationResult = validateInputNodes(input.nodes);
+        if (!validationResult.valid) {
+          throw new Error(`Node validation failed: ${validationResult.errors.join(', ')}`);
+        }
+
+        // Use registry-aware ExecutionEngine
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlow(
           input.nodes as unknown as ReactFlowNode<NodeData>[],
           input.edges,
         );
 
-        // Find scene node to get configuration
-        const sceneNode = input.nodes.find((node) => node.type === "scene");
+        // Registry-aware scene node lookup
+        const sceneNode = findSceneNode(input.nodes);
         if (!sceneNode) {
           throw new Error("Scene node is required");
         }
@@ -90,7 +96,7 @@ export const animationRouter = createTRPCRouter({
           },
         };
 
-        // Prepare scene config
+        // Prepare scene config using registry defaults
         const config: SceneAnimationConfig = {
           ...DEFAULT_SCENE_CONFIG,
           width: sceneData.width,
@@ -120,29 +126,7 @@ export const animationRouter = createTRPCRouter({
       }
     }),
 
-  // Utility endpoints
-  getDefaultSceneConfig: publicProcedure.query(() => {
-    return DEFAULT_SCENE_CONFIG;
-  }),
-
-  getDefaultTriangleConfig: publicProcedure.query(() => {
-    return {
-      width: 1920,
-      height: 1080,
-      fps: 60,
-      duration: 3,
-      triangleSize: 80,
-      margin: 100,
-      rotations: 2,
-      backgroundColor: "#000000",
-      triangleColor: "#ff4444",
-      strokeColor: "#ffffff",
-      strokeWidth: 3,
-      videoPreset: "medium",
-      videoCrf: 18,
-    };
-  }),
-
+  // Registry-aware scene validation endpoint
   validateScene: publicProcedure
     .input(
       z.object({
@@ -152,14 +136,21 @@ export const animationRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
+        // Registry-aware node validation
+        const nodeValidationResult = validateInputNodes(input.nodes);
+        if (!nodeValidationResult.valid) {
+          return { valid: false, errors: nodeValidationResult.errors };
+        }
+
+        // Registry-aware execution validation
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlow(
           input.nodes as unknown as ReactFlowNode<NodeData>[],
           input.edges,
         );
 
-        // Build scene for validation
-        const sceneNode = input.nodes.find((node) => node.type === "scene");
+        // Registry-aware scene node validation
+        const sceneNode = findSceneNode(input.nodes);
         if (!sceneNode) {
           return { valid: false, errors: ["Scene node is required"] };
         }
@@ -193,4 +184,163 @@ export const animationRouter = createTRPCRouter({
         };
       }
     }),
+
+  // Registry information endpoints
+  getNodeDefinitions: publicProcedure.query(() => {
+    // Future: Return registry definitions for dynamic UI generation
+    const geometryNodes = getNodesByCategory('geometry');
+    const timingNodes = getNodesByCategory('timing');
+    const logicNodes = getNodesByCategory('logic');
+    const animationNodes = getNodesByCategory('animation');
+    const outputNodes = getNodesByCategory('output');
+    
+    return {
+      geometry: geometryNodes,
+      timing: timingNodes,
+      logic: logicNodes,
+      animation: animationNodes,
+      output: outputNodes,
+    };
+  }),
+
+  getNodeDefinition: publicProcedure
+    .input(z.object({ nodeType: z.string() }))
+    .query(({ input }) => {
+      const definition = getNodeDefinition(input.nodeType);
+      if (!definition) {
+        throw new Error(`Unknown node type: ${input.nodeType}`);
+      }
+      return definition;
+    }),
+
+  // Utility endpoints (unchanged)
+  getDefaultSceneConfig: publicProcedure.query(() => {
+    return DEFAULT_SCENE_CONFIG;
+  }),
+
+  getDefaultTriangleConfig: publicProcedure.query(() => {
+    return {
+      width: 1920,
+      height: 1080,
+      fps: 60,
+      duration: 3,
+      triangleSize: 80,
+      margin: 100,
+      rotations: 2,
+      backgroundColor: "#000000",
+      triangleColor: "#ff4444",
+      strokeColor: "#ffffff",
+      strokeWidth: 3,
+      videoPreset: "medium",
+      videoCrf: 18,
+    };
+  }),
 });
+
+// Registry-aware helper functions
+function validateInputNodes(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  for (const node of nodes) {
+    if (!node.type) {
+      errors.push(`Node ${node.id} has no type specified`);
+      continue;
+    }
+    
+    // Validate against registry
+    const definition = getNodeDefinition(node.type);
+    if (!definition) {
+      errors.push(`Unknown node type: ${node.type}`);
+      continue;
+    }
+    
+    // Validate required properties exist
+    const requiredProps = definition.properties.properties.filter(p => p.required);
+    for (const prop of requiredProps) {
+      if (!(prop.key in node.data)) {
+        errors.push(`Node ${node.id} missing required property: ${prop.key}`);
+      }
+    }
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>): typeof nodes[0] | null {
+  // Registry-aware scene node detection
+  const outputNodes = getNodesByCategory('output');
+  const sceneNodeTypes = outputNodes.filter(def => def.type === 'scene').map(def => def.type);
+  
+  return nodes.find(node => node.type && sceneNodeTypes.includes(node.type)) || null;
+}
+
+// Future: Registry-aware node capability detection
+function getNodeCapabilities(nodeType: string): {
+  canHandleConditionals: boolean;
+  canModifyData: boolean;
+  canCreateObjects: boolean;
+  canControlFlow: boolean;
+} {
+  const definition = getNodeDefinition(nodeType);
+  if (!definition) {
+    return {
+      canHandleConditionals: false,
+      canModifyData: false,
+      canCreateObjects: false,
+      canControlFlow: false,
+    };
+  }
+  
+  return {
+    canHandleConditionals: definition.execution.category === 'logic',
+    canModifyData: ['logic', 'animation'].includes(definition.execution.category),
+    canCreateObjects: definition.execution.category === 'geometry',
+    canControlFlow: definition.execution.category === 'timing',
+  };
+}
+
+// Future: Registry-aware flow analysis
+function analyzeNodeFlow(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>, edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>): {
+  hasGeometry: boolean;
+  hasTiming: boolean;
+  hasLogic: boolean;
+  hasAnimation: boolean;
+  hasOutput: boolean;
+  flowComplexity: 'simple' | 'moderate' | 'complex';
+} {
+  const nodesByCategory = {
+    geometry: 0,
+    timing: 0,
+    logic: 0,
+    animation: 0,
+    output: 0,
+  };
+  
+  for (const node of nodes) {
+    if (!node.type) continue;
+    
+    const definition = getNodeDefinition(node.type);
+    if (definition) {
+      nodesByCategory[definition.execution.category]++;
+    }
+  }
+  
+  const totalNodes = nodes.length;
+  const totalEdges = edges.length;
+  
+  let flowComplexity: 'simple' | 'moderate' | 'complex' = 'simple';
+  if (totalNodes > 10 || totalEdges > 15 || nodesByCategory.logic > 2) {
+    flowComplexity = 'complex';
+  } else if (totalNodes > 5 || totalEdges > 7 || nodesByCategory.logic > 0) {
+    flowComplexity = 'moderate';
+  }
+  
+  return {
+    hasGeometry: nodesByCategory.geometry > 0,
+    hasTiming: nodesByCategory.timing > 0,
+    hasLogic: nodesByCategory.logic > 0,
+    hasAnimation: nodesByCategory.animation > 0,
+    hasOutput: nodesByCategory.output > 0,
+    flowComplexity,
+  };
+}

@@ -1,23 +1,53 @@
-// src/server/animation-processing/execution-context.ts - Updated with edge filtering completely removed
+// src/server/animation-processing/execution-context.ts - Future-proof execution context
 import type { PortType, SceneAnimationTrack } from "@/shared/types";
+
+// Expanded data types for future logic nodes
+export type ExecutionDataType = 
+  | 'object_stream'    // Current: geometry objects
+  | 'boolean'          // true/false for logic nodes
+  | 'integer'          // numbers for comparisons
+  | 'string'           // text data
+  | 'array'            // collections
+  | 'trigger'          // execution control
+  | 'conditional';     // conditional execution paths
 
 export interface ExecutionValue {
   type: PortType;
   data: unknown;
   nodeId: string;
   portId: string;
+  metadata?: {
+    timestamp?: number;
+    conditionalPath?: 'true' | 'false' | 'default';
+    priority?: number;
+    [key: string]: unknown;
+  };
+}
+
+// Future-proof execution result for conditional nodes
+export interface ExecutionResult {
+  success: boolean;
+  data?: unknown;
+  nextPort?: string;        // For conditional execution (if/else)
+  nextPorts?: string[];     // For multi-branch logic
+  variables?: Record<string, unknown>; // For setting variables
+  error?: string;
 }
 
 export interface ExecutionContext {
   // Node outputs stored by nodeId.portId
   nodeOutputs: Map<string, ExecutionValue>;
   
-  // Global variables for logic nodes
+  // Global variables for logic nodes (future-ready)
   variables: Map<string, unknown>;
   
   // Execution state
   executedNodes: Set<string>;
   currentTime: number;
+  
+  // Conditional execution tracking (future-ready)
+  conditionalPaths: Map<string, 'true' | 'false' | 'default'>;
+  executionStack: string[]; // For nested conditional execution
   
   // Scene building - properly typed
   sceneObjects: Array<{
@@ -31,6 +61,15 @@ export interface ExecutionContext {
     appearanceTime?: number;
   }>;
   sceneAnimations: SceneAnimationTrack[];
+
+  // Future: Conditional execution metadata
+  debugMode?: boolean;
+  executionLog?: Array<{
+    nodeId: string;
+    timestamp: number;
+    action: 'execute' | 'skip' | 'branch';
+    data?: unknown;
+  }>;
 }
 
 export function createExecutionContext(): ExecutionContext {
@@ -39,8 +78,12 @@ export function createExecutionContext(): ExecutionContext {
     variables: new Map(),
     executedNodes: new Set(),
     currentTime: 0,
+    conditionalPaths: new Map(),
+    executionStack: [],
     sceneObjects: [],
-    sceneAnimations: []
+    sceneAnimations: [],
+    debugMode: false,
+    executionLog: []
   };
 }
 
@@ -49,15 +92,30 @@ export function setNodeOutput(
   nodeId: string,
   portId: string,
   type: PortType,
-  data: unknown
+  data: unknown,
+  metadata?: ExecutionValue['metadata']
 ): void {
   const key = `${nodeId}.${portId}`;
   context.nodeOutputs.set(key, {
     type,
     data,
     nodeId,
-    portId
+    portId,
+    metadata: {
+      timestamp: Date.now(),
+      ...metadata
+    }
   });
+
+  // Debug logging (future-ready)
+  if (context.debugMode && context.executionLog) {
+    context.executionLog.push({
+      nodeId,
+      timestamp: Date.now(),
+      action: 'execute',
+      data
+    });
+  }
 }
 
 export function getNodeOutput(
@@ -105,12 +163,22 @@ export function getConnectedInputs(
   return inputs;
 }
 
+// Variable management for future logic nodes
 export function setVariable(
   context: ExecutionContext,
   name: string,
   value: unknown
 ): void {
   context.variables.set(name, value);
+
+  if (context.debugMode && context.executionLog) {
+    context.executionLog.push({
+      nodeId: 'system',
+      timestamp: Date.now(),
+      action: 'execute',
+      data: { variableSet: name, value }
+    });
+  }
 }
 
 export function getVariable(
@@ -132,4 +200,89 @@ export function isNodeExecuted(
   nodeId: string
 ): boolean {
   return context.executedNodes.has(nodeId);
+}
+
+// Future: Conditional execution support
+export function setConditionalPath(
+  context: ExecutionContext,
+  nodeId: string,
+  path: 'true' | 'false' | 'default'
+): void {
+  context.conditionalPaths.set(nodeId, path);
+}
+
+export function getConditionalPath(
+  context: ExecutionContext,
+  nodeId: string
+): 'true' | 'false' | 'default' | undefined {
+  return context.conditionalPaths.get(nodeId);
+}
+
+export function pushExecutionStack(
+  context: ExecutionContext,
+  nodeId: string
+): void {
+  context.executionStack.push(nodeId);
+}
+
+export function popExecutionStack(
+  context: ExecutionContext
+): string | undefined {
+  return context.executionStack.pop();
+}
+
+// Future: Debug utilities
+export function enableDebugMode(context: ExecutionContext): void {
+  context.debugMode = true;
+  if (!context.executionLog) {
+    context.executionLog = [];
+  }
+}
+
+export function getExecutionLog(context: ExecutionContext): typeof context.executionLog {
+  return context.executionLog ?? [];
+}
+
+// Future: Type validation for logic nodes
+export function validateExecutionValue(
+  value: unknown,
+  expectedType: ExecutionDataType
+): boolean {
+  switch (expectedType) {
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'integer':
+      return typeof value === 'number' && Number.isInteger(value);
+    case 'string':
+      return typeof value === 'string';
+    case 'array':
+      return Array.isArray(value);
+    case 'object_stream':
+      return Array.isArray(value) || (typeof value === 'object' && value !== null);
+    case 'trigger':
+      return value === true || value === null || value === undefined;
+    case 'conditional':
+      return typeof value === 'boolean' || typeof value === 'string';
+    default:
+      return true; // Unknown types pass through
+  }
+}
+
+// Future: Convert execution value to specific type
+export function coerceExecutionValue(
+  value: unknown,
+  targetType: ExecutionDataType
+): unknown {
+  switch (targetType) {
+    case 'boolean':
+      return Boolean(value);
+    case 'integer':
+      return typeof value === 'number' ? Math.floor(value) : parseInt(String(value), 10);
+    case 'string':
+      return String(value);
+    case 'array':
+      return Array.isArray(value) ? value : [value];
+    default:
+      return value;
+  }
 }

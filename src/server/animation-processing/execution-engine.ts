@@ -1,4 +1,4 @@
-// src/server/animation-processing/execution-engine.ts - Scene-centric pull-based execution
+// src/server/animation-processing/execution-engine.ts - Registry-driven execution engine
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
@@ -8,6 +8,7 @@ import {
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
+import { getNodeDefinition, getNodesByCategory, getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 
 // ReactFlow-compatible types for server
 export interface ReactFlowNode<T = unknown> {
@@ -34,10 +35,11 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor - Creates object definitions only
+// Registry-driven Geometry node executor
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return ['triangle', 'circle', 'rectangle'].includes(nodeType);
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'geometry';
   }
 
   async execute(
@@ -45,8 +47,6 @@ class GeometryNodeExecutor implements NodeExecutor {
     context: ExecutionContext
   ): Promise<void> {
     const objectDefinition = this.buildObjectDefinition(node);
-    
-    // Output object definition only - don't add to scene
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [objectDefinition]);
   }
 
@@ -99,10 +99,11 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - Only marks timing, doesn't add to scene
-class InsertNodeExecutor implements NodeExecutor {
+// Registry-driven Timing node executor (Insert nodes)
+class TimingNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return nodeType === 'insert';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'timing';
   }
 
   async execute(
@@ -111,8 +112,6 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    
-    // Get inputs - if none, just pass empty array (no error)
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
     const timedObjects = [];
@@ -121,7 +120,6 @@ class InsertNodeExecutor implements NodeExecutor {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const objectDef of inputData) {
-        // Insert node ONLY adds timing information - Scene decides what gets added to scene
         const timedObject = {
           ...objectDef,
           appearanceTime: data.appearanceTime as number
@@ -132,19 +130,40 @@ class InsertNodeExecutor implements NodeExecutor {
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
-    
-    // Output timed objects - Scene will decide if they get rendered
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', timedObjects);
   }
 }
 
-// Filter node executor - Unchanged, already follows pull model
-class FilterNodeExecutor implements NodeExecutor {
+// Registry-driven Logic node executor (Filter nodes, future-ready for if/else, etc.)
+class LogicNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return nodeType === 'filter';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'logic';
   }
 
   async execute(
+    node: ReactFlowNode<NodeData>, 
+    context: ExecutionContext, 
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    // Route to specific logic node handler based on type
+    switch (node.type) {
+      case 'filter':
+        await this.executeFilter(node, context, connections);
+        break;
+      // Future logic nodes will be handled here
+      // case 'if_else':
+      //   await this.executeIfElse(node, context, connections);
+      //   break;
+      // case 'comparison':
+      //   await this.executeComparison(node, context, connections);
+      //   break;
+      default:
+        throw new Error(`Unknown logic node type: ${node.type}`);
+    }
+  }
+
+  private async executeFilter(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
@@ -193,10 +212,11 @@ class FilterNodeExecutor implements NodeExecutor {
   }
 }
 
-// Animation node executor - No input requirements, processes if inputs exist
+// Registry-driven Animation node executor
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return nodeType === 'animation';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'animation';
   }
 
   async execute(
@@ -205,8 +225,6 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    
-    // Get inputs - if none, just output empty array (no error)
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
     const allAnimations: SceneAnimationTrack[] = [];
@@ -223,20 +241,16 @@ class AnimationNodeExecutor implements NodeExecutor {
           objectStartTime
         );
         allAnimations.push(...animations);
-        
-        // Pass through the timed object so Scene can receive it
         passThoughObjects.push(timedObject);
       }
     }
 
-    // Add animations to context for Scene node to find
     context.sceneAnimations.push(...allAnimations);
     const maxDuration = allAnimations.length > 0 ? 
       Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) : 
       context.currentTime;
     context.currentTime = maxDuration;
 
-    // Output the timed objects (not animations) so Scene can receive them
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThoughObjects);
   }
 
@@ -312,10 +326,11 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - Uses direct inputs like every other node
+// Registry-driven Scene node executor
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return nodeType === 'scene';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'scene';
   }
 
   async execute(
@@ -323,22 +338,18 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    // Scene node uses direct inputs - respects all upstream filtering/processing
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
-    // Process all inputs that actually reached Scene node through the flow
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const item of inputData) {
-        // Only add objects that have appearance time (processed by Insert nodes)
         if (typeof item === 'object' && item !== null && 'id' in item && 'appearanceTime' in item) {
           context.sceneObjects.push(item);
         }
       }
     }
     
-    // Validate that we found at least some objects
     if (context.sceneObjects.length === 0) {
       throw new Error(
         `Scene ${node.data.identifier.displayName} has no reachable objects. ` +
@@ -351,8 +362,8 @@ class SceneNodeExecutor implements NodeExecutor {
 export class ExecutionEngine {
   private executors: NodeExecutor[] = [
     new GeometryNodeExecutor(),
-    new InsertNodeExecutor(),
-    new FilterNodeExecutor(),
+    new TimingNodeExecutor(),
+    new LogicNodeExecutor(),
     new AnimationNodeExecutor(),
     new SceneNodeExecutor()
   ];
@@ -365,13 +376,11 @@ export class ExecutionEngine {
     
     const context = createExecutionContext();
     
-    // Scene-centric execution: Start from Scene node and work backwards
     const sceneNode = nodes.find(n => n.type === 'scene');
     if (!sceneNode) {
       throw new Error("Scene node is required");
     }
     
-    // Execute all nodes in topological order (needed to populate outputs)
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
     for (const node of executionOrder) {
@@ -387,11 +396,12 @@ export class ExecutionEngine {
     return context;
   }
 
-  // Validate that no node receives duplicate object IDs (except future Merge node)
+  // Registry-driven validation methods
   private validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    
     for (const targetNode of nodes) {
-      // Skip geometry nodes (no inputs) and future merge node
-      if (['triangle', 'circle', 'rectangle'].includes(targetNode.type!) || targetNode.type === 'merge') {
+      if (geometryNodeTypes.includes(targetNode.type!) || targetNode.type === 'merge') {
         continue;
       }
 
@@ -409,10 +419,10 @@ export class ExecutionEngine {
     }
   }
 
-  // Get all object IDs that would reach a specific target node
   private getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): string[] {
     const geometryNodes: ReactFlowNode<NodeData>[] = [];
     const visited = new Set<string>();
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     
     const traceUpstream = (currentNodeId: string): void => {
       if (visited.has(currentNodeId)) return;
@@ -421,36 +431,29 @@ export class ExecutionEngine {
       const currentNode = nodes.find(n => n.data.identifier.id === currentNodeId);
       if (!currentNode) return;
       
-      // If this is a geometry node, collect it
-      if (['triangle', 'circle', 'rectangle'].includes(currentNode.type!)) {
+      if (geometryNodeTypes.includes(currentNode.type!)) {
         geometryNodes.push(currentNode);
         return;
       }
       
-      // For other nodes, trace upstream to find geometry sources
       const incomingEdges = edges.filter(edge => edge.target === currentNodeId);
       for (const edge of incomingEdges) {
         traceUpstream(edge.source);
       }
     };
     
-    // Start tracing from target node
     traceUpstream(targetNodeId);
-    
-    // Return object IDs (geometry nodes use their own ID as object ID)
     return geometryNodes.map(node => node.data.identifier.id);
   }
 
-  // Validate that the flow architecture is respected
   private validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-    const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const geometryNodes = nodes.filter(n => geometryNodeTypes.includes(n.type!));
     
-    // Check that all geometry nodes that should appear in scene can reach insert nodes
     for (const geoNode of geometryNodes) {
       const isConnectedToScene = this.isNodeConnectedToScene(geoNode.data.identifier.id, edges, nodes);
       
       if (isConnectedToScene) {
-        // Check if this geometry node can reach an insert node (directly or through filter nodes)
         const canReachInsert = this.canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
         
         if (!canReachInsert) {
@@ -463,7 +466,6 @@ export class ExecutionEngine {
     }
   }
 
-  // Helper to check if a node can reach a specific node type (allows transparent intermediates like filters)
   private canReachNodeType(
     startNodeId: string, 
     targetNodeType: string, 
@@ -486,7 +488,6 @@ export class ExecutionEngine {
     return traverse(startNodeId);
   }
 
-  // Helper to check if a node is ultimately connected to scene
   private isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): boolean {
     const visited = new Set<string>();
     
@@ -508,23 +509,19 @@ export class ExecutionEngine {
     const inDegree = new Map<string, number>();
     const adjList = new Map<string, string[]>();
     
-    // Initialize using identifier.id
     for (const node of nodes) {
       inDegree.set(node.data.identifier.id, 0);
       adjList.set(node.data.identifier.id, []);
     }
     
-    // Build adjacency list and in-degree count
     for (const edge of edges) {
       adjList.get(edge.source)?.push(edge.target);
       inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
     }
     
-    // Kahn's algorithm for topological sorting
     const queue: ReactFlowNode<NodeData>[] = [];
     const result: ReactFlowNode<NodeData>[] = [];
     
-    // Start with nodes that have no dependencies
     for (const node of nodes) {
       if (inDegree.get(node.data.identifier.id) === 0) {
         queue.push(node);
@@ -535,7 +532,6 @@ export class ExecutionEngine {
       const current = queue.shift()!;
       result.push(current);
       
-      // Reduce in-degree for neighbors
       for (const neighborId of adjList.get(current.data.identifier.id) ?? []) {
         const newInDegree = (inDegree.get(neighborId) ?? 1) - 1;
         inDegree.set(neighborId, newInDegree);
@@ -549,7 +545,6 @@ export class ExecutionEngine {
       }
     }
     
-    // Check for cycles
     if (result.length !== nodes.length) {
       throw new Error("Circular dependency detected in node graph");
     }
@@ -558,8 +553,8 @@ export class ExecutionEngine {
   }
 
   private validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-    // Track object -> insert mappings
     const objectToInsertMap = new Map<string, string>();
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     
     for (const edge of edges) {
       const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
@@ -567,10 +562,7 @@ export class ExecutionEngine {
       
       if (!sourceNode || !targetNode) continue;
       
-      // Check for object -> multiple insert violations
-      if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
-          targetNode.type === 'insert') {
-        
+      if (geometryNodeTypes.includes(sourceNode.type!) && targetNode.type === 'insert') {
         const existingInsert = objectToInsertMap.get(sourceNode.data.identifier.id);
         if (existingInsert && existingInsert !== targetNode.data.identifier.id) {
           throw new Error(

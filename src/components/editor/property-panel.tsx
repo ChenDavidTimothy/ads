@@ -1,4 +1,4 @@
-// src/components/editor/property-panel.tsx - Updated with Filter Objects support
+// src/components/editor/property-panel.tsx - Registry-aware property panel
 "use client";
 
 import { useState } from "react";
@@ -6,8 +6,8 @@ import type { Node, Edge } from "reactflow";
 import { NumberField, ColorField, SelectField } from "@/components/ui/form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getNodeDefinition } from "@/shared/types/definitions";
-import { RESOLUTION_PRESETS } from "@/lib/constants/editor";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import { RESOLUTION_PRESETS } from "@/shared/registry/registry-utils";
 import type { FlowTracker } from "@/lib/flow/flow-tracking";
 import type { 
   NodeData, 
@@ -27,7 +27,7 @@ interface PropertyPanelProps {
   flowTracker: FlowTracker;
 }
 
-// Type guard functions
+// Type guard functions (unchanged)
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
   return 'duration' in data && 'tracks' in data;
 }
@@ -52,6 +52,7 @@ export function PropertyPanel({
   const [editingName, setEditingName] = useState(false);
   const [tempDisplayName, setTempDisplayName] = useState(node.data.identifier.displayName);
   
+  // Use registry to get node definition
   const nodeDefinition = getNodeDefinition(node.type!);
   
   if (!nodeDefinition) {
@@ -138,19 +139,25 @@ export function PropertyPanel({
         </div>
         
         <div className="text-xs text-gray-400">
-          {node.data.identifier.type.charAt(0).toUpperCase() + node.data.identifier.type.slice(1)} • #{node.data.identifier.sequence}
+          {nodeDefinition.label} • #{node.data.identifier.sequence}
         </div>
+        
+        {nodeDefinition.description && (
+          <div className="text-xs text-gray-500">
+            {nodeDefinition.description}
+          </div>
+        )}
       </div>
 
-      {/* Properties Section */}
+      {/* Registry-driven Properties Section */}
       <SchemaBasedProperties 
         properties={nodeDefinition.properties.properties}
         data={node.data}
         onChange={onChange}
       />
       
-      {/* Special handling for complex properties */}
-      {node.type === 'filter' && isFilterNodeData(node.data) && (
+      {/* Special handling for complex node types */}
+      {nodeDefinition.execution.category === 'logic' && node.type === 'filter' && isFilterNodeData(node.data) && (
         <FilterSpecialProperties 
           data={node.data} 
           onChange={onChange}
@@ -161,14 +168,14 @@ export function PropertyPanel({
         />
       )}
       
-      {node.type === 'animation' && isAnimationNodeData(node.data) && (
+      {nodeDefinition.execution.category === 'animation' && isAnimationNodeData(node.data) && (
         <AnimationSpecialProperties 
           data={node.data} 
           onChange={onChange} 
         />
       )}
       
-      {node.type === 'scene' && isSceneNodeData(node.data) && (
+      {nodeDefinition.execution.category === 'output' && isSceneNodeData(node.data) && (
         <SceneSpecialProperties 
           data={node.data} 
           onChange={onChange} 
@@ -288,6 +295,20 @@ function SchemaBasedProperties({
           </div>
         );
 
+      case 'string':
+        return (
+          <div key={schema.key} className="space-y-1">
+            <label className="block text-sm font-medium text-gray-300">
+              {schema.label}
+            </label>
+            <Input
+              value={(value as string) || ''}
+              onChange={(e) => onChange({ [schema.key]: e.target.value } as Partial<NodeData>)}
+              placeholder={`Enter ${schema.label.toLowerCase()}`}
+            />
+          </div>
+        );
+
       default:
         return (
           <div key={schema.key} className="text-gray-400 text-sm">
@@ -321,7 +342,7 @@ function FilterSpecialProperties({
   flowTracker, 
   nodeId 
 }: FilterSpecialProps) {
-  // Get all upstream geometry objects that could potentially flow to this filter
+  // Use registry-aware flow tracking
   const upstreamObjects = flowTracker.getUpstreamGeometryObjects(nodeId, allNodes, allEdges);
   const selectedIds = new Set(data.selectedObjectIds);
 
@@ -381,6 +402,8 @@ function FilterSpecialProperties({
           <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-700 rounded p-3">
             {upstreamObjects.map((objectNode) => {
               const isSelected = selectedIds.has(objectNode.data.identifier.id);
+              const nodeDefinition = getNodeDefinition(objectNode.type!);
+              
               return (
                 <div 
                   key={objectNode.data.identifier.id}
@@ -394,16 +417,18 @@ function FilterSpecialProperties({
                   />
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div 
-                      className="w-4 h-4 rounded border border-gray-400 flex-shrink-0"
+                      className="w-4 h-4 rounded border border-gray-400 flex-shrink-0 flex items-center justify-center text-xs"
                       style={{ 
                         backgroundColor: (objectNode.data as Record<string, unknown>).color as string || '#666'
                       }}
-                    />
+                    >
+                      {nodeDefinition?.rendering.icon || '?'}
+                    </div>
                     <span className="text-sm text-white truncate">
                       {objectNode.data.identifier.displayName}
                     </span>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {objectNode.type}
+                      {nodeDefinition?.label || objectNode.type}
                     </span>
                   </div>
                 </div>
@@ -445,7 +470,7 @@ interface SceneSpecialProps {
   onChange: (data: Partial<NodeData>) => void;
 }
 
-function SceneSpecialProperties({onChange }: SceneSpecialProps) {
+function SceneSpecialProperties({ onChange }: SceneSpecialProps) {
   return (
     <div className="space-y-4">
       <div>

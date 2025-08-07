@@ -1,6 +1,7 @@
-// src/lib/flow/flow-tracking.ts - Updated with upstream object discovery
+// src/lib/flow/flow-tracking.ts - Registry-aware flow tracking
 import type { Node, Edge } from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
+import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 
 export class FlowTracker {
   private nodeLineages = new Map<string, NodeLineage>();
@@ -14,7 +15,7 @@ export class FlowTracker {
     });
   }
 
-  // Track basic connection between nodes for topology only
+  // Track connection between nodes using registry for validation
   trackConnection(
     edgeId: string,
     sourceNodeId: string,
@@ -23,19 +24,41 @@ export class FlowTracker {
     targetPort: string,
     nodes: Node<NodeData>[]
   ): void {
-    // Update node lineages for basic topology tracking only
+    // Registry-aware connection validation
+    const sourceNode = nodes.find(n => n.data.identifier.id === sourceNodeId);
+    const targetNode = nodes.find(n => n.data.identifier.id === targetNodeId);
+    
+    if (!sourceNode || !targetNode) {
+      console.warn(`Connection tracking failed: Node not found`);
+      return;
+    }
+
+    const sourceDefinition = getNodeDefinition(sourceNode.type!);
+    const targetDefinition = getNodeDefinition(targetNode.type!);
+    
+    if (!sourceDefinition || !targetDefinition) {
+      console.warn(`Connection tracking failed: Node definition not found`);
+      return;
+    }
+
+    // Validate port compatibility using registry definitions
+    const sourcePortDef = sourceDefinition.ports.outputs.find(p => p.id === sourcePort);
+    const targetPortDef = targetDefinition.ports.inputs.find(p => p.id === targetPort);
+    
+    if (!sourcePortDef || !targetPortDef) {
+      console.warn(`Connection tracking failed: Port definition not found`);
+      return;
+    }
+
+    // Update node lineages for topology tracking
     this.updateNodeLineages(sourceNodeId, targetNodeId, edgeId);
   }
 
   // Remove connection tracking
   removeConnection(edgeId: string): void {
-    // Find nodes affected by this edge removal
     for (const [nodeId, lineage] of this.nodeLineages.entries()) {
       if (lineage.flowPath.includes(edgeId)) {
-        // Remove this edge from flow path
         lineage.flowPath = lineage.flowPath.filter(id => id !== edgeId);
-        
-        // Recalculate connections for this node
         this.recalculateUpstreamConnections(nodeId);
       }
     }
@@ -83,7 +106,7 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // Get all geometry objects that could potentially flow upstream to a given node
+  // Registry-aware geometry object discovery
   getUpstreamGeometryObjects(
     nodeId: string, 
     allNodes: Node<NodeData>[], 
@@ -91,6 +114,9 @@ export class FlowTracker {
   ): Node<NodeData>[] {
     const geometryNodes: Node<NodeData>[] = [];
     const visited = new Set<string>();
+    
+    // Get geometry node types from registry instead of hardcoding
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     
     // Recursive function to traverse upstream from the target node
     const traverseUpstream = (currentNodeId: string): void => {
@@ -101,8 +127,8 @@ export class FlowTracker {
       const currentNode = allNodes.find(n => n.data.identifier.id === currentNodeId);
       if (!currentNode) return;
       
-      // If this is a geometry node, add it to results
-      if (['triangle', 'circle', 'rectangle'].includes(currentNode.type!)) {
+      // Registry-aware geometry node detection
+      if (geometryNodeTypes.includes(currentNode.type!)) {
         geometryNodes.push(currentNode);
       }
       
@@ -128,13 +154,131 @@ export class FlowTracker {
     );
   }
 
-  // Update node lineages for basic topology tracking only
+  // Registry-aware node category validation
+  isGeometryNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'geometry' || false;
+  }
+
+  isTimingNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'timing' || false;
+  }
+
+  isLogicNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'logic' || false;
+  }
+
+  isAnimationNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'animation' || false;
+  }
+
+  isOutputNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'output' || false;
+  }
+
+  // Registry-aware flow validation
+  validateNodeFlow(
+    nodes: Node<NodeData>[], 
+    edges: Edge[]
+  ): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    // Get node categories from registry
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const timingNodeTypes = getNodesByCategory('timing').map(def => def.type);
+    const logicNodeTypes = getNodesByCategory('logic').map(def => def.type);
+    const animationNodeTypes = getNodesByCategory('animation').map(def => def.type);
+    const outputNodeTypes = getNodesByCategory('output').map(def => def.type);
+
+    // Validate proper flow architecture
+    const geometryNodes = nodes.filter(n => geometryNodeTypes.includes(n.type!));
+    
+    for (const geoNode of geometryNodes) {
+      const isConnectedToOutput = this.isNodeConnectedToCategory(
+        geoNode.data.identifier.id, 
+        'output', 
+        edges, 
+        nodes
+      );
+      
+      if (isConnectedToOutput) {
+        const canReachTiming = this.canReachNodeCategory(
+          geoNode.data.identifier.id, 
+          'timing', 
+          edges, 
+          nodes
+        );
+        
+        if (!canReachTiming) {
+          errors.push(
+            `Geometry node ${geoNode.data.identifier.displayName} must connect to a timing node ` +
+            `to control when it appears in the scene.`
+          );
+        }
+      }
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  // Registry-aware node category reachability
+  private canReachNodeCategory(
+    startNodeId: string, 
+    targetCategory: string, 
+    edges: Edge[], 
+    nodes: Node<NodeData>[]
+  ): boolean {
+    const visited = new Set<string>();
+    const targetNodeTypes = getNodesByCategory(targetCategory as 'geometry' | 'timing' | 'animation' | 'logic' | 'output').map(def => def.type);
+    
+    const traverse = (currentNodeId: string): boolean => {
+      if (visited.has(currentNodeId)) return false;
+      visited.add(currentNodeId);
+      
+      const currentNode = nodes.find(n => n.data.identifier.id === currentNodeId);
+      if (currentNode && targetNodeTypes.includes(currentNode.type!)) return true;
+      
+      const outgoingEdges = edges.filter(e => e.source === currentNodeId);
+      return outgoingEdges.some(edge => traverse(edge.target));
+    };
+    
+    return traverse(startNodeId);
+  }
+
+  // Registry-aware category connection checking
+  private isNodeConnectedToCategory(
+    nodeId: string, 
+    targetCategory: string, 
+    edges: Edge[], 
+    nodes: Node<NodeData>[]
+  ): boolean {
+    const visited = new Set<string>();
+    const targetNodeTypes = getNodesByCategory(targetCategory as 'geometry' | 'timing' | 'animation' | 'logic' | 'output').map(def => def.type);
+    
+    const traverse = (currentNodeId: string): boolean => {
+      if (visited.has(currentNodeId)) return false;
+      visited.add(currentNodeId);
+      
+      const currentNode = nodes.find(n => n.data.identifier.id === currentNodeId);
+      if (currentNode && targetNodeTypes.includes(currentNode.type!)) return true;
+      
+      const outgoingEdges = edges.filter(e => e.source === currentNodeId);
+      return outgoingEdges.some(edge => traverse(edge.target));
+    };
+    
+    return traverse(nodeId);
+  }
+
+  // Update node lineages for topology tracking
   private updateNodeLineages(sourceNodeId: string, targetNodeId: string, edgeId: string): void {
     const sourceLineage = this.nodeLineages.get(sourceNodeId);
     const targetLineage = this.nodeLineages.get(targetNodeId);
     
     if (sourceLineage && targetLineage) {
-      // Update basic parent-child relationships
       if (!sourceLineage.childNodes.includes(targetNodeId)) {
         sourceLineage.childNodes.push(targetNodeId);
       }
@@ -148,7 +292,7 @@ export class FlowTracker {
     }
   }
 
-  // Recalculate upstream connections for basic topology only
+  // Recalculate upstream connections for topology
   private recalculateUpstreamConnections(nodeId: string): void {
     const lineage = this.nodeLineages.get(nodeId);
     if (!lineage) return;
@@ -156,7 +300,6 @@ export class FlowTracker {
     // Clear and rebuild parent relationships based on current flow paths
     lineage.parentNodes = [];
     
-    // Find all edges in flow paths that target this node
     for (const [otherNodeId, otherLineage] of this.nodeLineages.entries()) {
       if (otherLineage.childNodes.includes(nodeId)) {
         if (!lineage.parentNodes.includes(otherNodeId)) {
@@ -164,5 +307,31 @@ export class FlowTracker {
         }
       }
     }
+  }
+
+  // Future: Get nodes by execution priority for conditional execution
+  getNodesByExecutionPriority(nodes: Node<NodeData>[]): Node<NodeData>[] {
+    return nodes.sort((a, b) => {
+      const defA = getNodeDefinition(a.type!);
+      const defB = getNodeDefinition(b.type!);
+      
+      const priorityA = defA?.execution.executionPriority ?? 0;
+      const priorityB = defB?.execution.executionPriority ?? 0;
+      
+      return priorityB - priorityA; // Higher priority first
+    });
+  }
+
+  // Future: Get conditional execution paths
+  getConditionalPaths(nodeId: string, nodes: Node<NodeData>[], edges: Edge[]): string[] {
+    const node = nodes.find(n => n.data.identifier.id === nodeId);
+    if (!node) return [];
+    
+    const definition = getNodeDefinition(node.type!);
+    if (!definition || definition.execution.category !== 'logic') return [];
+    
+    // Get all outgoing edges (potential conditional paths)
+    const outgoingEdges = edges.filter(e => e.source === nodeId);
+    return outgoingEdges.map(e => e.targetHandle || 'default');
   }
 }
