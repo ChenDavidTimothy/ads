@@ -36,7 +36,7 @@ const reactFlowNodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  data: z.record(z.unknown()), // Flexible to accommodate all registry-defined node types
+  data: z.unknown(),
 });
 
 // ReactFlow Edge schema (unchanged)
@@ -44,8 +44,8 @@ const reactFlowEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
-  sourceHandle: z.string().optional(),
-  targetHandle: z.string().optional(),
+  sourceHandle: z.string().nullable().optional(),
+  targetHandle: z.string().nullable().optional(),
 });
 
 export const animationRouter = createTRPCRouter({
@@ -61,7 +61,13 @@ export const animationRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       try {
         // Registry-aware node validation
-        const validationResult = validateInputNodes(input.nodes);
+        const normalizedNodesForValidation = input.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+        const validationResult = validateInputNodes(normalizedNodesForValidation);
         if (!validationResult.valid) {
           throw new NodeValidationError(validationResult.errors);
         }
@@ -89,13 +95,26 @@ export const animationRouter = createTRPCRouter({
 
         // Use registry-aware ExecutionEngine
         const engine = new ExecutionEngine();
+        const normalizedNodes = input.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+        const normalizedEdges = input.edges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
         const executionContext = await engine.executeFlow(
-          input.nodes as unknown as ReactFlowNode<NodeData>[],
-          input.edges,
+          normalizedNodes as unknown as ReactFlowNode<NodeData>[],
+          normalizedEdges,
         );
 
         // Registry-aware scene node lookup
-        const sceneNode = findSceneNode(input.nodes);
+        const sceneNode = findSceneNode(normalizedNodes);
         if (!sceneNode) {
           throw new SceneValidationError(["Scene node is required"]);
         }
@@ -178,20 +197,39 @@ export const animationRouter = createTRPCRouter({
     .query(async ({ input }) => {
       try {
         // Registry-aware node validation
-        const nodeValidationResult = validateInputNodes(input.nodes);
+        const normalizedNodesForValidation = input.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+        const nodeValidationResult = validateInputNodes(normalizedNodesForValidation);
         if (!nodeValidationResult.valid) {
           return { valid: false, errors: nodeValidationResult.errors };
         }
 
         // Registry-aware execution validation
         const engine = new ExecutionEngine();
+        const normalizedNodes = input.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+        const normalizedEdges = input.edges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
         const executionContext = await engine.executeFlow(
-          input.nodes as unknown as ReactFlowNode<NodeData>[],
-          input.edges,
+          normalizedNodes as unknown as ReactFlowNode<NodeData>[],
+          normalizedEdges,
         );
 
         // Registry-aware scene node validation
-        const sceneNode = findSceneNode(input.nodes);
+        const sceneNode = findSceneNode(normalizedNodes);
         if (!sceneNode) {
           return { valid: false, errors: ["Scene node is required"] };
         }
@@ -279,7 +317,7 @@ export const animationRouter = createTRPCRouter({
 });
 
 // Registry-aware helper functions
-function validateInputNodes(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>): { valid: boolean; errors: string[] } {
+function validateInputNodes(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   for (const node of nodes) {
@@ -297,7 +335,7 @@ function validateInputNodes(nodes: Array<{ id: string; type?: string; position: 
     
     // Validate properties against generated Zod schema
     const schema = buildZodSchemaFromProperties(definition.properties.properties);
-    const result = schema.safeParse(node.data);
+    const result = schema.safeParse(node.data as unknown);
     if (!result.success) {
       const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
       errors.push(`Node ${node.id} property validation failed: ${issues}`);
@@ -307,7 +345,7 @@ function validateInputNodes(nodes: Array<{ id: string; type?: string; position: 
   return { valid: errors.length === 0, errors };
 }
 
-function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>): typeof nodes[0] | null {
+function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>): typeof nodes[0] | null {
   // Registry-aware scene node detection
   const outputNodes = getNodesByCategory('output');
   const sceneNodeTypes = outputNodes.filter(def => def.type === 'scene').map(def => def.type);

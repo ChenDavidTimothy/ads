@@ -263,7 +263,7 @@ function SchemaBasedProperties({
         return (
           <div key={schema.key} className="space-y-1">
             <label className="block text-xs text-gray-400">
-              {schema.label} ({value})
+              {schema.label} {typeof value === 'number' ? `(${value})` : ''}
             </label>
             <input
               type="range"
@@ -311,10 +311,10 @@ function SchemaBasedProperties({
 
       default:
         return (
-          <div key={schema.key} className="text-gray-400 text-sm">
-            Unsupported property type: {schema.type}
+          <div key={(schema as { key?: string }).key ?? 'unsupported'} className="text-gray-400 text-sm">
+            Unsupported property type: {(schema as { type?: string }).type ?? 'unknown'}
           </div>
-        ) as React.ReactElement;
+        );
     }
   };
 
@@ -419,7 +419,7 @@ function FilterSpecialProperties({
                     <div 
                       className="w-4 h-4 rounded border border-gray-400 flex-shrink-0 flex items-center justify-center text-xs"
                       style={{ 
-                        backgroundColor: (objectNode.data as Record<string, unknown>).color as string || '#666'
+                        backgroundColor: ((objectNode.data as unknown as { color?: string })?.color) ?? '#666'
                       }}
                     >
                       {nodeDefinition?.rendering.icon || '?'}

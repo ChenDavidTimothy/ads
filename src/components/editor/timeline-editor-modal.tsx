@@ -447,10 +447,37 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
   const updateProperties = useCallback((
     updates: Partial<MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties>
   ) => {
-    onChange({ 
-      properties: { ...track.properties, ...updates }
-    });
-  }, [track.properties, onChange]);
+    // Preserve discriminated union shape when updating properties
+    switch (track.type) {
+      case 'move': {
+        const merged: MoveTrackProperties = { ...(track.properties as MoveTrackProperties), ...(updates as Partial<MoveTrackProperties>) };
+        onChange({ properties: merged });
+        break;
+      }
+      case 'rotate': {
+        const merged: RotateTrackProperties = { ...(track.properties as RotateTrackProperties), ...(updates as Partial<RotateTrackProperties>) };
+        onChange({ properties: merged });
+        break;
+      }
+      case 'scale': {
+        const merged: ScaleTrackProperties = { ...(track.properties as ScaleTrackProperties), ...(updates as Partial<ScaleTrackProperties>) };
+        onChange({ properties: merged });
+        break;
+      }
+      case 'fade': {
+        const merged: FadeTrackProperties = { ...(track.properties as FadeTrackProperties), ...(updates as Partial<FadeTrackProperties>) };
+        onChange({ properties: merged });
+        break;
+      }
+      case 'color': {
+        const merged: ColorTrackProperties = { ...(track.properties as ColorTrackProperties), ...(updates as Partial<ColorTrackProperties>) };
+        onChange({ properties: merged });
+        break;
+      }
+      default:
+        break;
+    }
+  }, [track.type, track.properties, onChange]);
 
   return (
     <div className="space-y-4">

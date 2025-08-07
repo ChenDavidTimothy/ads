@@ -1,0 +1,73 @@
+// src/server/animation-processing/executors/geometry-executor.ts
+import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
+import { UnknownNodeTypeError } from "@/shared/errors/domain";
+import type { NodeData } from "@/shared/types";
+import { setNodeOutput, type ExecutionContext } from "../execution-context";
+import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
+import type { NodeExecutor } from "./node-executor";
+
+export class GeometryNodeExecutor implements NodeExecutor {
+  canHandle(nodeType: string): boolean {
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'geometry';
+  }
+
+  async execute(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    _connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const objectDefinition = this.buildObjectDefinition(node);
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [objectDefinition]);
+  }
+
+  private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
+    const data = node.data as unknown as Record<string, unknown>;
+    const baseObject = {
+      id: node.data.identifier.id,
+      type: node.type as "triangle" | "circle" | "rectangle",
+      initialPosition: data.position as { x: number; y: number },
+      initialRotation: 0,
+      initialScale: { x: 1, y: 1 },
+      initialOpacity: 1,
+    };
+
+    switch (node.type as 'filter' | string) {
+      case "triangle":
+        return {
+          ...baseObject,
+          properties: {
+            size: data.size as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
+          },
+        };
+      case "circle":
+        return {
+          ...baseObject,
+          properties: {
+            radius: data.radius as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
+          },
+        };
+      case "rectangle":
+        return {
+          ...baseObject,
+          properties: {
+            width: data.width as number,
+            height: data.height as number,
+            color: data.color as string,
+            strokeColor: data.strokeColor as string,
+            strokeWidth: data.strokeWidth as number,
+          },
+        };
+      default:
+        throw new UnknownNodeTypeError(String(node.type));
+    }
+  }
+}
+
+

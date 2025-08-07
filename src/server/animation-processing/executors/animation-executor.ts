@@ -1,0 +1,88 @@
+// src/server/animation-processing/executors/animation-executor.ts
+import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
+import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
+import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
+import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
+import type { NodeExecutor } from "./node-executor";
+import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
+
+export class AnimationNodeExecutor implements NodeExecutor {
+  canHandle(nodeType: string): boolean {
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'animation';
+  }
+
+  async execute(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+
+    const allAnimations: SceneAnimationTrack[] = [];
+    const passThoughObjects: unknown[] = [];
+    const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
+    const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
+
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+
+      for (const timedObject of inputData) {
+        const objectId = (timedObject as { id?: unknown }).id as string | undefined;
+        const appearanceTime = (timedObject as { appearanceTime?: unknown }).appearanceTime as number | undefined;
+        const baseline = (objectId && upstreamCursorMap[objectId] !== undefined)
+          ? upstreamCursorMap[objectId]!
+          : (appearanceTime ?? 0);
+        const animations = convertTracksToSceneAnimations(
+          (data.tracks as AnimationTrack[]) || [],
+          objectId ?? '',
+          baseline
+        );
+        allAnimations.push(...animations);
+        passThoughObjects.push(timedObject);
+
+        if (objectId) {
+          const localEnd = animations.length > 0
+            ? Math.max(...animations.map(a => a.startTime + a.duration))
+            : baseline;
+          const newCursor = animations.length > 0 ? localEnd : baseline;
+          outputCursorMap[objectId] = Math.max(outputCursorMap[objectId] ?? 0, newCursor);
+        }
+      }
+    }
+
+    context.sceneAnimations.push(...allAnimations);
+    const maxDuration = allAnimations.length > 0 ?
+      Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) :
+      context.currentTime;
+    context.currentTime = maxDuration;
+
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      passThoughObjects,
+      { perObjectTimeCursor: outputCursorMap }
+    );
+  }
+
+  private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
+    const maps: Record<string, number>[] = [];
+    for (const input of inputs) {
+      const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
+      if (isPerObjectCursorMap(maybeMap)) {
+        maps.push(maybeMap);
+      }
+    }
+    return mergeCursorMaps(maps);
+  }
+}
+
+

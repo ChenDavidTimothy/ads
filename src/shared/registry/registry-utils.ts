@@ -5,7 +5,24 @@ import { NODE_DEFINITIONS, type NodeDefinition } from '../types/definitions';
 export type NodeType = keyof typeof NODE_DEFINITIONS;
 
 // Mutable registry copy to allow runtime registration of new nodes without touching static files
-const REGISTRY: Record<string, NodeDefinition> = { ...NODE_DEFINITIONS } as Record<string, NodeDefinition>;
+// Clone into mutable structures where needed to satisfy mutability of ports arrays
+const REGISTRY: Record<string, NodeDefinition> = Object.fromEntries(
+  Object.entries(NODE_DEFINITIONS).map(([key, def]) => [
+    key,
+    {
+      ...def,
+      ports: {
+        inputs: [...def.ports.inputs],
+        outputs: [...def.ports.outputs],
+      },
+      properties: {
+        properties: [...def.properties.properties],
+      },
+      rendering: { ...def.rendering },
+      defaults: { ...def.defaults },
+    } satisfies NodeDefinition,
+  ]),
+) as Record<string, NodeDefinition>;
 
 export function registerNodeDefinition(definition: NodeDefinition): void {
   REGISTRY[definition.type] = definition;
@@ -150,9 +167,8 @@ export function getNodeExecutionConfig(nodeType: string) {
 
 // Future-proof: Get nodes that support conditional execution
 export function getConditionalExecutionNodes(): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => 
-    def.execution.executionPriority !== undefined || 
-    def.execution.category === 'logic'
+  return Object.values(REGISTRY).filter(def =>
+    def.execution.executionPriority !== undefined || def.execution.category === 'logic'
   );
 }
 
