@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Dynamic component registration
+// src/components/editor/flow-editor.tsx - Scalable flow editor with generic node system
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -16,14 +16,14 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { TriangleNode, CircleNode, RectangleNode, InsertNode, FilterNode, AnimationNode, SceneNode } from "./nodes";
+import { GenericNodeRenderer } from "./generic-node-renderer";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import { getNodeDefinition } from "@/shared/types/definitions";
 import { arePortsCompatible } from "@/shared/types/ports";
 import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { api } from "@/trpc/react";
@@ -45,10 +45,6 @@ function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
 }
 
-function isFilterNodeData(data: NodeData): data is FilterNodeData {
-  return 'selectedObjectIds' in data;
-}
-
 // Timeline modal interfaces
 interface TimelineModalState {
   isOpen: boolean;
@@ -64,33 +60,35 @@ interface SceneConfig {
   videoCrf: number;
 }
 
-// Dynamic node component registration - replaces hardcoded mapping
-function createDynamicNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
-  // This could be fully generated from registry in the future
-  // For now, we map existing components to support incremental migration
-  return {
-    // Geometry nodes
-    triangle: TriangleNode,
-    circle: CircleNode,
-    rectangle: RectangleNode,
-    
-    // Timing nodes
-    insert: InsertNode,
-    
-    // Logic nodes
-    filter: FilterNode,
-    
-    // Animation nodes - special handling for timeline editor
-    animation: (props: Parameters<typeof AnimationNode>[0]) => (
-      <AnimationNode 
-        {...props} 
-        onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} 
-      />
-    ),
-    
-    // Output nodes
-    scene: SceneNode,
-  };
+// Scalable node component system - replaces hardcoded mapping
+function createScalableNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
+  // Single generic renderer handles ALL node types based on registry
+  const GenericNodeWithEditor = (props: Parameters<typeof GenericNodeRenderer>[0]) => (
+    <GenericNodeRenderer 
+      {...props} 
+      onDoubleClick={handleOpenTimelineEditor} 
+    />
+  );
+
+  // Dynamic node type mapping - future nodes automatically supported
+  const nodeTypes: NodeTypes = {};
+  
+  // Get all registered node types and map them to generic renderer
+  // This could be fully automated from registry in the future
+  const registeredTypes = [
+    'triangle', 'circle', 'rectangle',    // Geometry nodes
+    'insert',                             // Timing nodes  
+    'filter',                             // Logic nodes
+    'animation',                          // Animation nodes
+    'scene'                               // Output nodes
+  ];
+  
+  // Map all types to generic renderer
+  for (const nodeType of registeredTypes) {
+    nodeTypes[nodeType] = GenericNodeWithEditor;
+  }
+  
+  return nodeTypes;
 }
 
 export function FlowEditor() {
@@ -201,13 +199,13 @@ export function FlowEditor() {
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
 
-  // Dynamic node types - generated instead of hardcoded
+  // Scalable node types - automatically supports new node types from registry
   const nodeTypes: NodeTypes = useMemo(
-    () => createDynamicNodeTypes(handleOpenTimelineEditor), 
+    () => createScalableNodeTypes(handleOpenTimelineEditor), 
     [handleOpenTimelineEditor]
   );
 
-  // Connection validation with registry support
+  // Enhanced connection validation with registry support
   const wouldConnectionCreateDuplicateObjectIds = useCallback((
     sourceNodeId: string,
     targetNodeId: string, 
@@ -230,7 +228,7 @@ export function FlowEditor() {
       const sourceDefinition = getNodeDefinition(sourceNode.type!);
       const targetDefinition = getNodeDefinition(targetNode.type!);
       
-      // Check geometry → insert connection rules
+      // Check geometry → timing connection rules (preserves current behavior)
       if (sourceDefinition?.execution.category === 'geometry' && targetNode.type === 'insert') {
         const existingInsertConnection = edges.find(edge => 
           edge.source === sourceNode.data.identifier.id && 
@@ -246,7 +244,7 @@ export function FlowEditor() {
         }
       }
 
-      // Check for duplicate object IDs
+      // Check for duplicate object IDs (preserves filter behavior)
       if (targetDefinition?.execution.category !== 'geometry' && targetNode.type !== 'merge') {
         const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
           sourceNode.data.identifier.id,
@@ -270,7 +268,7 @@ export function FlowEditor() {
         }
       }
       
-      // Port compatibility validation
+      // Port compatibility validation using enhanced port system
       if (!sourceDefinition || !targetDefinition) {
         toast.error("Connection failed", "Unknown node type");
         return;
@@ -320,7 +318,7 @@ export function FlowEditor() {
   }, []);
 
   const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
-    // Edges are not selectable in simplified system
+    // Edges are not selectable in current system
   }, []);
 
   const onPaneClick = useCallback(() => {

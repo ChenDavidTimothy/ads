@@ -1,15 +1,16 @@
-// src/server/animation-processing/execution-context.ts - Future-proof execution context
+// src/server/animation-processing/execution-context.ts - Enhanced execution context for visual programming
 import type { PortType, SceneAnimationTrack } from "@/shared/types";
 
-// Expanded data types for future logic nodes
+// Enhanced data types for future logic nodes
 export type ExecutionDataType = 
   | 'object_stream'    // Current: geometry objects
   | 'boolean'          // true/false for logic nodes
-  | 'integer'          // numbers for comparisons
-  | 'string'           // text data
-  | 'array'            // collections
+  | 'number'           // numeric values for math operations
+  | 'string'           // text data for string operations
+  | 'array'            // collections/lists
   | 'trigger'          // execution control
-  | 'conditional';     // conditional execution paths
+  | 'conditional'      // conditional execution paths
+  | 'any';             // dynamic typing
 
 export interface ExecutionValue {
   type: PortType;
@@ -20,20 +21,24 @@ export interface ExecutionValue {
     timestamp?: number;
     conditionalPath?: 'true' | 'false' | 'default';
     priority?: number;
+    sourceExpression?: string; // For debugging complex expressions
     [key: string]: unknown;
   };
 }
 
-// Future-proof execution result for conditional nodes
+// Enhanced execution result for conditional nodes
 export interface ExecutionResult {
   success: boolean;
   data?: unknown;
   nextPort?: string;        // For conditional execution (if/else)
-  nextPorts?: string[];     // For multi-branch logic
+  nextPorts?: string[];     // For multi-branch logic (switch case)
   variables?: Record<string, unknown>; // For setting variables
+  conditionalOutputs?: Record<string, unknown>; // Multiple conditional outputs
   error?: string;
+  skipExecution?: boolean;  // For short-circuit evaluation
 }
 
+// Enhanced execution context for visual programming
 export interface ExecutionContext {
   // Node outputs stored by nodeId.portId
   nodeOutputs: Map<string, ExecutionValue>;
@@ -48,8 +53,24 @@ export interface ExecutionContext {
   // Conditional execution tracking (future-ready)
   conditionalPaths: Map<string, 'true' | 'false' | 'default'>;
   executionStack: string[]; // For nested conditional execution
+  branchingNodes: Set<string>; // Nodes that create conditional branches
   
-  // Scene building - properly typed
+  // Loop execution tracking (future-ready)
+  loopStates: Map<string, {
+    currentIteration: number;
+    maxIterations: number;
+    loopVariable?: string;
+    loopData?: unknown[];
+  }>;
+  
+  // Function call tracking (future-ready)
+  functionStack: Array<{
+    nodeId: string;
+    returnAddress: string;
+    localVariables: Record<string, unknown>;
+  }>;
+  
+  // Scene building - properly typed for current behavior
   sceneObjects: Array<{
     id: string;
     type: 'triangle' | 'circle' | 'rectangle';
@@ -62,14 +83,25 @@ export interface ExecutionContext {
   }>;
   sceneAnimations: SceneAnimationTrack[];
 
-  // Future: Conditional execution metadata
+  // Enhanced debugging and execution tracking
   debugMode?: boolean;
   executionLog?: Array<{
     nodeId: string;
     timestamp: number;
-    action: 'execute' | 'skip' | 'branch';
+    action: 'execute' | 'skip' | 'branch' | 'loop' | 'function_call';
     data?: unknown;
+    conditionalPath?: string;
+    variables?: Record<string, unknown>;
   }>;
+  
+  // Performance and optimization tracking
+  executionMetrics?: {
+    totalNodes: number;
+    executedNodes: number;
+    skippedNodes: number;
+    branchingCount: number;
+    executionStartTime: number;
+  };
 }
 
 export function createExecutionContext(): ExecutionContext {
@@ -80,10 +112,20 @@ export function createExecutionContext(): ExecutionContext {
     currentTime: 0,
     conditionalPaths: new Map(),
     executionStack: [],
+    branchingNodes: new Set(),
+    loopStates: new Map(),
+    functionStack: [],
     sceneObjects: [],
     sceneAnimations: [],
     debugMode: false,
-    executionLog: []
+    executionLog: [],
+    executionMetrics: {
+      totalNodes: 0,
+      executedNodes: 0,
+      skippedNodes: 0,
+      branchingCount: 0,
+      executionStartTime: Date.now(),
+    }
   };
 }
 
@@ -107,14 +149,20 @@ export function setNodeOutput(
     }
   });
 
-  // Debug logging (future-ready)
+  // Debug logging
   if (context.debugMode && context.executionLog) {
     context.executionLog.push({
       nodeId,
       timestamp: Date.now(),
       action: 'execute',
-      data
+      data,
+      variables: Object.fromEntries(context.variables)
     });
+  }
+  
+  // Update execution metrics
+  if (context.executionMetrics) {
+    context.executionMetrics.executedNodes++;
   }
 }
 
@@ -163,20 +211,29 @@ export function getConnectedInputs(
   return inputs;
 }
 
-// Variable management for future logic nodes
+// Variable management for logic nodes
 export function setVariable(
   context: ExecutionContext,
   name: string,
-  value: unknown
+  value: unknown,
+  scope: 'global' | 'local' = 'global'
 ): void {
-  context.variables.set(name, value);
+  if (scope === 'local' && context.functionStack.length > 0) {
+    // Set in current function's local scope
+    const currentFunction = context.functionStack[context.functionStack.length - 1]!;
+    currentFunction.localVariables[name] = value;
+  } else {
+    // Set in global scope
+    context.variables.set(name, value);
+  }
 
   if (context.debugMode && context.executionLog) {
     context.executionLog.push({
       nodeId: 'system',
       timestamp: Date.now(),
       action: 'execute',
-      data: { variableSet: name, value }
+      data: { variableSet: name, value, scope },
+      variables: Object.fromEntries(context.variables)
     });
   }
 }
@@ -185,6 +242,15 @@ export function getVariable(
   context: ExecutionContext,
   name: string
 ): unknown {
+  // Check local scope first (if in function)
+  if (context.functionStack.length > 0) {
+    const currentFunction = context.functionStack[context.functionStack.length - 1]!;
+    if (name in currentFunction.localVariables) {
+      return currentFunction.localVariables[name];
+    }
+  }
+  
+  // Fall back to global scope
   return context.variables.get(name);
 }
 
@@ -202,13 +268,28 @@ export function isNodeExecuted(
   return context.executedNodes.has(nodeId);
 }
 
-// Future: Conditional execution support
+// Conditional execution support (future-ready)
 export function setConditionalPath(
   context: ExecutionContext,
   nodeId: string,
   path: 'true' | 'false' | 'default'
 ): void {
   context.conditionalPaths.set(nodeId, path);
+  context.branchingNodes.add(nodeId);
+  
+  if (context.executionMetrics) {
+    context.executionMetrics.branchingCount++;
+  }
+
+  if (context.debugMode && context.executionLog) {
+    context.executionLog.push({
+      nodeId,
+      timestamp: Date.now(),
+      action: 'branch',
+      conditionalPath: path,
+      variables: Object.fromEntries(context.variables)
+    });
+  }
 }
 
 export function getConditionalPath(
@@ -231,11 +312,104 @@ export function popExecutionStack(
   return context.executionStack.pop();
 }
 
-// Future: Debug utilities
+// Loop execution support (future-ready)
+export function initializeLoop(
+  context: ExecutionContext,
+  nodeId: string,
+  maxIterations: number,
+  loopVariable?: string,
+  loopData?: unknown[]
+): void {
+  context.loopStates.set(nodeId, {
+    currentIteration: 0,
+    maxIterations,
+    loopVariable,
+    loopData
+  });
+
+  if (context.debugMode && context.executionLog) {
+    context.executionLog.push({
+      nodeId,
+      timestamp: Date.now(),
+      action: 'loop',
+      data: { maxIterations, loopVariable },
+      variables: Object.fromEntries(context.variables)
+    });
+  }
+}
+
+export function incrementLoop(
+  context: ExecutionContext,
+  nodeId: string
+): boolean {
+  const loopState = context.loopStates.get(nodeId);
+  if (!loopState) return false;
+  
+  loopState.currentIteration++;
+  
+  // Update loop variable if present
+  if (loopState.loopVariable && loopState.loopData) {
+    const currentValue = loopState.loopData[loopState.currentIteration - 1];
+    setVariable(context, loopState.loopVariable, currentValue);
+  }
+  
+  return loopState.currentIteration < loopState.maxIterations;
+}
+
+export function isLoopComplete(
+  context: ExecutionContext,
+  nodeId: string
+): boolean {
+  const loopState = context.loopStates.get(nodeId);
+  if (!loopState) return true;
+  
+  return loopState.currentIteration >= loopState.maxIterations;
+}
+
+// Function call support (future-ready)
+export function pushFunctionCall(
+  context: ExecutionContext,
+  nodeId: string,
+  returnAddress: string,
+  parameters: Record<string, unknown> = {}
+): void {
+  context.functionStack.push({
+    nodeId,
+    returnAddress,
+    localVariables: { ...parameters }
+  });
+
+  if (context.debugMode && context.executionLog) {
+    context.executionLog.push({
+      nodeId,
+      timestamp: Date.now(),
+      action: 'function_call',
+      data: { returnAddress, parameters },
+      variables: Object.fromEntries(context.variables)
+    });
+  }
+}
+
+export function popFunctionCall(
+  context: ExecutionContext
+): { nodeId: string; returnAddress: string; localVariables: Record<string, unknown> } | undefined {
+  return context.functionStack.pop();
+}
+
+// Debug utilities
 export function enableDebugMode(context: ExecutionContext): void {
   context.debugMode = true;
   if (!context.executionLog) {
     context.executionLog = [];
+  }
+  if (!context.executionMetrics) {
+    context.executionMetrics = {
+      totalNodes: 0,
+      executedNodes: 0,
+      skippedNodes: 0,
+      branchingCount: 0,
+      executionStartTime: Date.now(),
+    };
   }
 }
 
@@ -243,7 +417,21 @@ export function getExecutionLog(context: ExecutionContext): typeof context.execu
   return context.executionLog ?? [];
 }
 
-// Future: Type validation for logic nodes
+export function getExecutionMetrics(context: ExecutionContext) {
+  if (!context.executionMetrics) return null;
+  
+  const totalExecutionTime = Date.now() - context.executionMetrics.executionStartTime;
+  
+  return {
+    ...context.executionMetrics,
+    totalExecutionTime,
+    executionEfficiency: context.executionMetrics.totalNodes > 0 
+      ? (context.executionMetrics.executedNodes / context.executionMetrics.totalNodes) * 100 
+      : 0
+  };
+}
+
+// Type validation for logic nodes (future-ready)
 export function validateExecutionValue(
   value: unknown,
   expectedType: ExecutionDataType
@@ -251,8 +439,8 @@ export function validateExecutionValue(
   switch (expectedType) {
     case 'boolean':
       return typeof value === 'boolean';
-    case 'integer':
-      return typeof value === 'number' && Number.isInteger(value);
+    case 'number':
+      return typeof value === 'number' && !isNaN(value);
     case 'string':
       return typeof value === 'string';
     case 'array':
@@ -263,12 +451,14 @@ export function validateExecutionValue(
       return value === true || value === null || value === undefined;
     case 'conditional':
       return typeof value === 'boolean' || typeof value === 'string';
+    case 'any':
+      return true; // Any type is valid
     default:
-      return true; // Unknown types pass through
+      return true; // Unknown types pass through for compatibility
   }
 }
 
-// Future: Convert execution value to specific type
+// Convert execution value to specific type (future-ready)
 export function coerceExecutionValue(
   value: unknown,
   targetType: ExecutionDataType
@@ -276,8 +466,13 @@ export function coerceExecutionValue(
   switch (targetType) {
     case 'boolean':
       return Boolean(value);
-    case 'integer':
-      return typeof value === 'number' ? Math.floor(value) : parseInt(String(value), 10);
+    case 'number':
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      return Number(value);
     case 'string':
       return String(value);
     case 'array':
@@ -285,4 +480,25 @@ export function coerceExecutionValue(
     default:
       return value;
   }
+}
+
+// Utility to check if execution should continue based on conditions (future-ready)
+export function shouldContinueExecution(
+  context: ExecutionContext,
+  nodeId: string,
+  condition?: unknown
+): boolean {
+  // Check if node was already executed and shouldn't be re-executed
+  if (isNodeExecuted(context, nodeId)) {
+    return false;
+  }
+  
+  // Check conditional execution
+  if (condition !== undefined) {
+    const conditionalResult = Boolean(condition);
+    setConditionalPath(context, nodeId, conditionalResult ? 'true' : 'false');
+    return conditionalResult;
+  }
+  
+  return true;
 }
