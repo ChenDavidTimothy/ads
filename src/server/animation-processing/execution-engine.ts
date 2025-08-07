@@ -31,14 +31,14 @@ export class ExecutionEngine {
     validateConnections(nodes, edges);
     validateProperFlow(nodes, edges);
     validateNoDuplicateObjectIds(nodes, edges);
-
+    
     const context = createExecutionContext();
-
+    
     // validateScene already ensures exactly one scene node exists
-
+    
     const dataEdges = edges.filter((e) => (e.kind ?? 'data') === 'data');
     const executionOrder = getTopologicalOrder(nodes, dataEdges);
-
+    
     for (const node of executionOrder) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
         const executor = this.registry.find(node.type ?? '');
@@ -48,7 +48,7 @@ export class ExecutionEngine {
         }
       }
     }
-
+    
     return context;
   }
 }
