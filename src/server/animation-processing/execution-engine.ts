@@ -1,16 +1,15 @@
-// src/server/animation-processing/execution-engine.ts - Updated with edge filtering support
+// src/server/animation-processing/execution-engine.ts - Updated with selectedNodeIds removed from interface
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
-  getFilteredConnectedInputs,
-  setEdgeFiltering,
+  getConnectedInputs,
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
 
-// ReactFlow-compatible types for server - UPDATED with edge filtering
+// ReactFlow-compatible types for server - UPDATED: selectedNodeIds completely removed
 export interface ReactFlowNode<T = unknown> {
   id: string;
   type?: string;
@@ -24,7 +23,6 @@ export interface ReactFlowEdge {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  selectedNodeIds?: string[]; // NEW: Optional filtering data
 }
 
 export interface NodeExecutor {
@@ -36,7 +34,7 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor - CORRECTED: Only creates object definitions
+// Geometry node executor - Creates object definitions only
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -46,7 +44,7 @@ class GeometryNodeExecutor implements NodeExecutor {
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
-    // CRITICAL FIX: Only create object definition, DO NOT add to scene
+    // Only create object definition, DO NOT add to scene
     // Only Insert nodes should add objects to the scene
     const objectDefinition = this.buildObjectDefinition(node);
     
@@ -103,7 +101,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - UPDATED to use filtered inputs
+// Insert node executor - Uses getConnectedInputs without filtering
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -115,8 +113,7 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    // UPDATED: Use getFilteredConnectedInputs to respect edge filtering
-    const inputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'object');
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
     
     if (inputs.length === 0) {
       throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
@@ -125,7 +122,7 @@ class InsertNodeExecutor implements NodeExecutor {
     const timedObjects = [];
     
     for (const input of inputs) {
-      // CRITICAL FIX: Insert node is the ONLY place where objects are added to the scene
+      // Insert node is the ONLY place where objects are added to the scene
       const sceneObject = {
         ...input.data,
         appearanceTime: data.appearanceTime as number
@@ -141,7 +138,7 @@ class InsertNodeExecutor implements NodeExecutor {
   }
 }
 
-// Animation node executor - UPDATED to use filtered inputs
+// Animation node executor - Uses getConnectedInputs without filtering
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -153,8 +150,7 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    // UPDATED: Use getFilteredConnectedInputs to respect edge filtering
-    const inputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
     
     if (inputs.length === 0) {
       throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
@@ -255,7 +251,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - validates the complete flow (uses regular getConnectedInput for validation only)
+// Scene node executor - validates the complete flow using getConnectedInputs
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -266,8 +262,8 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    // Scene node should receive animation inputs (uses regular inputs for validation)
-    const animationInputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'animation');
+    // Scene node should receive animation inputs
+    const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
     
     // Validate that scene has objects (they should come through proper flow)
     if (context.sceneObjects.length === 0) {
@@ -304,9 +300,6 @@ export class ExecutionEngine {
     
     const context = createExecutionContext();
     
-    // NEW: Initialize edge filtering before execution
-    this.initializeEdgeFiltering(context, edges);
-    
     // Topological execution order
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
@@ -323,20 +316,10 @@ export class ExecutionEngine {
     return context;
   }
 
-  // NEW: Private helper method to initialize edge filtering
-  private initializeEdgeFiltering(context: ExecutionContext, edges: ReactFlowEdge[]): void {
-    for (const edge of edges) {
-      if (edge.selectedNodeIds !== undefined) {
-        setEdgeFiltering(context, edge.id, edge.selectedNodeIds);
-      }
-    }
-  }
-
-  // NEW: Validate that the flow architecture is respected
+  // Validate that the flow architecture is respected
   private validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
     const geometryNodes = nodes.filter(n => ['triangle', 'circle', 'rectangle'].includes(n.type!));
     const insertNodes = nodes.filter(n => n.type === 'insert');
-    const sceneNodes = nodes.filter(n => n.type === 'scene');
     
     // Check that all geometry nodes that should appear in scene are connected to insert nodes
     for (const geoNode of geometryNodes) {

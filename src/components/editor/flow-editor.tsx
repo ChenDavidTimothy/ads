@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with edge filtering integration
+// src/components/editor/flow-editor.tsx - Updated with complete edge filtering removal
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -20,7 +20,6 @@ import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, Sce
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
-import { EdgePropertyPanel } from "@/components/editor/edge-property-panel";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
@@ -64,9 +63,7 @@ export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [renderTrigger, setRenderTrigger] = useState(0);
   const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
     isOpen: false, 
     nodeId: null 
@@ -168,11 +165,6 @@ export function FlowEditor() {
     handleCloseTimelineEditor();
   }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
 
-  const handleEdgeFilterChange = useCallback((edgeId: string, selectedNodeIds: string[]) => {
-    flowTracker.updateEdgeFiltering(edgeId, selectedNodeIds);
-    setRenderTrigger(prev => prev + 1);
-  }, [flowTracker]);
-
   const timelineNode = timelineModalState.nodeId 
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
@@ -268,17 +260,14 @@ export function FlowEditor() {
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.data.identifier.id);
-    setSelectedEdgeId(null);
   }, []);
 
   const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
-    setSelectedEdgeId(edge.id);
-    setSelectedNodeId(null);
+    // UPDATED: No longer set selectedEdgeId - edges are not selectable
   }, []);
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
-    setSelectedEdgeId(null);
   }, []);
 
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
@@ -351,27 +340,14 @@ export function FlowEditor() {
         data: node.data
       }));
       
-      // Convert ReactFlow edges with filtering data - UPDATED with edge filtering integration
-      const backendEdges = edges.map(edge => {
-        const baseEdge = {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle
-        };
-        
-        // Apply filtering logic: if edge is tracked by FlowTracker, always include selectedNodeIds
-        if (flowTracker.hasEdge(edge.id)) {
-          return {
-            ...baseEdge,
-            selectedNodeIds: flowTracker.getSelectedNodeIds(edge.id)
-          };
-        } else {
-          // For untracked edges, omit selectedNodeIds property entirely
-          return baseEdge;
-        }
-      });
+      // Convert ReactFlow edges - UPDATED: simplified without filtering logic
+      const backendEdges = edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle
+      }));
       
       generateScene.mutate({ 
         nodes: backendNodes, 
@@ -381,7 +357,7 @@ export function FlowEditor() {
     } catch (error) {
       toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, generateScene, validateSceneNodes, toast, flowTracker]);
+  }, [nodes, edges, generateScene, validateSceneNodes, toast]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {
@@ -397,11 +373,6 @@ export function FlowEditor() {
   const selectedNode = useMemo(
     () => nodes.find((node) => node.data.identifier.id === selectedNodeId),
     [nodes, selectedNodeId]
-  );
-
-  const selectedEdge = useMemo(
-    () => edges.find((edge) => edge.id === selectedEdgeId),
-    [edges, selectedEdgeId]
   );
 
   // Get timeline node data with proper type checking
@@ -495,29 +466,17 @@ export function FlowEditor() {
         )}
       </div>
 
-      {(selectedNode || selectedEdge) && (
+      {selectedNode && (
         <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
-          {selectedNode ? (
-            <>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
-              </h3>
-              <PropertyPanel 
-                node={selectedNode}
-                onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
-                onDisplayNameChange={updateDisplayName}
-                validateDisplayName={validateDisplayName}
-              />
-            </>
-          ) : selectedEdge ? (
-            <EdgePropertyPanel 
-              edge={selectedEdge} 
-              flowTracker={flowTracker}
-              nodes={nodes}
-              onEdgeFilterChange={handleEdgeFilterChange}
-              renderTrigger={renderTrigger}
-            />
-          ) : null}
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
+          </h3>
+          <PropertyPanel 
+            node={selectedNode}
+            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
+            onDisplayNameChange={updateDisplayName}
+            validateDisplayName={validateDisplayName}
+          />
         </div>
       )}
 
