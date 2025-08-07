@@ -1,13 +1,10 @@
-// src/shared/types/ports.ts
+// src/shared/types/ports.ts - Simplified with object_stream as universal type
 export type PortType = 
-  | 'object'        // Geometry objects
-  | 'timed_object'  // Objects with timing applied by Insert node
-  | 'animation'     // Animation timeline
-  | 'object_stream' // Universal stream that can carry any object-containing data
-  | 'data'         // Generic data
-  | 'boolean'      // True/false values
-  | 'trigger'      // Execution trigger
-  | 'scene';       // Final scene output
+  | 'object_stream'  // Universal stream - connects to everything, carries any object data
+  | 'data'          // Generic data
+  | 'boolean'       // True/false values  
+  | 'trigger'       // Execution trigger
+  | 'scene';        // Final scene output
 
 export interface PortDefinition {
   id: string;
@@ -31,16 +28,13 @@ export interface TypedConnection {
   targetPortType: PortType;
 }
 
-// Base port compatibility rules - Updated with object_stream
+// Simplified port compatibility - object_stream is universal
 const PORT_COMPATIBILITY: Record<PortType, PortType[]> = {
-  object: ['object', 'object_stream', 'data'],
-  timed_object: ['timed_object', 'object_stream', 'data'],
-  animation: ['animation', 'object_stream', 'scene', 'data'],
-  object_stream: ['object', 'timed_object', 'animation', 'object_stream', 'data'],
-  data: ['data', 'boolean', 'trigger'],
-  boolean: ['boolean', 'trigger', 'data'],
-  trigger: ['trigger', 'animation', 'data'],
-  scene: ['scene']
+  object_stream: ['object_stream', 'data', 'scene'], // Universal - connects to most types
+  data: ['data', 'object_stream', 'boolean', 'trigger'],
+  boolean: ['boolean', 'trigger', 'data', 'object_stream'],
+  trigger: ['trigger', 'data', 'object_stream'], 
+  scene: ['scene'] // Scene is terminal - only accepts input
 };
 
 export function arePortsCompatible(

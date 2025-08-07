@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with FilterNode integration
+// src/components/editor/flow-editor.tsx - Updated for simplified single-port architecture
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -189,6 +189,21 @@ export function FlowEditor() {
     scene: SceneNode,
   }), [handleOpenTimelineEditor]);
 
+  // Check if a potential connection would create duplicate object IDs at target node
+  const wouldConnectionCreateDuplicateObjectIds = useCallback((
+    sourceNodeId: string,
+    targetNodeId: string, 
+    edgesWithNewConnection: Edge[],
+    allNodes: Node<NodeData>[]
+  ): string[] => {
+    // Get all upstream geometry objects that would reach the target node
+    const upstreamObjects = flowTracker.getUpstreamGeometryObjects(targetNodeId, allNodes, edgesWithNewConnection);
+    const objectIds = upstreamObjects.map(obj => obj.data.identifier.id);
+    
+    // Find duplicates
+    return objectIds.filter((id, index) => objectIds.indexOf(id) !== index);
+  }, [flowTracker]);
+
   const onConnect = useCallback(
     (params: Connection) => {
       const sourceNode = nodes.find((n) => n.data.identifier.id === params.source);
@@ -196,7 +211,7 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Check for object → multiple Insert violation
+      // Check for object → multiple Insert violation (simplified - any geometry to insert)
       if (['triangle', 'circle', 'rectangle'].includes(sourceNode.type!) && 
           targetNode.type === 'insert') {
         
@@ -209,6 +224,30 @@ export function FlowEditor() {
           toast.error(
             "Connection not allowed", 
             `Object already connected to Insert node. Each object can only connect to one Insert node.`
+          );
+          return;
+        }
+      }
+
+      // Check for duplicate object IDs reaching target node
+      if (!['triangle', 'circle', 'rectangle', 'merge'].includes(targetNode.type!)) {
+        const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
+          sourceNode.data.identifier.id,
+          targetNode.data.identifier.id,
+          [...edges, { 
+            id: 'temp', 
+            source: sourceNode.data.identifier.id, 
+            target: targetNode.data.identifier.id,
+            sourceHandle: params.sourceHandle,
+            targetHandle: params.targetHandle
+          }],
+          nodes
+        );
+
+        if (wouldCreateDuplicates.length > 0) {
+          toast.error(
+            "Connection not allowed",
+            `This connection would cause duplicate object IDs (${wouldCreateDuplicates.join(', ')}) to reach ${targetNode.data.identifier.displayName}. Each node can only receive each object once.`
           );
           return;
         }
@@ -242,14 +281,14 @@ export function FlowEditor() {
         target: targetNode.data.identifier.id
       }, edges);
       
-      // Find the newly created edge (compare arrays to find the new one)
+      // Find the newly created edge
       const newEdge = newEdges.find(edge => !edges.some(existingEdge => existingEdge.id === edge.id));
       if (!newEdge) {
         toast.error("Connection failed", "Failed to create edge");
         return;
       }
       
-      // Track the connection using the actual ReactFlow edge ID
+      // Track the connection
       flowTracker.trackConnection(
         newEdge.id,
         sourceNode.data.identifier.id,
@@ -261,7 +300,7 @@ export function FlowEditor() {
       
       setEdges(newEdges);
     },
-    [nodes, edges, setEdges, flowTracker, toast]
+    [nodes, edges, setEdges, flowTracker, toast, wouldConnectionCreateDuplicateObjectIds]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -269,7 +308,7 @@ export function FlowEditor() {
   }, []);
 
   const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
-    // UPDATED: No longer set selectedEdgeId - edges are not selectable
+    // Edges are not selectable in simplified system
   }, []);
 
   const onPaneClick = useCallback(() => {
@@ -346,7 +385,7 @@ export function FlowEditor() {
         data: node.data
       }));
       
-      // Convert ReactFlow edges - simplified without filtering logic
+      // Convert ReactFlow edges  
       const backendEdges = edges.map(edge => ({
         id: edge.id,
         source: edge.source,

@@ -1,4 +1,4 @@
-// src/shared/types/definitions.ts
+// src/shared/types/definitions.ts - Simplified single-port architecture
 import type { NodePortConfig } from './ports';
 import type { NodePropertyConfig } from './properties';
 
@@ -27,7 +27,7 @@ export const FPS_OPTIONS = [
   { value: 120, label: "120 FPS (Ultra Smooth)" },
 ] as const;
 
-// Geometry Node Definitions
+// Simplified Geometry Node Definitions - Single output port
 const triangleDefinition: NodeDefinition = {
   type: 'triangle',
   label: 'Triangle',
@@ -36,8 +36,7 @@ const triangleDefinition: NodeDefinition = {
   ports: {
     inputs: [],
     outputs: [
-      { id: 'object', type: 'object', label: 'Triangle Object' },
-      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'output', type: 'object_stream', label: 'Triangle' }
     ]
   },
   properties: {
@@ -59,8 +58,7 @@ const circleDefinition: NodeDefinition = {
   ports: {
     inputs: [],
     outputs: [
-      { id: 'object', type: 'object', label: 'Circle Object' },
-      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'output', type: 'object_stream', label: 'Circle' }
     ]
   },
   properties: {
@@ -82,8 +80,7 @@ const rectangleDefinition: NodeDefinition = {
   ports: {
     inputs: [],
     outputs: [
-      { id: 'object', type: 'object', label: 'Rectangle Object' },
-      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'output', type: 'object_stream', label: 'Rectangle' }
     ]
   },
   properties: {
@@ -98,6 +95,7 @@ const rectangleDefinition: NodeDefinition = {
   }
 };
 
+// Simplified Insert Definition - Single input/output
 const insertDefinition: NodeDefinition = {
   type: 'insert',
   label: 'Insert',
@@ -105,12 +103,10 @@ const insertDefinition: NodeDefinition = {
   category: 'timing',
   ports: {
     inputs: [
-      { id: 'object', type: 'object', label: 'Object' },
-      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'input', type: 'object_stream', label: 'Object' }
     ],
     outputs: [
-      { id: 'timed_object', type: 'timed_object', label: 'Timed Object' },
-      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'output', type: 'object_stream', label: 'Timed Object' }
     ]
   },
   properties: {
@@ -120,6 +116,7 @@ const insertDefinition: NodeDefinition = {
   }
 };
 
+// Filter Definition - Already correctly single input/output
 const filterDefinition: NodeDefinition = {
   type: 'filter',
   label: 'Filter Objects',
@@ -134,12 +131,11 @@ const filterDefinition: NodeDefinition = {
     ]
   },
   properties: {
-    properties: [
-      // selectedObjectIds will be managed by the UI, not directly editable as a simple property
-    ]
+    properties: []
   }
 };
 
+// Simplified Animation Definition - Single input, single output
 const animationDefinition: NodeDefinition = {
   type: 'animation',
   label: 'Animation',
@@ -147,10 +143,11 @@ const animationDefinition: NodeDefinition = {
   category: 'animation',
   ports: {
     inputs: [
-      { id: 'timed_object', type: 'timed_object', label: 'Timed Object' },
-      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'input', type: 'object_stream', label: 'Objects' }
     ],
-    outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
+    outputs: [
+      { id: 'output', type: 'object_stream', label: 'Animation' }
+    ]
   },
   properties: {
     properties: [
@@ -159,6 +156,7 @@ const animationDefinition: NodeDefinition = {
   }
 };
 
+// Simplified Scene Definition - Single input
 const sceneDefinition: NodeDefinition = {
   type: 'scene',
   label: 'Scene',
@@ -166,8 +164,7 @@ const sceneDefinition: NodeDefinition = {
   category: 'output',
   ports: {
     inputs: [
-      { id: 'animation', type: 'animation', label: 'Animation' },
-      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+      { id: 'input', type: 'object_stream', label: 'Input' }
     ],
     outputs: []
   },

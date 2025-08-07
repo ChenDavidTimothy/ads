@@ -1,4 +1,4 @@
-// src/components/editor/nodes/insert-node.tsx - Updated with display name
+// src/components/editor/nodes/insert-node.tsx - Simplified single input/output ports
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -12,15 +12,15 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
-      {/* Render input ports */}
-      {nodeDefinition?.ports.inputs.map((port, index) => (
+      {/* Single input port */}
+      {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
           type="target"
           position={Position.Left}
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.insert.handle} !border-2 !border-white`}
-          style={{ top: `${50 + (index * 20)}%` }}
+          style={{ top: `50%` }}
         />
       ))}
 
@@ -44,15 +44,15 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         )}
       </CardContent>
 
-      {/* Render output ports */}
-      {nodeDefinition?.ports.outputs.map((port, index) => (
+      {/* Single output port */}
+      {nodeDefinition?.ports.outputs.map((port) => (
         <Handle
           key={port.id}
           type="source"
           position={Position.Right}
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.insert.handle} !border-2 !border-white`}
-          style={{ top: `${50 + (index * 20)}%` }}
+          style={{ top: `50%` }}
         />
       ))}
     </Card>

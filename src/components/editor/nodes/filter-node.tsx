@@ -1,4 +1,4 @@
-// src/components/editor/nodes/filter-node.tsx
+// src/components/editor/nodes/filter-node.tsx - Confirmed single input/output ports
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -15,8 +15,8 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
 
   return (
     <Card selected={selected} className="p-4 min-w-[200px]">
-      {/* Render input ports */}
-      {nodeDefinition?.ports.inputs.map((port, index) => (
+      {/* Single input port */}
+      {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
           type="target"
@@ -61,8 +61,8 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
         </div>
       </CardContent>
 
-      {/* Render output ports */}
-      {nodeDefinition?.ports.outputs.map((port, index) => (
+      {/* Single output port */}
+      {nodeDefinition?.ports.outputs.map((port) => (
         <Handle
           key={port.id}
           type="source"

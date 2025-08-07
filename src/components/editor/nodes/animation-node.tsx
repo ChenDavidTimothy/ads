@@ -1,4 +1,4 @@
-// src/components/editor/nodes/animation-node.tsx - Updated with display name
+// src/components/editor/nodes/animation-node.tsx - Simplified single input/output ports
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
@@ -30,8 +30,8 @@ export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodePro
       className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-gray-750" 
       onDoubleClick={handleDoubleClick}
     >
-      {/* Render input ports */}
-      {nodeDefinition?.ports.inputs.map((port, index) => (
+      {/* Single input port */}
+      {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
           type="target"
@@ -88,15 +88,15 @@ export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodePro
         </div>
       </CardContent>
 
-      {/* Render output ports */}
-      {nodeDefinition?.ports.outputs.map((port, index) => (
+      {/* Single output port */}
+      {nodeDefinition?.ports.outputs.map((port) => (
         <Handle
           key={port.id}
           type="source"
           position={Position.Right}
           id={port.id}
           className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
-          style={{ top: `${50}%` }}
+          style={{ top: `50%` }}
         />
       ))}
     </Card>

@@ -1,4 +1,4 @@
-// src/server/animation-processing/execution-engine.ts - Updated with FilterNodeExecutor
+// src/server/animation-processing/execution-engine.ts - Scene-centric pull-based execution
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
@@ -34,7 +34,7 @@ export interface NodeExecutor {
   ): Promise<void>;
 }
 
-// Geometry node executor - Creates object definitions and outputs to both ports
+// Geometry node executor - Creates object definitions only
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return ['triangle', 'circle', 'rectangle'].includes(nodeType);
@@ -44,13 +44,10 @@ class GeometryNodeExecutor implements NodeExecutor {
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext
   ): Promise<void> {
-    // Only create object definition, DO NOT add to scene
-    // Only Insert nodes should add objects to the scene
     const objectDefinition = this.buildObjectDefinition(node);
     
-    // Output to both object and object_stream ports for maximum compatibility
-    setNodeOutput(context, node.data.identifier.id, 'object', 'object', objectDefinition);
-    setNodeOutput(context, node.data.identifier.id, 'stream', 'object_stream', [objectDefinition]);
+    // Output object definition only - don't add to scene
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [objectDefinition]);
   }
 
   private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
@@ -102,7 +99,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - Uses getConnectedInputs without filtering (handles arrays from Filter nodes)
+// Insert node executor - Only marks timing, doesn't add to scene
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -115,40 +112,33 @@ class InsertNodeExecutor implements NodeExecutor {
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
     
-    // Get inputs from both object and object_stream ports
-    const objectInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
-    const streamInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object_stream');
-    const allInputs = [...objectInputs, ...streamInputs];
+    // Get inputs - if none, just pass empty array (no error)
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
-    if (allInputs.length === 0) {
-      throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
-    }
-
     const timedObjects = [];
     
-    for (const input of allInputs) {
-      // Handle both single objects and arrays (from Filter nodes)
+    for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const objectDef of inputData) {
-        // Insert node is the ONLY place where objects are added to the scene
-        const sceneObject = {
+        // Insert node ONLY adds timing information - Scene decides what gets added to scene
+        const timedObject = {
           ...objectDef,
           appearanceTime: data.appearanceTime as number
         };
 
-        // Add object to scene - THIS IS THE ONLY PLACE THIS SHOULD HAPPEN
-        context.sceneObjects.push(sceneObject);
-        timedObjects.push(sceneObject);
+        timedObjects.push(timedObject);
       }
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
-    setNodeOutput(context, node.data.identifier.id, 'timed_object', 'timed_object', timedObjects);
+    
+    // Output timed objects - Scene will decide if they get rendered
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', timedObjects);
   }
 }
 
-// Filter node executor - Filters objects from any data stream
+// Filter node executor - Unchanged, already follows pull model
 class FilterNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'filter';
@@ -162,11 +152,9 @@ class FilterNodeExecutor implements NodeExecutor {
     const data = node.data as Record<string, unknown>;
     const selectedObjectIds = (data.selectedObjectIds as string[]) || [];
     
-    // Get input from the universal input port
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
     if (inputs.length === 0) {
-      // No inputs - output empty stream
       setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', []);
       return;
     }
@@ -174,45 +162,38 @@ class FilterNodeExecutor implements NodeExecutor {
     const filteredResults = [];
     
     for (const input of inputs) {
-      // Handle both single objects and arrays of objects
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const item of inputData) {
-        // Check if this item has objects that can be filtered
         if (this.hasFilterableObjects(item)) {
           const filtered = this.filterItem(item, selectedObjectIds);
           if (filtered) {
             filteredResults.push(filtered);
           }
         } else {
-          // Non-object data passes through unchanged
           filteredResults.push(item);
         }
       }
     }
     
-    // Output the filtered stream
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', filteredResults);
   }
 
   private hasFilterableObjects(item: unknown): boolean {
-    // Check if item has an id (indicating it's an object)
     return typeof item === 'object' && item !== null && 'id' in item;
   }
 
   private filterItem(item: unknown, selectedObjectIds: string[]): unknown | null {
     if (typeof item === 'object' && item !== null && 'id' in item) {
       const objectId = (item as { id: string }).id;
-      // Only pass through if object ID is in selected list
       return selectedObjectIds.includes(objectId) ? item : null;
     }
     
-    // Non-object items pass through unchanged
     return item;
   }
 }
 
-// Animation node executor - Uses getConnectedInputs without filtering (handles arrays from Filter nodes)
+// Animation node executor - No input requirements, processes if inputs exist
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -225,18 +206,13 @@ class AnimationNodeExecutor implements NodeExecutor {
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     
-    // Get inputs from both timed_object and object_stream ports
-    const timedObjectInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
-    const streamInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object_stream');
-    const allInputs = [...timedObjectInputs, ...streamInputs];
+    // Get inputs - if none, just output empty array (no error)
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
-    if (allInputs.length === 0) {
-      throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
-    }
-
     const allAnimations: SceneAnimationTrack[] = [];
+    const passThoughObjects: unknown[] = [];
     
-    for (const input of allInputs) {
+    for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const timedObject of inputData) {
@@ -247,14 +223,21 @@ class AnimationNodeExecutor implements NodeExecutor {
           objectStartTime
         );
         allAnimations.push(...animations);
+        
+        // Pass through the timed object so Scene can receive it
+        passThoughObjects.push(timedObject);
       }
     }
 
+    // Add animations to context for Scene node to find
     context.sceneAnimations.push(...allAnimations);
-    const maxDuration = Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime);
+    const maxDuration = allAnimations.length > 0 ? 
+      Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) : 
+      context.currentTime;
     context.currentTime = maxDuration;
 
-    setNodeOutput(context, node.data.identifier.id, 'animation', 'animation', allAnimations);
+    // Output the timed objects (not animations) so Scene can receive them
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThoughObjects);
   }
 
   private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
@@ -329,7 +312,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - validates the complete flow using getConnectedInputs
+// Scene node executor - Uses direct inputs like every other node
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -340,28 +323,28 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    // Scene node should receive animation or object_stream inputs
-    const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
-    const streamInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object_stream');
-    const allInputs = [...animationInputs, ...streamInputs];
+    // Scene node uses direct inputs - respects all upstream filtering/processing
+    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
-    // Validate that scene has objects (they should come through proper flow)
+    // Process all inputs that actually reached Scene node through the flow
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      
+      for (const item of inputData) {
+        // Only add objects that have appearance time (processed by Insert nodes)
+        if (typeof item === 'object' && item !== null && 'id' in item && 'appearanceTime' in item) {
+          context.sceneObjects.push(item);
+        }
+      }
+    }
+    
+    // Validate that we found at least some objects
     if (context.sceneObjects.length === 0) {
       throw new Error(
-        `Scene ${node.data.identifier.displayName} has no objects. ` +
-        `Objects must flow through: Geometry → Insert → Animation → Scene`
+        `Scene ${node.data.identifier.displayName} has no reachable objects. ` +
+        `Connect object flows: Geometry → Insert → Animation → Scene`
       );
     }
-    
-    // Validate that we have at least one input if we have objects
-    if (allInputs.length === 0 && context.sceneObjects.length > 0) {
-      throw new Error(
-        `Scene ${node.data.identifier.displayName} has objects but no input. ` +
-        `Connect Animation nodes or object streams to Scene.`
-      );
-    }
-    
-    setNodeOutput(context, node.data.identifier.id, 'scene', 'scene', node.data);
   }
 }
 
@@ -378,10 +361,17 @@ export class ExecutionEngine {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     this.validateProperFlow(nodes, edges);
+    this.validateNoDuplicateObjectIds(nodes, edges);
     
     const context = createExecutionContext();
     
-    // Topological execution order
+    // Scene-centric execution: Start from Scene node and work backwards
+    const sceneNode = nodes.find(n => n.type === 'scene');
+    if (!sceneNode) {
+      throw new Error("Scene node is required");
+    }
+    
+    // Execute all nodes in topological order (needed to populate outputs)
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
     for (const node of executionOrder) {
@@ -395,6 +385,60 @@ export class ExecutionEngine {
     }
     
     return context;
+  }
+
+  // Validate that no node receives duplicate object IDs (except future Merge node)
+  private validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    for (const targetNode of nodes) {
+      // Skip geometry nodes (no inputs) and future merge node
+      if (['triangle', 'circle', 'rectangle'].includes(targetNode.type!) || targetNode.type === 'merge') {
+        continue;
+      }
+
+      const incomingObjectIds = this.getIncomingObjectIds(targetNode.data.identifier.id, edges, nodes);
+      const duplicates = incomingObjectIds.filter((id, index) => 
+        incomingObjectIds.indexOf(id) !== index
+      );
+      
+      if (duplicates.length > 0) {
+        throw new Error(
+          `Node ${targetNode.data.identifier.displayName} receives duplicate object IDs: ${duplicates.join(', ')}. ` +
+          `Each node can only receive each object once. Use Merge node to explicitly handle duplicate objects.`
+        );
+      }
+    }
+  }
+
+  // Get all object IDs that would reach a specific target node
+  private getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): string[] {
+    const geometryNodes: ReactFlowNode<NodeData>[] = [];
+    const visited = new Set<string>();
+    
+    const traceUpstream = (currentNodeId: string): void => {
+      if (visited.has(currentNodeId)) return;
+      visited.add(currentNodeId);
+      
+      const currentNode = nodes.find(n => n.data.identifier.id === currentNodeId);
+      if (!currentNode) return;
+      
+      // If this is a geometry node, collect it
+      if (['triangle', 'circle', 'rectangle'].includes(currentNode.type!)) {
+        geometryNodes.push(currentNode);
+        return;
+      }
+      
+      // For other nodes, trace upstream to find geometry sources
+      const incomingEdges = edges.filter(edge => edge.target === currentNodeId);
+      for (const edge of incomingEdges) {
+        traceUpstream(edge.source);
+      }
+    };
+    
+    // Start tracing from target node
+    traceUpstream(targetNodeId);
+    
+    // Return object IDs (geometry nodes use their own ID as object ID)
+    return geometryNodes.map(node => node.data.identifier.id);
   }
 
   // Validate that the flow architecture is respected
