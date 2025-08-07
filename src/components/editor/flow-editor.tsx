@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with backend execution
+// src/components/editor/flow-editor.tsx - Updated with corrected FlowTracker
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -10,6 +10,7 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   type Node,
+  type Edge,
   type Connection,
   type NodeTypes,
 } from "reactflow";
@@ -19,6 +20,7 @@ import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, Sce
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
+import { EdgePropertyPanel } from "@/components/editor/edge-property-panel";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
@@ -62,7 +64,9 @@ export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [renderTrigger, setRenderTrigger] = useState(0);
   const [timelineModalState, setTimelineModalState] = useState<TimelineModalState>({ 
     isOpen: false, 
     nodeId: null 
@@ -164,6 +168,11 @@ export function FlowEditor() {
     handleCloseTimelineEditor();
   }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
 
+  const handleEdgeFilterChange = useCallback((edgeId: string, selectedNodeIds: string[]) => {
+    flowTracker.updateEdgeFiltering(edgeId, selectedNodeIds);
+    setRenderTrigger(prev => prev + 1);
+  }, [flowTracker]);
+
   const timelineNode = timelineModalState.nodeId 
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
@@ -229,29 +238,47 @@ export function FlowEditor() {
       }
       
       // Create edge with node IDs
-      const newEdge = addEdge({
+      const newEdges = addEdge({
         ...params,
         source: sourceNode.data.identifier.id,
         target: targetNode.data.identifier.id
       }, edges);
       
-      // Track the connection
-      const edgeId = `${sourceNode.data.identifier.id}-${targetNode.data.identifier.id}`;
+      // Find the newly created edge (compare arrays to find the new one)
+      const newEdge = newEdges.find(edge => !edges.some(existingEdge => existingEdge.id === edge.id));
+      if (!newEdge) {
+        toast.error("Connection failed", "Failed to create edge");
+        return;
+      }
+      
+      // Track the connection using the actual ReactFlow edge ID
       flowTracker.trackConnection(
-        edgeId,
+        newEdge.id,
         sourceNode.data.identifier.id,
         targetNode.data.identifier.id,
         params.sourceHandle!,
-        params.targetHandle!
+        params.targetHandle!,
+        nodes
       );
       
-      setEdges(newEdge);
+      setEdges(newEdges);
     },
     [nodes, edges, setEdges, flowTracker, toast]
   );
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.data.identifier.id);
+    setSelectedEdgeId(null);
+  }, []);
+
+  const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(edge.id);
+    setSelectedNodeId(null);
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
   }, []);
 
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
@@ -262,8 +289,7 @@ export function FlowEditor() {
 
   const onEdgesDelete = useCallback((deletedEdges: typeof edges) => {
     deletedEdges.forEach(edge => {
-      const edgeId = `${edge.source}-${edge.target}`;
-      flowTracker.removeConnection(edgeId);
+      flowTracker.removeConnection(edge.id);
     });
   }, [flowTracker]);
 
@@ -305,7 +331,7 @@ export function FlowEditor() {
         throw new Error("Invalid scene node data");
       }
 
-      // UPDATED: Send raw nodes and edges to backend
+      // Send raw nodes and edges to backend
       setVideoUrl(null);
       
       const config: Partial<SceneConfig> = {
@@ -359,6 +385,11 @@ export function FlowEditor() {
     [nodes, selectedNodeId]
   );
 
+  const selectedEdge = useMemo(
+    () => edges.find((edge) => edge.id === selectedEdgeId),
+    [edges, selectedEdgeId]
+  );
+
   // Get timeline node data with proper type checking
   const getTimelineNodeData = useCallback(() => {
     if (!timelineNode) return { duration: 3, tracks: [] };
@@ -387,6 +418,8 @@ export function FlowEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={onPaneClick}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
@@ -448,17 +481,29 @@ export function FlowEditor() {
         )}
       </div>
 
-      {selectedNode && (
+      {(selectedNode || selectedEdge) && (
         <div className="w-80 bg-gray-800 border-l border-gray-600 p-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
-          </h3>
-          <PropertyPanel 
-            node={selectedNode}
-            onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
-            onDisplayNameChange={updateDisplayName}
-            validateDisplayName={validateDisplayName}
-          />
+          {selectedNode ? (
+            <>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {selectedNode.type?.charAt(0).toUpperCase()}{selectedNode.type?.slice(1)} Properties
+              </h3>
+              <PropertyPanel 
+                node={selectedNode}
+                onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
+                onDisplayNameChange={updateDisplayName}
+                validateDisplayName={validateDisplayName}
+              />
+            </>
+          ) : selectedEdge ? (
+            <EdgePropertyPanel 
+              edge={selectedEdge} 
+              flowTracker={flowTracker}
+              nodes={nodes}
+              onEdgeFilterChange={handleEdgeFilterChange}
+              renderTrigger={renderTrigger}
+            />
+          ) : null}
         </div>
       )}
 

@@ -1,24 +1,22 @@
-// src/lib/flow/flow-tracking.ts - Enhanced with edge filtering
+// src/lib/flow/flow-tracking.ts - Corrected dynamic availability calculation
 import type { Node} from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 
-// Enhanced edge flow tracking with filtering
+// Enhanced edge flow tracking with filtering - REMOVED availableNodeIds
 export interface EdgeFlow {
   edgeId: string;
   sourceNodeId: string;
   targetNodeId: string;
   sourcePort: string;
   targetPort: string;
-  availableNodeIds: string[];    // All nodes that could flow through
   selectedNodeIds: string[];     // User-filtered nodes that actually flow through
   timestamp: number;
 }
 
-// Edge filtering state
+// Edge filtering state - REMOVED availableNodes
 export interface EdgeFilterState {
   edgeId: string;
   selectedNodes: Set<string>;
-  availableNodes: Set<string>;
 }
 
 export class FlowTracker {
@@ -41,23 +39,20 @@ export class FlowTracker {
     sourceNodeId: string,
     targetNodeId: string,
     sourcePort: string,
-    targetPort: string
+    targetPort: string,
+    nodes: Node<NodeData>[]
   ): void {
-    // Get available upstream geometry nodes
-    const availableNodes = this.getAvailableGeometryNodes(sourceNodeId);
+    // Calculate available objects dynamically for initial selection
+    const availableGeometryIds = this._getUpstreamGeometryObjects(sourceNodeId, nodes);
     
-    // Default: all available nodes are selected (user can filter later)
-    const selectedNodes = [...availableNodes];
-
-    // Create edge flow record
+    // Create edge flow record with all available objects selected by default
     const edgeFlow: EdgeFlow = {
       edgeId,
       sourceNodeId,
       targetNodeId,
       sourcePort,
       targetPort,
-      availableNodeIds: availableNodes,
-      selectedNodeIds: selectedNodes,
+      selectedNodeIds: availableGeometryIds, // Default: all available objects selected
       timestamp: Date.now()
     };
     
@@ -66,31 +61,47 @@ export class FlowTracker {
     // Initialize edge filter state
     this.edgeFilters.set(edgeId, {
       edgeId,
-      selectedNodes: new Set(selectedNodes),
-      availableNodes: new Set(availableNodes)
+      selectedNodes: new Set(availableGeometryIds)
     });
     
-    // Update node lineages
+    // Update node lineages for basic topology tracking
     this.updateNodeLineages(sourceNodeId, targetNodeId, edgeId);
   }
 
-  // Get geometry nodes available to flow through an edge
-  private getAvailableGeometryNodes(sourceNodeId: string): string[] {
-    const sourceLineage = this.nodeLineages.get(sourceNodeId);
-    if (!sourceLineage) {
-      // If source has no lineage yet, check if it's a geometry node itself
-      return [sourceNodeId];
-    }
-
-    // Get all upstream nodes including source
-    const allNodeIds = [sourceNodeId, ...sourceLineage.parentNodes];
+  // Dynamic upstream geometry traversal
+  private _getUpstreamGeometryObjects(targetNodeId: string, nodes: Node<NodeData>[]): string[] {
+    const visited = new Set<string>();
+    const geometryObjects = new Set<string>();
     
-    // For now, return all nodes - the UI will filter to geometry nodes
-    // This allows the system to work with any node types
-    return allNodeIds;
+    const traverse = (nodeId: string): void => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+      
+      // Find the node object to check its type
+      const node = nodes.find(n => n.data.identifier.id === nodeId);
+      if (!node) return;
+      
+      // If this is a geometry node, add it to results
+      if (['triangle', 'circle', 'rectangle'].includes(node.type!)) {
+        geometryObjects.add(nodeId);
+        return; // Don't traverse further upstream from geometry nodes
+      }
+      
+      // Find all edges that target this node
+      const incomingEdges = Array.from(this.edgeFlows.values())
+        .filter(edge => edge.targetNodeId === nodeId);
+      
+      // Recursively traverse upstream from each source
+      for (const edge of incomingEdges) {
+        traverse(edge.sourceNodeId);
+      }
+    };
+    
+    traverse(targetNodeId);
+    return Array.from(geometryObjects);
   }
 
-  // Enhanced method to get available geometry nodes with node type checking
+  // Dynamic availability calculation
   getAvailableGeometryNodesForEdge(
     edgeId: string, 
     nodes: Node<NodeData>[]
@@ -98,11 +109,12 @@ export class FlowTracker {
     const edgeFlow = this.edgeFlows.get(edgeId);
     if (!edgeFlow) return { available: [], selected: [] };
 
-    const available = edgeFlow.availableNodeIds
+    // Calculate available objects dynamically by traversing upstream from source node
+    const availableGeometryIds = this._getUpstreamGeometryObjects(edgeFlow.sourceNodeId, nodes);
+    
+    const available = availableGeometryIds
       .map(nodeId => nodes.find(n => n.data.identifier.id === nodeId))
-      .filter((node): node is Node<NodeData> => 
-        node !== undefined && ['triangle', 'circle', 'rectangle'].includes(node.type!)
-      );
+      .filter((node): node is Node<NodeData> => node !== undefined);
 
     const selected = edgeFlow.selectedNodeIds
       .map(nodeId => nodes.find(n => n.data.identifier.id === nodeId))
@@ -111,101 +123,62 @@ export class FlowTracker {
     return { available, selected };
   }
 
-  // Update which nodes flow through a specific edge (user filtering)
+  // RENAMED: Get selected node IDs for edge (was getAvailableNodeIds)
+  getSelectedNodeIds(edgeId: string): string[] {
+    const edgeFlow = this.edgeFlows.get(edgeId);
+    return edgeFlow?.selectedNodeIds ?? [];
+  }
+
+  // Update which nodes flow through a specific edge
   updateEdgeFiltering(edgeId: string, selectedNodeIds: string[]): void {
     const edgeFlow = this.edgeFlows.get(edgeId);
     const edgeFilter = this.edgeFilters.get(edgeId);
     
     if (!edgeFlow || !edgeFilter) return;
 
-    // Validate that selected nodes are available
-    const validSelected = selectedNodeIds.filter(nodeId => 
-      edgeFlow.availableNodeIds.includes(nodeId)
-    );
-
-    // Update edge flow
-    edgeFlow.selectedNodeIds = validSelected;
+    // Update edge flow selections
+    edgeFlow.selectedNodeIds = selectedNodeIds;
     edgeFlow.timestamp = Date.now();
 
     // Update filter state
-    edgeFilter.selectedNodes = new Set(validSelected);
-
-    // Propagate changes downstream
-    this.propagateFilteringDownstream(edgeId);
+    edgeFilter.selectedNodes = new Set(selectedNodeIds);
   }
 
-  // Propagate filtering changes to downstream edges
-  private propagateFilteringDownstream(sourceEdgeId: string): void {
-    const sourceEdge = this.edgeFlows.get(sourceEdgeId);
-    if (!sourceEdge) return;
-
-    // Find downstream edges from the target node
-    const downstreamEdges = Array.from(this.edgeFlows.values())
-      .filter(edge => edge.sourceNodeId === sourceEdge.targetNodeId);
-
-    for (const downstreamEdge of downstreamEdges) {
-      // Update available nodes for downstream edge
-      const newAvailable = sourceEdge.selectedNodeIds;
-      
-      // Keep only previously selected nodes that are still available
-      const stillValid = downstreamEdge.selectedNodeIds.filter(nodeId =>
-        newAvailable.includes(nodeId)
-      );
-
-      this.updateEdgeAvailability(downstreamEdge.edgeId, newAvailable, stillValid);
-    }
-  }
-
-  // Update edge availability after upstream changes
-  private updateEdgeAvailability(
-    edgeId: string, 
-    newAvailableIds: string[], 
-    newSelectedIds: string[]
-  ): void {
-    const edgeFlow = this.edgeFlows.get(edgeId);
-    const edgeFilter = this.edgeFilters.get(edgeId);
-    
-    if (!edgeFlow || !edgeFilter) return;
-
-    edgeFlow.availableNodeIds = newAvailableIds;
-    edgeFlow.selectedNodeIds = newSelectedIds;
-    
-    edgeFilter.availableNodes = new Set(newAvailableIds);
-    edgeFilter.selectedNodes = new Set(newSelectedIds);
-    
-    // Continue propagation downstream
-    this.propagateFilteringDownstream(edgeId);
-  }
-
-  // Get branch availability for smart filtering
+  // CORRECTED: Get branch availability for smart filtering
   getBranchAvailability(
     sourceNodeId: string, 
-    excludeEdgeId?: string
+    excludeEdgeId?: string,
+    nodes?: Node<NodeData>[]
   ): { available: string[], taken: string[] } {
-    // Find all outgoing edges from source node
-    const outgoingEdges = Array.from(this.edgeFlows.values())
+    // Get the target of the excluded edge to identify true parallel branches
+    let excludeTargetNodeId: string | undefined;
+    if (excludeEdgeId) {
+      const excludeEdge = this.edgeFlows.get(excludeEdgeId);
+      excludeTargetNodeId = excludeEdge?.targetNodeId;
+    }
+
+    // Find all outgoing edges from source node that target DIFFERENT nodes (true parallel branches)
+    const parallelBranches = Array.from(this.edgeFlows.values())
       .filter(edge => 
         edge.sourceNodeId === sourceNodeId && 
-        edge.edgeId !== excludeEdgeId
+        edge.edgeId !== excludeEdgeId &&
+        edge.targetNodeId !== excludeTargetNodeId // Only true parallel branches
       );
 
-    // Get all nodes already taken by other branches
+    // Get all nodes taken by true parallel branches
     const takenNodes = new Set<string>();
-    outgoingEdges.forEach(edge => {
+    parallelBranches.forEach(edge => {
       edge.selectedNodeIds.forEach(nodeId => takenNodes.add(nodeId));
     });
 
-    // Get all available nodes from source
-    const sourceEdges = Array.from(this.edgeFlows.values())
-      .filter(edge => edge.targetNodeId === sourceNodeId);
-    
-    const allAvailable = new Set<string>();
-    sourceEdges.forEach(edge => {
-      edge.selectedNodeIds.forEach(nodeId => allAvailable.add(nodeId));
-    });
+    // Get all objects that can reach this source node (available for this branch)
+    let allAvailableNodes: string[] = [];
+    if (nodes) {
+      allAvailableNodes = this._getUpstreamGeometryObjects(sourceNodeId, nodes);
+    }
 
-    // Available = all nodes minus taken by other branches
-    const available = Array.from(allAvailable).filter(nodeId => !takenNodes.has(nodeId));
+    // Available = all objects that can reach sourceNodeId minus taken by parallel branches
+    const available = allAvailableNodes.filter(nodeId => !takenNodes.has(nodeId));
 
     return {
       available,
@@ -224,7 +197,7 @@ export class FlowTracker {
     const edgeFlow = this.edgeFlows.get(edgeId);
     if (!edgeFlow) return;
 
-    // Update lineages
+    // Update basic topology lineages
     const sourceLineage = this.nodeLineages.get(edgeFlow.sourceNodeId);
     const targetLineage = this.nodeLineages.get(edgeFlow.targetNodeId);
 
@@ -236,12 +209,9 @@ export class FlowTracker {
       this.recalculateUpstreamConnections(edgeFlow.targetNodeId);
     }
 
-    // Clean up
+    // Clean up edge records
     this.edgeFlows.delete(edgeId);
     this.edgeFilters.delete(edgeId);
-    
-    // Propagate changes downstream
-    this.propagateFilteringDownstream(edgeFlow.targetNodeId);
   }
 
   // Remove node tracking
@@ -249,7 +219,7 @@ export class FlowTracker {
     const lineage = this.nodeLineages.get(nodeId);
     if (!lineage) return;
 
-    // Remove from all connected nodes and clean up edges
+    // Remove from all connected nodes
     lineage.childNodes.forEach(childId => {
       const childLineage = this.nodeLineages.get(childId);
       if (childLineage) {
@@ -277,7 +247,7 @@ export class FlowTracker {
     this.nodeLineages.delete(nodeId);
   }
 
-  // Validate display name uniqueness (unchanged)
+  // Validate display name uniqueness
   validateDisplayName(
     newName: string, 
     currentNodeId: string, 
@@ -295,62 +265,41 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // Helper methods (unchanged core logic)
+  // SIMPLIFIED: Update node lineages for basic topology tracking only
   private updateNodeLineages(sourceNodeId: string, targetNodeId: string, edgeId: string): void {
     const sourceLineage = this.nodeLineages.get(sourceNodeId);
     const targetLineage = this.nodeLineages.get(targetNodeId);
     
     if (sourceLineage && targetLineage) {
-      sourceLineage.childNodes.push(targetNodeId);
-      sourceLineage.flowPath.push(edgeId);
+      // Update basic parent-child relationships
+      if (!sourceLineage.childNodes.includes(targetNodeId)) {
+        sourceLineage.childNodes.push(targetNodeId);
+      }
+      if (!sourceLineage.flowPath.includes(edgeId)) {
+        sourceLineage.flowPath.push(edgeId);
+      }
       
-      targetLineage.parentNodes.push(sourceNodeId);
-      
-      // Propagate upstream nodes to target
-      const upstreamNodes = this.getUpstreamNodeIds(sourceNodeId);
-      upstreamNodes.forEach(upstreamId => {
-        if (!targetLineage.parentNodes.includes(upstreamId)) {
-          targetLineage.parentNodes.push(upstreamId);
-        }
-      });
+      if (!targetLineage.parentNodes.includes(sourceNodeId)) {
+        targetLineage.parentNodes.push(sourceNodeId);
+      }
     }
   }
 
-  private getUpstreamNodeIds(nodeId: string): string[] {
-    const lineage = this.nodeLineages.get(nodeId);
-    if (!lineage) return [nodeId];
-    
-    const upstream = new Set([nodeId]);
-    lineage.parentNodes.forEach(parentId => {
-      this.getUpstreamNodeIds(parentId).forEach(id => upstream.add(id));
-    });
-    
-    return Array.from(upstream);
-  }
-
+  // SIMPLIFIED: Recalculate upstream connections for basic topology only
   private recalculateUpstreamConnections(nodeId: string): void {
     const lineage = this.nodeLineages.get(nodeId);
     if (!lineage) return;
 
-    const directParents = [...lineage.parentNodes];
+    // Clear and rebuild parent relationships based on current edges
     lineage.parentNodes = [];
-
-    directParents.forEach(parentId => {
-      if (this.hasDirectConnection(parentId, nodeId)) {
-        lineage.parentNodes.push(parentId);
-        
-        this.getUpstreamNodeIds(parentId).forEach(upstreamId => {
-          if (upstreamId !== nodeId && !lineage.parentNodes.includes(upstreamId)) {
-            lineage.parentNodes.push(upstreamId);
-          }
-        });
+    
+    const incomingEdges = Array.from(this.edgeFlows.values())
+      .filter(edge => edge.targetNodeId === nodeId);
+    
+    incomingEdges.forEach(edge => {
+      if (!lineage.parentNodes.includes(edge.sourceNodeId)) {
+        lineage.parentNodes.push(edge.sourceNodeId);
       }
     });
-  }
-
-  private hasDirectConnection(sourceId: string, targetId: string): boolean {
-    return Array.from(this.edgeFlows.values()).some(
-      flow => flow.sourceNodeId === sourceId && flow.targetNodeId === targetId
-    );
   }
 }
