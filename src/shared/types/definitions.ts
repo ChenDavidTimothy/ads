@@ -1,40 +1,24 @@
-// src/shared/types/definitions.ts - Enhanced node definitions with rendering templates
+// src/shared/types/definitions.ts - Complete registry-driven node system
 import type { NodePortConfig } from './ports';
 import type { NodePropertyConfig } from './properties';
 
-// Rendering templates for different node types
-export type NodeRenderTemplate = 
-  | 'basic'           // Standard nodes (geometry, timing, etc.)
-  | 'conditional'     // If/else, switch nodes (future)
-  | 'operation'       // Math, string, logic operations (future)
-  | 'data_source'     // Variables, constants, data inputs (future)
-  | 'custom';         // Nodes with completely custom rendering
-
 // Rendering metadata for UI generation
 export interface NodeRenderConfig {
-  template: NodeRenderTemplate;
   icon: string;
   colors: {
     primary: string;
     handle: string;
   };
-  // Future: Custom rendering configuration
-  customFields?: {
-    showDurationInHeader?: boolean;
-    showPreviewInBody?: boolean;
-    compactMode?: boolean;
-  };
 }
 
 // Execution metadata for backend processing
 export interface NodeExecutionConfig {
-  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data' | 'control_flow';
-  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene' | 'data' | 'control_flow';
-  executionMode?: 'sequential' | 'conditional' | 'parallel'; // Future execution modes
-  executionPriority?: number; // For conditional execution ordering
+  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output';
+  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene';
+  executionPriority?: number; // For future conditional execution
 }
 
-// Complete node definition with rendering templates
+// Complete node definition with all metadata
 export interface NodeDefinition {
   type: string;
   label: string;
@@ -46,7 +30,7 @@ export interface NodeDefinition {
   defaults: Record<string, unknown>;
 }
 
-// Video and FPS options (preserved)
+// Video and FPS options (existing)
 export const VIDEO_PRESETS = [
   { value: "ultrafast", label: "Ultrafast (Low quality, fast render)" },
   { value: "fast", label: "Fast" },
@@ -62,7 +46,7 @@ export const FPS_OPTIONS = [
   { value: 120, label: "120 FPS (Ultra Smooth)" },
 ] as const;
 
-// Enhanced node definitions with rendering templates
+// Complete node definitions with all metadata
 export const NODE_DEFINITIONS = {
   triangle: {
     type: 'triangle',
@@ -71,7 +55,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'geometry',
       executor: 'geometry',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [],
@@ -89,7 +72,6 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '▲',
       colors: {
         primary: 'bg-red-600',
@@ -112,7 +94,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'geometry',
       executor: 'geometry',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [],
@@ -130,7 +111,6 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '●',
       colors: {
         primary: 'bg-blue-600',
@@ -153,7 +133,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'geometry',
       executor: 'geometry',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [],
@@ -172,7 +151,6 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '▬',
       colors: {
         primary: 'bg-green-600',
@@ -196,7 +174,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'timing',
       executor: 'timing',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [
@@ -212,7 +189,6 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '⏰',
       colors: {
         primary: 'bg-orange-600',
@@ -231,7 +207,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'logic',
       executor: 'logic',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [
@@ -245,7 +220,6 @@ export const NODE_DEFINITIONS = {
       properties: []
     },
     rendering: {
-      template: 'basic',
       icon: '⏷',
       colors: {
         primary: 'bg-violet-600',
@@ -264,7 +238,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'animation',
       executor: 'animation',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [
@@ -280,14 +253,10 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '🎬',
       colors: {
         primary: 'bg-purple-600',
         handle: '!bg-purple-500',
-      },
-      customFields: {
-        showDurationInHeader: true,
       }
     },
     defaults: {
@@ -303,7 +272,6 @@ export const NODE_DEFINITIONS = {
     execution: {
       category: 'output',
       executor: 'scene',
-      executionMode: 'sequential',
     },
     ports: {
       inputs: [
@@ -335,14 +303,10 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      template: 'basic',
       icon: '🎭',
       colors: {
         primary: 'bg-gray-600',
         handle: '!bg-gray-500',
-      },
-      customFields: {
-        compactMode: false,
       }
     },
     defaults: {
@@ -368,10 +332,6 @@ export function getNodesByCategory(category: NodeDefinition['execution']['catego
 
 export function getNodesByExecutor(executor: NodeDefinition['execution']['executor']): NodeDefinition[] {
   return Object.values(NODE_DEFINITIONS).filter(def => def.execution.executor === executor);
-}
-
-export function getNodesByTemplate(template: NodeRenderTemplate): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => def.rendering.template === template);
 }
 
 // Generate TypeScript types from registry

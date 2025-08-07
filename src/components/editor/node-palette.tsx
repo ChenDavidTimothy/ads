@@ -1,4 +1,4 @@
-// src/components/editor/node-palette.tsx - Simple fix, no over-engineering
+// src/components/editor/node-palette.tsx - Registry-driven node palette
 "use client";
 
 import { type XYPosition } from "reactflow";
@@ -10,7 +10,7 @@ interface NodePaletteProps {
 }
 
 export function NodePalette({ onAddNode }: NodePaletteProps) {
-  // Simple registry-driven palette (no over-engineering)
+  // Generate palette structure from registry
   const palette = generateNodePalette();
   const nodeColors = generateNodeColors();
 
@@ -54,7 +54,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       {renderNodeSection("Timing", palette.timingNodes)}
       {renderNodeSection("Logic", palette.logicNodes)}
       {renderNodeSection("Animation", palette.animationNodes)}
-      {renderNodeSection("Output", palette.outputNodes)}
+      {renderNodeSection("Output", palette.utilityNodes)}
 
       <div className="mt-8 p-3 bg-gray-700 rounded-lg">
         <h4 className="text-sm font-semibold text-white mb-2">Flow</h4>

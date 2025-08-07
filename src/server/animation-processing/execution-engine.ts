@@ -1,18 +1,14 @@
-// src/server/animation-processing/execution-engine.ts - Future-ready execution engine
+// src/server/animation-processing/execution-engine.ts - Registry-driven execution engine
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
-import type { ExecutionContext, ExecutionResult } from "./execution-context";
+import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
   getConnectedInputs,
   markNodeExecuted,
-  isNodeExecuted,
-  shouldContinueExecution,
-  setConditionalPath,
-  enableDebugMode,
-  getExecutionMetrics
+  isNodeExecuted 
 } from "./execution-context";
-import { getNodeDefinition, getNodesByCategory, getNodesByExecutor } from "@/shared/types/definitions";
+import { getNodeDefinition, getNodesByCategory, getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 
 // ReactFlow-compatible types for server
 export interface ReactFlowNode<T = unknown> {
@@ -30,45 +26,28 @@ export interface ReactFlowEdge {
   targetHandle?: string;
 }
 
-// Enhanced node executor interface for visual programming
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
   execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult>;
-  
-  // Future: Support for conditional execution
-  shouldExecute?(
-    node: ReactFlowNode<NodeData>,
-    context: ExecutionContext,
-    connections: ReactFlowEdge[]
-  ): Promise<boolean>;
-  
-  // Future: Support for parallel execution
-  canExecuteInParallel?(nodeType: string): boolean;
+  ): Promise<void>;
 }
 
-// Enhanced Geometry node executor
+// Registry-driven Geometry node executor
 class GeometryNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'geometry';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'geometry';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
+  ): Promise<void> {
     const objectDefinition = this.buildObjectDefinition(node);
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [objectDefinition]);
-    
-    return { success: true, data: [objectDefinition] };
   }
 
   private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
@@ -118,29 +97,20 @@ class GeometryNodeExecutor implements NodeExecutor {
         throw new Error(`Unknown geometry type: ${node.type}`);
     }
   }
-
-  // Future: Parallel execution support for geometry nodes
-  canExecuteInParallel(): boolean {
-    return true; // Geometry nodes can be created in parallel
-  }
 }
 
-// Enhanced Timing node executor
+// Registry-driven Timing node executor (Insert nodes)
 class TimingNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'timing';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'timing';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
+  ): Promise<void> {
     const data = node.data as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
@@ -161,36 +131,35 @@ class TimingNodeExecutor implements NodeExecutor {
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', timedObjects);
-    
-    return { success: true, data: timedObjects };
   }
 }
 
-// Enhanced Logic node executor with future conditional support
+// Registry-driven Logic node executor (Filter nodes, future-ready for if/else, etc.)
 class LogicNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'logic';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'logic';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
+  ): Promise<void> {
     // Route to specific logic node handler based on type
     switch (node.type) {
       case 'filter':
-        return await this.executeFilter(node, context, connections);
+        await this.executeFilter(node, context, connections);
+        break;
       // Future logic nodes will be handled here
-      case 'if_else':
-        return await this.executeIfElse(node, context, connections);
-      case 'switch':
-        return await this.executeSwitch(node, context, connections);
-      case 'comparison':
-        return await this.executeComparison(node, context, connections);
+      // case 'if_else':
+      //   await this.executeIfElse(node, context, connections);
+      //   break;
+      // case 'comparison':
+      //   await this.executeComparison(node, context, connections);
+      //   break;
       default:
-        return { success: false, error: `Unknown logic node type: ${node.type}` };
+        throw new Error(`Unknown logic node type: ${node.type}`);
     }
   }
 
@@ -198,11 +167,7 @@ class LogicNodeExecutor implements NodeExecutor {
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
+  ): Promise<void> {
     const data = node.data as Record<string, unknown>;
     const selectedObjectIds = (data.selectedObjectIds as string[]) || [];
     
@@ -210,7 +175,7 @@ class LogicNodeExecutor implements NodeExecutor {
     
     if (inputs.length === 0) {
       setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', []);
-      return { success: true, data: [] };
+      return;
     }
     
     const filteredResults = [];
@@ -231,127 +196,6 @@ class LogicNodeExecutor implements NodeExecutor {
     }
     
     setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', filteredResults);
-    return { success: true, data: filteredResults };
-  }
-
-  // Future: If/Else conditional execution
-  private async executeIfElse(
-    node: ReactFlowNode<NodeData>, 
-    context: ExecutionContext, 
-    connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
-    const data = node.data as Record<string, unknown>;
-    const conditionInput = getConnectedInputs(context, connections, node.data.identifier.id, 'condition')[0];
-    
-    if (!conditionInput) {
-      return { success: false, error: "No condition input provided" };
-    }
-    
-    const conditionValue = Boolean(conditionInput.data);
-    const outputPort = conditionValue ? 'true_output' : 'false_output';
-    
-    setConditionalPath(context, node.data.identifier.id, conditionValue ? 'true' : 'false');
-    
-    // Get input data and pass it through the appropriate output
-    const dataInput = getConnectedInputs(context, connections, node.data.identifier.id, 'input')[0];
-    const outputData = dataInput?.data ?? null;
-    
-    setNodeOutput(context, node.data.identifier.id, outputPort, 'object_stream', outputData);
-    
-    return { 
-      success: true, 
-      data: outputData,
-      nextPort: outputPort,
-      conditionalOutputs: { [outputPort]: outputData }
-    };
-  }
-
-  // Future: Switch case execution
-  private async executeSwitch(
-    node: ReactFlowNode<NodeData>, 
-    context: ExecutionContext, 
-    connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
-    const data = node.data as Record<string, unknown>;
-    const switchInput = getConnectedInputs(context, connections, node.data.identifier.id, 'switch_value')[0];
-    
-    if (!switchInput) {
-      return { success: false, error: "No switch value provided" };
-    }
-    
-    const switchValue = String(switchInput.data);
-    const cases = (data.cases as Array<{ value: string; output: string }>) || [];
-    
-    // Find matching case or use default
-    const matchingCase = cases.find(c => c.value === switchValue);
-    const outputPort = matchingCase?.output || 'default_output';
-    
-    setConditionalPath(context, node.data.identifier.id, 'default');
-    
-    const dataInput = getConnectedInputs(context, connections, node.data.identifier.id, 'input')[0];
-    const outputData = dataInput?.data ?? null;
-    
-    setNodeOutput(context, node.data.identifier.id, outputPort, 'object_stream', outputData);
-    
-    return { 
-      success: true, 
-      data: outputData,
-      nextPort: outputPort,
-      conditionalOutputs: { [outputPort]: outputData }
-    };
-  }
-
-  // Future: Comparison operations
-  private async executeComparison(
-    node: ReactFlowNode<NodeData>, 
-    context: ExecutionContext, 
-    connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
-    const data = node.data as Record<string, unknown>;
-    const operation = data.operation as string;
-    
-    const inputA = getConnectedInputs(context, connections, node.data.identifier.id, 'input_a')[0];
-    const inputB = getConnectedInputs(context, connections, node.data.identifier.id, 'input_b')[0];
-    
-    if (!inputA || !inputB) {
-      return { success: false, error: "Missing comparison inputs" };
-    }
-    
-    let result = false;
-    const valueA = inputA.data;
-    const valueB = inputB.data;
-    
-    switch (operation) {
-      case 'equals':
-        result = valueA === valueB;
-        break;
-      case 'not_equals':
-        result = valueA !== valueB;
-        break;
-      case 'greater_than':
-        result = Number(valueA) > Number(valueB);
-        break;
-      case 'less_than':
-        result = Number(valueA) < Number(valueB);
-        break;
-      default:
-        return { success: false, error: `Unknown comparison operation: ${operation}` };
-    }
-    
-    setNodeOutput(context, node.data.identifier.id, 'result', 'boolean', result);
-    return { success: true, data: result };
   }
 
   private hasFilterableObjects(item: unknown): boolean {
@@ -368,27 +212,23 @@ class LogicNodeExecutor implements NodeExecutor {
   }
 }
 
-// Enhanced Animation node executor
+// Registry-driven Animation node executor
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'animation';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'animation';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
+  ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
     const allAnimations: SceneAnimationTrack[] = [];
-    const passThroughObjects: unknown[] = [];
+    const passThoughObjects: unknown[] = [];
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -401,7 +241,7 @@ class AnimationNodeExecutor implements NodeExecutor {
           objectStartTime
         );
         allAnimations.push(...animations);
-        passThroughObjects.push(timedObject);
+        passThoughObjects.push(timedObject);
       }
     }
 
@@ -411,8 +251,7 @@ class AnimationNodeExecutor implements NodeExecutor {
       context.currentTime;
     context.currentTime = maxDuration;
 
-    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThroughObjects);
-    return { success: true, data: passThroughObjects };
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThoughObjects);
   }
 
   private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
@@ -487,22 +326,18 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Enhanced Scene node executor
+// Registry-driven Scene node executor
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'scene';
+    const executionConfig = getNodeExecutionConfig(nodeType);
+    return executionConfig?.executor === 'scene';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>, 
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
+  ): Promise<void> {
     const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
     
     for (const input of inputs) {
@@ -516,115 +351,30 @@ class SceneNodeExecutor implements NodeExecutor {
     }
     
     if (context.sceneObjects.length === 0) {
-      return { 
-        success: false, 
-        error: `Scene ${node.data.identifier.displayName} has no reachable objects. Connect object flows: Geometry → Insert → Animation → Scene` 
-      };
+      throw new Error(
+        `Scene ${node.data.identifier.displayName} has no reachable objects. ` +
+        `Connect object flows: Geometry → Insert → Animation → Scene`
+      );
     }
-    
-    return { success: true, data: context.sceneObjects };
   }
 }
 
-// Future: Data source executor for variables and constants
-class DataSourceNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'data';
-  }
-
-  async execute(
-    node: ReactFlowNode<NodeData>, 
-    context: ExecutionContext
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
-    const data = node.data as Record<string, unknown>;
-    
-    switch (node.type) {
-      case 'variable':
-        const variableName = data.variableName as string;
-        const variableValue = context.variables.get(variableName);
-        setNodeOutput(context, node.data.identifier.id, 'output', 'any', variableValue);
-        return { success: true, data: variableValue };
-        
-      case 'constant':
-        const constantValue = data.value;
-        const constantType = data.type as string;
-        setNodeOutput(context, node.data.identifier.id, 'output', constantType as PortType, constantValue);
-        return { success: true, data: constantValue };
-        
-      default:
-        return { success: false, error: `Unknown data source type: ${node.type}` };
-    }
-  }
-
-  canExecuteInParallel(): boolean {
-    return true; // Data sources can execute in parallel
-  }
-}
-
-// Future: Control flow executor for loops and functions
-class ControlFlowNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const nodeDefinition = getNodeDefinition(nodeType);
-    return nodeDefinition?.execution.executor === 'control_flow';
-  }
-
-  async execute(
-    node: ReactFlowNode<NodeData>, 
-    context: ExecutionContext, 
-    connections: ReactFlowEdge[]
-  ): Promise<ExecutionResult> {
-    if (!shouldContinueExecution(context, node.data.identifier.id)) {
-      return { success: false, error: "Node execution skipped" };
-    }
-
-    // Future implementation for for loops, while loops, functions, etc.
-    return { success: false, error: "Control flow nodes not yet implemented" };
-  }
-}
-
-// Enhanced execution engine with visual programming support
 export class ExecutionEngine {
   private executors: NodeExecutor[] = [
     new GeometryNodeExecutor(),
     new TimingNodeExecutor(),
     new LogicNodeExecutor(),
     new AnimationNodeExecutor(),
-    new SceneNodeExecutor(),
-    // Future executors
-    new DataSourceNodeExecutor(),
-    new ControlFlowNodeExecutor()
+    new SceneNodeExecutor()
   ];
 
-  async executeFlow(
-    nodes: ReactFlowNode<NodeData>[], 
-    edges: ReactFlowEdge[],
-    options?: {
-      debugMode?: boolean;
-      parallelExecution?: boolean;
-      maxExecutionTime?: number;
-    }
-  ): Promise<ExecutionContext> {
+  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
     this.validateScene(nodes);
     this.validateConnections(nodes, edges);
     this.validateProperFlow(nodes, edges);
     this.validateNoDuplicateObjectIds(nodes, edges);
     
     const context = createExecutionContext();
-    
-    // Enable debug mode if requested
-    if (options?.debugMode) {
-      enableDebugMode(context);
-    }
-    
-    // Set execution metrics
-    if (context.executionMetrics) {
-      context.executionMetrics.totalNodes = nodes.length;
-    }
     
     const sceneNode = nodes.find(n => n.type === 'scene');
     if (!sceneNode) {
@@ -633,44 +383,22 @@ export class ExecutionEngine {
     
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
-    // Execute nodes in order (future: support parallel execution)
     for (const node of executionOrder) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
         const executor = this.getExecutor(node.type!);
         if (executor) {
-          try {
-            const result = await executor.execute(node, context, edges);
-            if (result.success) {
-              markNodeExecuted(context, node.data.identifier.id);
-            } else {
-              console.warn(`Node execution failed: ${node.data.identifier.displayName} - ${result.error}`);
-              if (context.executionMetrics) {
-                context.executionMetrics.skippedNodes++;
-              }
-            }
-          } catch (error) {
-            console.error(`Node execution error: ${node.data.identifier.displayName}`, error);
-            if (context.executionMetrics) {
-              context.executionMetrics.skippedNodes++;
-            }
-          }
+          await executor.execute(node, context, edges);
+          markNodeExecuted(context, node.data.identifier.id);
         }
       }
-    }
-    
-    // Log execution metrics if debug mode enabled
-    if (options?.debugMode && context.executionMetrics) {
-      const metrics = getExecutionMetrics(context);
-      console.log('Execution completed:', metrics);
     }
     
     return context;
   }
 
-  // Current validation methods (preserved)
+  // Registry-driven validation methods
   private validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-    const geometryNodes = getNodesByCategory('geometry');
-    const geometryNodeTypes = geometryNodes.map(def => def.type);
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     
     for (const targetNode of nodes) {
       if (geometryNodeTypes.includes(targetNode.type!) || targetNode.type === 'merge') {
@@ -865,42 +593,5 @@ export class ExecutionEngine {
 
   addExecutor(executor: NodeExecutor): void {
     this.executors.push(executor);
-  }
-
-  // Future: Parallel execution support
-  private async executeInParallel(
-    nodes: ReactFlowNode<NodeData>[],
-    context: ExecutionContext,
-    edges: ReactFlowEdge[]
-  ): Promise<void> {
-    const parallelGroups = this.groupNodesForParallelExecution(nodes, edges);
-    
-    for (const group of parallelGroups) {
-      const promises = group.map(async (node) => {
-        const executor = this.getExecutor(node.type!);
-        if (executor && !isNodeExecuted(context, node.data.identifier.id)) {
-          try {
-            const result = await executor.execute(node, context, edges);
-            if (result.success) {
-              markNodeExecuted(context, node.data.identifier.id);
-            }
-          } catch (error) {
-            console.error(`Parallel execution error for ${node.data.identifier.displayName}:`, error);
-          }
-        }
-      });
-      
-      await Promise.all(promises);
-    }
-  }
-
-  // Future: Group nodes that can execute in parallel
-  private groupNodesForParallelExecution(
-    nodes: ReactFlowNode<NodeData>[],
-    edges: ReactFlowEdge[]
-  ): ReactFlowNode<NodeData>[][] {
-    // Implementation would analyze dependencies and group nodes that can execute in parallel
-    // For now, return single groups (sequential execution)
-    return nodes.map(node => [node]);
   }
 }

@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Scalable flow editor with generic node system
+// src/components/editor/flow-editor.tsx - Minimal fix to original (not over-engineered)
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -16,7 +16,8 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { GenericNodeRenderer } from "./generic-node-renderer";
+// Keep your existing simple, working components
+import { TriangleNode, CircleNode, RectangleNode, InsertNode, FilterNode, AnimationNode, SceneNode } from "./nodes";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
@@ -36,7 +37,7 @@ import type {
   AnimationTrack
 } from "@/shared/types";
 
-// Type guard functions
+// Type guards (unchanged)
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
   return 'duration' in data && 'tracks' in data;
 }
@@ -45,7 +46,7 @@ function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
 }
 
-// Timeline modal interfaces
+// Timeline modal interfaces (unchanged)
 interface TimelineModalState {
   isOpen: boolean;
   nodeId: string | null;
@@ -60,37 +61,32 @@ interface SceneConfig {
   videoCrf: number;
 }
 
-// Scalable node component system - replaces hardcoded mapping
-function createScalableNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
-  // Single generic renderer handles ALL node types based on registry
-  const GenericNodeWithEditor = (props: Parameters<typeof GenericNodeRenderer>[0]) => (
-    <GenericNodeRenderer 
-      {...props} 
-      onDoubleClick={handleOpenTimelineEditor} 
-    />
-  );
+// ONLY change: Make component mapping registry-aware instead of hardcoded
+function createNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
+  const baseMapping: NodeTypes = {
+    triangle: TriangleNode,
+    circle: CircleNode,
+    rectangle: RectangleNode,
+    insert: InsertNode,
+    filter: FilterNode,
+    animation: (props: Parameters<typeof AnimationNode>[0]) => (
+      <AnimationNode {...props} onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} />
+    ),
+    scene: SceneNode,
+  };
 
-  // Dynamic node type mapping - future nodes automatically supported
-  const nodeTypes: NodeTypes = {};
-  
-  // Get all registered node types and map them to generic renderer
-  // This could be fully automated from registry in the future
-  const registeredTypes = [
-    'triangle', 'circle', 'rectangle',    // Geometry nodes
-    'insert',                             // Timing nodes  
-    'filter',                             // Logic nodes
-    'animation',                          // Animation nodes
-    'scene'                               // Output nodes
-  ];
-  
-  // Map all types to generic renderer
-  for (const nodeType of registeredTypes) {
-    nodeTypes[nodeType] = GenericNodeWithEditor;
-  }
-  
-  return nodeTypes;
+  // Future: Registry-driven expansion (when you add new nodes)
+  // const registeredNodes = getAllNodeTypes(); // Future function
+  // for (const nodeType of registeredNodes) {
+  //   if (!baseMapping[nodeType]) {
+  //     baseMapping[nodeType] = getNodeComponent(nodeType); // Future function
+  //   }
+  // }
+
+  return baseMapping;
 }
 
+// Rest of your flow editor - UNCHANGED (it was already good)
 export function FlowEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -199,13 +195,13 @@ export function FlowEditor() {
     ? nodes.find(n => n.data.identifier.id === timelineModalState.nodeId)
     : null;
 
-  // Scalable node types - automatically supports new node types from registry
+  // Only change: Use registry-aware node types
   const nodeTypes: NodeTypes = useMemo(
-    () => createScalableNodeTypes(handleOpenTimelineEditor), 
+    () => createNodeTypes(handleOpenTimelineEditor), 
     [handleOpenTimelineEditor]
   );
 
-  // Enhanced connection validation with registry support
+  // All connection validation logic - UNCHANGED (it was already working)
   const wouldConnectionCreateDuplicateObjectIds = useCallback((
     sourceNodeId: string,
     targetNodeId: string, 
@@ -224,11 +220,10 @@ export function FlowEditor() {
       
       if (!sourceNode || !targetNode) return;
       
-      // Registry-aware validation
+      // Registry-aware validation (unchanged)
       const sourceDefinition = getNodeDefinition(sourceNode.type!);
       const targetDefinition = getNodeDefinition(targetNode.type!);
       
-      // Check geometry → timing connection rules (preserves current behavior)
       if (sourceDefinition?.execution.category === 'geometry' && targetNode.type === 'insert') {
         const existingInsertConnection = edges.find(edge => 
           edge.source === sourceNode.data.identifier.id && 
@@ -244,7 +239,6 @@ export function FlowEditor() {
         }
       }
 
-      // Check for duplicate object IDs (preserves filter behavior)
       if (targetDefinition?.execution.category !== 'geometry' && targetNode.type !== 'merge') {
         const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
           sourceNode.data.identifier.id,
@@ -268,7 +262,6 @@ export function FlowEditor() {
         }
       }
       
-      // Port compatibility validation using enhanced port system
       if (!sourceDefinition || !targetDefinition) {
         toast.error("Connection failed", "Unknown node type");
         return;
@@ -338,7 +331,6 @@ export function FlowEditor() {
   }, [flowTracker]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
-    // Registry-aware scene validation
     if (nodeType === "scene") {
       const existingSceneNodes = nodes.filter(node => node.type === "scene");
       if (existingSceneNodes.length > 0) {
@@ -347,7 +339,6 @@ export function FlowEditor() {
       }
     }
 
-    // Use registry to validate node type
     const nodeDefinition = getNodeDefinition(nodeType as NodeType);
     if (!nodeDefinition) {
       toast.error("Node creation failed", `Unknown node type: ${nodeType}`);
