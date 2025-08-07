@@ -1,15 +1,16 @@
-// src/server/animation-processing/execution-engine.ts - CORRECTED: Proper flow architecture
+// src/server/animation-processing/execution-engine.ts - Updated with edge filtering support
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
-  getConnectedInputs,
+  getFilteredConnectedInputs,
+  setEdgeFiltering,
   markNodeExecuted,
   isNodeExecuted 
 } from "./execution-context";
 
-// ReactFlow-compatible types for server
+// ReactFlow-compatible types for server - UPDATED with edge filtering
 export interface ReactFlowNode<T = unknown> {
   id: string;
   type?: string;
@@ -23,6 +24,7 @@ export interface ReactFlowEdge {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
+  selectedNodeIds?: string[]; // NEW: Optional filtering data
 }
 
 export interface NodeExecutor {
@@ -101,7 +103,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 }
 
-// Insert node executor - CORRECTED: This is the ONLY place objects are added to scene
+// Insert node executor - UPDATED to use filtered inputs
 class InsertNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'insert';
@@ -113,7 +115,8 @@ class InsertNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'object');
+    // UPDATED: Use getFilteredConnectedInputs to respect edge filtering
+    const inputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'object');
     
     if (inputs.length === 0) {
       throw new Error(`Insert node ${node.data.identifier.displayName} missing required object input(s). Objects must be connected to Insert nodes to appear in the scene.`);
@@ -138,7 +141,7 @@ class InsertNodeExecutor implements NodeExecutor {
   }
 }
 
-// Animation node executor - handles multiple inputs
+// Animation node executor - UPDATED to use filtered inputs
 class AnimationNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'animation';
@@ -150,7 +153,8 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
+    // UPDATED: Use getFilteredConnectedInputs to respect edge filtering
+    const inputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'timed_object');
     
     if (inputs.length === 0) {
       throw new Error(`Animation node ${node.data.identifier.displayName} missing required timed object input(s). Connect Insert nodes to Animation nodes.`);
@@ -251,7 +255,7 @@ class AnimationNodeExecutor implements NodeExecutor {
   }
 }
 
-// Scene node executor - validates the complete flow
+// Scene node executor - validates the complete flow (uses regular getConnectedInput for validation only)
 class SceneNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
     return nodeType === 'scene';
@@ -262,8 +266,8 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    // Scene node should receive animation inputs
-    const animationInputs = getConnectedInputs(context, connections, node.data.identifier.id, 'animation');
+    // Scene node should receive animation inputs (uses regular inputs for validation)
+    const animationInputs = getFilteredConnectedInputs(context, connections, node.data.identifier.id, 'animation');
     
     // Validate that scene has objects (they should come through proper flow)
     if (context.sceneObjects.length === 0) {
@@ -300,6 +304,9 @@ export class ExecutionEngine {
     
     const context = createExecutionContext();
     
+    // NEW: Initialize edge filtering before execution
+    this.initializeEdgeFiltering(context, edges);
+    
     // Topological execution order
     const executionOrder = this.getTopologicalOrder(nodes, edges);
     
@@ -314,6 +321,15 @@ export class ExecutionEngine {
     }
     
     return context;
+  }
+
+  // NEW: Private helper method to initialize edge filtering
+  private initializeEdgeFiltering(context: ExecutionContext, edges: ReactFlowEdge[]): void {
+    for (const edge of edges) {
+      if (edge.selectedNodeIds !== undefined) {
+        setEdgeFiltering(context, edge.id, edge.selectedNodeIds);
+      }
+    }
   }
 
   // NEW: Validate that the flow architecture is respected

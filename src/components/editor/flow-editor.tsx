@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with corrected FlowTracker
+// src/components/editor/flow-editor.tsx - Updated with edge filtering integration
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -343,7 +343,7 @@ export function FlowEditor() {
         videoCrf: sceneNode.data.videoCrf,
       };
       
-      // Convert ReactFlow nodes/edges to format expected by backend
+      // Convert ReactFlow nodes to format expected by backend
       const backendNodes = nodes.map(node => ({
         id: node.id,
         type: node.type,
@@ -351,13 +351,27 @@ export function FlowEditor() {
         data: node.data
       }));
       
-      const backendEdges = edges.map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle
-      }));
+      // Convert ReactFlow edges with filtering data - UPDATED with edge filtering integration
+      const backendEdges = edges.map(edge => {
+        const baseEdge = {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle
+        };
+        
+        // Apply filtering logic: if edge is tracked by FlowTracker, always include selectedNodeIds
+        if (flowTracker.hasEdge(edge.id)) {
+          return {
+            ...baseEdge,
+            selectedNodeIds: flowTracker.getSelectedNodeIds(edge.id)
+          };
+        } else {
+          // For untracked edges, omit selectedNodeIds property entirely
+          return baseEdge;
+        }
+      });
       
       generateScene.mutate({ 
         nodes: backendNodes, 
@@ -367,7 +381,7 @@ export function FlowEditor() {
     } catch (error) {
       toast.error("Generation failed", error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, generateScene, validateSceneNodes, toast]);
+  }, [nodes, edges, generateScene, validateSceneNodes, toast, flowTracker]);
 
   const handleDownload = useCallback(() => {
     if (videoUrl) {

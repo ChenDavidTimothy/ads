@@ -1,4 +1,4 @@
-// src/lib/flow/flow-tracking.ts - Corrected dynamic availability calculation
+// src/lib/flow/flow-tracking.ts - Updated with hasEdge method
 import type { Node} from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 
@@ -31,6 +31,11 @@ export class FlowTracker {
       childNodes: [],
       flowPath: []
     });
+  }
+
+  // Check if an edge is being tracked by FlowTracker
+  hasEdge(edgeId: string): boolean {
+    return this.edgeFlows.has(edgeId);
   }
 
   // Track connection between nodes with filtering

@@ -34,13 +34,14 @@ const reactFlowNodeSchema = z.object({
   data: z.record(z.unknown()), // Flexible to accommodate all node properties
 });
 
-// ReactFlow Edge schema
+// ReactFlow Edge schema - UPDATED to include optional selectedNodeIds for filtering
 const reactFlowEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
   sourceHandle: z.string().optional(),
   targetHandle: z.string().optional(),
+  selectedNodeIds: z.array(z.string()).optional(),
 });
 
 export const animationRouter = createTRPCRouter({
