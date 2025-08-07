@@ -35,7 +35,10 @@ const triangleDefinition: NodeDefinition = {
   category: 'geometry',
   ports: {
     inputs: [],
-    outputs: [{ id: 'object', type: 'object', label: 'Triangle Object' }]
+    outputs: [
+      { id: 'object', type: 'object', label: 'Triangle Object' },
+      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+    ]
   },
   properties: {
     properties: [
@@ -55,7 +58,10 @@ const circleDefinition: NodeDefinition = {
   category: 'geometry',
   ports: {
     inputs: [],
-    outputs: [{ id: 'object', type: 'object', label: 'Circle Object' }]
+    outputs: [
+      { id: 'object', type: 'object', label: 'Circle Object' },
+      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+    ]
   },
   properties: {
     properties: [
@@ -75,7 +81,10 @@ const rectangleDefinition: NodeDefinition = {
   category: 'geometry',
   ports: {
     inputs: [],
-    outputs: [{ id: 'object', type: 'object', label: 'Rectangle Object' }]
+    outputs: [
+      { id: 'object', type: 'object', label: 'Rectangle Object' },
+      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+    ]
   },
   properties: {
     properties: [
@@ -95,12 +104,38 @@ const insertDefinition: NodeDefinition = {
   description: 'Controls when an object appears in the timeline',
   category: 'timing',
   ports: {
-    inputs: [{ id: 'object', type: 'object', label: 'Object' }],
-    outputs: [{ id: 'timed_object', type: 'timed_object', label: 'Timed Object' }]
+    inputs: [
+      { id: 'object', type: 'object', label: 'Object' },
+      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+    ],
+    outputs: [
+      { id: 'timed_object', type: 'timed_object', label: 'Timed Object' },
+      { id: 'stream', type: 'object_stream', label: 'Object Stream' }
+    ]
   },
   properties: {
     properties: [
       { key: 'appearanceTime', type: 'number', label: 'Appearance Time (seconds)', min: 0, step: 0.1, defaultValue: 0 }
+    ]
+  }
+};
+
+const filterDefinition: NodeDefinition = {
+  type: 'filter',
+  label: 'Filter Objects',
+  description: 'Filters objects from any data stream based on selection criteria',
+  category: 'logic',
+  ports: {
+    inputs: [
+      { id: 'input', type: 'object_stream', label: 'Input Stream' }
+    ],
+    outputs: [
+      { id: 'output', type: 'object_stream', label: 'Filtered Stream' }
+    ]
+  },
+  properties: {
+    properties: [
+      // selectedObjectIds will be managed by the UI, not directly editable as a simple property
     ]
   }
 };
@@ -111,7 +146,10 @@ const animationDefinition: NodeDefinition = {
   description: 'Timeline-based animation container',
   category: 'animation',
   ports: {
-    inputs: [{ id: 'timed_object', type: 'timed_object', label: 'Timed Object' }],
+    inputs: [
+      { id: 'timed_object', type: 'timed_object', label: 'Timed Object' },
+      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+    ],
     outputs: [{ id: 'animation', type: 'animation', label: 'Animation Output' }]
   },
   properties: {
@@ -127,7 +165,10 @@ const sceneDefinition: NodeDefinition = {
   description: 'Final video output configuration',
   category: 'output',
   ports: {
-    inputs: [{ id: 'animation', type: 'animation', label: 'Animation' }],
+    inputs: [
+      { id: 'animation', type: 'animation', label: 'Animation' },
+      { id: 'object_stream', type: 'object_stream', label: 'Object Stream' }
+    ],
     outputs: []
   },
   properties: {
@@ -161,6 +202,7 @@ export const NODE_DEFINITIONS: Record<string, NodeDefinition> = {
   circle: circleDefinition,
   rectangle: rectangleDefinition,
   insert: insertDefinition,
+  filter: filterDefinition,
   animation: animationDefinition,
   scene: sceneDefinition
 };

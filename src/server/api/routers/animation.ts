@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts - Updated with selectedNodeIds removed from schema
+// src/server/api/routers/animation.ts - Updated with selectedNodeIds completely removed
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
@@ -33,7 +33,7 @@ const reactFlowNodeSchema = z.object({
   data: z.record(z.unknown()), // Flexible to accommodate all node properties
 });
 
-// ReactFlow Edge schema - UPDATED: selectedNodeIds completely removed
+// ReactFlow Edge schema - Updated with selectedNodeIds completely removed
 const reactFlowEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),

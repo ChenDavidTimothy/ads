@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Updated with complete edge filtering removal
+// src/components/editor/flow-editor.tsx - Updated with FilterNode integration
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -16,7 +16,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { TriangleNode, CircleNode, RectangleNode, InsertNode, AnimationNode, SceneNode } from "./nodes";
+import { TriangleNode, CircleNode, RectangleNode, InsertNode, FilterNode, AnimationNode, SceneNode } from "./nodes";
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
 import { PropertyPanel } from "@/components/editor/property-panel";
@@ -32,6 +32,7 @@ import type {
   NodeType, 
   AnimationNodeData, 
   SceneNodeData,
+  FilterNodeData,
   AnimationTrack
 } from "@/shared/types";
 
@@ -42,6 +43,10 @@ function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
 
 function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
+}
+
+function isFilterNodeData(data: NodeData): data is FilterNodeData {
+  return 'selectedObjectIds' in data;
 }
 
 // Interfaces for timeline modal
@@ -174,6 +179,7 @@ export function FlowEditor() {
     circle: CircleNode,
     rectangle: RectangleNode,
     insert: InsertNode,
+    filter: FilterNode,
     animation: (props: Parameters<typeof AnimationNode>[0]) => (
       <AnimationNode 
         {...props} 
@@ -340,7 +346,7 @@ export function FlowEditor() {
         data: node.data
       }));
       
-      // Convert ReactFlow edges - UPDATED: simplified without filtering logic
+      // Convert ReactFlow edges - simplified without filtering logic
       const backendEdges = edges.map(edge => ({
         id: edge.id,
         source: edge.source,
@@ -476,6 +482,9 @@ export function FlowEditor() {
             onChange={(newData: Partial<NodeData>) => updateNodeData(selectedNode.data.identifier.id, newData)}
             onDisplayNameChange={updateDisplayName}
             validateDisplayName={validateDisplayName}
+            allNodes={nodes}
+            allEdges={edges}
+            flowTracker={flowTracker}
           />
         </div>
       )}

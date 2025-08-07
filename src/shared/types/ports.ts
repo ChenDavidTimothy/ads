@@ -3,6 +3,7 @@ export type PortType =
   | 'object'        // Geometry objects
   | 'timed_object'  // Objects with timing applied by Insert node
   | 'animation'     // Animation timeline
+  | 'object_stream' // Universal stream that can carry any object-containing data
   | 'data'         // Generic data
   | 'boolean'      // True/false values
   | 'trigger'      // Execution trigger
@@ -30,11 +31,12 @@ export interface TypedConnection {
   targetPortType: PortType;
 }
 
-// Base port compatibility rules
+// Base port compatibility rules - Updated with object_stream
 const PORT_COMPATIBILITY: Record<PortType, PortType[]> = {
-  object: ['object', 'data'],
-  timed_object: ['timed_object', 'data'],
-  animation: ['animation', 'scene', 'data'],
+  object: ['object', 'object_stream', 'data'],
+  timed_object: ['timed_object', 'object_stream', 'data'],
+  animation: ['animation', 'object_stream', 'scene', 'data'],
+  object_stream: ['object', 'timed_object', 'animation', 'object_stream', 'data'],
   data: ['data', 'boolean', 'trigger'],
   boolean: ['boolean', 'trigger', 'data'],
   trigger: ['trigger', 'animation', 'data'],

@@ -18,6 +18,10 @@ export const NODE_COLORS = {
     primary: "bg-orange-600",
     handle: "!bg-orange-500",
   },
+  filter: {
+    primary: "bg-violet-600",
+    handle: "!bg-violet-500",
+  },
   animation: {
     primary: "bg-purple-600",
     handle: "!bg-purple-500",

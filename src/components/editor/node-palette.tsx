@@ -19,6 +19,10 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
     { type: "insert", label: "Insert", icon: "⏰" },
   ];
 
+  const logicNodes = [
+    { type: "filter", label: "Filter Objects", icon: "⏷" },
+  ];
+
   const animationNodes = [
     { type: "animation", label: "Animation", icon: "🎬" },
   ];
@@ -75,6 +79,25 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
+          Logic
+        </h3>
+        <div className="space-y-2">
+          {logicNodes.map((node) => (
+            <Button
+              key={node.type}
+              onClick={() => handleNodeClick(node.type)}
+              className={`w-full justify-start gap-3 ${NODE_COLORS[node.type as keyof typeof NODE_COLORS].primary} hover:opacity-90`}
+              size="md"
+            >
+              <span className="text-lg">{node.icon}</span>
+              <span>{node.label}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
           Animation
         </h3>
         <div className="space-y-2">
@@ -115,6 +138,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         <h4 className="text-sm font-semibold text-white mb-2">Flow</h4>
         <ul className="text-xs text-gray-300 space-y-1">
           <li>• Geometry → Insert → Animation</li>
+          <li>• Filter objects at any stage</li>
           <li>• Set appearance timing</li>
           <li>• Build animation sequences</li>
           <li>• Connect to scene output</li>

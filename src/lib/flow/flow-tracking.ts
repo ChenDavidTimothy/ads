@@ -1,5 +1,5 @@
-// src/lib/flow/flow-tracking.ts - Simplified to basic topology tracking only
-import type { Node} from "reactflow";
+// src/lib/flow/flow-tracking.ts - Updated with upstream object discovery
+import type { Node, Edge } from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 
 export class FlowTracker {
@@ -81,6 +81,51 @@ export class FlowTracker {
     );
     
     return duplicate ? "Name already exists" : null;
+  }
+
+  // Get all geometry objects that could potentially flow upstream to a given node
+  getUpstreamGeometryObjects(
+    nodeId: string, 
+    allNodes: Node<NodeData>[], 
+    allEdges: Edge[]
+  ): Node<NodeData>[] {
+    const geometryNodes: Node<NodeData>[] = [];
+    const visited = new Set<string>();
+    
+    // Recursive function to traverse upstream from the target node
+    const traverseUpstream = (currentNodeId: string): void => {
+      if (visited.has(currentNodeId)) return;
+      visited.add(currentNodeId);
+      
+      // Find the current node
+      const currentNode = allNodes.find(n => n.data.identifier.id === currentNodeId);
+      if (!currentNode) return;
+      
+      // If this is a geometry node, add it to results
+      if (['triangle', 'circle', 'rectangle'].includes(currentNode.type!)) {
+        geometryNodes.push(currentNode);
+      }
+      
+      // Find all edges that target this node (incoming edges)
+      const incomingEdges = allEdges.filter(edge => edge.target === currentNodeId);
+      
+      // Recursively traverse all source nodes
+      for (const edge of incomingEdges) {
+        traverseUpstream(edge.source);
+      }
+    };
+    
+    // Start traversal from the target node
+    traverseUpstream(nodeId);
+    
+    // Remove duplicates and sort by display name for consistent UI
+    const uniqueNodes = Array.from(new Map(
+      geometryNodes.map(node => [node.data.identifier.id, node])
+    ).values());
+    
+    return uniqueNodes.sort((a, b) => 
+      a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)
+    );
   }
 
   // Update node lineages for basic topology tracking only

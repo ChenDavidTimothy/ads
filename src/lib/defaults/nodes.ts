@@ -1,4 +1,4 @@
-// src/lib/defaults/nodes.ts - Updated with unified ID system
+// src/lib/defaults/nodes.ts - Updated with filter node support
 import type { Node } from "reactflow";
 import type { 
   NodeData, 
@@ -20,6 +20,7 @@ function getNodeShortId(nodeType: NodeType): string {
     circle: 'cir',
     rectangle: 'rec',
     insert: 'ins',
+    filter: 'flt',
     animation: 'ani',
     scene: 'scn'
   };
@@ -32,6 +33,7 @@ function getNodeDisplayLabel(nodeType: NodeType): string {
     circle: 'Circle',
     rectangle: 'Rectangle',
     insert: 'Insert',
+    filter: 'Filter Objects',
     animation: 'Animation',
     scene: 'Scene'
   };
@@ -145,6 +147,12 @@ export function getDefaultNodeData(
         identifier,
         lineage,
         appearanceTime: 0,
+      };
+    case "filter":
+      return {
+        identifier,
+        lineage,
+        selectedObjectIds: [],
       };
     case "animation":
       return {

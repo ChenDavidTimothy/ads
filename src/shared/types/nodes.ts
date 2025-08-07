@@ -56,6 +56,11 @@ export interface InsertNodeData extends BaseNodeData {
   appearanceTime: number;
 }
 
+// Filter node data
+export interface FilterNodeData extends BaseNodeData {
+  selectedObjectIds: string[];
+}
+
 // Animation track properties - aligned with API schema
 export interface MoveTrackProperties {
   from: Point2D;
@@ -135,8 +140,8 @@ export interface SceneNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | AnimationNodeData | SceneNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | AnimationNodeData | SceneNodeData;
 
 // Node type literal types
 export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
-export type NodeType = GeometryNodeType | 'insert' | 'animation' | 'scene';
+export type NodeType = GeometryNodeType | 'insert' | 'filter' | 'animation' | 'scene';
