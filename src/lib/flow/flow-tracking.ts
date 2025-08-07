@@ -1,4 +1,4 @@
-// src/lib/flow/flow-tracking.ts - Enhanced with edge filtering support
+// src/lib/flow/flow-tracking.ts - Enhanced with edge filtering
 import type { Node} from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 
@@ -78,15 +78,16 @@ export class FlowTracker {
   private getAvailableGeometryNodes(sourceNodeId: string): string[] {
     const sourceLineage = this.nodeLineages.get(sourceNodeId);
     if (!sourceLineage) {
-      // If source has no lineage yet, return just the source if it exists
+      // If source has no lineage yet, check if it's a geometry node itself
       return [sourceNodeId];
     }
 
     // Get all upstream nodes including source
     const allNodeIds = [sourceNodeId, ...sourceLineage.parentNodes];
     
-    // Return all node IDs - the UI will filter to geometry nodes
-    return [...new Set(allNodeIds)]; // Remove duplicates
+    // For now, return all nodes - the UI will filter to geometry nodes
+    // This allows the system to work with any node types
+    return allNodeIds;
   }
 
   // Enhanced method to get available geometry nodes with node type checking
@@ -218,20 +219,6 @@ export class FlowTracker {
     return edgeFlow?.selectedNodeIds ?? [];
   }
 
-  // NEW: Public getter for a single edge's flow data
-  public getEdgeFlow(edgeId: string): EdgeFlow | undefined {
-    return this.edgeFlows.get(edgeId);
-  }
-
-  // NEW: Public getter for all edge flow data (for initial state, or full sync)
-  public getAllEdgeFlows(): Record<string, EdgeFlow> {
-    const result: Record<string, EdgeFlow> = {};
-    for (const [edgeId, edgeFlow] of this.edgeFlows.entries()) {
-      result[edgeId] = edgeFlow;
-    }
-    return result;
-  }
-
   // Remove connection tracking
   removeConnection(edgeId: string): void {
     const edgeFlow = this.edgeFlows.get(edgeId);
@@ -290,7 +277,7 @@ export class FlowTracker {
     this.nodeLineages.delete(nodeId);
   }
 
-  // Validate display name uniqueness
+  // Validate display name uniqueness (unchanged)
   validateDisplayName(
     newName: string, 
     currentNodeId: string, 
@@ -308,7 +295,7 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // Helper methods
+  // Helper methods (unchanged core logic)
   private updateNodeLineages(sourceNodeId: string, targetNodeId: string, edgeId: string): void {
     const sourceLineage = this.nodeLineages.get(sourceNodeId);
     const targetLineage = this.nodeLineages.get(targetNodeId);
