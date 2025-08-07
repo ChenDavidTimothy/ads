@@ -1,5 +1,6 @@
 // src/shared/types/properties.ts
 import type { Point2D } from './core';
+import { z } from 'zod';
 
 export type PropertyType = 
   | 'number'
@@ -86,4 +87,50 @@ export function getDefaultPropertiesFromSchema(
   }
   
   return defaults;
+}
+
+// Generate a Zod schema from PropertySchema for robust runtime validation
+export function buildZodSchemaFromProperties(
+  schemas: PropertySchema[]
+): z.ZodObject<z.ZodRawShape> {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const schema of schemas) {
+    switch (schema.type) {
+      case 'number': {
+        let validator = z.number();
+        if (schema.min !== undefined) validator = validator.min(schema.min);
+        if (schema.max !== undefined) validator = validator.max(schema.max);
+        shape[schema.key] = validator;
+        break;
+      }
+      case 'string':
+        shape[schema.key] = z.string();
+        break;
+      case 'color':
+        shape[schema.key] = z.string().regex(/^#([0-9a-fA-F]{3}){1,2}$/);
+        break;
+      case 'boolean':
+        shape[schema.key] = z.boolean();
+        break;
+      case 'point2d':
+        shape[schema.key] = z.object({ x: z.number(), y: z.number() });
+        break;
+      case 'select':
+        // Accept string or number to accommodate selects that conceptually represent numeric enums (e.g., fps)
+        shape[schema.key] = z.union([z.string(), z.number()]);
+        break;
+      case 'range': {
+        let validator = z.number();
+        validator = validator.min(schema.min).max(schema.max);
+        if (schema.step !== undefined) {
+          // step validation would be custom; skip strict enforcement to avoid overengineering now
+        }
+        shape[schema.key] = validator;
+        break;
+      }
+      default:
+        shape[schema.key] = z.unknown();
+    }
+  }
+  return z.object(shape);
 }

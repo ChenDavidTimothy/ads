@@ -4,7 +4,7 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS } from "@/lib/constants/editor";
-import { getNodeDefinition } from "@/shared/types/definitions";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { SceneNodeData } from "@/shared/types/nodes";
 
 export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
@@ -33,7 +33,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${NODE_COLORS.scene.handle} !border-2 !border-white`}
+          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
           style={{ top: `50%` }}
         />
       ))}

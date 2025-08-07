@@ -1,5 +1,5 @@
 // src/server/animation-processing/execution-context.ts - Future-proof execution context
-import type { PortType, SceneAnimationTrack } from "@/shared/types";
+import type { PortType, SceneAnimationTrack, GeometryProperties } from "@/shared/types";
 
 // Expanded data types for future logic nodes
 export type ExecutionDataType = 
@@ -53,7 +53,7 @@ export interface ExecutionContext {
   sceneObjects: Array<{
     id: string;
     type: 'triangle' | 'circle' | 'rectangle';
-    properties: Record<string, unknown>;
+    properties: GeometryProperties;
     initialPosition: { x: number; y: number };
     initialRotation?: number;
     initialScale?: { x: number; y: number };

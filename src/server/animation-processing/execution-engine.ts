@@ -1,6 +1,6 @@
 // src/server/animation-processing/execution-engine.ts - Registry-driven execution engine
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
-import type { ExecutionContext } from "./execution-context";
+import type { ExecutionContext, ExecutionValue } from "./execution-context";
 import { 
   createExecutionContext, 
   setNodeOutput, 
@@ -9,6 +9,16 @@ import {
   isNodeExecuted 
 } from "./execution-context";
 import { getNodeDefinition, getNodesByCategory, getNodeExecutionConfig } from "@/shared/registry/registry-utils";
+import {
+  CircularDependencyError,
+  DuplicateObjectIdsError,
+  MissingInsertConnectionError,
+  MultipleInsertConnectionsError,
+  SceneRequiredError,
+  TooManyScenesError,
+  UnknownNodeTypeError,
+} from "@/shared/errors/domain";
+import type { PortType } from "@/shared/types";
 
 // ReactFlow-compatible types for server
 export interface ReactFlowNode<T = unknown> {
@@ -24,6 +34,7 @@ export interface ReactFlowEdge {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
+  kind?: 'data' | 'control';
 }
 
 export interface NodeExecutor {
@@ -33,6 +44,88 @@ export interface NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void>;
+}
+
+// Minimal executor registry for scalability
+class ExecutorRegistry {
+  private executors: NodeExecutor[] = [];
+  register(executor: NodeExecutor): void { this.executors.push(executor); }
+  find(nodeType: string): NodeExecutor | undefined { return this.executors.find(e => e.canHandle(nodeType)); }
+  list(): NodeExecutor[] { return [...this.executors]; }
+}
+
+function extractObjectIdsFromInputs(inputs: Array<{ data: unknown }>): string[] {
+  const ids: string[] = [];
+  for (const input of inputs) {
+    const items = Array.isArray(input.data) ? input.data : [input.data];
+    for (const item of items) {
+      if (typeof item === 'object' && item !== null && 'id' in item) {
+        const id = (item as { id: unknown }).id;
+        if (typeof id === 'string') {
+          ids.push(id);
+        }
+      }
+    }
+  }
+  return ids;
+}
+
+function assertNoDuplicateObjectIds(nodeType: string | undefined, nodeName: string, nodeId: string, inputs: Array<{ data: unknown }>): void {
+  if (nodeType === 'merge') return;
+  const ids = extractObjectIdsFromInputs(inputs);
+  if (ids.length === 0) return;
+  const seen = new Map<string, number>();
+  for (const id of ids) {
+    seen.set(id, (seen.get(id) ?? 0) + 1);
+  }
+  const duplicates = Array.from(seen.entries()).filter(([, count]) => count > 1).map(([id]) => id);
+  if (duplicates.length > 0) {
+    throw new DuplicateObjectIdsError(nodeName, nodeId, duplicates);
+  }
+}
+
+// Per-object time cursor utilities
+type PerObjectCursorMap = Record<string, number>;
+
+function isPerObjectCursorMap(value: unknown): value is PerObjectCursorMap {
+  if (typeof value !== 'object' || value === null) return false;
+  for (const v of Object.values(value as Record<string, unknown>)) {
+    if (typeof v !== 'number') return false;
+  }
+  return true;
+}
+
+function mergeCursorMaps(cursorMaps: PerObjectCursorMap[]): PerObjectCursorMap {
+  const merged: PerObjectCursorMap = {};
+  for (const map of cursorMaps) {
+    for (const [objectId, time] of Object.entries(map)) {
+      if (!(objectId in merged)) {
+        merged[objectId] = time;
+      } else {
+        merged[objectId] = Math.max(merged[objectId]!, time);
+      }
+    }
+  }
+  return merged;
+}
+
+function extractCursorsFromInputs(inputs: ExecutionValue[]): PerObjectCursorMap {
+  const maps: PerObjectCursorMap[] = [];
+  for (const input of inputs) {
+    const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
+    if (isPerObjectCursorMap(maybeMap)) {
+      maps.push(maybeMap);
+    }
+  }
+  return mergeCursorMaps(maps);
+}
+
+function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]): PerObjectCursorMap {
+  const picked: PerObjectCursorMap = {};
+  for (const id of ids) {
+    if (id in cursorMap) picked[id] = cursorMap[id]!;
+  }
+  return picked;
 }
 
 // Registry-driven Geometry node executor
@@ -51,7 +144,7 @@ class GeometryNodeExecutor implements NodeExecutor {
   }
 
   private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
-    const data = node.data as Record<string, unknown>;
+    const data = node.data as unknown as Record<string, unknown>;
     const baseObject = {
       id: node.data.identifier.id,
       type: node.type as "triangle" | "circle" | "rectangle",
@@ -61,7 +154,7 @@ class GeometryNodeExecutor implements NodeExecutor {
       initialOpacity: 1,
     };
 
-    switch (node.type) {
+    switch (node.type as 'filter' | string) {
       case "triangle":
         return {
           ...baseObject,
@@ -94,7 +187,7 @@ class GeometryNodeExecutor implements NodeExecutor {
           },
         };
       default:
-        throw new Error(`Unknown geometry type: ${node.type}`);
+        throw new UnknownNodeTypeError(String(node.type));
     }
   }
 }
@@ -111,10 +204,17 @@ class TimingNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    const data = node.data as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
+    const data = node.data as unknown as Record<string, unknown>;
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+    assertNoDuplicateObjectIds(node.type, node.data.identifier.displayName, node.data.identifier.id, inputs);
     
-    const timedObjects = [];
+    const timedObjects: unknown[] = [];
+    const upstreamCursorMap = extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -130,7 +230,14 @@ class TimingNodeExecutor implements NodeExecutor {
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
-    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', timedObjects);
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      timedObjects,
+      { perObjectTimeCursor: upstreamCursorMap }
+    );
   }
 }
 
@@ -168,17 +275,24 @@ class LogicNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    const data = node.data as Record<string, unknown>;
+    const data = node.data as unknown as Record<string, unknown>;
     const selectedObjectIds = (data.selectedObjectIds as string[]) || [];
     
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+    assertNoDuplicateObjectIds(node.type, node.data.identifier.displayName, node.data.identifier.id, inputs);
     
     if (inputs.length === 0) {
-      setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', []);
+      setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], { perObjectTimeCursor: {} });
       return;
     }
     
-    const filteredResults = [];
+    const filteredResults: unknown[] = [];
+    const upstreamCursorMap = extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -195,7 +309,16 @@ class LogicNodeExecutor implements NodeExecutor {
       }
     }
     
-    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', filteredResults);
+    const filteredIds = extractObjectIdsFromInputs([{ data: filteredResults }]);
+    const propagatedCursors = pickCursorsForIds(upstreamCursorMap, filteredIds);
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      filteredResults,
+      { perObjectTimeCursor: propagatedCursors }
+    );
   }
 
   private hasFilterableObjects(item: unknown): boolean {
@@ -225,23 +348,44 @@ class AnimationNodeExecutor implements NodeExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+    assertNoDuplicateObjectIds(node.type, node.data.identifier.displayName, node.data.identifier.id, inputs);
     
     const allAnimations: SceneAnimationTrack[] = [];
     const passThoughObjects: unknown[] = [];
+    const upstreamCursorMap = extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
+    const outputCursorMap: PerObjectCursorMap = { ...upstreamCursorMap };
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       
       for (const timedObject of inputData) {
-        const objectStartTime = timedObject.appearanceTime || 0;
+        const objectId = (timedObject as { id?: unknown }).id as string | undefined;
+        const appearanceTime = (timedObject as { appearanceTime?: unknown }).appearanceTime as number | undefined;
+        const baseline = (objectId && upstreamCursorMap[objectId] !== undefined)
+          ? upstreamCursorMap[objectId]!
+          : (appearanceTime ?? 0);
         const animations = this.convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],
-          timedObject.id,
-          objectStartTime
+          objectId ?? '',
+          baseline
         );
         allAnimations.push(...animations);
         passThoughObjects.push(timedObject);
+
+        if (objectId) {
+          const localEnd = animations.length > 0
+            ? Math.max(...animations.map(a => a.startTime + a.duration))
+            : baseline; // no animations, cursor remains baseline
+          // If animations exist, localEnd already includes baseline in startTime
+          const newCursor = animations.length > 0 ? localEnd : baseline;
+          outputCursorMap[objectId] = Math.max(outputCursorMap[objectId] ?? 0, newCursor);
+        }
       }
     }
 
@@ -251,17 +395,24 @@ class AnimationNodeExecutor implements NodeExecutor {
       context.currentTime;
     context.currentTime = maxDuration;
 
-    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThoughObjects);
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      passThoughObjects,
+      { perObjectTimeCursor: outputCursorMap }
+    );
   }
 
-  private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, objectStartTime: number): SceneAnimationTrack[] {
+  private convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, baselineTime: number): SceneAnimationTrack[] {
     return tracks.map((track): SceneAnimationTrack => {
       switch (track.type) {
         case 'move':
           return {
             objectId,
             type: 'move',
-            startTime: objectStartTime + track.startTime,
+            startTime: baselineTime + track.startTime,
             duration: track.duration,
             easing: track.easing,
             properties: {
@@ -273,7 +424,7 @@ class AnimationNodeExecutor implements NodeExecutor {
           return {
             objectId,
             type: 'rotate',
-            startTime: objectStartTime + track.startTime,
+            startTime: baselineTime + track.startTime,
             duration: track.duration,
             easing: track.easing,
             properties: {
@@ -286,7 +437,7 @@ class AnimationNodeExecutor implements NodeExecutor {
           return {
             objectId,
             type: 'scale',
-            startTime: objectStartTime + track.startTime,
+            startTime: baselineTime + track.startTime,
             duration: track.duration,
             easing: track.easing,
             properties: {
@@ -298,7 +449,7 @@ class AnimationNodeExecutor implements NodeExecutor {
           return {
             objectId,
             type: 'fade',
-            startTime: objectStartTime + track.startTime,
+            startTime: baselineTime + track.startTime,
             duration: track.duration,
             easing: track.easing,
             properties: {
@@ -310,7 +461,7 @@ class AnimationNodeExecutor implements NodeExecutor {
           return {
             objectId,
             type: 'color',
-            startTime: objectStartTime + track.startTime,
+            startTime: baselineTime + track.startTime,
             duration: track.duration,
             easing: track.easing,
             properties: {
@@ -319,8 +470,10 @@ class AnimationNodeExecutor implements NodeExecutor {
               property: track.properties.property,
             }
           };
-        default:
-          throw new Error(`Unknown track type: ${track.type}`);
+        default: {
+          const _exhaustiveCheck: never = track as never;
+          throw new Error(`Unknown track type: ${String((_exhaustiveCheck as unknown as { type?: string }).type ?? 'unknown')}`);
+        }
       }
     });
   }
@@ -338,7 +491,13 @@ class SceneNodeExecutor implements NodeExecutor {
     context: ExecutionContext, 
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    const inputs = getConnectedInputs(context, connections, node.data.identifier.id, 'input');
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+    assertNoDuplicateObjectIds(node.type, node.data.identifier.displayName, node.data.identifier.id, inputs);
     
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -351,22 +510,22 @@ class SceneNodeExecutor implements NodeExecutor {
     }
     
     if (context.sceneObjects.length === 0) {
-      throw new Error(
-        `Scene ${node.data.identifier.displayName} has no reachable objects. ` +
-        `Connect object flows: Geometry → Insert → Animation → Scene`
-      );
+      throw new MissingInsertConnectionError(node.data.identifier.displayName, node.data.identifier.id);
     }
   }
 }
 
 export class ExecutionEngine {
-  private executors: NodeExecutor[] = [
-    new GeometryNodeExecutor(),
-    new TimingNodeExecutor(),
-    new LogicNodeExecutor(),
-    new AnimationNodeExecutor(),
-    new SceneNodeExecutor()
-  ];
+  private registry: ExecutorRegistry = new ExecutorRegistry();
+
+  constructor() {
+    // Register built-in executors
+    this.registry.register(new GeometryNodeExecutor());
+    this.registry.register(new TimingNodeExecutor());
+    this.registry.register(new LogicNodeExecutor());
+    this.registry.register(new AnimationNodeExecutor());
+    this.registry.register(new SceneNodeExecutor());
+  }
 
   async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
     this.validateScene(nodes);
@@ -378,10 +537,11 @@ export class ExecutionEngine {
     
     const sceneNode = nodes.find(n => n.type === 'scene');
     if (!sceneNode) {
-      throw new Error("Scene node is required");
+      throw new SceneRequiredError();
     }
     
-    const executionOrder = this.getTopologicalOrder(nodes, edges);
+    // Build execution order based on data edges (control edges ignored for simple DAG scheduling)
+    const executionOrder = this.getTopologicalOrder(nodes, edges.filter(e => (e.kind ?? 'data') === 'data'));
     
     for (const node of executionOrder) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
@@ -411,10 +571,7 @@ export class ExecutionEngine {
       );
       
       if (duplicates.length > 0) {
-        throw new Error(
-          `Node ${targetNode.data.identifier.displayName} receives duplicate object IDs: ${duplicates.join(', ')}. ` +
-          `Each node can only receive each object once. Use Merge node to explicitly handle duplicate objects.`
-        );
+        throw new DuplicateObjectIdsError(targetNode.data.identifier.displayName, targetNode.data.identifier.id, duplicates);
       }
     }
   }
@@ -457,10 +614,7 @@ export class ExecutionEngine {
         const canReachInsert = this.canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
         
         if (!canReachInsert) {
-          throw new Error(
-            `Geometry node ${geoNode.data.identifier.displayName} must connect to an Insert node ` +
-            `(directly or through Filter nodes) to appear in the scene. Insert nodes control when objects appear in the timeline.`
-          );
+          throw new MissingInsertConnectionError(geoNode.data.identifier.displayName, geoNode.data.identifier.id);
         }
       }
     }
@@ -546,7 +700,7 @@ export class ExecutionEngine {
     }
     
     if (result.length !== nodes.length) {
-      throw new Error("Circular dependency detected in node graph");
+      throw new CircularDependencyError();
     }
     
     return result;
@@ -565,9 +719,11 @@ export class ExecutionEngine {
       if (geometryNodeTypes.includes(sourceNode.type!) && targetNode.type === 'insert') {
         const existingInsert = objectToInsertMap.get(sourceNode.data.identifier.id);
         if (existingInsert && existingInsert !== targetNode.data.identifier.id) {
-          throw new Error(
-            `Object ${sourceNode.data.identifier.displayName} cannot connect to multiple Insert nodes. ` +
-            `Already connected to ${existingInsert}, attempted connection to ${targetNode.data.identifier.id}.`
+          throw new MultipleInsertConnectionsError(
+            sourceNode.data.identifier.displayName,
+            sourceNode.data.identifier.id,
+            targetNode.data.identifier.id,
+            existingInsert,
           );
         }
         objectToInsertMap.set(sourceNode.data.identifier.id, targetNode.data.identifier.id);
@@ -579,19 +735,19 @@ export class ExecutionEngine {
     const sceneNodes = nodes.filter(node => node.type === "scene");
     
     if (sceneNodes.length === 0) {
-      throw new Error("Scene node is required");
+      throw new SceneRequiredError();
     }
     
     if (sceneNodes.length > 1) {
-      throw new Error("Only one scene node allowed per workspace");
+      throw new TooManyScenesError();
     }
   }
 
   private getExecutor(nodeType: string): NodeExecutor | undefined {
-    return this.executors.find(executor => executor.canHandle(nodeType));
+    return this.registry.find(nodeType);
   }
 
   addExecutor(executor: NodeExecutor): void {
-    this.executors.push(executor);
+    this.registry.register(executor);
   }
 }

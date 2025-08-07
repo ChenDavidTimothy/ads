@@ -1,5 +1,6 @@
 // src/shared/types/nodes.ts
 import type { Point2D } from './core';
+import type { NodeType } from './definitions';
 
 // Node identifier system
 export interface NodeIdentifier {
@@ -142,6 +143,4 @@ export interface SceneNodeData extends BaseNodeData {
 // Union type for all node data
 export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | AnimationNodeData | SceneNodeData;
 
-// Node type literal types
-export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
-export type NodeType = GeometryNodeType | 'insert' | 'filter' | 'animation' | 'scene';
+// NodeType is derived from the registry (definitions)

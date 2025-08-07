@@ -4,7 +4,7 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { NODE_COLORS, TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
-import { getNodeDefinition } from "@/shared/types/definitions";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 
 interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
@@ -37,7 +37,7 @@ export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodePro
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
+          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
           style={{ top: `50%` }}
         />
       ))}
@@ -95,7 +95,7 @@ export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodePro
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${NODE_COLORS.animation.handle} !border-2 !border-white`}
+          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
           style={{ top: `50%` }}
         />
       ))}

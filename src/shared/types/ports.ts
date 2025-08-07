@@ -18,6 +18,9 @@ export interface NodePortConfig {
   outputs: PortDefinition[];
 }
 
+// Edge kind to distinguish control-flow vs data-flow
+export type EdgeKind = 'data' | 'control';
+
 export interface TypedConnection {
   id: string;
   sourceNodeId: string;
@@ -26,6 +29,7 @@ export interface TypedConnection {
   targetPortId: string;
   sourcePortType: PortType;
   targetPortType: PortType;
+  kind?: EdgeKind;
 }
 
 // Simplified port compatibility - object_stream is universal

@@ -24,10 +24,11 @@ import { PropertyPanel } from "@/components/editor/property-panel";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getDefaultNodeData } from "@/lib/defaults/nodes";
-import { getNodeDefinition } from "@/shared/types/definitions";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { arePortsCompatible } from "@/shared/types/ports";
 import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { api } from "@/trpc/react";
+import { extractDomainError } from "@/shared/errors/client";
 import type { 
   NodeData, 
   NodeType, 
@@ -107,7 +108,14 @@ export function FlowEditor() {
     },
     onError: (error) => {
       console.error("Scene generation failed:", error);
-      toast.error("Video generation failed", error.message);
+      const domain = extractDomainError(error);
+      if (domain?.code) {
+        // Prefer domain message if present
+        toast.error("Cannot generate yet", domain.message ?? "A validation error occurred");
+        // Optionally: in a future edit, highlight domain.details?.nodeId
+      } else {
+        toast.error("Video generation failed", error.message);
+      }
     },
   });
 
@@ -389,7 +397,8 @@ export function FlowEditor() {
         source: edge.source,
         target: edge.target,
         sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle
+        targetHandle: edge.targetHandle,
+        kind: 'data'
       }));
       
       generateScene.mutate({ 

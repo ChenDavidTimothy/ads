@@ -1,6 +1,9 @@
 // src/server/api/routers/animation.ts - Registry-aware animation router
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { TRPCError } from "@trpc/server";
+import { logger } from "@/server/logger";
+import { isDomainError, NodeValidationError, SceneValidationError } from "@/shared/errors/domain";
 import {
   generateSceneAnimation,
   DEFAULT_SCENE_CONFIG,
@@ -9,7 +12,10 @@ import {
 import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
-import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
+import { buildZodSchemaFromProperties } from "@/shared/types/properties";
+import type { NodeDefinition } from "@/shared/types/definitions";
+import { arePortsCompatible } from "@/shared/types/ports";
+import type { AnimationScene, NodeData, SceneNodeData, SceneObject, GeometryProperties, TriangleProperties, CircleProperties, RectangleProperties } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 
 // Scene config schema (unchanged)
@@ -57,7 +63,28 @@ export const animationRouter = createTRPCRouter({
         // Registry-aware node validation
         const validationResult = validateInputNodes(input.nodes);
         if (!validationResult.valid) {
-          throw new Error(`Node validation failed: ${validationResult.errors.join(', ')}`);
+          throw new NodeValidationError(validationResult.errors);
+        }
+
+        // Validate connections by port compatibility
+        const connectionErrors: string[] = [];
+        for (const edge of input.edges) {
+          const source = input.nodes.find(n => n.id === edge.source);
+          const target = input.nodes.find(n => n.id === edge.target);
+          if (!source || !target) continue;
+          const sourceDef = getNodeDefinition(source.type ?? "");
+          const targetDef = getNodeDefinition(target.type ?? "");
+          if (!sourceDef || !targetDef) continue;
+          // Only validate data edges for port types; control edges will be used by a future scheduler
+          if ((edge as { kind?: 'data' | 'control' }).kind === 'control') continue;
+          const sourcePort = sourceDef.ports.outputs.find(p => p.id === edge.sourceHandle);
+          const targetPort = targetDef.ports.inputs.find(p => p.id === edge.targetHandle);
+          if (sourcePort && targetPort && !arePortsCompatible(sourcePort.type, targetPort.type)) {
+            connectionErrors.push(`Edge ${edge.id}: ${source.type}.${edge.sourceHandle} (${sourcePort.type}) → ${target.type}.${edge.targetHandle} (${targetPort.type}) is incompatible`);
+          }
+        }
+        if (connectionErrors.length > 0) {
+          throw new NodeValidationError(connectionErrors);
         }
 
         // Use registry-aware ExecutionEngine
@@ -70,7 +97,7 @@ export const animationRouter = createTRPCRouter({
         // Registry-aware scene node lookup
         const sceneNode = findSceneNode(input.nodes);
         if (!sceneNode) {
-          throw new Error("Scene node is required");
+          throw new SceneValidationError(["Scene node is required"]);
         }
 
         const sceneData = sceneNode.data as unknown as SceneNodeData;
@@ -89,7 +116,7 @@ export const animationRouter = createTRPCRouter({
         // Build AnimationScene from execution context
         const scene: AnimationScene = {
           duration: totalDuration,
-          objects: executionContext.sceneObjects as SceneObject[],
+          objects: executionContext.sceneObjects,
           animations: executionContext.sceneAnimations,
           background: {
             color: sceneData.backgroundColor,
@@ -117,12 +144,26 @@ export const animationRouter = createTRPCRouter({
           config,
         };
       } catch (error) {
-        console.error("Scene animation generation failed:", error);
-        throw new Error(
-          error instanceof Error
-            ? `Scene animation generation failed: ${error.message}`
-            : "Scene animation generation failed with unknown error",
-        );
+        // Log server-side with structured logger (warn for domain errors, error otherwise)
+        logger.domain('Scene animation generation failed', error, { path: 'animation.generateScene' });
+
+        // Map domain errors to TRPC typed errors for the client
+        if (isDomainError(error)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: error.message,
+            cause: error,
+            // @ts-expect-error: tRPC allows arbitrary data on error
+            data: { errorCode: error.code, details: error.details },
+          });
+        }
+
+        // Unknown/system error
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Scene animation generation failed due to an unexpected error',
+          cause: error instanceof Error ? error : new Error(String(error)),
+        });
       }
     }),
 
@@ -254,12 +295,12 @@ function validateInputNodes(nodes: Array<{ id: string; type?: string; position: 
       continue;
     }
     
-    // Validate required properties exist
-    const requiredProps = definition.properties.properties.filter(p => p.required);
-    for (const prop of requiredProps) {
-      if (!(prop.key in node.data)) {
-        errors.push(`Node ${node.id} missing required property: ${prop.key}`);
-      }
+    // Validate properties against generated Zod schema
+    const schema = buildZodSchemaFromProperties(definition.properties.properties);
+    const result = schema.safeParse(node.data);
+    if (!result.success) {
+      const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+      errors.push(`Node ${node.id} property validation failed: ${issues}`);
     }
   }
   

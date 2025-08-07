@@ -1,11 +1,25 @@
 // src/shared/registry/registry-utils.ts - Dynamic generation from node definitions
-import { NODE_DEFINITIONS, type NodeDefinition, type NodeType } from '../types/definitions';
+import { NODE_DEFINITIONS, type NodeDefinition } from '../types/definitions';
+
+// Derive NodeType from registry to avoid duplication elsewhere
+export type NodeType = keyof typeof NODE_DEFINITIONS;
+
+// Mutable registry copy to allow runtime registration of new nodes without touching static files
+const REGISTRY: Record<string, NodeDefinition> = { ...NODE_DEFINITIONS } as Record<string, NodeDefinition>;
+
+export function registerNodeDefinition(definition: NodeDefinition): void {
+  REGISTRY[definition.type] = definition;
+}
+
+export function listNodeTypes(): string[] {
+  return Object.keys(REGISTRY);
+}
 
 // Generate node colors from definitions (replaces hardcoded constants)
 export function generateNodeColors() {
   const colors: Record<string, { primary: string; handle: string }> = {};
   
-  for (const [nodeType, definition] of Object.entries(NODE_DEFINITIONS)) {
+  for (const [nodeType, definition] of Object.entries(REGISTRY)) {
     colors[nodeType] = definition.rendering.colors;
   }
   
@@ -72,22 +86,22 @@ export function generateNodePalette() {
 
 // Registry query functions
 export function getNodesByCategory(category: NodeDefinition['execution']['category']): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => def.execution.category === category);
+  return Object.values(REGISTRY).filter(def => def.execution.category === category);
 }
 
 export function getNodesByExecutor(executor: NodeDefinition['execution']['executor']): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => def.execution.executor === executor);
+  return Object.values(REGISTRY).filter(def => def.execution.executor === executor);
 }
 
 export function getNodeDefinition(nodeType: string): NodeDefinition | undefined {
-  return NODE_DEFINITIONS[nodeType as keyof typeof NODE_DEFINITIONS];
+  return REGISTRY[nodeType];
 }
 
 // Generate component mapping for future dynamic registration
 export function getNodeComponentMapping(): Record<string, string> {
   const mapping: Record<string, string> = {};
   
-  for (const [nodeType, definition] of Object.entries(NODE_DEFINITIONS)) {
+  for (const [nodeType, definition] of Object.entries(REGISTRY)) {
     // Map to actual component names (preserving current behavior)
     switch (definition.execution.category) {
       case 'geometry':
@@ -113,7 +127,7 @@ export function getNodeComponentMapping(): Record<string, string> {
 
 // Validate node type at runtime
 export function isValidNodeType(nodeType: string): nodeType is NodeType {
-  return nodeType in NODE_DEFINITIONS;
+  return nodeType in REGISTRY;
 }
 
 // Get default properties for a node type

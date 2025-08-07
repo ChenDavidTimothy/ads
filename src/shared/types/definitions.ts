@@ -28,6 +28,8 @@ export interface NodeDefinition {
   properties: NodePropertyConfig;
   rendering: NodeRenderConfig;
   defaults: Record<string, unknown>;
+  version?: string; // optional semantic version for migrations
+  migrate?: (data: Record<string, unknown>) => Record<string, unknown>; // optional migration hook
 }
 
 // Video and FPS options (existing)
@@ -321,21 +323,5 @@ export const NODE_DEFINITIONS = {
   }
 } as const;
 
-// Registry utilities for type-safe access
-export function getNodeDefinition(nodeType: string): NodeDefinition | undefined {
-  return NODE_DEFINITIONS[nodeType as keyof typeof NODE_DEFINITIONS];
-}
-
-export function getNodesByCategory(category: NodeDefinition['execution']['category']): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => def.execution.category === category);
-}
-
-export function getNodesByExecutor(executor: NodeDefinition['execution']['executor']): NodeDefinition[] {
-  return Object.values(NODE_DEFINITIONS).filter(def => def.execution.executor === executor);
-}
-
-// Generate TypeScript types from registry
+// Canonical node type derived from registry
 export type NodeType = keyof typeof NODE_DEFINITIONS;
-export type GeometryNodeType = 'triangle' | 'circle' | 'rectangle';
-export type NodeCategory = NodeDefinition['execution']['category'];
-export type NodeExecutor = NodeDefinition['execution']['executor'];
