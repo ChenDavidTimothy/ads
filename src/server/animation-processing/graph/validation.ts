@@ -1,6 +1,13 @@
 // src/server/animation-processing/graph/validation.ts
-import { getNodesByCategory } from "@/shared/registry/registry-utils";
-import { DuplicateObjectIdsError, MissingInsertConnectionError, MultipleInsertNodesInSeriesError, SceneRequiredError, TooManyScenesError } from "@/shared/errors/domain";
+import { getNodesByCategory, getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
+import { 
+  DuplicateObjectIdsError, 
+  MissingInsertConnectionError, 
+  MultipleInsertNodesInSeriesError, 
+  SceneRequiredError, 
+  TooManyScenesError,
+  InvalidConnectionError 
+} from "@/shared/errors/domain";
 import type { NodeData } from "@/shared/types";
 import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 
@@ -11,8 +18,103 @@ export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
 }
 
 export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  // Connection validation logic can be added here if needed in the future
-  // Currently no restrictions on object branching - Merge nodes handle conflicts
+  // Validate port compatibility for all connections
+  validatePortCompatibility(nodes, edges);
+  // Validate merge port uniqueness
+  validateMergePortConnections(nodes, edges);
+}
+
+export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const { arePortsCompatible } = require("@/shared/types/ports");
+  const { getNodeDefinition } = require("@/shared/registry/registry-utils");
+
+  for (const edge of edges) {
+    const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
+    const targetNode = nodes.find(n => n.data.identifier.id === edge.target);
+    
+    if (!sourceNode || !targetNode) {
+      throw new InvalidConnectionError(
+        `Connection references non-existent nodes: ${edge.source} -> ${edge.target}`,
+        { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
+      );
+    }
+
+    const sourceDefinition = getNodeDefinition(sourceNode.type!);
+    const targetDefinition = getNodeDefinition(targetNode.type!);
+    
+    if (!sourceDefinition || !targetDefinition) {
+      throw new InvalidConnectionError(
+        `Unknown node types in connection: ${sourceNode.type} -> ${targetNode.type}`,
+        { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
+      );
+    }
+
+    // Get dynamic definition for merge nodes
+    const actualTargetDefinition = targetNode.type === 'merge' 
+      ? getNodeDefinitionWithDynamicPorts(targetNode.type, targetNode.data)
+      : targetDefinition;
+
+    const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
+    const targetPort = actualTargetDefinition?.ports.inputs.find(p => p.id === edge.targetHandle);
+    
+    if (!sourcePort) {
+      throw new InvalidConnectionError(
+        `Source port "${edge.sourceHandle}" not found on ${sourceNode.data.identifier.displayName}`,
+        { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
+      );
+    }
+    
+    if (!targetPort) {
+      throw new InvalidConnectionError(
+        `Target port "${edge.targetHandle}" not found on ${targetNode.data.identifier.displayName}`,
+        { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
+      );
+    }
+
+    if (!arePortsCompatible(sourcePort.type, targetPort.type)) {
+      throw new InvalidConnectionError(
+        `Port types incompatible: ${sourcePort.type} output cannot connect to ${targetPort.type} input between ${sourceNode.data.identifier.displayName} and ${targetNode.data.identifier.displayName}`,
+        { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
+      );
+    }
+  }
+}
+
+export function validateMergePortConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const mergeNodes = nodes.filter(node => node.type === 'merge');
+  
+  for (const mergeNode of mergeNodes) {
+    const incomingEdges = edges.filter(edge => edge.target === mergeNode.data.identifier.id);
+    const portConnections = new Map<string, ReactFlowEdge[]>();
+    
+    // Group edges by target port
+    for (const edge of incomingEdges) {
+      if (!edge.targetHandle) continue;
+      
+      const existingEdges = portConnections.get(edge.targetHandle) || [];
+      existingEdges.push(edge);
+      portConnections.set(edge.targetHandle, existingEdges);
+    }
+    
+    // Check for multiple connections to same port
+    for (const [portId, connectedEdges] of portConnections.entries()) {
+      if (connectedEdges.length > 1) {
+        const sourceNodeNames = connectedEdges.map(edge => {
+          const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
+          return sourceNode?.data.identifier.displayName || edge.source;
+        });
+        
+        throw new InvalidConnectionError(
+          `Multiple connections to merge port "${portId}" on ${mergeNode.data.identifier.displayName}. Each merge input port can only accept one connection. Connected from: ${sourceNodeNames.join(', ')}`,
+          { 
+            nodeId: mergeNode.data.identifier.id, 
+            nodeName: mergeNode.data.identifier.displayName,
+            info: { portId, connectedEdges: connectedEdges.length }
+          }
+        );
+      }
+    }
+  }
 }
 
 export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
@@ -31,13 +133,11 @@ export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: Reac
 }
 
 export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  // Find all paths from any node to scene that pass through multiple insert nodes
   const sceneNodes = nodes.filter((node) => node.type === 'scene');
-  if (sceneNodes.length === 0) return; // No scene to validate against
+  if (sceneNodes.length === 0) return;
 
-  const sceneNode = sceneNodes[0]; // We already validated there's only one scene
+  const sceneNode = sceneNodes[0]; 
   
-  // For each node, find all paths to scene and check for multiple insert nodes
   for (const startNode of nodes) {
     const pathsToScene = findAllPathsToScene(startNode.data.identifier.id, sceneNode.data.identifier.id, edges, nodes);
     
@@ -70,7 +170,7 @@ export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], e
   console.log('[VALIDATION] Edges:', edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
 
   for (const targetNode of nodes) {
-    // CRITICAL: Only merge nodes are allowed to receive duplicate object IDs
+    // Only merge nodes are allowed to receive duplicate object IDs
     if (targetNode.type === 'merge') {
       console.log(`[VALIDATION] Skipping merge node: ${targetNode.data.identifier.displayName}`);
       continue;
@@ -97,25 +197,22 @@ export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], e
   console.log('[VALIDATION] No duplicate object IDs found - validation passed');
 }
 
-// CRITICAL FIX: Merge-aware traversal that understands merge nodes deduplicate objects
+// Helper functions (keeping existing implementation)
 function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): string[] {
   console.log(`[TRACE] Starting upstream trace for node: ${targetNodeId}`);
   
   const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
   console.log(`[TRACE] Geometry node types:`, geometryNodeTypes);
 
-  // Create a lookup map for faster node finding
   const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
   nodes.forEach(node => {
     nodeByIdentifierId.set(node.data.identifier.id, node);
   });
 
-  // Recursive function that returns object IDs from this node and upstream
   const traceUpstreamNode = (currentNodeId: string, pathVisited: Set<string>, depth: number = 0, pathId: string = 'root'): string[] => {
     const indent = '  '.repeat(depth);
     console.log(`${indent}[TRACE] [Path ${pathId}] Visiting node: ${currentNodeId}`);
     
-    // Prevent cycles within the same path
     if (pathVisited.has(currentNodeId)) {
       console.log(`${indent}[TRACE] [Path ${pathId}] Cycle detected in this path, skipping`);
       return [];
@@ -134,14 +231,13 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
     
     const objectIds: string[] = [];
     
-    // CRITICAL: Special handling for merge nodes - they deduplicate upstream objects
+    // Special handling for merge nodes - they deduplicate upstream objects
     if (currentNode.type === 'merge') {
       console.log(`${indent}[TRACE] [Path ${pathId}] MERGE NODE DETECTED - will deduplicate upstream objects`);
       
       const incomingEdges = edges.filter((edge) => edge.target === currentNodeId);
       const allUpstreamObjects: string[] = [];
       
-      // Collect objects from all merge inputs
       incomingEdges.forEach((edge, index) => {
         const subPathId = `${pathId}.merge.${index}`;
         console.log(`${indent}[TRACE] [Path ${pathId}] Following merge input from: ${edge.source} (path: ${subPathId})`);
@@ -150,7 +246,6 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
         allUpstreamObjects.push(...upstreamObjects);
       });
       
-      // CRITICAL: Merge deduplicates identical object IDs
       const uniqueObjects = [...new Set(allUpstreamObjects)];
       console.log(`${indent}[TRACE] [Path ${pathId}] Merge deduplication: ${allUpstreamObjects.length} → ${uniqueObjects.length} objects`);
       console.log(`${indent}[TRACE] [Path ${pathId}] Before merge:`, allUpstreamObjects);
@@ -179,7 +274,6 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
     return objectIds;
   };
 
-  // Start tracing from the target node
   const result = traceUpstreamNode(targetNodeId, new Set<string>());
   
   console.log(`[TRACE] Final result for ${targetNodeId}:`, result);
@@ -238,7 +332,6 @@ function isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: R
   return traverse(nodeId);
 }
 
-// Find all possible paths from startNodeId to targetNodeId
 function findAllPathsToScene(
   startNodeId: string, 
   targetNodeId: string, 
@@ -254,24 +347,20 @@ function findAllPathsToScene(
   });
   
   const dfs = (currentNodeId: string, visited: Set<string>) => {
-    // Avoid infinite loops
     if (visited.has(currentNodeId)) return;
     
     currentPath.push(currentNodeId);
     visited.add(currentNodeId);
     
-    // If we reached the target, save this path
     if (currentNodeId === targetNodeId) {
       allPaths.push([...currentPath]);
     } else {
-      // Continue exploring outgoing edges
       const outgoingEdges = edges.filter(e => e.source === currentNodeId);
       for (const edge of outgoingEdges) {
         dfs(edge.target, new Set(visited));
       }
     }
     
-    // Backtrack
     currentPath.pop();
   };
   

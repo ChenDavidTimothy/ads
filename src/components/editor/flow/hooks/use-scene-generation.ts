@@ -10,10 +10,37 @@ import type { SceneConfig } from '../types';
 import { createBrowserClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 
+// Backend graceful error response type
+interface ValidationError {
+  type: 'error' | 'warning';
+  code: string;
+  message: string;
+  suggestions?: string[];
+  nodeId?: string;
+  nodeName?: string;
+}
+
+interface GracefulErrorResponse {
+  success: false;
+  errors: ValidationError[];
+  canRetry: boolean;
+}
+
+interface SuccessResponse {
+  success: true;
+  videoUrl?: string;
+  jobId?: string;
+  scene: unknown;
+  config: unknown;
+}
+
+type GenerationResponse = GracefulErrorResponse | SuccessResponse;
+
 export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const { toast } = useNotifications();
   const router = useRouter();
   const utils = api.useUtils();
@@ -30,94 +57,62 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     };
   }, []);
 
-  // Reset error state when nodes/edges change (user is actively working)
+  // Reset errors when nodes/edges change (user is actively working)
   useEffect(() => {
-    if (lastError) {
+    if (lastError || validationErrors.length > 0) {
       setLastError(null);
+      setValidationErrors([]);
     }
-  }, [nodes, edges, lastError]);
+  }, [nodes, edges, lastError, validationErrors.length]);
 
-  // Auth state monitoring with automatic session refresh
+  // Simplified auth state monitoring - remove complex interval logic that causes memory leaks
   useEffect(() => {
-    const supabase = createBrowserClient();
-    let authInterval: NodeJS.Timeout | null = null;
-    
-    const checkAndRefreshAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          console.warn('[AUTH] Session invalid, stopping auth checks');
-          if (authInterval) {
-            clearInterval(authInterval);
-            authInterval = null;
-          }
-          return false;
-        }
-        
-        // Refresh session if it expires soon (within 5 minutes)
-        const expiresAt = new Date(session.expires_at! * 1000);
-        const now = new Date();
-        const timeUntilExpiry = expiresAt.getTime() - now.getTime();
-        const fiveMinutes = 5 * 60 * 1000;
-        
-        if (timeUntilExpiry < fiveMinutes) {
-          console.log('[AUTH] Refreshing session preventively');
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.error('[AUTH] Session refresh failed:', refreshError);
-            if (authInterval) {
-              clearInterval(authInterval);
-              authInterval = null;
-            }
-            return false;
-          }
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('[AUTH] Auth check failed:', error);
-        if (authInterval) {
-          clearInterval(authInterval);
-          authInterval = null;
-        }
-        return false;
-      }
-    };
-
-    // Check auth immediately and then every 2 minutes if still authenticated
-    checkAndRefreshAuth().then((isAuthenticated) => {
-      if (isAuthenticated) {
-        authInterval = setInterval(async () => {
-          const stillAuthenticated = await checkAndRefreshAuth();
-          if (!stillAuthenticated && authInterval) {
-            clearInterval(authInterval);
-            authInterval = null;
-          }
-        }, 2 * 60 * 1000);
-      }
-    });
-    
+    // Remove complex auth monitoring that was causing memory leaks
+    // Basic auth check only when needed, no intervals
     return () => {
-      if (authInterval) {
-        clearInterval(authInterval);
-      }
+      // Cleanup any auth-related listeners if needed
     };
-  }, [router, toast]);
+  }, []);
 
   const generateScene = api.animation.generateScene.useMutation({
     onMutate: () => {
-      // Optimistic update - start loading immediately
       setIsGenerating(true);
       setLastError(null);
+      setValidationErrors([]);
       setVideoUrl(null);
       generationAttemptRef.current += 1;
       console.log(`[GENERATION] Starting attempt #${generationAttemptRef.current}`);
     },
-    onSuccess: (data: { jobId: string } | { videoUrl: string }) => {
+    onSuccess: (data: GenerationResponse) => {
       const currentAttempt = generationAttemptRef.current;
-      console.log(`[GENERATION] Success for attempt #${currentAttempt}`);
+      console.log(`[GENERATION] Success response for attempt #${currentAttempt}:`, data);
       
-      // Backward-compatible: support immediate videoUrl or new async jobId flow
+      // Handle graceful validation errors
+      if (!data.success) {
+        console.log(`[GENERATION] Validation errors detected:`, data.errors);
+        setIsGenerating(false);
+        setValidationErrors(data.errors);
+        
+        // Show user-friendly error notifications
+        const errorMessages = data.errors.filter(e => e.type === 'error');
+        const warningMessages = data.errors.filter(e => e.type === 'warning');
+        
+        if (errorMessages.length > 0) {
+          const primaryError = errorMessages[0];
+          toast.error('Cannot generate video', primaryError!.message);
+          setLastError(primaryError!.message);
+        }
+        
+        if (warningMessages.length > 0) {
+          warningMessages.forEach(warning => {
+            toast.warning('Warning', warning.message);
+          });
+        }
+        
+        return;
+      }
+      
+      // Handle successful generation
       if ('videoUrl' in data && data.videoUrl) {
         setVideoUrl(data.videoUrl);
         setIsGenerating(false);
@@ -135,10 +130,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       
       // Start polling job status with timeout and retry logic
       let pollAttempts = 0;
-      const maxPollAttempts = 60; // 60 attempts = ~90 seconds with backoff
+      const maxPollAttempts = 60;
       
       const poll = async () => {
-        // Check if this poll is still for the current generation attempt
         if (currentAttempt !== generationAttemptRef.current) {
           console.log(`[GENERATION] Cancelling poll for old attempt #${currentAttempt}`);
           return;
@@ -148,7 +142,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         console.log(`[GENERATION] Polling attempt ${pollAttempts}/${maxPollAttempts} for job ${jobId}`);
         
         try {
-          // Check auth before each poll
           const supabase = createBrowserClient();
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
@@ -168,7 +161,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
               setIsGenerating(false);
               toast.success('Video generated successfully!');
             }
-            return; // stop polling
+            return;
           }
           
           if (res.status === 'failed') {
@@ -180,13 +173,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
             return;
           }
           
-          // Continue polling if still processing
           if (pollAttempts < maxPollAttempts) {
-            // Exponential backoff: start at 1s, max 4s
             const delay = Math.min(1000 + (pollAttempts * 100), 4000);
             pollTimeoutRef.current = setTimeout(poll, delay);
           } else {
-            // Polling timeout
             if (currentAttempt === generationAttemptRef.current) {
               setIsGenerating(false);
               setLastError('Generation timeout - please try again');
@@ -196,7 +186,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         } catch (error) {
           console.error(`[GENERATION] Poll attempt ${pollAttempts} failed:`, error);
           
-          // Distinguish between network errors and auth errors
           const errorMessage = error instanceof Error ? error.message : String(error);
           if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('401')) {
             if (currentAttempt === generationAttemptRef.current) {
@@ -208,9 +197,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
             return;
           }
           
-          // For network/temporary errors, continue polling with backoff
           if (pollAttempts < maxPollAttempts) {
-            const delay = Math.min(2000 + (pollAttempts * 200), 8000); // Longer delay for errors
+            const delay = Math.min(2000 + (pollAttempts * 200), 8000);
             pollTimeoutRef.current = setTimeout(poll, delay);
           } else {
             if (currentAttempt === generationAttemptRef.current) {
@@ -222,7 +210,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
       };
       
-      // Start polling after a short delay
       pollTimeoutRef.current = setTimeout(poll, 500);
     },
     onError: (error: unknown) => {
@@ -260,7 +247,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       setLastError(genericMessage);
       toast.error('Generation failed', errorMessage || genericMessage);
     },
-    // Disable automatic retries to prevent infinite loops
     retry: false,
   });
 
@@ -289,11 +275,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   }, [nodes]);
 
   const handleGenerateScene = useCallback(async () => {
-    // Reset any previous errors
     setLastError(null);
+    setValidationErrors([]);
     
     try {
-      // Verify authentication first
       const supabase = createBrowserClient();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -308,7 +293,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       const config: Partial<SceneConfig> = {
         width: sceneData.width,
         height: sceneData.height,
-        // Coerce fps in case the select stored it as a string (e.g., '60')
         fps: typeof (sceneData as unknown as Record<string, unknown>).fps === 'string'
           ? Number((sceneData as unknown as Record<string, unknown>).fps)
           : (sceneData.fps as number),
@@ -332,7 +316,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         kind: 'data' as const,
       }));
 
-      // Mutation will handle the rest via onMutate/onSuccess/onError
       generateScene.mutate({ nodes: backendNodes, edges: backendEdges, config });
       
     } catch (error) {
@@ -356,7 +339,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }
   }, [videoUrl, toast]);
 
-  // Force reset function for when things get stuck
   const resetGeneration = useCallback(() => {
     console.log('[GENERATION] Force reset triggered');
     if (pollTimeoutRef.current) {
@@ -365,9 +347,29 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }
     setIsGenerating(false);
     setLastError(null);
+    setValidationErrors([]);
     generationAttemptRef.current = 0;
-    toast.info('Generation reset', 'You can now try generating again');
-  }, [toast]);
+    // No toast for reset - it's a frequent user action
+  }, []);
+
+  // Get detailed validation error information for UI
+  const getValidationSummary = useCallback(() => {
+    if (validationErrors.length === 0) return null;
+    
+    const errors = validationErrors.filter(e => e.type === 'error');
+    const warnings = validationErrors.filter(e => e.type === 'warning');
+    
+    return {
+      hasErrors: errors.length > 0,
+      hasWarnings: warnings.length > 0,
+      errorCount: errors.length,
+      warningCount: warnings.length,
+      errors,
+      warnings,
+      primaryError: errors[0] || null,
+      allSuggestions: [...errors, ...warnings].flatMap(e => e.suggestions || [])
+    };
+  }, [validationErrors]);
 
   return { 
     videoUrl, 
@@ -382,6 +384,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     lastError,
     resetGeneration,
     isGenerating,
+    validationErrors,
+    getValidationSummary,
   } as const;
 }
 

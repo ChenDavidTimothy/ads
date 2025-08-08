@@ -1,4 +1,4 @@
-// src/components/editor/flow/hooks/useFlowGraph.ts
+// src/components/editor/flow/hooks/useFlowGraph.ts - Fixed React render errors
 import { useCallback, useMemo, useState } from 'react';
 import { useEdgesState, useNodesState, type Edge, type Node } from 'reactflow';
 import { getDefaultNodeData } from '@/lib/defaults/nodes';
@@ -40,7 +40,7 @@ export function useFlowGraph() {
   );
 
   const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
-    // CRITICAL FIX: Handle edge cleanup synchronously for merge nodes to prevent race conditions
+    // Handle edge cleanup synchronously for merge nodes to prevent race conditions
     if ('inputPortCount' in newData) {
       const updatedNode = nodes.find(n => n.data.identifier.id === nodeId);
       if (updatedNode?.type === 'merge') {
@@ -59,7 +59,7 @@ export function useFlowGraph() {
           )
         );
         
-        // Clean up edges synchronously
+        // Clean up edges synchronously without toast notification
         setEdges((eds) => {
           const invalidEdges = eds.filter(edge => 
             edge.target === updatedNode.id && 
@@ -68,15 +68,13 @@ export function useFlowGraph() {
           );
           
           if (invalidEdges.length > 0) {
-            toast.success(
-              'Port cleanup completed',
-              `Removed ${invalidEdges.length} connection(s) to ports that no longer exist`
-            );
-            
-            // Clean up tracking for removed edges
+            // Clean up tracking for removed edges silently
             invalidEdges.forEach(edge => {
               flowTracker.removeConnection(edge.id);
             });
+            
+            // Console log for debugging, but no user toast for frequent operations
+            console.log(`[CLEANUP] Removed ${invalidEdges.length} invalid connection(s) during port reconfiguration`);
           }
           
           return eds.filter(edge => 
@@ -98,7 +96,7 @@ export function useFlowGraph() {
           : node
       )
     );
-  }, [setNodes, setEdges, nodes, flowTracker, toast]);
+  }, [setNodes, setEdges, nodes, flowTracker]);
 
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
@@ -197,5 +195,3 @@ export function useFlowGraph() {
     cleanupInvalidMergeEdges,
   } as const;
 }
-
-

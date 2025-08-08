@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Refactored with robust error handling
+// src/components/editor/flow-editor.tsx - Updated to use graceful validation
 "use client";
 
 import { useCallback, useMemo } from "react";
@@ -60,6 +60,7 @@ export function FlowEditor() {
     lastError,
     resetGeneration,
     isGenerating,
+    getValidationSummary,
   } = useSceneGeneration(nodes, edges);
 
   const handleSaveTimeline = useCallback((duration: number, tracks: AnimationTrack[]) => {
@@ -98,6 +99,9 @@ export function FlowEditor() {
     return null;
   }, [nodes, edges]);
 
+  // Get validation summary for enhanced error display
+  const validationSummary = getValidationSummary();
+
   return (
     <div className="flex h-full">
       <NodePalette onAddNode={handleAddNode} />
@@ -126,6 +130,7 @@ export function FlowEditor() {
           hasVideo={Boolean(videoUrl)}
           lastError={lastError}
           onResetGeneration={resetGeneration}
+          validationSummary={validationSummary}
         />
 
         <VideoPreview videoUrl={videoUrl} />

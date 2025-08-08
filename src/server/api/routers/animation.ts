@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts - Registry-aware animation router with proper ID handling
+// src/server/api/routers/animation.ts - Graceful error handling with comprehensive validation
 import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
@@ -39,7 +39,7 @@ const reactFlowNodeSchema = z.object({
   data: z.unknown(),
 });
 
-// ReactFlow Edge schema (unchanged)
+// ReactFlow Edge schema
 const reactFlowEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
@@ -64,78 +64,209 @@ type ValidateSceneInput = z.infer<typeof validateSceneInputSchema>;
 type ReactFlowNodeInput = z.infer<typeof reactFlowNodeSchema>;
 type ReactFlowEdgeInput = z.infer<typeof reactFlowEdgeSchema>;
 
+// Validation result type for graceful error handling
+interface ValidationResult {
+  success: boolean;
+  errors: Array<{
+    type: 'error' | 'warning';
+    code: string;
+    message: string;
+    suggestions?: string[];
+    nodeId?: string;
+    nodeName?: string;
+  }>;
+}
+
+// User-friendly error translation
+function translateDomainError(error: unknown): { message: string; suggestions: string[] } {
+  if (!isDomainError(error)) {
+    return {
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      suggestions: ['Please check your node configuration and try again']
+    };
+  }
+
+  switch (error.code) {
+    case 'ERR_SCENE_REQUIRED':
+      return {
+        message: 'A Scene node is required to generate video',
+        suggestions: [
+          'Add a Scene node from the Output section in the node palette',
+          'Connect your animation flow to the Scene node'
+        ]
+      };
+
+    case 'ERR_TOO_MANY_SCENES':
+      return {
+        message: 'Only one Scene node is allowed per workspace',
+        suggestions: [
+          'Remove extra Scene nodes',
+          'Keep only one Scene node as the final output'
+        ]
+      };
+
+    case 'ERR_INVALID_CONNECTION':
+      return {
+        message: error.message || 'Invalid connection detected',
+        suggestions: [
+          'Check that port types are compatible',
+          'Verify merge nodes have unique connections per input port',
+          'Ensure all connected nodes exist'
+        ]
+      };
+
+    case 'ERR_MISSING_INSERT_CONNECTION':
+      return {
+        message: error.message || 'Geometry objects need timing information',
+        suggestions: [
+          'Connect geometry nodes through Insert nodes to control when they appear',
+          'Insert nodes specify when objects become visible in the timeline'
+        ]
+      };
+
+    case 'ERR_MULTIPLE_INSERT_NODES_IN_SERIES':
+      return {
+        message: error.message || 'Multiple Insert nodes detected in the same path',
+        suggestions: [
+          'Objects can only have one appearance time',
+          'Use separate paths for different timing',
+          'Use a Merge node to combine objects with different timing'
+        ]
+      };
+
+    case 'ERR_DUPLICATE_OBJECT_IDS':
+      return {
+        message: error.message || 'Objects reach the same destination through multiple paths',
+        suggestions: [
+          'Add a Merge node to combine objects before they reach non-merge nodes',
+          'Merge nodes resolve conflicts when identical objects arrive from different paths',
+          'Check your flow for branching that reconnects later'
+        ]
+      };
+
+    case 'ERR_NODE_VALIDATION_FAILED':
+      return {
+        message: 'Some nodes have invalid properties',
+        suggestions: [
+          'Check the Properties panel for validation errors',
+          'Verify all required fields are filled',
+          'Ensure numeric values are within valid ranges'
+        ]
+      };
+
+    case 'ERR_SCENE_VALIDATION_FAILED':
+      return {
+        message: 'Scene configuration has issues',
+        suggestions: [
+          'Check animation duration and frame limits',
+          'Verify scene properties in the Properties panel',
+          'Ensure total frames don\'t exceed system limits'
+        ]
+      };
+
+    case 'ERR_CIRCULAR_DEPENDENCY':
+      return {
+        message: 'Circular connections detected in your node graph',
+        suggestions: [
+          'Remove connections that create loops',
+          'Ensure data flows in one direction from geometry to scene',
+          'Check for accidentally connected output back to input'
+        ]
+      };
+
+    default:
+      return {
+        message: error.message || 'Validation error occurred',
+        suggestions: ['Please review your node setup and connections']
+      };
+  }
+}
+
 export const animationRouter = createTRPCRouter({
-  // Main scene-based endpoint - registry-aware
+  // Main scene generation with comprehensive graceful validation
   generateScene: protectedProcedure
     .input(generateSceneInputSchema)
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
-        // CRITICAL FIX: Convert React Flow nodes to backend format with proper ID mapping
+        // Convert React Flow nodes to backend format with proper ID mapping
         const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id, // Keep React Flow ID for edge references
+          id: n.id,
           type: n.type,
           position: n.position,
           data: n.data ?? {},
         }));
 
-        // CRITICAL FIX: Convert React Flow edges to backend format with identifier ID mapping
+        // Convert React Flow edges to backend format with identifier ID mapping
         const nodeIdMap = new Map<string, string>();
         input.nodes.forEach(n => {
           if (n.data && typeof n.data === 'object' && n.data !== null) {
             const identifier = (n.data as { identifier?: { id?: string } }).identifier;
             if (identifier?.id) {
-              nodeIdMap.set(n.id, identifier.id); // React Flow ID -> Identifier ID
+              nodeIdMap.set(n.id, identifier.id);
             }
           }
         });
 
         const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
-          // CRITICAL: Convert to identifier IDs for backend processing
           source: nodeIdMap.get(e.source) ?? e.source,
           target: nodeIdMap.get(e.target) ?? e.target,
           sourceHandle: e.sourceHandle ?? undefined,
           targetHandle: e.targetHandle ?? undefined,
         }));
 
-        // Registry-aware node validation
-        const validationResult = validateInputNodes(backendNodes);
-        if (!validationResult.valid) {
-          throw new NodeValidationError(validationResult.errors);
+        // Registry-aware node validation with graceful error collection
+        const nodeValidationResult = validateInputNodesGracefully(backendNodes);
+        if (!nodeValidationResult.success) {
+          return {
+            success: false,
+            errors: nodeValidationResult.errors,
+            canRetry: true
+          };
         }
 
-        // Validate connections by port compatibility
-        const connectionErrors: string[] = [];
-        for (const edge of input.edges) {
-          const source = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.source);
-          const target = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.target);
-          if (!source || !target) continue;
-          const sourceDef = getNodeDefinition(source.type ?? "");
-          const targetDef = getNodeDefinition(target.type ?? "");
-          if (!sourceDef || !targetDef) continue;
-          // Only validate data edges for port types; control edges will be used by a future scheduler
-          if ((edge as { kind?: 'data' | 'control' }).kind === 'control') continue;
-          const sourcePort = sourceDef.ports.outputs.find(p => p.id === edge.sourceHandle);
-          const targetPort = targetDef.ports.inputs.find(p => p.id === edge.targetHandle);
-          if (sourcePort && targetPort && !arePortsCompatible(sourcePort.type, targetPort.type)) {
-            connectionErrors.push(`Edge ${edge.id}: ${source.type}.${edge.sourceHandle} (${sourcePort.type}) → ${target.type}.${edge.targetHandle} (${targetPort.type}) is incompatible`);
-          }
-        }
-        if (connectionErrors.length > 0) {
-          throw new NodeValidationError(connectionErrors);
+        // Connection validation with graceful error handling
+        const connectionValidationResult = validateConnectionsGracefully(input.nodes, input.edges);
+        if (!connectionValidationResult.success) {
+          return {
+            success: false,
+            errors: connectionValidationResult.errors,
+            canRetry: true
+          };
         }
 
-        // Use registry-aware ExecutionEngine with proper ID mapping
+        // Comprehensive flow validation with graceful error handling
+        const flowValidationResult = await validateFlowGracefully(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges
+        );
+        if (!flowValidationResult.success) {
+          return {
+            success: false,
+            errors: flowValidationResult.errors,
+            canRetry: true
+          };
+        }
+
+        // If we get here, validation passed - proceed with generation
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlow(
           backendNodes as ReactFlowNode<NodeData>[],
           backendEdges,
         );
 
-        // Registry-aware scene node lookup
         const sceneNode = findSceneNode(backendNodes);
         if (!sceneNode) {
-          throw new SceneValidationError(["Scene node is required"]);
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_SCENE_REQUIRED',
+              message: 'Scene node is required',
+              suggestions: ['Add a Scene node from the Output section']
+            }],
+            canRetry: true
+          };
         }
 
         const sceneData = sceneNode.data as SceneNodeData;
@@ -175,9 +306,23 @@ export const animationRouter = createTRPCRouter({
           videoCrf: sceneData.videoCrf,
           ...input.config,
         };
-        // Enforce total frame cap: width/height/fps already bounded; cap duration as well
+
+        // Enforce total frame cap
         if (config.fps * totalDuration > 1800) {
-          throw new SceneValidationError([`Total frames exceed limit: ${config.fps * totalDuration} > 1800`]);
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_SCENE_VALIDATION_FAILED',
+              message: `Animation too long: ${config.fps * totalDuration} frames exceeds limit of 1800`,
+              suggestions: [
+                'Reduce scene duration',
+                'Lower frame rate',
+                'Split into multiple shorter animations'
+              ]
+            }],
+            canRetry: true
+          };
         }
 
         // Persist job row first
@@ -188,13 +333,21 @@ export const animationRouter = createTRPCRouter({
           .insert({ user_id: ctx.user!.id, status: 'queued', payload })
           .select('id')
           .single();
+        
         if (insErr || !jobRow) {
-          throw (insErr ?? new Error('Failed to create job'));
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_RENDER_QUEUE_FAILED',
+              message: 'Failed to queue render job',
+              suggestions: ['Please try again', 'Check your internet connection']
+            }],
+            canRetry: true
+          };
         }
 
-        // Worker now runs in separate process; optionally we could verify availability via a heartbeat
         await ensureWorkerReady();
-        // Submit to queue (non-blocking)
         await renderQueue.enqueueOnly({
           scene,
           config,
@@ -202,12 +355,12 @@ export const animationRouter = createTRPCRouter({
           jobId: jobRow.id,
         });
 
-        // Optimized: wait briefly for NOTIFY to avoid client latency, but keep request bounded
-        // Default to 500ms, configurable via RENDER_JOB_INLINE_WAIT_MS (clamped 0-5000ms)
+        // Wait briefly for immediate completion
         const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
         const parsed = Number(inlineWaitMsRaw);
         const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
         const notify = await waitForRenderJobEvent({ jobId: jobRow.id, timeoutMs: inlineWaitMs });
+        
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return {
             success: true,
@@ -216,113 +369,100 @@ export const animationRouter = createTRPCRouter({
             config,
           } as const;
         }
-        // Fall back to jobId if not immediately ready
+        
         return {
           success: true,
           jobId: jobRow.id,
           scene,
           config,
         } as const;
+
       } catch (error) {
-        // Log server-side with structured logger
+        // Log server-side error
         logger.domain('Scene generation failed', error, {
           path: 'animation.generateScene',
           userId: ctx.user?.id
         });
 
-        // Map domain errors to TRPC typed errors for the client
-        if (isDomainError(error)) {
-          throw new Error(error.message);
-        }
-
-        // Unknown/system error
-        throw (error instanceof Error ? error : new Error('Scene animation generation failed'));
+        // Graceful error response
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{
+            type: 'error' as const,
+            code: isDomainError(error) ? error.code : 'ERR_UNKNOWN',
+            message: translated.message,
+            suggestions: translated.suggestions
+          }],
+          canRetry: true
+        };
       }
     }),
 
-  // Registry-aware scene validation endpoint
+  // Enhanced validation endpoint with graceful error reporting
   validateScene: protectedProcedure
     .input(validateSceneInputSchema)
     .query(async ({ input }: { input: ValidateSceneInput }) => {
-      try {
-        // CRITICAL FIX: Convert React Flow format to backend format
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
+      const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data ?? {},
+      }));
 
-        const nodeIdMap = new Map<string, string>();
-        input.nodes.forEach(n => {
-          if (n.data && typeof n.data === 'object' && n.data !== null) {
-            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
-            if (identifier?.id) {
-              nodeIdMap.set(n.id, identifier.id);
-            }
+      const nodeIdMap = new Map<string, string>();
+      input.nodes.forEach(n => {
+        if (n.data && typeof n.data === 'object' && n.data !== null) {
+          const identifier = (n.data as { identifier?: { id?: string } }).identifier;
+          if (identifier?.id) {
+            nodeIdMap.set(n.id, identifier.id);
           }
-        });
-
-        const backendEdges = input.edges.map((e) => ({
-          id: e.id,
-          source: nodeIdMap.get(e.source) ?? e.source,
-          target: nodeIdMap.get(e.target) ?? e.target,
-          sourceHandle: e.sourceHandle ?? undefined,
-          targetHandle: e.targetHandle ?? undefined,
-        }));
-
-        // Registry-aware node validation
-        const nodeValidationResult = validateInputNodes(backendNodes);
-        if (!nodeValidationResult.valid) {
-          return { valid: false, errors: nodeValidationResult.errors };
         }
+      });
 
-        // Registry-aware execution validation
-        const engine = new ExecutionEngine();
-        const executionContext = await engine.executeFlow(
+      const backendEdges = input.edges.map((e) => ({
+        id: e.id,
+        source: nodeIdMap.get(e.source) ?? e.source,
+        target: nodeIdMap.get(e.target) ?? e.target,
+        sourceHandle: e.sourceHandle ?? undefined,
+        targetHandle: e.targetHandle ?? undefined,
+      }));
+
+      const allErrors: ValidationResult['errors'] = [];
+
+      // Node validation
+      const nodeValidation = validateInputNodesGracefully(backendNodes);
+      allErrors.push(...nodeValidation.errors);
+
+      // Connection validation
+      const connectionValidation = validateConnectionsGracefully(input.nodes, input.edges);
+      allErrors.push(...connectionValidation.errors);
+
+      // Flow validation
+      try {
+        const flowValidation = await validateFlowGracefully(
           backendNodes as ReactFlowNode<NodeData>[],
-          backendEdges,
+          backendEdges
         );
-
-        // Registry-aware scene node validation
-        const sceneNode = findSceneNode(backendNodes);
-        if (!sceneNode) {
-          return { valid: false, errors: ["Scene node is required"] };
-        }
-
-        const sceneData = sceneNode.data as SceneNodeData;
-        const maxAnimationTime =
-          executionContext.sceneAnimations.length > 0
-            ? Math.max(
-                ...executionContext.sceneAnimations.map(
-                  (anim) => anim.startTime + anim.duration,
-                ),
-              )
-            : 0;
-        const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
-
-        const scene: AnimationScene = {
-          duration: totalDuration,
-          objects: executionContext.sceneObjects,
-          animations: executionContext.sceneAnimations,
-          background: { color: sceneData.backgroundColor },
-        };
-
-        const errors = validateScene(scene);
-        return { valid: errors.length === 0, errors };
+        allErrors.push(...flowValidation.errors);
       } catch (error) {
-        return {
-          valid: false,
-          errors: [
-            error instanceof Error ? error.message : "Unknown validation error",
-          ],
-        };
+        const translated = translateDomainError(error);
+        allErrors.push({
+          type: 'error',
+          code: isDomainError(error) ? error.code : 'ERR_VALIDATION_FAILED',
+          message: translated.message,
+          suggestions: translated.suggestions
+        });
       }
+
+      return {
+        valid: allErrors.filter(e => e.type === 'error').length === 0,
+        errors: allErrors
+      };
     }),
 
-  // Registry information endpoints
+  // Registry information endpoints (unchanged)
   getNodeDefinitions: publicProcedure.query(() => {
-    // Future: Return registry definitions for dynamic UI generation
     const geometryNodes = getNodesByCategory('geometry');
     const timingNodes = getNodesByCategory('timing');
     const logicNodes = getNodesByCategory('logic');
@@ -337,7 +477,7 @@ export const animationRouter = createTRPCRouter({
       output: outputNodes,
     };
   }),
-  // Minimal job status endpoint used by the client to retrieve the final URL
+
   getRenderJobStatus: protectedProcedure
     .input(z.object({ jobId: z.string() }))
     .query(async ({ input, ctx }: { input: { jobId: string }; ctx: TRPCContext }) => {
@@ -351,7 +491,7 @@ export const animationRouter = createTRPCRouter({
       if (error) {
         throw new Error(error.message);
       }
-      // If completed, return quickly; otherwise try a short wait for NOTIFY (reduces client polling jitter)
+      
       if (data?.status !== 'completed' || !data?.output_url) {
         const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
         if (notify && notify.status === 'completed' && notify.publicUrl) {
@@ -371,7 +511,6 @@ export const animationRouter = createTRPCRouter({
       return definition;
     }),
 
-  // Utility endpoints (unchanged)
   getDefaultSceneConfig: publicProcedure.query(() => {
       return DEFAULT_SCENE_CONFIG;
   }),
@@ -395,42 +534,132 @@ export const animationRouter = createTRPCRouter({
   }),
 });
 
-// Registry-aware helper functions
-function validateInputNodes(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
+// Graceful validation helper functions
+function validateInputNodesGracefully(
+  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>
+): ValidationResult {
+  const errors: ValidationResult['errors'] = [];
   
   for (const node of nodes) {
     if (!node.type) {
-      errors.push(`Node ${node.id} has no type specified`);
+      errors.push({
+        type: 'error',
+        code: 'ERR_MISSING_NODE_TYPE',
+        message: `Node ${node.id} has no type specified`,
+        nodeId: node.id
+      });
       continue;
     }
     
-    // Validate against registry
     const definition = getNodeDefinition(node.type);
     if (!definition) {
-      errors.push(`Unknown node type: ${node.type}`);
+      errors.push({
+        type: 'error',
+        code: 'ERR_UNKNOWN_NODE_TYPE',
+        message: `Unknown node type: ${node.type}`,
+        nodeId: node.id
+      });
       continue;
     }
     
-    // Validate properties against generated Zod schema
     const schema = buildZodSchemaFromProperties(definition.properties.properties);
     const result = schema.safeParse(node.data);
     if (!result.success) {
       const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
-      errors.push(`Node ${node.id} property validation failed: ${issues}`);
+      errors.push({
+        type: 'error',
+        code: 'ERR_NODE_PROPERTY_VALIDATION',
+        message: `Node property validation failed: ${issues}`,
+        nodeId: node.id,
+        suggestions: ['Check the Properties panel for this node', 'Verify all required fields are filled']
+      });
     }
   }
   
-  return { valid: errors.length === 0, errors };
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
 }
 
-function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>): typeof nodes[0] | null {
-  // Registry-aware scene node detection
+function validateConnectionsGracefully(
+  nodes: ReactFlowNodeInput[], 
+  edges: ReactFlowEdgeInput[]
+): ValidationResult {
+  const errors: ValidationResult['errors'] = [];
+  
+  for (const edge of edges) {
+    const source = nodes.find((n) => n.id === edge.source);
+    const target = nodes.find((n) => n.id === edge.target);
+    
+    if (!source || !target) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Connection references non-existent nodes: ${edge.source} -> ${edge.target}`,
+        suggestions: ['Remove invalid connections', 'Ensure all connected nodes exist']
+      });
+      continue;
+    }
+    
+    const sourceDef = getNodeDefinition(source.type ?? "");
+    const targetDef = getNodeDefinition(target.type ?? "");
+    
+    if (!sourceDef || !targetDef) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Unknown node types in connection: ${source.type} -> ${target.type}`,
+        suggestions: ['Check node types are valid']
+      });
+      continue;
+    }
+    
+    if ((edge as { kind?: 'data' | 'control' }).kind === 'control') continue;
+    
+    const sourcePort = sourceDef.ports.outputs.find(p => p.id === edge.sourceHandle);
+    const targetPort = targetDef.ports.inputs.find(p => p.id === edge.targetHandle);
+    
+    if (sourcePort && targetPort && !arePortsCompatible(sourcePort.type, targetPort.type)) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Port types incompatible: ${sourcePort.type} → ${targetPort.type}`,
+        suggestions: [
+          'Connect compatible port types',
+          'Check the node documentation for port compatibility'
+        ]
+      });
+    }
+  }
+  
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
+}
+
+async function validateFlowGracefully(
+  nodes: ReactFlowNode<NodeData>[],
+  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>
+): Promise<ValidationResult> {
+  const errors: ValidationResult['errors'] = [];
+  
+  try {
+    const engine = new ExecutionEngine();
+    await engine.executeFlow(nodes, edges);
+  } catch (error) {
+    const translated = translateDomainError(error);
+    errors.push({
+      type: 'error',
+      code: isDomainError(error) ? error.code : 'ERR_FLOW_VALIDATION_FAILED',
+      message: translated.message,
+      suggestions: translated.suggestions
+    });
+  }
+  
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
+}
+
+function findSceneNode(
+  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>
+): typeof nodes[0] | null {
   const outputNodes = getNodesByCategory('output');
   const sceneNodeTypes = outputNodes.filter(def => def.type === 'scene').map(def => def.type);
   
   return nodes.find(node => node.type && sceneNodeTypes.includes(node.type)) ?? null;
 }
-
-// Future: Registry-aware node capability detection
-// (helper stubs removed as they were unused and triggered lints)

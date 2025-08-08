@@ -1,5 +1,25 @@
-// src/components/editor/flow/components/actions-toolbar.tsx
+// src/components/editor/flow/components/actions-toolbar.tsx - Enhanced with validation error display
 import { Button } from '@/components/ui/button';
+
+interface ValidationError {
+  type: 'error' | 'warning';
+  code: string;
+  message: string;
+  suggestions?: string[];
+  nodeId?: string;
+  nodeName?: string;
+}
+
+interface ValidationSummary {
+  hasErrors: boolean;
+  hasWarnings: boolean;
+  errorCount: number;
+  warningCount: number;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+  primaryError: ValidationError | null;
+  allSuggestions: string[];
+}
 
 interface Props {
   onGenerate: () => void;
@@ -10,6 +30,7 @@ interface Props {
   hasVideo: boolean;
   lastError?: string | null;
   onResetGeneration?: () => void;
+  validationSummary?: ValidationSummary | null;
 }
 
 export function ActionsToolbar({ 
@@ -20,21 +41,22 @@ export function ActionsToolbar({
   onDownload, 
   hasVideo,
   lastError,
-  onResetGeneration
+  onResetGeneration,
+  validationSummary
 }: Props) {
   const getGenerateButtonText = () => {
     if (isGenerating) return 'Generating...';
-    if (lastError) return 'Try Again';
+    if (lastError || validationSummary?.hasErrors) return 'Fix Issues & Try Again';
     return 'Generate Video';
   };
 
   const getGenerateButtonVariant = () => {
-    if (lastError) return 'danger' as const;
+    if (lastError || validationSummary?.hasErrors) return 'danger' as const;
     return 'success' as const;
   };
 
   return (
-    <div className="absolute top-4 right-4 space-y-2 max-w-64">
+    <div className="absolute top-4 right-4 space-y-2 max-w-80">
       <Button 
         onClick={onGenerate} 
         disabled={!canGenerate || isGenerating} 
@@ -45,8 +67,79 @@ export function ActionsToolbar({
         {getGenerateButtonText()}
       </Button>
 
-      {/* Error display with recovery options */}
-      {lastError && (
+      {/* Enhanced validation error display */}
+      {validationSummary?.hasErrors && (
+        <div className="text-xs text-red-400 bg-red-900/20 border border-red-800 p-3 rounded space-y-3">
+          <div className="font-medium flex items-center justify-between">
+            <span>Validation Errors ({validationSummary.errorCount})</span>
+            {onResetGeneration && (
+              <Button 
+                onClick={onResetGeneration}
+                variant="ghost" 
+                size="sm"
+                className="text-xs text-red-300 hover:text-red-200 border border-red-800 hover:border-red-700 px-2 py-1"
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+
+          {/* Primary error */}
+          {validationSummary.primaryError && (
+            <div className="space-y-2">
+              <div className="text-red-300 font-medium">
+                {validationSummary.primaryError.message}
+              </div>
+              
+              {/* Suggestions for primary error */}
+              {validationSummary.primaryError.suggestions && validationSummary.primaryError.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-red-400 text-xs font-medium">How to fix:</div>
+                  <ul className="text-red-300 text-xs space-y-1">
+                    {validationSummary.primaryError.suggestions.map((suggestion, index) => (
+                      <li key={index} className="flex items-start gap-1">
+                        <span className="text-red-400">•</span>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Additional errors count */}
+          {validationSummary.errorCount > 1 && (
+            <div className="text-xs text-red-400 pt-2 border-t border-red-800">
+              + {validationSummary.errorCount - 1} more error{validationSummary.errorCount - 1 !== 1 ? 's' : ''} detected
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Validation warnings display */}
+      {validationSummary?.hasWarnings && !validationSummary.hasErrors && (
+        <div className="text-xs text-yellow-400 bg-yellow-900/20 border border-yellow-800 p-3 rounded space-y-2">
+          <div className="font-medium">
+            Warnings ({validationSummary.warningCount})
+          </div>
+          
+          {validationSummary.warnings.slice(0, 2).map((warning, index) => (
+            <div key={index} className="text-yellow-300">
+              {warning.message}
+            </div>
+          ))}
+          
+          {validationSummary.warningCount > 2 && (
+            <div className="text-xs text-yellow-400">
+              + {validationSummary.warningCount - 2} more warning{validationSummary.warningCount - 2 !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Legacy error display (fallback) */}
+      {lastError && !validationSummary?.hasErrors && (
         <div className="text-xs text-red-400 bg-red-900/20 border border-red-800 p-3 rounded space-y-2">
           <div className="font-medium">Error:</div>
           <div className="text-red-300">{lastError}</div>
@@ -63,8 +156,8 @@ export function ActionsToolbar({
         </div>
       )}
 
-      {/* Hint display when no error */}
-      {!lastError && !canGenerate && hint && (
+      {/* Hint display when no errors */}
+      {!lastError && !validationSummary?.hasErrors && !canGenerate && hint && (
         <div className="text-xs text-yellow-400 bg-yellow-900/20 border border-yellow-800 p-3 rounded">
           <div className="font-medium mb-1">Setup Required:</div>
           <div className="text-yellow-300">{hint}</div>
@@ -111,13 +204,14 @@ export function ActionsToolbar({
         </div>
       )}
 
-      {/* Help text */}
-      {!isGenerating && !lastError && (
+      {/* Enhanced help text with validation awareness */}
+      {!isGenerating && !lastError && !validationSummary?.hasErrors && (
         <div className="text-xs text-gray-500 bg-gray-800/50 p-2 rounded">
           <div className="font-medium mb-1">Tips:</div>
           <ul className="space-y-1 text-gray-400">
             <li>• Connect geometry → insert → scene</li>
             <li>• Use merge for duplicate objects</li>
+            <li>• All validation happens at generation time</li>
             <li>• Check auth status if stuck</li>
           </ul>
         </div>
