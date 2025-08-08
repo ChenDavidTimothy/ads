@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useEdgesState, useNodesState, type Edge, type Node } from 'reactflow';
 import { getDefaultNodeData } from '@/lib/defaults/nodes';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { getNodeDefinition, getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import type { NodeData, NodeType } from '@/shared/types';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -14,12 +14,83 @@ export function useFlowGraph() {
   const [flowTracker] = useState(() => new FlowTracker());
   const { toast } = useNotifications();
 
+  // Unified edge validation function for merge nodes
+  const cleanupInvalidMergeEdges = useCallback((currentNodes: Node<NodeData>[], currentEdges: Edge[]) => {
+    const edgesToRemove: Edge[] = [];
+    
+    currentNodes.forEach(node => {
+      if (node.type === 'merge') {
+        const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', node.data);
+        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
+        
+        currentEdges.forEach(edge => {
+          if (edge.target === node.id && edge.targetHandle && !validPortIds.has(edge.targetHandle)) {
+            edgesToRemove.push(edge);
+          }
+        });
+      }
+    });
+    
+    return currentEdges.filter(edge => !edgesToRemove.includes(edge));
+  }, []);
+
   const selectedNode = useMemo(
     () => nodes.find((node) => node.data.identifier.id === selectedNodeId),
     [nodes, selectedNodeId]
   );
 
   const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
+    // CRITICAL FIX: Handle edge cleanup synchronously for merge nodes to prevent race conditions
+    if ('inputPortCount' in newData) {
+      const updatedNode = nodes.find(n => n.data.identifier.id === nodeId);
+      if (updatedNode?.type === 'merge') {
+        const updatedNodeData = { ...updatedNode.data, ...newData };
+        
+        // Get the new dynamic port definition
+        const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', updatedNodeData);
+        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
+        
+        // Update both nodes and edges in a single synchronous operation
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.data.identifier.id === nodeId
+              ? { ...node, data: { ...node.data, ...newData } }
+              : node
+          )
+        );
+        
+        // Clean up edges synchronously
+        setEdges((eds) => {
+          const invalidEdges = eds.filter(edge => 
+            edge.target === updatedNode.id && 
+            edge.targetHandle && 
+            !validPortIds.has(edge.targetHandle)
+          );
+          
+          if (invalidEdges.length > 0) {
+            toast.success(
+              'Port cleanup completed',
+              `Removed ${invalidEdges.length} connection(s) to ports that no longer exist`
+            );
+            
+            // Clean up tracking for removed edges
+            invalidEdges.forEach(edge => {
+              flowTracker.removeConnection(edge.id);
+            });
+          }
+          
+          return eds.filter(edge => 
+            !(edge.target === updatedNode.id && 
+              edge.targetHandle && 
+              !validPortIds.has(edge.targetHandle))
+          );
+        });
+        
+        return; // Early return to avoid duplicate node update
+      }
+    }
+    
+    // Regular node data update for non-merge nodes or non-port-count changes
     setNodes((nds) =>
       nds.map((node) =>
         node.data.identifier.id === nodeId
@@ -27,7 +98,7 @@ export function useFlowGraph() {
           : node
       )
     );
-  }, [setNodes]);
+  }, [setNodes, setEdges, nodes, flowTracker, toast]);
 
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
@@ -123,6 +194,7 @@ export function useFlowGraph() {
     onEdgesDelete,
     handleAddNode,
     flowTracker,
+    cleanupInvalidMergeEdges,
   } as const;
 }
 

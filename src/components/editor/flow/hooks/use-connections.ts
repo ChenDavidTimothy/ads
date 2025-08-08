@@ -15,6 +15,22 @@ export function useConnections(
 ) {
   const { toast } = useNotifications();
 
+  // Helper function to get clean, current edges for a merge node
+  const getCurrentValidEdgesForMergeNode = useCallback((nodeId: string, currentEdges: Edge[]) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || node.type !== 'merge') return currentEdges;
+    
+    const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', node.data);
+    const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
+    
+    // Return only edges that connect to currently valid ports
+    return currentEdges.filter(edge => 
+      edge.target === nodeId && 
+      edge.targetHandle && 
+      validPortIds.has(edge.targetHandle)
+    );
+  }, [nodes]);
+
   const wouldConnectionCreateDuplicateObjectIds = useCallback((
     sourceNodeId: string,
     targetNodeId: string,
@@ -58,9 +74,14 @@ export function useConnections(
 
     // CRITICAL FIX: Block multiple edges to same input port for merge nodes
     if (targetNode.type === 'merge') {
-      const existingConnectionToSamePort = edges.find(edge => 
-        edge.target === targetNode.id && edge.targetHandle === params.targetHandle
+      // Get only the current valid edges for this merge node (filters out stale edges)
+      const currentValidEdges = getCurrentValidEdgesForMergeNode(targetNode.id, edges);
+      
+      // Check if the target port already has a connection among the valid edges
+      const existingConnectionToSamePort = currentValidEdges.find(edge => 
+        edge.targetHandle === params.targetHandle
       );
+      
       if (existingConnectionToSamePort) {
         toast.error(
           'Connection blocked - Multiple edges to same port',
