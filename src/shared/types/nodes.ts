@@ -62,6 +62,11 @@ export interface FilterNodeData extends BaseNodeData {
   selectedObjectIds: string[];
 }
 
+// Merge node data
+export interface MergeNodeData extends BaseNodeData {
+  inputPortCount: number;
+}
+
 // Animation track properties - aligned with API schema
 export interface MoveTrackProperties {
   from: Point2D;
@@ -141,6 +146,6 @@ export interface SceneNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | AnimationNodeData | SceneNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | AnimationNodeData | SceneNodeData;
 
 // NodeType is derived from the registry (definitions)

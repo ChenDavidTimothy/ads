@@ -123,6 +123,7 @@ export function getNodeComponentMapping() {
     RectangleNode,
     InsertNode,
     FilterNode,
+    MergeNode,
     AnimationNode,
     SceneNode
   } = require('@/components/editor/nodes');
@@ -141,7 +142,8 @@ export function getNodeComponentMapping() {
         mapping[nodeType] = InsertNode;
         break;
       case 'logic':
-        mapping[nodeType] = FilterNode;
+        if (nodeType === 'filter') mapping[nodeType] = FilterNode;
+        else if (nodeType === 'merge') mapping[nodeType] = MergeNode;
         break;
       case 'animation':
         mapping[nodeType] = AnimationNode;
@@ -176,6 +178,27 @@ export function getNodeRenderConfig(nodeType: string) {
 export function getNodeExecutionConfig(nodeType: string) {
   const definition = getNodeDefinition(nodeType);
   return definition?.execution;
+}
+
+// Dynamic port generation for nodes with configurable ports
+export function getNodeDefinitionWithDynamicPorts(nodeType: string, nodeData?: Record<string, unknown>): NodeDefinition | undefined {
+  const baseDefinition = getNodeDefinition(nodeType);
+  if (!baseDefinition || nodeType !== 'merge') return baseDefinition;
+  
+  const portCount = Number(nodeData?.inputPortCount) || 2;
+  const dynamicInputs = Array.from({ length: portCount }, (_, i) => ({
+    id: `input${i + 1}`,
+    type: 'object_stream' as const,
+    label: i === 0 ? 'Input 1 (Priority)' : `Input ${i + 1}`,
+  }));
+
+  return {
+    ...baseDefinition,
+    ports: {
+      inputs: dynamicInputs,
+      outputs: [...baseDefinition.ports.outputs],
+    },
+  };
 }
 
 // Future-proof: Get nodes that support conditional execution

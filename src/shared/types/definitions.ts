@@ -233,6 +233,51 @@ export const NODE_DEFINITIONS = {
     }
   },
 
+  merge: {
+    type: 'merge',
+    label: 'Merge Objects',
+    description: 'Merges objects with identical IDs using port priority resolution',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input1', type: 'object_stream', label: 'Input 1 (Priority)' },
+        { id: 'input2', type: 'object_stream', label: 'Input 2' },
+      ],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Merged Stream' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'inputPortCount', 
+          type: 'select', 
+          label: 'Input Ports',
+          options: [
+            { value: '2', label: '2 Ports' },
+            { value: '3', label: '3 Ports' },
+            { value: '4', label: '4 Ports' },
+            { value: '5', label: '5 Ports' }
+          ],
+          defaultValue: '2'
+        }
+      ]
+    },
+    rendering: {
+      icon: '⊕',
+      colors: {
+        primary: 'bg-teal-600',
+        handle: '!bg-teal-500',
+      }
+    },
+    defaults: {
+      inputPortCount: 2,
+    }
+  },
+
   animation: {
     type: 'animation',
     label: 'Animation',

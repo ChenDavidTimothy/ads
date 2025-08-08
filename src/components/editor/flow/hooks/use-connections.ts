@@ -34,15 +34,7 @@ export function useConnections(
     const sourceDefinition = getNodeDefinition(sourceNode.type!);
     const targetDefinition = getNodeDefinition(targetNode.type!);
 
-    if (sourceDefinition?.execution.category === 'geometry' && targetNode.type === 'insert') {
-      const existingInsertConnection = edges.find(
-        (edge) => edge.source === sourceNode.data.identifier.id && nodes.find((n) => n.data.identifier.id === edge.target)?.type === 'insert'
-      );
-      if (existingInsertConnection) {
-        toast.error('Connection not allowed', 'Object already connected to Insert node. Each object can only connect to one Insert node.');
-        return;
-      }
-    }
+
 
     if (targetDefinition?.execution.category !== 'geometry' && targetNode.type !== 'merge') {
       const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(

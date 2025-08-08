@@ -1,6 +1,6 @@
 // src/server/animation-processing/graph/validation.ts
 import { getNodesByCategory } from "@/shared/registry/registry-utils";
-import { DuplicateObjectIdsError, MissingInsertConnectionError, MultipleInsertConnectionsError, SceneRequiredError, TooManyScenesError } from "@/shared/errors/domain";
+import { DuplicateObjectIdsError, MissingInsertConnectionError, SceneRequiredError, TooManyScenesError } from "@/shared/errors/domain";
 import type { NodeData } from "@/shared/types";
 import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 
@@ -11,27 +11,8 @@ export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
 }
 
 export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const objectToInsertMap = new Map<string, string>();
-  const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
-
-  for (const edge of edges) {
-    const sourceNode = nodes.find((n) => n.data.identifier.id === edge.source);
-    const targetNode = nodes.find((n) => n.data.identifier.id === edge.target);
-    if (!sourceNode || !targetNode) continue;
-
-    if (geometryNodeTypes.includes(sourceNode.type!) && targetNode.type === 'insert') {
-      const existingInsert = objectToInsertMap.get(sourceNode.data.identifier.id);
-      if (existingInsert && existingInsert !== targetNode.data.identifier.id) {
-        throw new MultipleInsertConnectionsError(
-          sourceNode.data.identifier.displayName,
-          sourceNode.data.identifier.id,
-          targetNode.data.identifier.id,
-          existingInsert,
-        );
-      }
-      objectToInsertMap.set(sourceNode.data.identifier.id, targetNode.data.identifier.id);
-    }
-  }
+  // Connection validation logic can be added here if needed in the future
+  // Currently no restrictions on object branching - Merge nodes handle conflicts
 }
 
 export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {

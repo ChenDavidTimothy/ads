@@ -89,16 +89,7 @@ export class MissingInsertConnectionError extends DomainError {
   }
 }
 
-export class MultipleInsertConnectionsError extends DomainError {
-  constructor(nodeName: string, nodeId: string, attemptedInsertId: string, existingInsertId: string) {
-    super(
-      `Object ${nodeName} cannot connect to multiple Insert nodes.`,
-      'ERR_MULTIPLE_INSERT_CONNECTIONS',
-      { nodeId, nodeName, info: { attemptedInsertId, existingInsertId } },
-    );
-    this.name = 'MultipleInsertConnectionsError';
-  }
-}
+
 
 export class DuplicateObjectIdsError extends DomainError {
   constructor(nodeName: string, nodeId: string, duplicateIds: string[]) {

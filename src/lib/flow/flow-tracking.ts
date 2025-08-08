@@ -144,12 +144,9 @@ export class FlowTracker {
     // Start traversal from the target node
     traverseUpstream(nodeId);
     
-    // Remove duplicates and sort by display name for consistent UI
-    const uniqueNodes = Array.from(new Map(
-      geometryNodes.map(node => [node.data.identifier.id, node])
-    ).values());
-    
-    return uniqueNodes.sort((a, b) => 
+    // Return all geometry nodes (including duplicates) for validation
+    // Sort by display name for consistent UI
+    return geometryNodes.sort((a, b) => 
       a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)
     );
   }

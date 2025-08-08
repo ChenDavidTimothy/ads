@@ -21,6 +21,9 @@ export class LogicNodeExecutor implements NodeExecutor {
       case 'filter':
         await this.executeFilter(node, context, connections);
         break;
+      case 'merge':
+        await this.executeMerge(node, context, connections);
+        break;
       default:
         throw new Error(`Unknown logic node type: ${node.type}`);
     }
@@ -87,6 +90,66 @@ export class LogicNodeExecutor implements NodeExecutor {
     }
 
     return item;
+  }
+
+  private async executeMerge(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const portCount = Number(data.inputPortCount) || 2;
+    
+    // Collect inputs from all ports in priority order
+    const portInputs: ExecutionValue[][] = [];
+    for (let i = 1; i <= portCount; i++) {
+      const inputs = getConnectedInputs(
+        context,
+        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+        node.data.identifier.id,
+        `input${i}`
+      );
+      portInputs.push(inputs);
+    }
+
+    // Merge logic: collect all objects, resolve conflicts by port priority
+    const mergedObjects = new Map<string, unknown>();
+    const allCursorMaps: Record<string, number>[] = [];
+
+    // Process ports in reverse order so Port 1 (index 0) has highest priority
+    for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
+      const inputs = portInputs[portIndex];
+      
+      for (const input of inputs || []) {
+        const inputData = Array.isArray(input.data) ? input.data : [input.data];
+        
+        // Extract cursor metadata
+        const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
+        if (isPerObjectCursorMap(maybeMap)) {
+          allCursorMaps.push(maybeMap);
+        }
+
+        for (const obj of inputData) {
+          if (typeof obj === 'object' && obj !== null && 'id' in obj) {
+            const objectId = (obj as { id: string }).id;
+            // Port priority: later iteration (lower port index) overwrites
+            mergedObjects.set(objectId, obj);
+          }
+        }
+      }
+    }
+
+    const mergedResult = Array.from(mergedObjects.values());
+    const mergedCursors = mergeCursorMaps(allCursorMaps);
+
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      mergedResult,
+      { perObjectTimeCursor: mergedCursors }
+    );
   }
 
   private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
