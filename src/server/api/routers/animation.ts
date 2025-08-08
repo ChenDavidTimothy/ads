@@ -1,8 +1,9 @@
 // src/server/api/routers/animation.ts - Registry-aware animation router
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { TRPCError } from "@trpc/server";
-import { logger } from "@/server/logger";
+import type { createTRPCContext } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+import { logger as serverLogger } from "@/server/logger";
+import { logger } from "@/lib/logger";
 import { isDomainError, NodeValidationError, SceneValidationError } from "@/shared/errors/domain";
 import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
 import { validateScene } from "@/shared/types";
@@ -13,6 +14,9 @@ import { arePortsCompatible } from "@/shared/types/ports";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 import { renderQueue } from "@/server/jobs/render-queue";
+import { createServiceClient } from "@/utils/supabase/service";
+
+type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 // Scene config schema (unchanged)
 const sceneConfigSchema = z.object({
@@ -44,20 +48,30 @@ const reactFlowEdgeSchema = z.object({
   targetHandle: z.string().nullable().optional(),
 });
 
+const generateSceneInputSchema = z.object({
+  nodes: z.array(reactFlowNodeSchema),
+  edges: z.array(reactFlowEdgeSchema),
+  config: sceneConfigSchema.optional(),
+});
+
+const validateSceneInputSchema = z.object({
+  nodes: z.array(reactFlowNodeSchema),
+  edges: z.array(reactFlowEdgeSchema),
+});
+
+type GenerateSceneInput = z.infer<typeof generateSceneInputSchema>;
+type ValidateSceneInput = z.infer<typeof validateSceneInputSchema>;
+type ReactFlowNodeInput = z.infer<typeof reactFlowNodeSchema>;
+type ReactFlowEdgeInput = z.infer<typeof reactFlowEdgeSchema>;
+
 export const animationRouter = createTRPCRouter({
   // Main scene-based endpoint - registry-aware
-  generateScene: publicProcedure
-    .input(
-      z.object({
-        nodes: z.array(reactFlowNodeSchema),
-        edges: z.array(reactFlowEdgeSchema),
-        config: sceneConfigSchema.optional(),
-      }),
-    )
-    .mutation(async ({ input }) => {
+  generateScene: protectedProcedure
+    .input(generateSceneInputSchema)
+    .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
         // Registry-aware node validation
-        const normalizedNodesForValidation = input.nodes.map(n => ({
+        const normalizedNodesForValidation = input.nodes.map((n: ReactFlowNodeInput) => ({
           id: n.id,
           type: n.type,
           position: n.position,
@@ -70,9 +84,9 @@ export const animationRouter = createTRPCRouter({
 
         // Validate connections by port compatibility
         const connectionErrors: string[] = [];
-        for (const edge of input.edges) {
-          const source = input.nodes.find(n => n.id === edge.source);
-          const target = input.nodes.find(n => n.id === edge.target);
+        for (const edge of input.edges as ReactFlowEdgeInput[]) {
+          const source = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.source);
+          const target = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.target);
           if (!source || !target) continue;
           const sourceDef = getNodeDefinition(source.type ?? "");
           const targetDef = getNodeDefinition(target.type ?? "");
@@ -91,19 +105,20 @@ export const animationRouter = createTRPCRouter({
 
         // Use registry-aware ExecutionEngine
         const engine = new ExecutionEngine();
-        const normalizedNodes = input.nodes.map(n => ({
+        const normalizedNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
           id: n.id,
           type: n.type,
           position: n.position,
           data: n.data ?? {},
         }));
-        const normalizedEdges = input.edges.map(e => ({
+        const normalizedEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: e.source,
           target: e.target,
           sourceHandle: e.sourceHandle ?? undefined,
           targetHandle: e.targetHandle ?? undefined,
         }));
+        
         const executionContext = await engine.executeFlow(
           normalizedNodes as ReactFlowNode<NodeData>[],
           normalizedEdges,
@@ -157,10 +172,24 @@ export const animationRouter = createTRPCRouter({
           throw new SceneValidationError([`Total frames exceed limit: ${config.fps * totalDuration} > 1800`]);
         }
 
-        // Submit to controlled concurrency queue but keep synchronous behavior
+        // Persist job row first
+        const supabase = createServiceClient();
+        const payload = { scene, config } as const;
+        const { data: jobRow, error: insErr } = await supabase
+          .from('render_jobs')
+          .insert({ user_id: ctx.user!.id, status: 'queued', payload })
+          .select('id')
+          .single();
+        if (insErr || !jobRow) {
+          throw (insErr ?? new Error('Failed to create job'));
+        }
+
+        // Submit to queue
         const { publicUrl: videoUrl } = await renderQueue.enqueue({
           scene,
           config,
+          userId: ctx.user!.id,
+          jobId: jobRow.id as string,
         });
 
         return {
@@ -170,41 +199,36 @@ export const animationRouter = createTRPCRouter({
           config,
         };
       } catch (error) {
-        // Log server-side with structured logger (warn for domain errors, error otherwise)
-        logger.domain('Scene animation generation failed', error, { path: 'animation.generateScene' });
+        // Log server-side with structured logger
+        if (isDomainError(error)) {
+          logger.warn('Scene generation validation failed', { 
+            path: 'animation.generateScene',
+            userId: ctx.user?.id 
+          }, error);
+        } else {
+          logger.error('Scene generation system error', { 
+            path: 'animation.generateScene',
+            userId: ctx.user?.id 
+          }, error);
+        }
 
         // Map domain errors to TRPC typed errors for the client
         if (isDomainError(error)) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: error.message,
-            cause: error,
-            // @ts-expect-error: tRPC allows arbitrary data on error
-            data: { errorCode: error.code, details: error.details },
-          });
+          throw new Error(error.message);
         }
 
         // Unknown/system error
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Scene animation generation failed due to an unexpected error',
-          cause: error instanceof Error ? error : new Error(String(error)),
-        });
+        throw (error instanceof Error ? error : new Error('Scene animation generation failed'));
       }
     }),
 
   // Registry-aware scene validation endpoint
-  validateScene: publicProcedure
-    .input(
-      z.object({
-        nodes: z.array(reactFlowNodeSchema),
-        edges: z.array(reactFlowEdgeSchema),
-      }),
-    )
-    .query(async ({ input }) => {
+  validateScene: protectedProcedure
+    .input(validateSceneInputSchema)
+    .query(async ({ input }: { input: ValidateSceneInput }) => {
       try {
         // Registry-aware node validation
-        const normalizedNodesForValidation = input.nodes.map(n => ({
+        const normalizedNodesForValidation = input.nodes.map((n: ReactFlowNodeInput) => ({
           id: n.id,
           type: n.type,
           position: n.position,
@@ -217,13 +241,13 @@ export const animationRouter = createTRPCRouter({
 
         // Registry-aware execution validation
         const engine = new ExecutionEngine();
-        const normalizedNodes = input.nodes.map(n => ({
+        const normalizedNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
           id: n.id,
           type: n.type,
           position: n.position,
           data: n.data ?? {},
         }));
-        const normalizedEdges = input.edges.map(e => ({
+        const normalizedEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: e.source,
           target: e.target,
@@ -291,7 +315,7 @@ export const animationRouter = createTRPCRouter({
 
   getNodeDefinition: publicProcedure
     .input(z.object({ nodeType: z.string() }))
-    .query(({ input }) => {
+    .query(({ input }: { input: { nodeType: string } }) => {
       const definition = getNodeDefinition(input.nodeType);
       if (!definition) {
         throw new Error(`Unknown node type: ${input.nodeType}`);

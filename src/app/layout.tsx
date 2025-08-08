@@ -7,6 +7,7 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "@/trpc/react";
 import { NotificationProvider } from "@/hooks/use-notifications";
 import { ToastContainer } from "@/components/ui/toast";
+import { AuthStatus } from "@/components/auth/auth-status";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -27,6 +28,9 @@ export default function RootLayout({
       <body>
         <NotificationProvider>
           <TRPCReactProvider>
+            <div className="p-3 border-b flex justify-end">
+              <AuthStatus />
+            </div>
             {children}
             <ToastContainer />
           </TRPCReactProvider>

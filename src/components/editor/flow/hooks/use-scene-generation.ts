@@ -1,4 +1,3 @@
-// src/components/editor/flow/hooks/useSceneGeneration.ts
 import { useCallback, useMemo, useState } from 'react';
 import type { Edge, Node } from 'reactflow';
 import { api } from '@/trpc/react';
@@ -6,10 +5,13 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { extractDomainError } from '@/shared/errors/client';
 import type { NodeData, SceneNodeData } from '@/shared/types';
 import type { SceneConfig } from '../types';
+import { createBrowserClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const { toast } = useNotifications();
+  const router = useRouter();
 
   const generateScene = api.animation.generateScene.useMutation({
     onSuccess: (data) => {
@@ -17,7 +19,6 @@ export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
       toast.success('Video generated successfully!');
     },
     onError: (error) => {
-      console.error('Scene generation failed:', error);
       const domain = extractDomainError(error);
       if (domain?.code) {
         toast.error('Cannot generate yet', domain.message ?? 'A validation error occurred');
@@ -30,7 +31,9 @@ export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
   const isSceneConnected = useMemo(() => {
     const sceneNode = nodes.find((n) => n.type === 'scene');
     if (!sceneNode) return false;
-    return edges.some((edge) => edge.target === sceneNode.data.identifier.id);
+    const sceneTargetId = (sceneNode as unknown as { id: string }).id;
+    const legacyId: string | undefined = (sceneNode.data?.identifier?.id as string | undefined);
+    return edges.some((edge) => edge.target === sceneTargetId || (legacyId ? edge.target === legacyId : false));
   }, [nodes, edges]);
 
   const canGenerate = useMemo(() => {
@@ -49,8 +52,17 @@ export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
     return sceneNodes[0]!;
   }, [nodes]);
 
-  const handleGenerateScene = useCallback(() => {
+  const handleGenerateScene = useCallback(async () => {
     try {
+      const supabase = createBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('Please log in to generate a video');
+        router.push('/auth');
+        return;
+      }
+
       const sceneNode = validateSceneNodes();
       const sceneData = sceneNode.data as unknown as SceneNodeData;
       const config: Partial<SceneConfig> = {
@@ -83,7 +95,7 @@ export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
     } catch (error) {
       toast.error('Generation failed', error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [nodes, edges, generateScene, validateSceneNodes, toast]);
+  }, [nodes, edges, generateScene, validateSceneNodes, toast, router]);
 
   const handleDownload = useCallback(() => {
     if (!videoUrl) return;
@@ -97,5 +109,3 @@ export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
 
   return { videoUrl, canGenerate, generateScene, handleGenerateScene, handleDownload, isSceneConnected } as const;
 }
-
-

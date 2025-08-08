@@ -1,31 +1,43 @@
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+import type { createTRPCContext } from "@/server/api/trpc";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
+type HelloInput = { text: string };
+type CreatePostInput = { name: string };
 
 export const postRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
+    .query(({ input }: { input: HelloInput }) => {
       return {
         greeting: `Hello ${input.text}`,
       };
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.post.create({
-        data: {
-          name: input.name,
-        },
-      });
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext; input: CreatePostInput }) => {
+      const { supabase, user } = ctx;
+      const { error } = await supabase
+        .from("posts")
+        .insert({ name: input.name, user_id: user!.id });
+      if (error) {
+        throw error;
+      }
+      return { success: true } as const;
     }),
 
-  getLatest: publicProcedure.query(async ({ ctx }) => {
-    const post = await ctx.db.post.findFirst({
-      orderBy: { createdAt: "desc" },
-    });
-
-    return post ?? null;
+  getLatest: protectedProcedure.query(async ({ ctx }: { ctx: TRPCContext }) => {
+    const { supabase, user } = ctx;
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("user_id", user!.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data ?? null;
   }),
 });

@@ -9,8 +9,7 @@
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
-
-import { db } from "@/server/db";
+import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 /**
  * 1. CONTEXT
@@ -25,8 +24,14 @@ import { db } from "@/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return {
-    db,
+    supabase,
+    user,
     ...opts,
   };
 };
@@ -38,7 +43,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
  * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<Awaited<ReturnType<typeof createTRPCContext>>>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
     return {
@@ -104,3 +109,17 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+const authMiddleware = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new Error("UNAUTHORIZED");
+  }
+  return next({
+    ctx: {
+      user: ctx.user,
+      supabase: ctx.supabase,
+    },
+  });
+});
+
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(authMiddleware);

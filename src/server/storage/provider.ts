@@ -1,14 +1,16 @@
 // src/server/storage/provider.ts
-export interface StorageTarget {
-  // Absolute path on local filesystem where the file should be written
+export interface StoragePreparedTarget {
+  // Absolute path on local filesystem where the encoder should write
   filePath: string;
-  // Public URL for accessing the file
-  publicUrl: string;
+  // Remote key/path in the storage backend, e.g. "<userId>/animations/xyz.mp4"
+  remoteKey: string;
 }
 
 export interface StorageProvider {
-  // Prepare a unique target path and URL for a new artifact
-  prepareTarget(extension: string): Promise<StorageTarget>;
+  // Prepare a unique local target and remote key for a new artifact
+  prepareTarget(extension: string, opts?: { userId?: string }): Promise<StoragePreparedTarget>;
+  // Finalize the artifact (e.g., upload to remote storage) and return a public URL
+  finalize(prepared: StoragePreparedTarget): Promise<{ publicUrl: string }>;
 }
 
 

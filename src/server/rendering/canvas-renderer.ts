@@ -31,10 +31,10 @@ export class CanvasRenderer implements Renderer {
     const sceneRenderer = new SceneRenderer(scene, sceneRenderConfig);
     const frameGenerator = new FrameGenerator(frameConfig, linear);
 
-    const { filePath, publicUrl } = await this.storageProvider.prepareTarget("mp4");
+    const prepared = await this.storageProvider.prepareTarget("mp4");
 
     await frameGenerator.generateAnimation(
-      filePath,
+      prepared.filePath,
       (ctx, frame) => {
         sceneRenderer.renderFrame(ctx, frame.time);
       },
@@ -44,6 +44,7 @@ export class CanvasRenderer implements Renderer {
       }
     );
 
-    return { filePath, publicUrl };
+    const { publicUrl } = await this.storageProvider.finalize(prepared);
+    return { filePath: prepared.filePath, publicUrl };
   }
 }
