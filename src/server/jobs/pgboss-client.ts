@@ -12,23 +12,23 @@ export async function getBoss(): Promise<PgBoss> {
     throw new Error('PG_BOSS_DATABASE_URL is not set');
   }
 
-  const boss = new PgBoss({
+  const bossOptions: PgBoss.ConstructorOptions = {
     connectionString,
     // retention and maintenance defaults; can be tuned via env
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
     // Enable internal state monitoring to make operational health observable
     monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '60'),
-  } as any);
+  };
+
+  const boss = new PgBoss(bossOptions);
 
   boss.on('error', (err) => {
-    // eslint-disable-next-line no-console
     console.error('[pg-boss] error', err);
   });
 
   bossStarting = boss.start().then(() => {
     bossSingleton = boss;
-    // eslint-disable-next-line no-console
     console.log('[pg-boss] started');
 
     // graceful shutdown
@@ -40,8 +40,8 @@ export async function getBoss(): Promise<PgBoss> {
           // ignore
         }
       };
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', () => { void shutdown(); });
+      process.on('SIGTERM', () => { void shutdown(); });
     }
 
     return boss;

@@ -21,8 +21,12 @@ async function main() {
     }
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => {
+    void shutdown();
+  });
+  process.on('SIGTERM', () => {
+    void shutdown();
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
