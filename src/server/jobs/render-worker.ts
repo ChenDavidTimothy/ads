@@ -3,6 +3,9 @@ import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
 import { SupabaseStorageProvider } from '@/server/storage/supabase';
 import { createServiceClient } from '@/utils/supabase/service';
 import { notifyRenderJobEvent, shutdownPgEvents } from './pg-events';
+import type { Job } from 'pg-boss';
+import type { AnimationScene } from '@/shared/types/scene';
+import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
 const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '2');
 
@@ -15,26 +18,55 @@ export async function registerRenderWorker() {
   if (process.env.JOB_DEBUG === '1') {
     try {
       await boss.createQueue('render-video');
-      // eslint-disable-next-line no-console
       console.log('[worker] queue ensured: render-video');
     } catch {
       // ignore if not supported / already exists
     }
   }
-  await boss.work(
+  type RenderJobPayload = {
+    scene: AnimationScene;
+    config: SceneAnimationConfig;
+    userId: string;
+    jobId: string;
+  };
+
+  function isRenderJobPayload(value: unknown): value is RenderJobPayload {
+    if (!value || typeof value !== 'object') return false;
+    const v = value as Record<string, unknown>;
+    const cfg = v.config as Record<string, unknown> | undefined;
+    return (
+      typeof v.userId === 'string' &&
+      typeof v.jobId === 'string' &&
+      typeof v.scene === 'object' && v.scene !== null &&
+      cfg !== undefined &&
+      typeof cfg.width === 'number' &&
+      typeof cfg.height === 'number' &&
+      typeof cfg.fps === 'number'
+    );
+  }
+
+  const workOptions = {
+    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2,
+    includeMetadata: true as const,
+  };
+
+  await boss.work<RenderJobPayload>(
     'render-video',
-    { teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2 } as any,
-    async (job: any) => {
+    workOptions,
+    async (job: Job<RenderJobPayload> | Job<RenderJobPayload>[]) => {
       const j = Array.isArray(job) ? job[0] : job;
-      const data = (j && (j.data ?? j.body)) ?? {};
-      const { scene, config, userId, jobId } = data;
-      // eslint-disable-next-line no-console
+      const payloadCandidate: unknown = j
+        ? (j.data as RenderJobPayload | undefined) ?? (j as unknown as { body?: unknown }).body
+        : undefined;
+
+      if (!isRenderJobPayload(payloadCandidate)) {
+        throw new Error('Invalid job payload');
+      }
+      const { scene, config, userId, jobId } = payloadCandidate;
+
       console.log(`[worker] received job ${jobId} for user ${userId}`);
       const supabase = createServiceClient();
       try {
-        if (!jobId || !userId || !scene || !config) {
-          throw new Error('Invalid job payload');
-        }
         // Idempotency guard: if job already completed or failed, ack and return stored result
         const { data: existing } = await supabase
           .from('render_jobs')
@@ -42,17 +74,16 @@ export async function registerRenderWorker() {
           .eq('id', jobId)
           .eq('user_id', userId)
           .single();
-        if (existing?.status === 'completed' && existing.output_url) {
-          // eslint-disable-next-line no-console
+        if (existing?.status === 'completed' && typeof existing.output_url === 'string') {
           console.log(`[worker] job ${jobId} already completed, skipping`);
           await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl: existing.output_url });
           return { publicUrl: existing.output_url };
         }
         if (existing?.status === 'failed') {
-          // eslint-disable-next-line no-console
           console.log(`[worker] job ${jobId} already failed, skipping`);
-          await notifyRenderJobEvent({ jobId, status: 'failed', error: existing.error });
-          throw new Error(existing.error ?? 'Job previously failed');
+          const previousError = typeof existing.error === 'string' ? existing.error : undefined;
+          await notifyRenderJobEvent({ jobId, status: 'failed', error: previousError });
+          throw new Error(previousError ?? 'Job previously failed');
         }
         await supabase
           .from('render_jobs')
@@ -70,18 +101,17 @@ export async function registerRenderWorker() {
           .eq('id', jobId)
           .eq('user_id', userId);
 
-        // eslint-disable-next-line no-console
         console.log(`[worker] completed job ${jobId} -> ${publicUrl}`);
         await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl });
 
         return { publicUrl };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        // eslint-disable-next-line no-console
         console.error(`[worker] failed job ${jobId}: ${message}`);
         if (jobId && userId) {
           const configuredRetryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
-          const attempt = Number((j as any)?.retrycount ?? (j as any)?.retryCount ?? 0);
+          const meta = j as unknown as { retrycount?: unknown; retryCount?: unknown };
+          const attempt = typeof meta.retrycount === 'number' ? meta.retrycount : typeof meta.retryCount === 'number' ? meta.retryCount : 0;
           const isFinalAttempt = attempt + 1 >= (Number.isFinite(configuredRetryLimit) ? configuredRetryLimit : 5);
           if (isFinalAttempt) {
             await supabase
@@ -94,8 +124,7 @@ export async function registerRenderWorker() {
             const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
             if (deadLetterQueue) {
               try {
-                await (await getBoss()).send(deadLetterQueue, { jobId, userId, error: message }, { expireIn: '7 days' } as any);
-                // eslint-disable-next-line no-console
+                await (await getBoss()).send(deadLetterQueue, { jobId, userId, error: message });
                 console.warn(`[worker] sent job ${jobId} to DLQ ${deadLetterQueue}`);
               } catch {
                 // ignore DLQ failures
@@ -115,7 +144,6 @@ export async function registerRenderWorker() {
     }
   );
   if (process.env.JOB_DEBUG === '1') {
-    // eslint-disable-next-line no-console
     console.log('[worker] registered for queue: render-video');
   }
   workerRegistered = true;
