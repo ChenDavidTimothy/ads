@@ -220,17 +220,10 @@ export const animationRouter = createTRPCRouter({
         } as const;
       } catch (error) {
         // Log server-side with structured logger
-        if (isDomainError(error)) {
-          logger.warn('Scene generation validation failed', { 
-            path: 'animation.generateScene',
-            userId: ctx.user?.id 
-          }, error);
-        } else {
-          logger.error('Scene generation system error', { 
-            path: 'animation.generateScene',
-            userId: ctx.user?.id 
-          }, error);
-        }
+        logger.domain('Scene generation failed', error, {
+          path: 'animation.generateScene',
+          userId: ctx.user?.id
+        });
 
         // Map domain errors to TRPC typed errors for the client
         if (isDomainError(error)) {

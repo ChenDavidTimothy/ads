@@ -1,72 +1,82 @@
 /**
- * Production-ready logging utility
- * Logs to console in development, can be extended for production logging services
+ * Production-ready unified logging utility
+ * Combines environment-aware console logging with structured JSON output
+ * Includes domain error handling and enhanced error tracking
  */
 
-type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+import { isDomainError } from "@/shared/errors/domain";
 
-interface LogContext {
-  userId?: string;
-  path?: string;
-  [key: string]: unknown;
-}
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
+type LogMeta = Record<string, unknown>;
 
-  private log(level: LogLevel, message: string, context?: LogContext, error?: unknown) {
-    const timestamp = new Date().toISOString();
-    const logData: Record<string, unknown> = {
-      timestamp,
-      level,
-      message,
-      context,
-    };
-    if (error) {
-      logData.error = this.serializeError(error);
-    }
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-    if (this.isDevelopment) {
-      // Console logging for development
-      const logMethod = level === 'error' ? console.error : 
-                       level === 'warn' ? console.warn : 
-                       console.log;
-      
-      logMethod(`[${level.toUpperCase()}]`, message, context ?? '', error ?? '');
-    } else {
-      // In production, you'd send to logging service (e.g., Sentry, LogRocket, etc.)
-      console.log(JSON.stringify(logData));
+function log(level: LogLevel, message: string, meta?: LogMeta): void {
+  const line = {
+    ts: new Date().toISOString(),
+    level,
+    message,
+    ...((meta ?? {}) as Record<string, unknown>),
+  };
+
+  if (isDevelopment) {
+    // Console logging for development with readable format
+    const logMethod = level === 'error' ? console.error : 
+                     level === 'warn' ? console.warn : 
+                     level === 'debug' ? console.debug :
+                     console.log;
+    
+    logMethod(`[${level.toUpperCase()}]`, message, meta ?? '');
+  } else {
+    // JSON structured logging for production
+    const output = JSON.stringify(line);
+    switch (level) {
+      case 'debug':
+        console.debug(output);
+        break;
+      case 'info':
+        console.info(output);
+        break;
+      case 'warn':
+        console.warn(output);
+        break;
+      case 'error':
+        console.error(output);
+        break;
     }
   }
+}
 
-  private serializeError(error: unknown) {
+export const logger = {
+  debug(message: string, meta?: LogMeta) { 
+    if (isDevelopment) {
+      log('debug', message, meta); 
+    }
+  },
+  info(message: string, meta?: LogMeta) { 
+    log('info', message, meta); 
+  },
+  warn(message: string, meta?: LogMeta) { 
+    log('warn', message, meta); 
+  },
+  error(message: string, meta?: LogMeta) { 
+    log('error', message, meta); 
+  },
+  errorWithStack(message: string, error: unknown, meta?: LogMeta) {
+    const base: LogMeta = meta ?? {};
     if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
+      base.error = { name: error.name, message: error.message, stack: error.stack };
+    } else {
+      base.error = { message: String(error) };
     }
-    return String(error);
-  }
-
-  info(message: string, context?: LogContext) {
-    this.log('info', message, context);
-  }
-
-  warn(message: string, context?: LogContext, error?: unknown) {
-    this.log('warn', message, context, error);
-  }
-
-  error(message: string, context?: LogContext, error?: unknown) {
-    this.log('error', message, context, error);
-  }
-
-  debug(message: string, context?: LogContext) {
-    if (this.isDevelopment) {
-      this.log('debug', message, context);
+    log('error', message, base);
+  },
+  domain(message: string, error: unknown, meta?: LogMeta) {
+    if (isDomainError(error)) {
+      this.warn(message, { ...(meta ?? {}), errorCode: error.code, details: error.details });
+    } else {
+      this.errorWithStack(message, error, meta);
     }
   }
-}
-
-export const logger = new Logger();
+};
