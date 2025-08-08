@@ -1,2 +1,10 @@
+ignoredBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - unrs-resolver
+
 onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
   - canvas
+  - prisma
+  - sharp

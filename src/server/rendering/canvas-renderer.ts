@@ -47,5 +47,3 @@ export class CanvasRenderer implements Renderer {
     return { filePath, publicUrl };
   }
 }
-
-
