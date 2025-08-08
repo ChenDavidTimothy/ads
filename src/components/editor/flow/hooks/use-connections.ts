@@ -1,4 +1,4 @@
-// src/components/editor/flow/hooks/useConnections.ts
+// src/components/editor/flow/hooks/use-connections.ts
 import { useCallback } from 'react';
 import { addEdge, type Connection, type Edge, type Node } from 'reactflow';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
@@ -16,7 +16,7 @@ export function useConnections(
   const { toast } = useNotifications();
 
   const wouldConnectionCreateDuplicateObjectIds = useCallback((
-    _sourceNodeId: string,
+    sourceNodeId: string,
     targetNodeId: string,
     edgesWithNewConnection: Edge[],
     allNodes: Node<NodeData>[]
@@ -27,45 +27,24 @@ export function useConnections(
   }, [flowTracker]);
 
   const onConnect = useCallback((params: Connection) => {
-    const sourceNode = nodes.find((n) => n.data.identifier.id === params.source);
-    const targetNode = nodes.find((n) => n.data.identifier.id === params.target);
-    if (!sourceNode || !targetNode) return;
+    // CRITICAL FIX: params.source/target are React Flow node IDs, which equal identifier IDs
+    const sourceNode = nodes.find((n) => n.id === params.source);
+    const targetNode = nodes.find((n) => n.id === params.target);
+    
+    if (!sourceNode || !targetNode) {
+      toast.error('Connection failed', 'Source or target node not found');
+      return;
+    }
 
     const sourceDefinition = getNodeDefinition(sourceNode.type!);
     const targetDefinition = getNodeDefinition(targetNode.type!);
-
-
-
-    if (targetDefinition?.execution.category !== 'geometry' && targetNode.type !== 'merge') {
-      const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
-        sourceNode.data.identifier.id,
-        targetNode.data.identifier.id,
-        [
-          ...edges,
-          {
-            id: 'temp',
-            source: sourceNode.data.identifier.id,
-            target: targetNode.data.identifier.id,
-            sourceHandle: params.sourceHandle,
-            targetHandle: params.targetHandle,
-          } as Edge,
-        ],
-        nodes
-      );
-      if (wouldCreateDuplicates.length > 0) {
-        toast.error(
-          'Connection not allowed',
-          `This connection would cause duplicate object IDs (${wouldCreateDuplicates.join(', ')}) to reach ${targetNode.data.identifier.displayName}. Each node can only receive each object once.`
-        );
-        return;
-      }
-    }
 
     if (!sourceDefinition || !targetDefinition) {
       toast.error('Connection failed', 'Unknown node type');
       return;
     }
 
+    // CRITICAL FIX: Validate ports before checking duplicates
     const sourcePort = sourceDefinition.ports.outputs.find((p) => p.id === params.sourceHandle);
     const targetPort = targetDefinition.ports.inputs.find((p) => p.id === params.targetHandle);
     if (!sourcePort || !targetPort) {
@@ -78,11 +57,41 @@ export function useConnections(
       return;
     }
 
+    // CRITICAL FIX: Block ALL nodes except geometry and merge from receiving duplicate object IDs
+    if (targetDefinition.execution.category !== 'geometry' && targetNode.type !== 'merge') {
+      const simulatedEdges = [
+        ...edges,
+        {
+          id: 'temp-validation-edge',
+          source: sourceNode.id, // Use React Flow IDs consistently
+          target: targetNode.id,
+          sourceHandle: params.sourceHandle,
+          targetHandle: params.targetHandle,
+        } as Edge,
+      ];
+
+      const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
+        sourceNode.id,
+        targetNode.id,
+        simulatedEdges,
+        nodes
+      );
+
+      if (wouldCreateDuplicates.length > 0) {
+        toast.error(
+          'Connection blocked - Duplicate object IDs',
+          `This connection would cause duplicate object IDs (${wouldCreateDuplicates.join(', ')}) to reach ${targetNode.data.identifier.displayName}. Only Merge nodes can receive identical object IDs. Use a Merge node to resolve conflicts.`
+        );
+        return; // BLOCK THE CONNECTION
+      }
+    }
+
     const newEdges = addEdge(
       {
         ...params,
-        source: sourceNode.data.identifier.id,
-        target: targetNode.data.identifier.id,
+        // Keep React Flow IDs for edge source/target for consistency
+        source: sourceNode.id,
+        target: targetNode.id,
       },
       edges
     );
@@ -95,7 +104,7 @@ export function useConnections(
 
     flowTracker.trackConnection(
       newEdge.id,
-      sourceNode.data.identifier.id,
+      sourceNode.data.identifier.id, // Use identifier IDs for flow tracking
       targetNode.data.identifier.id,
       params.sourceHandle!,
       params.targetHandle!,
@@ -107,5 +116,3 @@ export function useConnections(
 
   return { onConnect } as const;
 }
-
-

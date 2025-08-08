@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts - Registry-aware animation router
+// src/server/api/routers/animation.ts - Registry-aware animation router with proper ID handling
 import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
@@ -17,9 +17,6 @@ import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
-
-// Typed row for Supabase render_jobs selection
-// (inline typing is handled at usage sites to avoid builder type issues)
 
 // Scene config schema (coerce types where the client might send strings)
 const sceneConfigSchema = z.object({
@@ -73,14 +70,36 @@ export const animationRouter = createTRPCRouter({
     .input(generateSceneInputSchema)
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
-        // Registry-aware node validation
-        const normalizedNodesForValidation = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
+        // CRITICAL FIX: Convert React Flow nodes to backend format with proper ID mapping
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+          id: n.id, // Keep React Flow ID for edge references
           type: n.type,
           position: n.position,
           data: n.data ?? {},
         }));
-        const validationResult = validateInputNodes(normalizedNodesForValidation);
+
+        // CRITICAL FIX: Convert React Flow edges to backend format with identifier ID mapping
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
+            if (identifier?.id) {
+              nodeIdMap.set(n.id, identifier.id); // React Flow ID -> Identifier ID
+            }
+          }
+        });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          // CRITICAL: Convert to identifier IDs for backend processing
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Registry-aware node validation
+        const validationResult = validateInputNodes(backendNodes);
         if (!validationResult.valid) {
           throw new NodeValidationError(validationResult.errors);
         }
@@ -106,29 +125,15 @@ export const animationRouter = createTRPCRouter({
           throw new NodeValidationError(connectionErrors);
         }
 
-        // Use registry-aware ExecutionEngine
+        // Use registry-aware ExecutionEngine with proper ID mapping
         const engine = new ExecutionEngine();
-        const normalizedNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
-        const normalizedEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle ?? undefined,
-          targetHandle: e.targetHandle ?? undefined,
-        }));
-        
         const executionContext = await engine.executeFlow(
-          normalizedNodes as ReactFlowNode<NodeData>[],
-          normalizedEdges,
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges,
         );
 
         // Registry-aware scene node lookup
-        const sceneNode = findSceneNode(normalizedNodes);
+        const sceneNode = findSceneNode(backendNodes);
         if (!sceneNode) {
           throw new SceneValidationError(["Scene node is required"]);
         }
@@ -240,40 +245,47 @@ export const animationRouter = createTRPCRouter({
     .input(validateSceneInputSchema)
     .query(async ({ input }: { input: ValidateSceneInput }) => {
       try {
-        // Registry-aware node validation
-        const normalizedNodesForValidation = input.nodes.map((n: ReactFlowNodeInput) => ({
+        // CRITICAL FIX: Convert React Flow format to backend format
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
           id: n.id,
           type: n.type,
           position: n.position,
           data: n.data ?? {},
         }));
-        const nodeValidationResult = validateInputNodes(normalizedNodesForValidation);
+
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
+            if (identifier?.id) {
+              nodeIdMap.set(n.id, identifier.id);
+            }
+          }
+        });
+
+        const backendEdges = input.edges.map((e) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Registry-aware node validation
+        const nodeValidationResult = validateInputNodes(backendNodes);
         if (!nodeValidationResult.valid) {
           return { valid: false, errors: nodeValidationResult.errors };
         }
 
         // Registry-aware execution validation
         const engine = new ExecutionEngine();
-        const normalizedNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
-        const normalizedEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle ?? undefined,
-          targetHandle: e.targetHandle ?? undefined,
-        }));
         const executionContext = await engine.executeFlow(
-          normalizedNodes as ReactFlowNode<NodeData>[],
-          normalizedEdges,
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges,
         );
 
         // Registry-aware scene node validation
-        const sceneNode = findSceneNode(normalizedNodes);
+        const sceneNode = findSceneNode(backendNodes);
         if (!sceneNode) {
           return { valid: false, errors: ["Scene node is required"] };
         }

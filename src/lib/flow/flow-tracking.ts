@@ -1,4 +1,4 @@
-// src/lib/flow/flow-tracking.ts - Registry-aware flow tracking
+// src/lib/flow/flow-tracking.ts - Registry-aware flow tracking with consistent ID handling
 import type { Node, Edge } from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
@@ -106,7 +106,7 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // Registry-aware geometry object discovery
+  // CRITICAL FIX: Registry-aware geometry object discovery with consistent ID handling
   getUpstreamGeometryObjects(
     nodeId: string, 
     allNodes: Node<NodeData>[], 
@@ -118,22 +118,38 @@ export class FlowTracker {
     // Get geometry node types from registry instead of hardcoding
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     
+    // CRITICAL FIX: Handle ID conversion - edges use React Flow IDs, we need to convert
+    const getNodeByReactFlowId = (reactFlowId: string): Node<NodeData> | undefined => {
+      return allNodes.find(n => n.id === reactFlowId);
+    };
+
+    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
+      return allNodes.find(n => n.data.identifier.id === identifierId);
+    };
+
     // Recursive function to traverse upstream from the target node
     const traverseUpstream = (currentNodeId: string): void => {
       if (visited.has(currentNodeId)) return;
       visited.add(currentNodeId);
       
-      // Find the current node
-      const currentNode = allNodes.find(n => n.data.identifier.id === currentNodeId);
-      if (!currentNode) return;
+      // CRITICAL FIX: Try both ID types to find the current node
+      let currentNode = getNodeByReactFlowId(currentNodeId) || getNodeByIdentifierId(currentNodeId);
+      
+      if (!currentNode) {
+        console.warn(`Node not found for ID: ${currentNodeId}`);
+        return;
+      }
       
       // Registry-aware geometry node detection
       if (geometryNodeTypes.includes(currentNode.type!)) {
         geometryNodes.push(currentNode);
+        // Continue traversal to find ALL upstream geometry nodes (don't return early)
       }
       
-      // Find all edges that target this node (incoming edges)
-      const incomingEdges = allEdges.filter(edge => edge.target === currentNodeId);
+      // CRITICAL FIX: Find edges targeting this node using BOTH ID types
+      const incomingEdges = allEdges.filter(edge => 
+        edge.target === currentNode!.id || edge.target === currentNode!.data.identifier.id
+      );
       
       // Recursively traverse all source nodes
       for (const edge of incomingEdges) {
@@ -144,7 +160,7 @@ export class FlowTracker {
     // Start traversal from the target node
     traverseUpstream(nodeId);
     
-    // Return all geometry nodes (including duplicates) for validation
+    // Return all geometry nodes (including duplicates for validation)
     // Sort by display name for consistent UI
     return geometryNodes.sort((a, b) => 
       a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)

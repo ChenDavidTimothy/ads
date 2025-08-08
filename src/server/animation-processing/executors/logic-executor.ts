@@ -97,8 +97,12 @@ export class LogicNodeExecutor implements NodeExecutor {
     context: ExecutionContext,
     connections: ReactFlowEdge[]
   ): Promise<void> {
+    console.log(`[MERGE] Starting merge execution for node: ${node.data.identifier.displayName}`);
+    
     const data = node.data as unknown as Record<string, unknown>;
     const portCount = Number(data.inputPortCount) || 2;
+    
+    console.log(`[MERGE] Port count: ${portCount}`);
     
     // Collect inputs from all ports in priority order
     const portInputs: ExecutionValue[][] = [];
@@ -110,18 +114,23 @@ export class LogicNodeExecutor implements NodeExecutor {
         `input${i}`
       );
       portInputs.push(inputs);
+      console.log(`[MERGE] Port ${i} inputs:`, inputs.length, 'connections');
     }
 
     // Merge logic: collect all objects, resolve conflicts by port priority
     const mergedObjects = new Map<string, unknown>();
     const allCursorMaps: Record<string, number>[] = [];
 
+    console.log(`[MERGE] Processing ports in reverse order for priority (Port 1 = highest priority)`);
+
     // Process ports in reverse order so Port 1 (index 0) has highest priority
     for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
+      console.log(`[MERGE] Processing port ${portIndex + 1} (${inputs.length} inputs)`);
       
       for (const input of inputs || []) {
         const inputData = Array.isArray(input.data) ? input.data : [input.data];
+        console.log(`[MERGE] Port ${portIndex + 1} input data:`, inputData.length, 'items');
         
         // Extract cursor metadata
         const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
@@ -132,8 +141,21 @@ export class LogicNodeExecutor implements NodeExecutor {
         for (const obj of inputData) {
           if (typeof obj === 'object' && obj !== null && 'id' in obj) {
             const objectId = (obj as { id: string }).id;
+            
+            const existingObject = mergedObjects.get(objectId);
+            if (existingObject) {
+              console.log(`[MERGE] Object ID conflict detected: ${objectId}`);
+              console.log(`[MERGE] Existing object (from earlier port):`, existingObject);
+              console.log(`[MERGE] New object (from port ${portIndex + 1}):`, obj);
+              console.log(`[MERGE] Port ${portIndex + 1} overwrites previous (priority resolution)`);
+            } else {
+              console.log(`[MERGE] Adding new object ID: ${objectId} from port ${portIndex + 1}`);
+            }
+            
             // Port priority: later iteration (lower port index) overwrites
             mergedObjects.set(objectId, obj);
+          } else {
+            console.log(`[MERGE] Non-object or object without ID:`, obj);
           }
         }
       }
@@ -141,6 +163,31 @@ export class LogicNodeExecutor implements NodeExecutor {
 
     const mergedResult = Array.from(mergedObjects.values());
     const mergedCursors = mergeCursorMaps(allCursorMaps);
+
+    console.log(`[MERGE] Final merged result:`);
+    console.log(`[MERGE] Input object count across all ports: ${portInputs.flat().reduce((acc, input) => {
+      const data = Array.isArray(input.data) ? input.data : [input.data];
+      return acc + data.length;
+    }, 0)}`);
+    console.log(`[MERGE] Output object count: ${mergedResult.length}`);
+    console.log(`[MERGE] Unique object IDs in output:`, mergedResult.map(obj => 
+      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : 'NO_ID'
+    ));
+    
+    // CRITICAL: Verify no duplicate IDs in output
+    const outputIds = mergedResult.map(obj => 
+      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null
+    ).filter(id => id !== null);
+    
+    const uniqueOutputIds = new Set(outputIds);
+    console.log(`[MERGE] Output verification - Total IDs: ${outputIds.length}, Unique IDs: ${uniqueOutputIds.size}`);
+    
+    if (outputIds.length !== uniqueOutputIds.size) {
+      console.error(`[MERGE] ERROR: Merge node is outputting duplicate object IDs!`);
+      console.error(`[MERGE] All output IDs:`, outputIds);
+      console.error(`[MERGE] Duplicate IDs:`, outputIds.filter((id, index) => outputIds.indexOf(id) !== index));
+      throw new Error(`Merge node ${node.data.identifier.displayName} failed to deduplicate objects`);
+    }
 
     setNodeOutput(
       context,
@@ -150,6 +197,8 @@ export class LogicNodeExecutor implements NodeExecutor {
       mergedResult,
       { perObjectTimeCursor: mergedCursors }
     );
+    
+    console.log(`[MERGE] Merge execution completed successfully`);
   }
 
   private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
@@ -163,5 +212,3 @@ export class LogicNodeExecutor implements NodeExecutor {
     return mergeCursorMaps(maps);
   }
 }
-
-

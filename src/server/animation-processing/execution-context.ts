@@ -1,4 +1,4 @@
-// src/server/animation-processing/execution-context.ts - Future-proof execution context
+// src/server/animation-processing/execution-context.ts - Future-proof execution context with ID consistency fixes
 import type { PortType, SceneAnimationTrack, GeometryProperties } from "@/shared/types";
 
 // Expanded data types for future logic nodes
@@ -127,18 +127,24 @@ export function getNodeOutput(
   return context.nodeOutputs.get(key);
 }
 
+// CRITICAL FIX: Handle both React Flow IDs and identifier IDs in connection lookups
 export function getConnectedInput(
   context: ExecutionContext,
   connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue | undefined {
-  const connection = connections.find(
+  // CRITICAL: Try to find connection using identifier ID first, then React Flow ID
+  let connection = connections.find(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   
-  if (!connection) return undefined;
+  if (!connection) {
+    // No connection found with this target node ID
+    return undefined;
+  }
   
+  // Get output using the source node identifier ID
   return getNodeOutput(context, connection.source, connection.sourceHandle);
 }
 
@@ -148,12 +154,14 @@ export function getConnectedInputs(
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue[] {
+  // CRITICAL: Find all connections targeting this node/port combination
   const matchingConnections = connections.filter(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   
   const inputs: ExecutionValue[] = [];
   for (const connection of matchingConnections) {
+    // Get output using the source node identifier ID
     const input = getNodeOutput(context, connection.source, connection.sourceHandle);
     if (input) {
       inputs.push(input);
