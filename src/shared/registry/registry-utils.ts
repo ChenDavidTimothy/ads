@@ -114,27 +114,40 @@ export function getNodeDefinition(nodeType: string): NodeDefinition | undefined 
   return REGISTRY[nodeType];
 }
 
-// Generate component mapping for future dynamic registration
-export function getNodeComponentMapping(): Record<string, string> {
-  const mapping: Record<string, string> = {};
+// Dynamic component mapping - returns actual component references
+export function getNodeComponentMapping() {
+  // Import components dynamically to avoid circular dependencies
+  const {
+    TriangleNode,
+    CircleNode, 
+    RectangleNode,
+    InsertNode,
+    FilterNode,
+    AnimationNode,
+    SceneNode
+  } = require('@/components/editor/nodes');
+
+  const mapping: Record<string, React.ComponentType<any>> = {};
   
   for (const [nodeType, definition] of Object.entries(REGISTRY)) {
-    // Map to actual component names (preserving current behavior)
+    // Map to actual component references based on category
     switch (definition.execution.category) {
       case 'geometry':
-        mapping[nodeType] = `${definition.label}Node`; // TriangleNode, CircleNode, etc.
+        if (nodeType === 'triangle') mapping[nodeType] = TriangleNode;
+        else if (nodeType === 'circle') mapping[nodeType] = CircleNode;
+        else if (nodeType === 'rectangle') mapping[nodeType] = RectangleNode;
         break;
       case 'timing':
-        mapping[nodeType] = 'InsertNode';
+        mapping[nodeType] = InsertNode;
         break;
       case 'logic':
-        mapping[nodeType] = 'FilterNode'; // Currently only filter
+        mapping[nodeType] = FilterNode;
         break;
       case 'animation':
-        mapping[nodeType] = 'AnimationNode';
+        mapping[nodeType] = AnimationNode;
         break;
       case 'output':
-        mapping[nodeType] = 'SceneNode';
+        mapping[nodeType] = SceneNode;
         break;
     }
   }
