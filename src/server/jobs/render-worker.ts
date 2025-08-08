@@ -23,7 +23,7 @@ export async function registerRenderWorker() {
   }
   await boss.work(
     'render-video',
-    { teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2, batchSize: 1 },
+    { teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2 } as any,
     async (job: any) => {
       const j = Array.isArray(job) ? job[0] : job;
       const data = (j && (j.data ?? j.body)) ?? {};

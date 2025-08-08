@@ -19,14 +19,14 @@ import { createServiceClient } from "@/utils/supabase/service";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
-// Scene config schema (unchanged)
+// Scene config schema (coerce types where the client might send strings)
 const sceneConfigSchema = z.object({
-  width: z.number().max(1920).optional(),
-  height: z.number().max(1080).optional(),
-  fps: z.number().max(60).optional(),
+  width: z.coerce.number().max(1920).optional(),
+  height: z.coerce.number().max(1080).optional(),
+  fps: z.coerce.number().max(60).optional(),
   backgroundColor: z.string().optional(),
   videoPreset: z.string().optional(),
-  videoCrf: z.number().min(0).max(51).optional(),
+  videoCrf: z.coerce.number().min(0).max(51).optional(),
 });
 
 // Registry-aware ReactFlow Node schema
@@ -196,7 +196,11 @@ export const animationRouter = createTRPCRouter({
         });
 
         // Optimized: wait briefly for NOTIFY to avoid client latency, but keep request bounded
-        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: 25000 });
+        // Default to 500ms, configurable via RENDER_JOB_INLINE_WAIT_MS (clamped 0-5000ms)
+        const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+        const parsed = Number(inlineWaitMsRaw);
+        const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: inlineWaitMs });
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return {
             success: true,

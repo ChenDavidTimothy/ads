@@ -17,7 +17,8 @@ export async function getBoss(): Promise<PgBoss> {
     // retention and maintenance defaults; can be tuned via env
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
-    // monitorStateIntervalSeconds can help with metrics later
+    // Enable internal state monitoring to make operational health observable
+    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '60'),
   } as any);
 
   boss.on('error', (err) => {

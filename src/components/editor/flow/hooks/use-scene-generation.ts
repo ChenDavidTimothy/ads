@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 // Minimal local types to avoid dependency on reactflow types at build time
-type RFEdge = { id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string };
+type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
 type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
 import { api } from '@/trpc/react';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -98,7 +98,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       const config: Partial<SceneConfig> = {
         width: sceneData.width,
         height: sceneData.height,
-        fps: sceneData.fps,
+        // Coerce fps in case the select stored it as a string (e.g., '60')
+        fps: typeof (sceneData as unknown as Record<string, unknown>).fps === 'string'
+          ? Number((sceneData as unknown as Record<string, unknown>).fps)
+          : (sceneData.fps as number),
         backgroundColor: sceneData.backgroundColor,
         videoPreset: sceneData.videoPreset,
         videoCrf: sceneData.videoCrf,

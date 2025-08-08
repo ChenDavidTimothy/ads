@@ -152,7 +152,8 @@ export async function notifyRenderJobEvent(payload: {
 }): Promise<void> {
   const client = await getPublisher();
   const text = JSON.stringify(payload);
-  await client.query(`NOTIFY ${CHANNEL}, '${text.replace(/'/g, "''")}'`);
+  // Use parameterized pg_notify to avoid manual string escaping
+  await client.query('SELECT pg_notify($1, $2)', [CHANNEL, text]);
 }
 
 export async function shutdownPgEvents(): Promise<void> {

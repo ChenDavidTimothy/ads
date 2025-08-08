@@ -16,13 +16,15 @@ class Logger {
 
   private log(level: LogLevel, message: string, context?: LogContext, error?: unknown) {
     const timestamp = new Date().toISOString();
-    const logData = {
+    const logData: Record<string, unknown> = {
       timestamp,
       level,
       message,
       context,
-      ...(error && { error: this.serializeError(error) }),
     };
+    if (error) {
+      logData.error = this.serializeError(error);
+    }
 
     if (this.isDevelopment) {
       // Console logging for development
