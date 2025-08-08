@@ -7,6 +7,7 @@
     "build": "next build",
     "check": "next lint && tsc --noEmit",
     "dev": "next dev --turbo",
+    "worker": "tsx ./src/server/jobs/worker-entry.ts",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "lint": "next lint",
@@ -49,6 +50,8 @@
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "tsx": "^4.19.2",
+    "dotenv": "^16.4.7",
     "tailwindcss": "^4.0.15",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.27.0"

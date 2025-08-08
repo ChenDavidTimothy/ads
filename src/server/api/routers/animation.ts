@@ -184,7 +184,7 @@ export const animationRouter = createTRPCRouter({
           throw (insErr ?? new Error('Failed to create job'));
         }
 
-        // Ensure worker is ready before submitting to queue
+        // Worker now runs in separate process; optionally we could verify availability via a heartbeat
         await ensureWorkerReady();
         // Submit to queue
         const { publicUrl: videoUrl } = await renderQueue.enqueue({

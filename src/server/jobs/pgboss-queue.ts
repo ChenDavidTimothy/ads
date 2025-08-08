@@ -52,6 +52,11 @@ export class PgBossQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
       // eslint-disable-next-line no-console
       console.log(`[queue] enqueue ${this.queueName} businessJobId=${businessJobId}`);
     }
+    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '15');
+    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '120');
+    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 120) * 60;
+
     await boss.send(this.queueName, {
       // ensure payload shape matches worker expectations
       scene: (job as any).scene,
@@ -60,6 +65,12 @@ export class PgBossQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
       jobId: businessJobId,
     } as any, {
       singletonKey: businessJobId,
+      // reliability options
+      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 5,
+      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 15,
+      retryBackoff: true,
+      expireIn: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 7200,
+      // keep as low priority unless specified by queue policy
     } as any);
 
     return await new Promise<TResult>((resolve, reject) => {

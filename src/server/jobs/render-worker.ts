@@ -2,7 +2,7 @@ import { getBoss } from './pgboss-client';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
 import { SupabaseStorageProvider } from '@/server/storage/supabase';
 import { createServiceClient } from '@/utils/supabase/service';
-import { notifyRenderJobEvent } from './pg-events';
+import { notifyRenderJobEvent, shutdownPgEvents } from './pg-events';
 
 const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '2');
 
@@ -35,6 +35,25 @@ export async function registerRenderWorker() {
         if (!jobId || !userId || !scene || !config) {
           throw new Error('Invalid job payload');
         }
+        // Idempotency guard: if job already completed or failed, ack and return stored result
+        const { data: existing } = await supabase
+          .from('render_jobs')
+          .select('status, output_url, error')
+          .eq('id', jobId)
+          .eq('user_id', userId)
+          .single();
+        if (existing?.status === 'completed' && existing.output_url) {
+          // eslint-disable-next-line no-console
+          console.log(`[worker] job ${jobId} already completed, skipping`);
+          await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl: existing.output_url });
+          return { publicUrl: existing.output_url };
+        }
+        if (existing?.status === 'failed') {
+          // eslint-disable-next-line no-console
+          console.log(`[worker] job ${jobId} already failed, skipping`);
+          await notifyRenderJobEvent({ jobId, status: 'failed', error: existing.error });
+          throw new Error(existing.error ?? 'Job previously failed');
+        }
         await supabase
           .from('render_jobs')
           .update({ status: 'processing', updated_at: new Date().toISOString() })
@@ -61,12 +80,35 @@ export async function registerRenderWorker() {
         // eslint-disable-next-line no-console
         console.error(`[worker] failed job ${jobId}: ${message}`);
         if (jobId && userId) {
-          await supabase
-            .from('render_jobs')
-            .update({ status: 'failed', error: message, updated_at: new Date().toISOString() })
-            .eq('id', jobId)
-            .eq('user_id', userId);
-          await notifyRenderJobEvent({ jobId, status: 'failed', error: message });
+          const configuredRetryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+          const attempt = Number((j as any)?.retrycount ?? (j as any)?.retryCount ?? 0);
+          const isFinalAttempt = attempt + 1 >= (Number.isFinite(configuredRetryLimit) ? configuredRetryLimit : 5);
+          if (isFinalAttempt) {
+            await supabase
+              .from('render_jobs')
+              .update({ status: 'failed', error: message, updated_at: new Date().toISOString() })
+              .eq('id', jobId)
+              .eq('user_id', userId);
+            await notifyRenderJobEvent({ jobId, status: 'failed', error: message });
+            // DLQ pattern: mirror failed job into dedicated table/queue if configured
+            const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
+            if (deadLetterQueue) {
+              try {
+                await (await getBoss()).send(deadLetterQueue, { jobId, userId, error: message }, { expireIn: '7 days' } as any);
+                // eslint-disable-next-line no-console
+                console.warn(`[worker] sent job ${jobId} to DLQ ${deadLetterQueue}`);
+              } catch {
+                // ignore DLQ failures
+              }
+            }
+          } else {
+            // mark back to queued to reflect retry in UI
+            await supabase
+              .from('render_jobs')
+              .update({ status: 'queued', error: message, updated_at: new Date().toISOString() })
+              .eq('id', jobId)
+              .eq('user_id', userId);
+          }
         }
         throw err;
       }
@@ -77,6 +119,14 @@ export async function registerRenderWorker() {
     console.log('[worker] registered for queue: render-video');
   }
   workerRegistered = true;
+}
+
+export async function shutdownRenderWorker(): Promise<void> {
+  try {
+    await shutdownPgEvents();
+  } catch {
+    // ignore
+  }
 }
 
 

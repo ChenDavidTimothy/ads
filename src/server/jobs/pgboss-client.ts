@@ -12,7 +12,13 @@ export async function getBoss(): Promise<PgBoss> {
     throw new Error('PG_BOSS_DATABASE_URL is not set');
   }
 
-  const boss = new PgBoss(connectionString);
+  const boss = new PgBoss({
+    connectionString,
+    // retention and maintenance defaults; can be tuned via env
+    deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
+    archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
+    // monitorStateIntervalSeconds can help with metrics later
+  } as any);
 
   boss.on('error', (err) => {
     // eslint-disable-next-line no-console

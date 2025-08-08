@@ -5,24 +5,57 @@ let listenerConnected: Promise<void> | null = null;
 const handlers: Array<(payload: any) => void> = [];
 const CHANNEL = 'render_jobs_events';
 
-async function connectListener(): Promise<void> {
-  if (listenerConnected) return listenerConnected;
+function createPgClient(): Client {
   const connectionString = process.env.PG_BOSS_DATABASE_URL;
   if (!connectionString) throw new Error('PG_BOSS_DATABASE_URL is not set');
-  listenerClient = new Client({ connectionString, ssl: { rejectUnauthorized: false } as any });
+
+  // Configurable SSL without disabling verification by default
+  const sslMode = process.env.PG_SSL; // e.g. 'require'
+  const rejectUnauthorizedEnv = process.env.PG_SSL_REJECT_UNAUTHORIZED; // 'true' | 'false'
+  const shouldUseSsl = sslMode === 'require' || /sslmode=require/i.test(connectionString);
+  const rejectUnauthorized = rejectUnauthorizedEnv
+    ? rejectUnauthorizedEnv.toLowerCase() !== 'false'
+    : true;
+
+  const client = new Client({
+    connectionString,
+    ssl: shouldUseSsl ? { rejectUnauthorized } : undefined,
+  } as any);
+  return client;
+}
+
+let reconnectDelayMs = 1000;
+const maxReconnectDelayMs = 30000;
+
+async function connectListener(): Promise<void> {
+  if (listenerConnected) return listenerConnected;
+  listenerClient = createPgClient();
   listenerConnected = listenerClient
     .connect()
     .then(async () => {
+      reconnectDelayMs = 1000;
       listenerClient!.on('error', () => {
-        // simple reconnect strategy
+        // reconnect with simple exponential backoff
         listenerConnected = null;
+        try {
+          listenerClient?.removeAllListeners('notification');
+          listenerClient?.removeAllListeners('error');
+          // eslint-disable-next-line no-empty
+        } catch {}
         listenerClient = null;
-        void connectListener().then(() => listen());
+        setTimeout(() => {
+          reconnectDelayMs = Math.min(reconnectDelayMs * 2, maxReconnectDelayMs);
+          void connectListener().then(() => listen());
+        }, reconnectDelayMs);
       });
       await listen();
     })
     .catch((err) => {
       listenerConnected = null;
+      try {
+        listenerClient?.end().catch(() => undefined);
+        // eslint-disable-next-line no-empty
+      } catch {}
       listenerClient = null;
       throw err;
     });
@@ -59,9 +92,7 @@ async function getPublisher(): Promise<Client> {
     await publisherConnecting;
     return publisherClient!;
   }
-  const connectionString = process.env.PG_BOSS_DATABASE_URL;
-  if (!connectionString) throw new Error('PG_BOSS_DATABASE_URL is not set');
-  publisherClient = new Client({ connectionString, ssl: { rejectUnauthorized: false } as any });
+  publisherClient = createPgClient();
   publisherConnecting = publisherClient.connect().then(() => {
     return;
   });
@@ -79,6 +110,31 @@ export async function notifyRenderJobEvent(payload: {
   const client = await getPublisher();
   const text = JSON.stringify(payload);
   await client.query(`NOTIFY ${CHANNEL}, '${text.replace(/'/g, "''")}'`);
+}
+
+export async function shutdownPgEvents(): Promise<void> {
+  try {
+    if (listenerClient) {
+      listenerClient.removeAllListeners('notification');
+      listenerClient.removeAllListeners('error');
+      await listenerClient.end().catch(() => undefined);
+    }
+  } catch {
+    // ignore
+  } finally {
+    listenerClient = null;
+    listenerConnected = null;
+  }
+  try {
+    if (publisherClient) {
+      await publisherClient.end().catch(() => undefined);
+    }
+  } catch {
+    // ignore
+  } finally {
+    publisherClient = null;
+    publisherConnecting = null;
+  }
 }
 
 
