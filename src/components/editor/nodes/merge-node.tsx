@@ -28,8 +28,16 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
     }
   };
 
+  // Dynamic height based on port count for better port spacing
+  const getNodeHeight = () => {
+    if (portCount <= 2) return 'min-h-[120px]';
+    if (portCount === 3) return 'min-h-[140px]';
+    if (portCount === 4) return 'min-h-[160px]';
+    return 'min-h-[180px]'; // 5 ports
+  };
+
   return (
-    <Card className={`p-4 min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''}`}>
+    <Card className={`p-4 min-w-[200px] ${getNodeHeight()} ${selected ? 'ring-2 ring-blue-500' : ''}`}>
       {/* Dynamic input ports */}
       {inputPorts.map((port, index) => (
         <Handle

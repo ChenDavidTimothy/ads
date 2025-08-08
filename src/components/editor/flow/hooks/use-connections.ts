@@ -1,7 +1,7 @@
 // src/components/editor/flow/hooks/use-connections.ts
 import { useCallback } from 'react';
 import { addEdge, type Connection, type Edge, type Node } from 'reactflow';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { getNodeDefinition, getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import { arePortsCompatible } from '@/shared/types/ports';
 import type { NodeData } from '@/shared/types';
 import type { FlowTracker } from '@/lib/flow/flow-tracking';
@@ -44,12 +44,30 @@ export function useConnections(
       return;
     }
 
-    // CRITICAL FIX: Validate ports before checking duplicates
+    // CRITICAL FIX: Use dynamic port definitions for merge nodes
+    const actualTargetDefinition = targetNode.type === 'merge' 
+      ? getNodeDefinitionWithDynamicPorts(targetNode.type, targetNode.data)
+      : targetDefinition;
+    
     const sourcePort = sourceDefinition.ports.outputs.find((p) => p.id === params.sourceHandle);
-    const targetPort = targetDefinition.ports.inputs.find((p) => p.id === params.targetHandle);
+    const targetPort = actualTargetDefinition?.ports.inputs.find((p) => p.id === params.targetHandle);
     if (!sourcePort || !targetPort) {
       toast.error('Connection failed', 'Invalid port');
       return;
+    }
+
+    // CRITICAL FIX: Block multiple edges to same input port for merge nodes
+    if (targetNode.type === 'merge') {
+      const existingConnectionToSamePort = edges.find(edge => 
+        edge.target === targetNode.id && edge.targetHandle === params.targetHandle
+      );
+      if (existingConnectionToSamePort) {
+        toast.error(
+          'Connection blocked - Multiple edges to same port',
+          `Input port "${targetPort.label}" already has a connection. Each merge input port can only accept one edge to avoid confusion about data priority.`
+        );
+        return;
+      }
     }
 
     if (!arePortsCompatible(sourcePort.type, targetPort.type)) {
