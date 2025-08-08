@@ -2,7 +2,6 @@
 import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
-import { logger as serverLogger } from "@/server/logger";
 import { logger } from "@/lib/logger";
 import { isDomainError, NodeValidationError, SceneValidationError } from "@/shared/errors/domain";
 import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
@@ -18,6 +17,9 @@ import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
+
+// Typed row for Supabase render_jobs selection
+// (inline typing is handled at usage sites to avoid builder type issues)
 
 // Scene config schema (coerce types where the client might send strings)
 const sceneConfigSchema = z.object({
@@ -85,7 +87,7 @@ export const animationRouter = createTRPCRouter({
 
         // Validate connections by port compatibility
         const connectionErrors: string[] = [];
-        for (const edge of input.edges as ReactFlowEdgeInput[]) {
+        for (const edge of input.edges) {
           const source = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.source);
           const target = input.nodes.find((n: ReactFlowNodeInput) => n.id === edge.target);
           if (!source || !target) continue;
@@ -192,7 +194,7 @@ export const animationRouter = createTRPCRouter({
           scene,
           config,
           userId: ctx.user!.id,
-          jobId: jobRow.id as string,
+          jobId: jobRow.id,
         });
 
         // Optimized: wait briefly for NOTIFY to avoid client latency, but keep request bounded
@@ -200,7 +202,7 @@ export const animationRouter = createTRPCRouter({
         const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
         const parsed = Number(inlineWaitMsRaw);
         const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
-        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: inlineWaitMs });
+        const notify = await waitForRenderJobEvent({ jobId: jobRow.id, timeoutMs: inlineWaitMs });
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return {
             success: true,
@@ -212,7 +214,7 @@ export const animationRouter = createTRPCRouter({
         // Fall back to jobId if not immediately ready
         return {
           success: true,
-          jobId: jobRow.id as string,
+          jobId: jobRow.id,
           scene,
           config,
         } as const;
@@ -407,7 +409,7 @@ function validateInputNodes(nodes: Array<{ id: string; type?: string; position: 
     
     // Validate properties against generated Zod schema
     const schema = buildZodSchemaFromProperties(definition.properties.properties);
-    const result = schema.safeParse(node.data as unknown);
+    const result = schema.safeParse(node.data);
     if (!result.success) {
       const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
       errors.push(`Node ${node.id} property validation failed: ${issues}`);
@@ -426,75 +428,4 @@ function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: 
 }
 
 // Future: Registry-aware node capability detection
-function getNodeCapabilities(nodeType: string): {
-  canHandleConditionals: boolean;
-  canModifyData: boolean;
-  canCreateObjects: boolean;
-  canControlFlow: boolean;
-} {
-  const definition = getNodeDefinition(nodeType);
-  if (!definition) {
-    return {
-      canHandleConditionals: false,
-      canModifyData: false,
-      canCreateObjects: false,
-      canControlFlow: false,
-    };
-  }
-  
-  return {
-    canHandleConditionals: definition.execution.category === 'logic',
-    canModifyData: ['logic', 'animation'].includes(definition.execution.category),
-    canCreateObjects: definition.execution.category === 'geometry',
-    canControlFlow: definition.execution.category === 'timing',
-  };
-}
-
-// Future: Registry-aware flow analysis
-function analyzeNodeFlow(
-  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>,
-  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>
-): {
-  hasGeometry: boolean;
-  hasTiming: boolean;
-  hasLogic: boolean;
-  hasAnimation: boolean;
-  hasOutput: boolean;
-  flowComplexity: 'simple' | 'moderate' | 'complex';
-} {
-  const nodesByCategory = {
-    geometry: 0,
-    timing: 0,
-    logic: 0,
-    animation: 0,
-    output: 0,
-  };
-  
-  for (const node of nodes) {
-    if (!node.type) continue;
-    
-    const definition = getNodeDefinition(node.type);
-    if (definition) {
-      nodesByCategory[definition.execution.category]++;
-    }
-  }
-  
-  const totalNodes = nodes.length;
-  const totalEdges = edges.length;
-  
-  let flowComplexity: 'simple' | 'moderate' | 'complex' = 'simple';
-  if (totalNodes > 10 || totalEdges > 15 || nodesByCategory.logic > 2) {
-    flowComplexity = 'complex';
-  } else if (totalNodes > 5 || totalEdges > 7 || nodesByCategory.logic > 0) {
-    flowComplexity = 'moderate';
-  }
-  
-  return {
-    hasGeometry: nodesByCategory.geometry > 0,
-    hasTiming: nodesByCategory.timing > 0,
-    hasLogic: nodesByCategory.logic > 0,
-    hasAnimation: nodesByCategory.animation > 0,
-    hasOutput: nodesByCategory.output > 0,
-    flowComplexity,
-  };
-}
+// (helper stubs removed as they were unused and triggered lints)
