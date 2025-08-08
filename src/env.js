@@ -15,6 +15,7 @@ export const env = createEnv({
       .default("development"),
     FFMPEG_PATH: z.string().optional(),
     RENDER_CONCURRENCY: z.coerce.number().int().positive().default(2),
+    PG_BOSS_DATABASE_URL: z.string().min(1),
   },
 
   /**
@@ -37,6 +38,7 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     FFMPEG_PATH: process.env.FFMPEG_PATH,
     RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY,
+    PG_BOSS_DATABASE_URL: process.env.PG_BOSS_DATABASE_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
