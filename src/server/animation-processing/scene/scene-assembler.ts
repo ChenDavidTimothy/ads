@@ -98,10 +98,10 @@ export function convertTracksToSceneAnimations(tracks: AnimationTrack[], objectI
             property: track.properties.property,
           }
         };
-      default: {
-        const _exhaustiveCheck: never = track as never;
-        throw new Error(`Unknown track type: ${String((_exhaustiveCheck as unknown as { type?: string }).type ?? 'unknown')}`);
-      }
+      default:
+        // Exhaustiveness check: if a new track type is added, TypeScript will flag this switch as non-exhaustive.
+        // We deliberately throw here to fail fast in runtime as well.
+        throw new Error('Unknown track type');
     }
   });
 }

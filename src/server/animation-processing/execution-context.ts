@@ -234,9 +234,7 @@ export function popExecutionStack(
 // Future: Debug utilities
 export function enableDebugMode(context: ExecutionContext): void {
   context.debugMode = true;
-  if (!context.executionLog) {
-    context.executionLog = [];
-  }
+  context.executionLog ??= [];
 }
 
 export function getExecutionLog(context: ExecutionContext): typeof context.executionLog {

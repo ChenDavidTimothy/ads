@@ -210,7 +210,7 @@ function SchemaBasedProperties({
             min={schema.min}
             max={schema.max}
             step={schema.step}
-            defaultValue={schema.defaultValue as number}
+            defaultValue={schema.defaultValue}
           />
         );
 
@@ -422,13 +422,13 @@ function FilterSpecialProperties({
                         backgroundColor: ((objectNode.data as unknown as { color?: string })?.color) ?? '#666'
                       }}
                     >
-                      {nodeDefinition?.rendering.icon || '?'}
+                      {nodeDefinition?.rendering.icon ?? '?'}
                     </div>
                     <span className="text-sm text-white truncate">
                       {objectNode.data.identifier.displayName}
                     </span>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {nodeDefinition?.label || objectNode.type}
+                      {nodeDefinition?.label ?? objectNode.type}
                     </span>
                   </div>
                 </div>

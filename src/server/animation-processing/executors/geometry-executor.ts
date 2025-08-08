@@ -32,7 +32,7 @@ export class GeometryNodeExecutor implements NodeExecutor {
       initialOpacity: 1,
     };
 
-    switch (node.type as 'filter' | string) {
+    switch (node.type) {
       case "triangle":
         return {
           ...baseObject,
@@ -65,7 +65,7 @@ export class GeometryNodeExecutor implements NodeExecutor {
           },
         };
       default:
-        throw new UnknownNodeTypeError(String(node.type));
+        throw new UnknownNodeTypeError(String(node.type ?? 'unknown'));
     }
   }
 }

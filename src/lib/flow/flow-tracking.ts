@@ -189,10 +189,6 @@ export class FlowTracker {
     
     // Get node categories from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
-    const timingNodeTypes = getNodesByCategory('timing').map(def => def.type);
-    const logicNodeTypes = getNodesByCategory('logic').map(def => def.type);
-    const animationNodeTypes = getNodesByCategory('animation').map(def => def.type);
-    const outputNodeTypes = getNodesByCategory('output').map(def => def.type);
 
     // Validate proper flow architecture
     const geometryNodes = nodes.filter(n => geometryNodeTypes.includes(n.type!));
@@ -332,6 +328,6 @@ export class FlowTracker {
     
     // Get all outgoing edges (potential conditional paths)
     const outgoingEdges = edges.filter(e => e.source === nodeId);
-    return outgoingEdges.map(e => e.targetHandle || 'default');
+    return outgoingEdges.map(e => e.targetHandle ?? 'default');
   }
 }

@@ -450,27 +450,27 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
     // Preserve discriminated union shape when updating properties
     switch (track.type) {
       case 'move': {
-        const merged: MoveTrackProperties = { ...(track.properties as MoveTrackProperties), ...(updates as Partial<MoveTrackProperties>) };
+        const merged: MoveTrackProperties = { ...track.properties, ...(updates as Partial<MoveTrackProperties>) };
         onChange({ properties: merged });
         break;
       }
       case 'rotate': {
-        const merged: RotateTrackProperties = { ...(track.properties as RotateTrackProperties), ...(updates as Partial<RotateTrackProperties>) };
+        const merged: RotateTrackProperties = { ...track.properties, ...(updates as Partial<RotateTrackProperties>) };
         onChange({ properties: merged });
         break;
       }
       case 'scale': {
-        const merged: ScaleTrackProperties = { ...(track.properties as ScaleTrackProperties), ...(updates as Partial<ScaleTrackProperties>) };
+        const merged: ScaleTrackProperties = { ...track.properties, ...(updates as Partial<ScaleTrackProperties>) };
         onChange({ properties: merged });
         break;
       }
       case 'fade': {
-        const merged: FadeTrackProperties = { ...(track.properties as FadeTrackProperties), ...(updates as Partial<FadeTrackProperties>) };
+        const merged: FadeTrackProperties = { ...track.properties, ...(updates as Partial<FadeTrackProperties>) };
         onChange({ properties: merged });
         break;
       }
       case 'color': {
-        const merged: ColorTrackProperties = { ...(track.properties as ColorTrackProperties), ...(updates as Partial<ColorTrackProperties>) };
+        const merged: ColorTrackProperties = { ...track.properties, ...(updates as Partial<ColorTrackProperties>) };
         onChange({ properties: merged });
         break;
       }

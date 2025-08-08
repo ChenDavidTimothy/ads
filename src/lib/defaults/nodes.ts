@@ -128,6 +128,9 @@ export function getDefaultTrackProperties(trackType: AnimationTrack['type']):
     case 'color':
       return { from: '#ff0000', to: '#00ff00', property: 'fill' };
     default:
-      throw new Error(`Unknown track type: ${trackType}`);
+      {
+        const _exhaustiveCheck: never = trackType;
+        throw new Error('Unknown track type');
+      }
   }
 }

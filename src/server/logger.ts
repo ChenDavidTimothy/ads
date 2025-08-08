@@ -3,17 +3,9 @@ import { isDomainError } from "@/shared/errors/domain";
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogMeta {
-  [key: string]: unknown;
-}
+type LogMeta = Record<string, unknown>;
 
-function serialize(meta?: LogMeta): string {
-  try {
-    return JSON.stringify(meta ?? {});
-  } catch {
-    return '{}';
-  }
-}
+// Intentionally no serialize() helper to avoid unused symbol warnings
 
 function log(level: LogLevel, message: string, meta?: LogMeta): void {
   const line = {

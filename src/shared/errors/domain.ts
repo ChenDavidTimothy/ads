@@ -27,7 +27,7 @@ export class DomainError extends Error {
   public readonly details?: DomainErrorDetails;
   public readonly isUserError: boolean;
 
-  constructor(message: string, code: DomainErrorCode, details?: DomainErrorDetails, isUserError: boolean = true) {
+  constructor(message: string, code: DomainErrorCode, details?: DomainErrorDetails, isUserError = true) {
     super(message);
     this.name = 'DomainError';
     this.code = code;

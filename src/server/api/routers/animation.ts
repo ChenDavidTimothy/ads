@@ -13,9 +13,8 @@ import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 import { buildZodSchemaFromProperties } from "@/shared/types/properties";
-import type { NodeDefinition } from "@/shared/types/definitions";
 import { arePortsCompatible } from "@/shared/types/ports";
-import type { AnimationScene, NodeData, SceneNodeData, SceneObject, GeometryProperties, TriangleProperties, CircleProperties, RectangleProperties } from "@/shared/types";
+import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 
 // Scene config schema (unchanged)
@@ -109,7 +108,7 @@ export const animationRouter = createTRPCRouter({
           targetHandle: e.targetHandle ?? undefined,
         }));
         const executionContext = await engine.executeFlow(
-          normalizedNodes as unknown as ReactFlowNode<NodeData>[],
+          normalizedNodes as ReactFlowNode<NodeData>[],
           normalizedEdges,
         );
 
@@ -119,7 +118,7 @@ export const animationRouter = createTRPCRouter({
           throw new SceneValidationError(["Scene node is required"]);
         }
 
-        const sceneData = sceneNode.data as unknown as SceneNodeData;
+        const sceneData = sceneNode.data as SceneNodeData;
 
         // Calculate total duration
         const maxAnimationTime =
@@ -224,7 +223,7 @@ export const animationRouter = createTRPCRouter({
           targetHandle: e.targetHandle ?? undefined,
         }));
         const executionContext = await engine.executeFlow(
-          normalizedNodes as unknown as ReactFlowNode<NodeData>[],
+          normalizedNodes as ReactFlowNode<NodeData>[],
           normalizedEdges,
         );
 
@@ -234,7 +233,7 @@ export const animationRouter = createTRPCRouter({
           return { valid: false, errors: ["Scene node is required"] };
         }
 
-        const sceneData = sceneNode.data as unknown as SceneNodeData;
+        const sceneData = sceneNode.data as SceneNodeData;
         const maxAnimationTime =
           executionContext.sceneAnimations.length > 0
             ? Math.max(
@@ -294,7 +293,7 @@ export const animationRouter = createTRPCRouter({
 
   // Utility endpoints (unchanged)
   getDefaultSceneConfig: publicProcedure.query(() => {
-    return DEFAULT_SCENE_CONFIG;
+      return DEFAULT_SCENE_CONFIG;
   }),
 
   getDefaultTriangleConfig: publicProcedure.query(() => {
@@ -350,7 +349,7 @@ function findSceneNode(nodes: Array<{ id: string; type?: string; position: { x: 
   const outputNodes = getNodesByCategory('output');
   const sceneNodeTypes = outputNodes.filter(def => def.type === 'scene').map(def => def.type);
   
-  return nodes.find(node => node.type && sceneNodeTypes.includes(node.type)) || null;
+  return nodes.find(node => node.type && sceneNodeTypes.includes(node.type)) ?? null;
 }
 
 // Future: Registry-aware node capability detection
@@ -379,7 +378,10 @@ function getNodeCapabilities(nodeType: string): {
 }
 
 // Future: Registry-aware flow analysis
-function analyzeNodeFlow(nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>, edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>): {
+function analyzeNodeFlow(
+  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>,
+  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>
+): {
   hasGeometry: boolean;
   hasTiming: boolean;
   hasLogic: boolean;

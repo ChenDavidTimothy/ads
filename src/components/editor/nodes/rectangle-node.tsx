@@ -3,7 +3,6 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { NODE_COLORS } from "@/lib/constants/editor";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { RectangleNodeData } from "@/shared/types/nodes";
 

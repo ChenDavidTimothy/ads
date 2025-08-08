@@ -36,9 +36,12 @@ export class AnimationNodeExecutor implements NodeExecutor {
       for (const timedObject of inputData) {
         const objectId = (timedObject as { id?: unknown }).id as string | undefined;
         const appearanceTime = (timedObject as { appearanceTime?: unknown }).appearanceTime as number | undefined;
-        const baseline = (objectId && upstreamCursorMap[objectId] !== undefined)
-          ? upstreamCursorMap[objectId]!
-          : (appearanceTime ?? 0);
+        let baseline: number;
+        if (typeof objectId === 'string' && upstreamCursorMap[objectId] !== undefined) {
+          baseline = upstreamCursorMap[objectId];
+        } else {
+          baseline = appearanceTime ?? 0;
+        }
         const animations = convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],
           objectId ?? '',

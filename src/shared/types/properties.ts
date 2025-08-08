@@ -128,11 +128,9 @@ export function buildZodSchemaFromProperties(
         shape[schema.key] = validator;
         break;
       }
-      default: {
-        const _exhaustiveCheck: never = schema as never;
+      default:
         // Unknown property types are ignored to maintain strict typing
         break;
-      }
     }
   }
   return z.object(shape);
