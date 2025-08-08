@@ -14,6 +14,7 @@ import { arePortsCompatible } from "@/shared/types/ports";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 import { renderQueue, ensureWorkerReady } from "@/server/jobs/render-queue";
+import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -186,20 +187,31 @@ export const animationRouter = createTRPCRouter({
 
         // Worker now runs in separate process; optionally we could verify availability via a heartbeat
         await ensureWorkerReady();
-        // Submit to queue
-        const { publicUrl: videoUrl } = await renderQueue.enqueue({
+        // Submit to queue (non-blocking)
+        await renderQueue.enqueueOnly({
           scene,
           config,
           userId: ctx.user!.id,
           jobId: jobRow.id as string,
         });
 
+        // Optimized: wait briefly for NOTIFY to avoid client latency, but keep request bounded
+        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: 25000 });
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return {
+            success: true,
+            videoUrl: notify.publicUrl,
+            scene,
+            config,
+          } as const;
+        }
+        // Fall back to jobId if not immediately ready
         return {
           success: true,
-          videoUrl,
+          jobId: jobRow.id as string,
           scene,
           config,
-        };
+        } as const;
       } catch (error) {
         // Log server-side with structured logger
         if (isDomainError(error)) {
@@ -314,6 +326,29 @@ export const animationRouter = createTRPCRouter({
       output: outputNodes,
     };
   }),
+  // Minimal job status endpoint used by the client to retrieve the final URL
+  getRenderJobStatus: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .query(async ({ input, ctx }: { input: { jobId: string }; ctx: TRPCContext }) => {
+      const supabase = createServiceClient();
+      const { data, error } = await supabase
+        .from('render_jobs')
+        .select('status, output_url, error')
+        .eq('id', input.jobId)
+        .eq('user_id', ctx.user!.id)
+        .single();
+      if (error) {
+        throw new Error(error.message);
+      }
+      // If completed, return quickly; otherwise try a short wait for NOTIFY (reduces client polling jitter)
+      if (data?.status !== 'completed' || !data?.output_url) {
+        const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;
+        }
+      }
+      return { status: data?.status ?? 'unknown', videoUrl: data?.output_url ?? null, error: data?.error ?? null } as const;
+    }),
 
   getNodeDefinition: publicProcedure
     .input(z.object({ nodeType: z.string() }))

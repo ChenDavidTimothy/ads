@@ -39,6 +39,36 @@ export class PgBossQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
     eventsSubscribed = true;
   }
 
+  // Non-blocking enqueue: send job and return immediately with jobId
+  async enqueueOnly(job: TJob & { jobId?: string; userId?: string }): Promise<{ jobId: string }> {
+    const boss = await getBoss();
+
+    const businessJobId = (job as any)?.jobId as string | undefined;
+    if (!businessJobId) {
+      throw new Error('jobId is required to enqueue render job');
+    }
+
+    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '15');
+    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '120');
+    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 120) * 60;
+
+    await boss.send(this.queueName, {
+      scene: (job as any).scene,
+      config: (job as any).config,
+      userId: (job as any).userId,
+      jobId: businessJobId,
+    } as any, {
+      singletonKey: businessJobId,
+      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 5,
+      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 15,
+      retryBackoff: true,
+      expireIn: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 7200,
+    } as any);
+
+    return { jobId: businessJobId };
+  }
+
   async enqueue(job: TJob & { jobId?: string; userId?: string }): Promise<TResult> {
     await this.ensureEventSubscription();
     const boss = await getBoss();

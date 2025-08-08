@@ -83,6 +83,49 @@ export async function listenRenderJobEvents(
   handlers.push(handler);
 }
 
+export async function waitForRenderJobEvent(params: {
+  jobId: string;
+  timeoutMs?: number;
+}): Promise<{ status: 'completed' | 'failed'; publicUrl?: string; error?: string } | null> {
+  const { jobId, timeoutMs = 25000 } = params;
+  await connectListener();
+
+  return await new Promise((resolve) => {
+    let settled = false;
+    const handler = (payload: any) => {
+      if (settled) return;
+      if (!payload || payload.jobId !== jobId) return;
+      settled = true;
+      // remove handler
+      const idx = handlers.indexOf(handler);
+      if (idx >= 0) handlers.splice(idx, 1);
+      resolve({ status: payload.status, publicUrl: payload.publicUrl, error: payload.error });
+    };
+    handlers.push(handler);
+    const t = setTimeout(() => {
+      if (settled) return;
+      // remove handler on timeout
+      const idx = handlers.indexOf(handler);
+      if (idx >= 0) handlers.splice(idx, 1);
+      settled = true;
+      resolve(null);
+    }, timeoutMs);
+    // In case process is terminating, resolve early
+    if (typeof process !== 'undefined') {
+      const onExit = () => {
+        if (settled) return;
+        const idx = handlers.indexOf(handler);
+        if (idx >= 0) handlers.splice(idx, 1);
+        settled = true;
+        clearTimeout(t);
+        resolve(null);
+      };
+      process.once('SIGINT', onExit);
+      process.once('SIGTERM', onExit);
+    }
+  });
+}
+
 let publisherClient: Client | null = null;
 let publisherConnecting: Promise<void> | null = null;
 

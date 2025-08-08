@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { Edge, Node } from 'reactflow';
+// Minimal local types to avoid dependency on reactflow types at build time
+type RFEdge = { id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string };
+type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
 import { api } from '@/trpc/react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { extractDomainError } from '@/shared/errors/client';
@@ -8,22 +10,50 @@ import type { SceneConfig } from '../types';
 import { createBrowserClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 
-export function useSceneGeneration(nodes: Node<NodeData>[], edges: Edge[]) {
+export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const { toast } = useNotifications();
   const router = useRouter();
+  const utils = api.useUtils();
 
   const generateScene = api.animation.generateScene.useMutation({
-    onSuccess: (data) => {
-      setVideoUrl(data.videoUrl);
-      toast.success('Video generated successfully!');
+    onSuccess: (data: { jobId: string } | { videoUrl: string }) => {
+      // Backward-compatible: support immediate videoUrl or new async jobId flow
+      if ('videoUrl' in data && data.videoUrl) {
+        setVideoUrl(data.videoUrl);
+        toast.success('Video generated successfully!');
+        return;
+      }
+      const jobId = 'jobId' in data ? data.jobId : null;
+      if (!jobId) return;
+      // Start polling job status until completed/failed
+      const poll = async () => {
+        try {
+          const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
+          if (res.status === 'completed' && res.videoUrl) {
+            setVideoUrl(res.videoUrl);
+            toast.success('Video generated successfully!');
+            return; // stop polling
+          }
+          if (res.status === 'failed') {
+            toast.error('Video generation failed', res.error ?? 'Unknown error');
+            return;
+          }
+          setTimeout(poll, 1500);
+        } catch (e) {
+          // keep trying for transient issues
+          setTimeout(poll, 2000);
+        }
+      };
+      void poll();
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       const domain = extractDomainError(error);
       if (domain?.code) {
         toast.error('Cannot generate yet', domain.message ?? 'A validation error occurred');
       } else {
-        toast.error('Video generation failed', error.message);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Video generation failed', message);
       }
     },
   });
