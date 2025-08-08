@@ -32,7 +32,7 @@ class Logger {
                        level === 'warn' ? console.warn : 
                        console.log;
       
-      logMethod(`[${level.toUpperCase()}]`, message, context || '', error || '');
+      logMethod(`[${level.toUpperCase()}]`, message, context ?? '', error ?? '');
     } else {
       // In production, you'd send to logging service (e.g., Sentry, LogRocket, etc.)
       console.log(JSON.stringify(logData));

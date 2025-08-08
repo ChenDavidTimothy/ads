@@ -6,6 +6,13 @@ type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 type HelloInput = { text: string };
 type CreatePostInput = { name: string };
 
+interface Post {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+}
+
 export const postRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
@@ -28,16 +35,16 @@ export const postRouter = createTRPCRouter({
       return { success: true } as const;
     }),
 
-  getLatest: protectedProcedure.query(async ({ ctx }: { ctx: TRPCContext }) => {
+  getLatest: protectedProcedure.query(async ({ ctx }: { ctx: TRPCContext }): Promise<Post | null> => {
     const { supabase, user } = ctx;
-    const { data, error } = await supabase
+    const result = await supabase
       .from("posts")
       .select("*")
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (error) throw error;
-    return data ?? null;
+    if (result.error) throw result.error;
+    return result.data as Post | null;
   }),
 });

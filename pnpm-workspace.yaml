@@ -3,8 +3,6 @@ ignoredBuiltDependencies:
   - unrs-resolver
 
 onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
   - canvas
   - prisma
   - sharp

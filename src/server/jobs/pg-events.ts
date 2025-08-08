@@ -1,8 +1,17 @@
 import { Client } from 'pg';
+import type { ClientConfig } from 'pg';
+
+// Define proper types for the payload
+interface RenderJobEventPayload {
+  jobId: string;
+  status: 'completed' | 'failed';
+  publicUrl?: string;
+  error?: string;
+}
 
 let listenerClient: Client | null = null;
 let listenerConnected: Promise<void> | null = null;
-const handlers: Array<(payload: any) => void> = [];
+const handlers: Array<(payload: RenderJobEventPayload) => void> = [];
 const CHANNEL = 'render_jobs_events';
 
 function createPgClient(): Client {
@@ -17,11 +26,11 @@ function createPgClient(): Client {
     ? rejectUnauthorizedEnv.toLowerCase() !== 'false'
     : true;
 
-  const client = new Client({
+  const clientConfig: ClientConfig = {
     connectionString,
     ssl: shouldUseSsl ? { rejectUnauthorized } : undefined,
-  } as any);
-  return client;
+  };
+  return new Client(clientConfig);
 }
 
 let reconnectDelayMs = 1000;
@@ -40,8 +49,9 @@ async function connectListener(): Promise<void> {
         try {
           listenerClient?.removeAllListeners('notification');
           listenerClient?.removeAllListeners('error');
-          // eslint-disable-next-line no-empty
-        } catch {}
+        } catch {
+          // ignore cleanup errors
+        }
         listenerClient = null;
         setTimeout(() => {
           reconnectDelayMs = Math.min(reconnectDelayMs * 2, maxReconnectDelayMs);
@@ -54,8 +64,9 @@ async function connectListener(): Promise<void> {
       listenerConnected = null;
       try {
         listenerClient?.end().catch(() => undefined);
-        // eslint-disable-next-line no-empty
-      } catch {}
+      } catch {
+        // ignore cleanup errors
+      }
       listenerClient = null;
       throw err;
     });
@@ -68,16 +79,32 @@ async function listen(): Promise<void> {
   listenerClient.on('notification', (msg) => {
     if (msg.channel !== CHANNEL || !msg.payload) return;
     try {
-      const payload = JSON.parse(msg.payload);
-      for (const h of handlers) h(payload);
+      const payload = JSON.parse(msg.payload) as unknown;
+      // Type guard to ensure payload is valid
+      if (isValidRenderJobEventPayload(payload)) {
+        for (const h of handlers) h(payload);
+      }
     } catch {
       // ignore malformed payloads
     }
   });
 }
 
+// Type guard function to validate payload
+function isValidRenderJobEventPayload(payload: unknown): payload is RenderJobEventPayload {
+  if (!payload || typeof payload !== 'object') return false;
+  const obj = payload as Record<string, unknown>;
+  
+  if (typeof obj.jobId !== 'string') return false;
+  if (obj.status !== 'completed' && obj.status !== 'failed') return false;
+  if (obj.publicUrl !== undefined && typeof obj.publicUrl !== 'string') return false;
+  if (obj.error !== undefined && typeof obj.error !== 'string') return false;
+  
+  return true;
+}
+
 export async function listenRenderJobEvents(
-  handler: (payload: { jobId: string; status: 'completed' | 'failed'; publicUrl?: string; error?: string }) => void
+  handler: (payload: RenderJobEventPayload) => void
 ): Promise<void> {
   await connectListener();
   handlers.push(handler);
@@ -86,20 +113,20 @@ export async function listenRenderJobEvents(
 export async function waitForRenderJobEvent(params: {
   jobId: string;
   timeoutMs?: number;
-}): Promise<{ status: 'completed' | 'failed'; publicUrl?: string; error?: string } | null> {
+}): Promise<RenderJobEventPayload | null> {
   const { jobId, timeoutMs = 25000 } = params;
   await connectListener();
 
   return await new Promise((resolve) => {
     let settled = false;
-    const handler = (payload: any) => {
+    const handler = (payload: RenderJobEventPayload) => {
       if (settled) return;
       if (!payload || payload.jobId !== jobId) return;
       settled = true;
       // remove handler
       const idx = handlers.indexOf(handler);
       if (idx >= 0) handlers.splice(idx, 1);
-      resolve({ status: payload.status, publicUrl: payload.publicUrl, error: payload.error });
+      resolve({ jobId: payload.jobId, status: payload.status, publicUrl: payload.publicUrl, error: payload.error });
     };
     handlers.push(handler);
     const t = setTimeout(() => {
@@ -144,12 +171,7 @@ async function getPublisher(): Promise<Client> {
   return publisherClient;
 }
 
-export async function notifyRenderJobEvent(payload: {
-  jobId: string;
-  status: 'completed' | 'failed';
-  publicUrl?: string;
-  error?: string;
-}): Promise<void> {
+export async function notifyRenderJobEvent(payload: RenderJobEventPayload): Promise<void> {
   const client = await getPublisher();
   const text = JSON.stringify(payload);
   // Use parameterized pg_notify to avoid manual string escaping
