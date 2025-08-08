@@ -18,8 +18,12 @@ export interface RenderJobResult {
   publicUrl: string;
 }
 
-// Ensure worker is registered once in process
-void registerRenderWorker();
+// Ensure worker is registered once in process, and export a helper to await it
+const workerReady: Promise<void> = registerRenderWorker();
+
+export async function ensureWorkerReady(): Promise<void> {
+  await workerReady;
+}
 
 export const renderQueue = new PgBossQueue<RenderJobInput, RenderJobResult>({
   queueName: 'render-video',

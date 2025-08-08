@@ -48,9 +48,17 @@ export class PgBossQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
       throw new Error('jobId is required to enqueue render job');
     }
 
-    // eslint-disable-next-line no-console
-    console.log(`[queue] enqueue ${this.queueName} businessJobId=${businessJobId}`);
-    await boss.send(this.queueName, job as any, {
+    if (process.env.JOB_DEBUG === '1') {
+      // eslint-disable-next-line no-console
+      console.log(`[queue] enqueue ${this.queueName} businessJobId=${businessJobId}`);
+    }
+    await boss.send(this.queueName, {
+      // ensure payload shape matches worker expectations
+      scene: (job as any).scene,
+      config: (job as any).config,
+      userId: (job as any).userId,
+      jobId: businessJobId,
+    } as any, {
       singletonKey: businessJobId,
     } as any);
 
@@ -75,8 +83,10 @@ export class PgBossQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
             .eq('id', businessJobId)
             .single();
           if (!error && data) {
-            // eslint-disable-next-line no-console
-            console.log(`[queue] poll status jobId=${businessJobId} status=${data.status}`);
+            if (process.env.JOB_DEBUG === '1') {
+              // eslint-disable-next-line no-console
+              console.log(`[queue] poll status jobId=${businessJobId} status=${data.status}`);
+            }
             if (data.status === 'completed' && data.output_url) {
               waiters.delete(businessJobId);
               clearTimeout(timeout);

@@ -13,7 +13,7 @@ import { buildZodSchemaFromProperties } from "@/shared/types/properties";
 import { arePortsCompatible } from "@/shared/types/ports";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
-import { renderQueue } from "@/server/jobs/render-queue";
+import { renderQueue, ensureWorkerReady } from "@/server/jobs/render-queue";
 import { createServiceClient } from "@/utils/supabase/service";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -184,6 +184,8 @@ export const animationRouter = createTRPCRouter({
           throw (insErr ?? new Error('Failed to create job'));
         }
 
+        // Ensure worker is ready before submitting to queue
+        await ensureWorkerReady();
         // Submit to queue
         const { publicUrl: videoUrl } = await renderQueue.enqueue({
           scene,
