@@ -168,9 +168,14 @@ export function AuthStatus() {
           setEmail(null);
           setAuthState('unauthenticated');
           setSessionExpiresAt(null);
+          // Clean up all intervals and timeouts on sign out
           if (refreshTimeoutRef.current) {
             clearTimeout(refreshTimeoutRef.current);
             refreshTimeoutRef.current = null;
+          }
+          if (sessionCheckIntervalRef.current) {
+            clearInterval(sessionCheckIntervalRef.current);
+            sessionCheckIntervalRef.current = null;
           }
           break;
           
@@ -219,12 +224,20 @@ export function AuthStatus() {
       setAuthState('unauthenticated');
       setSessionExpiresAt(null);
       
+      // Clean up all intervals and timeouts
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
         refreshTimeoutRef.current = null;
       }
+      if (sessionCheckIntervalRef.current) {
+        clearInterval(sessionCheckIntervalRef.current);
+        sessionCheckIntervalRef.current = null;
+      }
       
       toast.success('Signed out successfully', 'Come back soon!');
+      
+      // Redirect to auth page after successful logout
+      window.location.href = '/auth';
     } catch (error) {
       console.error('[AUTH] Logout error:', error);
       toast.error('Logout failed', 'Please try again');

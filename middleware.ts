@@ -29,8 +29,24 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+  // Get user session
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  const url = request.nextUrl.clone()
+  const isAuthPage = url.pathname === '/auth'
+  const isProtectedRoute = url.pathname.startsWith('/editor')
+  
+  // Redirect unauthenticated users away from protected routes
+  if (!user && isProtectedRoute) {
+    url.pathname = '/auth'
+    return NextResponse.redirect(url)
+  }
+  
+  // Redirect authenticated users away from auth page to editor
+  if (user && isAuthPage) {
+    url.pathname = '/editor'
+    return NextResponse.redirect(url)
+  }
 
   return response
 }

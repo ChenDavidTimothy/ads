@@ -40,14 +40,17 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   // Auth state monitoring with automatic session refresh
   useEffect(() => {
     const supabase = createBrowserClient();
+    let authInterval: NodeJS.Timeout | null = null;
     
     const checkAndRefreshAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error || !session) {
-          console.warn('[AUTH] Session invalid, redirecting to login');
-          toast.warning('Session expired', 'Please log in again to continue');
-          router.push('/auth');
+          console.warn('[AUTH] Session invalid, stopping auth checks');
+          if (authInterval) {
+            clearInterval(authInterval);
+            authInterval = null;
+          }
           return false;
         }
         
@@ -62,8 +65,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error('[AUTH] Session refresh failed:', refreshError);
-            toast.error('Session refresh failed', 'Please log in again');
-            router.push('/auth');
+            if (authInterval) {
+              clearInterval(authInterval);
+              authInterval = null;
+            }
             return false;
           }
         }
@@ -71,17 +76,32 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return true;
       } catch (error) {
         console.error('[AUTH] Auth check failed:', error);
-        toast.error('Authentication error', 'Please log in again');
-        router.push('/auth');
+        if (authInterval) {
+          clearInterval(authInterval);
+          authInterval = null;
+        }
         return false;
       }
     };
 
-    // Check auth immediately and then every 2 minutes
-    checkAndRefreshAuth();
-    const authInterval = setInterval(checkAndRefreshAuth, 2 * 60 * 1000);
+    // Check auth immediately and then every 2 minutes if still authenticated
+    checkAndRefreshAuth().then((isAuthenticated) => {
+      if (isAuthenticated) {
+        authInterval = setInterval(async () => {
+          const stillAuthenticated = await checkAndRefreshAuth();
+          if (!stillAuthenticated && authInterval) {
+            clearInterval(authInterval);
+            authInterval = null;
+          }
+        }, 2 * 60 * 1000);
+      }
+    });
     
-    return () => clearInterval(authInterval);
+    return () => {
+      if (authInterval) {
+        clearInterval(authInterval);
+      }
+    };
   }, [router, toast]);
 
   const generateScene = api.animation.generateScene.useMutation({
