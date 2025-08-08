@@ -51,7 +51,8 @@ export class FrameGenerator {
       fps: this.config.fps,
       preset: videoConfig?.preset ?? 'medium',
       crf: videoConfig?.crf ?? 18,
-      inputPixelFormat: 'rgba',
+      // node-canvas raw buffer is BGRA; feed that directly to ffmpeg
+      inputPixelFormat: 'bgra',
     });
 
     try {
