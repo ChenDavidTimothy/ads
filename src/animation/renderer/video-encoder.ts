@@ -9,6 +9,8 @@ export interface VideoConfig {
   fps: number;
   preset: string;
   crf: number;
+  // Raw input pixel format
+  inputPixelFormat: 'rgb24' | 'rgba' | 'bgra';
 }
 
 export class VideoEncoder {
@@ -34,7 +36,7 @@ export class VideoEncoder {
 
       this.ffmpegProcess = spawn(ffmpegPath, [
         '-f', 'rawvideo',
-        '-pix_fmt', 'rgb24',
+        '-pix_fmt', this.config.inputPixelFormat,
         '-s', `${this.config.width}x${this.config.height}`,
         '-r', this.config.fps.toString(),
         '-i', 'pipe:0',

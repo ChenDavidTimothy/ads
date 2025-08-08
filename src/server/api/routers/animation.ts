@@ -16,12 +16,12 @@ import { renderQueue } from "@/server/jobs/render-queue";
 
 // Scene config schema (unchanged)
 const sceneConfigSchema = z.object({
-  width: z.number().optional(),
-  height: z.number().optional(),
-  fps: z.number().optional(),
+  width: z.number().max(1920).optional(),
+  height: z.number().max(1080).optional(),
+  fps: z.number().max(60).optional(),
   backgroundColor: z.string().optional(),
   videoPreset: z.string().optional(),
-  videoCrf: z.number().optional(),
+  videoCrf: z.number().min(0).max(51).optional(),
 });
 
 // Registry-aware ReactFlow Node schema
@@ -126,7 +126,10 @@ export const animationRouter = createTRPCRouter({
                 ),
               )
             : 0;
-        const totalDuration = Math.max(maxAnimationTime, sceneData.duration);
+        const totalDuration = Math.min(
+          Math.max(maxAnimationTime, sceneData.duration),
+          15
+        );
 
         // Build AnimationScene from execution context
         const scene: AnimationScene = {
@@ -149,6 +152,10 @@ export const animationRouter = createTRPCRouter({
           videoCrf: sceneData.videoCrf,
           ...input.config,
         };
+        // Enforce total frame cap: width/height/fps already bounded; cap duration as well
+        if (config.fps * totalDuration > 1800) {
+          throw new SceneValidationError([`Total frames exceed limit: ${config.fps * totalDuration} > 1800`]);
+        }
 
         // Submit to controlled concurrency queue but keep synchronous behavior
         const { publicUrl: videoUrl } = await renderQueue.enqueue({

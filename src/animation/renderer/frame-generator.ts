@@ -1,7 +1,7 @@
 // src/animation/renderer/frame-generator.ts
 import { createCanvas } from 'canvas';
 import type { NodeCanvasContext, EasingFunction } from '@/shared/types/core';
-import { VideoEncoder, convertImageDataToRGB, type VideoConfig } from './video-encoder';
+import { VideoEncoder, type VideoConfig } from './video-encoder';
 import { linear } from '../core/interpolation';
 
 export interface FrameConfig {
@@ -50,7 +50,8 @@ export class FrameGenerator {
       height: this.config.height,
       fps: this.config.fps,
       preset: videoConfig?.preset ?? 'medium',
-      crf: videoConfig?.crf ?? 18
+      crf: videoConfig?.crf ?? 18,
+      inputPixelFormat: 'rgba',
     });
 
     try {
@@ -74,10 +75,9 @@ export class FrameGenerator {
         // Render frame
         renderCallback(this.ctx, frame, this.config);
 
-        // Convert to RGB and write
-        const imageData = this.ctx.getImageData(0, 0, this.config.width, this.config.height);
-        const rgbBuffer = convertImageDataToRGB(imageData as ImageData, this.config.width, this.config.height);
-        await encoder.writeFrame(rgbBuffer);
+        // Write raw RGBA directly
+        const rgbaBuffer = this.canvas.toBuffer('raw');
+        await encoder.writeFrame(rgbaBuffer);
       }
 
       await encoder.finish();
