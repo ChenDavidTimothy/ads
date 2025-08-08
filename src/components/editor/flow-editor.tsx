@@ -1,4 +1,4 @@
-// src/components/editor/flow-editor.tsx - Refactored to modular hooks/components
+// src/components/editor/flow-editor.tsx - Refactored with robust error handling
 "use client";
 
 import { useCallback, useMemo } from "react";
@@ -17,7 +17,6 @@ import { FlowCanvas } from "./flow/components/flow-canvas";
 import { ActionsToolbar } from "./flow/components/actions-toolbar";
 import { RightSidebar } from "./flow/components/right-sidebar";
 import { VideoPreview } from "./flow/components/video-preview";
-
 
 export function FlowEditor() {
   const {
@@ -52,7 +51,16 @@ export function FlowEditor() {
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
 
-  const { videoUrl, canGenerate, generateScene, handleGenerateScene, handleDownload } = useSceneGeneration(nodes, edges);
+  const { 
+    videoUrl, 
+    canGenerate, 
+    generateScene, 
+    handleGenerateScene, 
+    handleDownload,
+    lastError,
+    resetGeneration,
+    isGenerating,
+  } = useSceneGeneration(nodes, edges);
 
   const handleSaveTimeline = useCallback((duration: number, tracks: AnimationTrack[]) => {
     if (timelineModalState.nodeId) {
@@ -62,6 +70,33 @@ export function FlowEditor() {
   }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
 
   const timelineNodeData = getTimelineNodeData();
+
+  // Generate user-friendly hints for different scenarios
+  const getGenerationHint = useCallback(() => {
+    const hasScene = nodes.some((n) => n.type === 'scene');
+    const hasGeometry = nodes.some((n) => ['triangle', 'circle', 'rectangle'].includes(n.type!));
+    
+    if (!hasScene) {
+      return 'Add a Scene node to generate video';
+    }
+    
+    if (!hasGeometry) {
+      return 'Add geometry nodes (Triangle, Circle, Rectangle) to create content';
+    }
+    
+    const sceneNode = nodes.find((n) => n.type === 'scene');
+    if (sceneNode) {
+      const sceneTargetId = (sceneNode as unknown as { id: string }).id;
+      const legacyId: string | undefined = (sceneNode.data?.identifier?.id as string | undefined);
+      const isConnected = edges.some((edge) => edge.target === sceneTargetId || (legacyId ? edge.target === legacyId : false));
+      
+      if (!isConnected) {
+        return 'Connect your nodes to the Scene node to generate video';
+      }
+    }
+    
+    return null;
+  }, [nodes, edges]);
 
   return (
     <div className="flex h-full">
@@ -85,10 +120,12 @@ export function FlowEditor() {
         <ActionsToolbar
           onGenerate={handleGenerateScene}
           canGenerate={canGenerate}
-          isGenerating={generateScene.isPending}
-          hint={!nodes.some((n) => n.type === 'scene') ? 'Add Scene node to generate video' : 'Connect animation to Scene node'}
+          isGenerating={isGenerating}
+          hint={getGenerationHint()}
           onDownload={videoUrl ? handleDownload : undefined}
           hasVideo={Boolean(videoUrl)}
+          lastError={lastError}
+          onResetGeneration={resetGeneration}
         />
 
         <VideoPreview videoUrl={videoUrl} />
