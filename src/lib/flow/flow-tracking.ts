@@ -343,4 +343,36 @@ export class FlowTracker {
     const outgoingEdges = edges.filter(e => e.source === nodeId);
     return outgoingEdges.map(e => e.targetHandle ?? 'default');
   }
+
+  // Check if there's a node of specific type upstream from the given node
+  hasUpstreamNodeOfType(nodeId: string, targetNodeType: string, nodes: Node<NodeData>[], edges: Edge[]): boolean {
+    const visited = new Set<string>();
+    
+    const traverse = (currentNodeId: string): boolean => {
+      if (visited.has(currentNodeId)) return false;
+      visited.add(currentNodeId);
+      
+      // Find incoming edges to current node
+      const incomingEdges = edges.filter(e => e.target === currentNodeId);
+      
+      for (const edge of incomingEdges) {
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        if (!sourceNode) continue;
+        
+        // If we found the target node type, return true
+        if (sourceNode.type === targetNodeType) {
+          return true;
+        }
+        
+        // Recursively check upstream from this source node
+        if (traverse(edge.source)) {
+          return true;
+        }
+      }
+      
+      return false;
+    };
+    
+    return traverse(nodeId);
+  }
 }

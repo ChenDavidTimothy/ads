@@ -57,19 +57,41 @@ export function useConnections(
       return;
     }
 
+    // CRITICAL FIX: Block multiple insert nodes in series
+    if (targetNode.type === 'insert' && sourceNode.type === 'insert') {
+      toast.error(
+        'Connection blocked - Multiple Insert nodes in series',
+        `Cannot connect Insert node "${sourceNode.data.identifier.displayName}" to Insert node "${targetNode.data.identifier.displayName}". Objects can only have one appearance time. Use separate paths or merge them before connecting to scene.`
+      );
+      return; // BLOCK THE CONNECTION
+    }
+
+    // CRITICAL FIX: Block indirect multiple insert nodes through path analysis
+    const simulatedEdges = [
+      ...edges,
+      {
+        id: 'temp-validation-edge',
+        source: sourceNode.id,
+        target: targetNode.id,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
+      } as Edge,
+    ];
+
+    if (targetNode.type === 'insert') {
+      // Check if there's already an insert node upstream from the source
+      const hasUpstreamInsert = flowTracker.hasUpstreamNodeOfType(sourceNode.id, 'insert', nodes, simulatedEdges);
+      if (hasUpstreamInsert) {
+        toast.error(
+          'Connection blocked - Multiple Insert nodes in path',
+          `This connection would create multiple Insert nodes along the same path. Objects can only have one appearance time. Connect through a Merge node to resolve timing conflicts.`
+        );
+        return; // BLOCK THE CONNECTION
+      }
+    }
+
     // CRITICAL FIX: Block ALL nodes except geometry and merge from receiving duplicate object IDs
     if (targetDefinition.execution.category !== 'geometry' && targetNode.type !== 'merge') {
-      const simulatedEdges = [
-        ...edges,
-        {
-          id: 'temp-validation-edge',
-          source: sourceNode.id, // Use React Flow IDs consistently
-          target: targetNode.id,
-          sourceHandle: params.sourceHandle,
-          targetHandle: params.targetHandle,
-        } as Edge,
-      ];
-
       const wouldCreateDuplicates = wouldConnectionCreateDuplicateObjectIds(
         sourceNode.id,
         targetNode.id,

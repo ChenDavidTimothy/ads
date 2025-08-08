@@ -9,6 +9,7 @@ export type DomainErrorCode =
   | 'ERR_SCENE_VALIDATION_FAILED'
   | 'ERR_MISSING_INSERT_CONNECTION'
   | 'ERR_MULTIPLE_INSERT_CONNECTIONS'
+  | 'ERR_MULTIPLE_INSERT_NODES_IN_SERIES'
   | 'ERR_DUPLICATE_OBJECT_IDS'
   | 'ERR_UNKNOWN_NODE_TYPE';
 
@@ -19,6 +20,8 @@ export interface DomainErrorDetails {
   sourceNodeId?: string;
   targetNodeId?: string;
   edgeId?: string;
+  insertNodeNames?: string[];
+  pathDescription?: string;
   info?: Record<string, unknown>;
 }
 
@@ -86,6 +89,17 @@ export class MissingInsertConnectionError extends DomainError {
       { nodeId, nodeName },
     );
     this.name = 'MissingInsertConnectionError';
+  }
+}
+
+export class MultipleInsertNodesInSeriesError extends DomainError {
+  constructor(insertNodeNames: string[], pathDescription: string) {
+    super(
+      `Multiple Insert nodes detected in series along path: ${pathDescription}. Insert nodes: ${insertNodeNames.join(' → ')}. Only one Insert node per path is allowed as objects can only have one appearance time.`,
+      'ERR_MULTIPLE_INSERT_NODES_IN_SERIES',
+      { insertNodeNames, pathDescription },
+    );
+    this.name = 'MultipleInsertNodesInSeriesError';
   }
 }
 

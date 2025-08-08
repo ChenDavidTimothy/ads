@@ -10,7 +10,7 @@ import { LogicNodeExecutor } from "./executors/logic-executor";
 import { AnimationNodeExecutor } from "./executors/animation-executor";
 import { SceneNodeExecutor } from "./executors/scene-executor";
 import { getTopologicalOrder } from "./graph/topo-sort";
-import { validateScene, validateConnections, validateNoDuplicateObjectIds, validateProperFlow } from "./graph/validation";
+import { validateScene, validateConnections, validateNoDuplicateObjectIds, validateProperFlow, validateNoMultipleInsertNodesInSeries } from "./graph/validation";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 // Note: ExecutorRegistry remains internal; avoid leaking engine internals
@@ -30,6 +30,7 @@ export class ExecutionEngine {
     validateScene(nodes);
     validateConnections(nodes, edges);
     validateProperFlow(nodes, edges);
+    validateNoMultipleInsertNodesInSeries(nodes, edges);
     validateNoDuplicateObjectIds(nodes, edges);
     
     const context = createExecutionContext();

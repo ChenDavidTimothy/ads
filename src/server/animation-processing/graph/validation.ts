@@ -1,6 +1,6 @@
 // src/server/animation-processing/graph/validation.ts
 import { getNodesByCategory } from "@/shared/registry/registry-utils";
-import { DuplicateObjectIdsError, MissingInsertConnectionError, SceneRequiredError, TooManyScenesError } from "@/shared/errors/domain";
+import { DuplicateObjectIdsError, MissingInsertConnectionError, MultipleInsertNodesInSeriesError, SceneRequiredError, TooManyScenesError } from "@/shared/errors/domain";
 import type { NodeData } from "@/shared/types";
 import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 
@@ -25,6 +25,40 @@ export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: Reac
       const canReachInsert = canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
       if (!canReachInsert) {
         throw new MissingInsertConnectionError(geoNode.data.identifier.displayName, geoNode.data.identifier.id);
+      }
+    }
+  }
+}
+
+export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  // Find all paths from any node to scene that pass through multiple insert nodes
+  const sceneNodes = nodes.filter((node) => node.type === 'scene');
+  if (sceneNodes.length === 0) return; // No scene to validate against
+
+  const sceneNode = sceneNodes[0]; // We already validated there's only one scene
+  
+  // For each node, find all paths to scene and check for multiple insert nodes
+  for (const startNode of nodes) {
+    const pathsToScene = findAllPathsToScene(startNode.data.identifier.id, sceneNode.data.identifier.id, edges, nodes);
+    
+    for (const path of pathsToScene) {
+      const insertNodesInPath = path.filter(nodeId => {
+        const node = nodes.find(n => n.data.identifier.id === nodeId);
+        return node?.type === 'insert';
+      });
+      
+      if (insertNodesInPath.length > 1) {
+        const insertNodeNames = insertNodesInPath.map(nodeId => {
+          const node = nodes.find(n => n.data.identifier.id === nodeId);
+          return node?.data.identifier.displayName || nodeId;
+        });
+        
+        const pathDescription = path.map(nodeId => {
+          const node = nodes.find(n => n.data.identifier.id === nodeId);
+          return node?.data.identifier.displayName || nodeId;
+        }).join(' → ');
+        
+        throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
       }
     }
   }
@@ -202,4 +236,45 @@ function isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: R
   };
   
   return traverse(nodeId);
+}
+
+// Find all possible paths from startNodeId to targetNodeId
+function findAllPathsToScene(
+  startNodeId: string, 
+  targetNodeId: string, 
+  edges: ReactFlowEdge[], 
+  nodes: ReactFlowNode<NodeData>[]
+): string[][] {
+  const allPaths: string[][] = [];
+  const currentPath: string[] = [];
+  
+  const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
+  nodes.forEach(node => {
+    nodeByIdentifierId.set(node.data.identifier.id, node);
+  });
+  
+  const dfs = (currentNodeId: string, visited: Set<string>) => {
+    // Avoid infinite loops
+    if (visited.has(currentNodeId)) return;
+    
+    currentPath.push(currentNodeId);
+    visited.add(currentNodeId);
+    
+    // If we reached the target, save this path
+    if (currentNodeId === targetNodeId) {
+      allPaths.push([...currentPath]);
+    } else {
+      // Continue exploring outgoing edges
+      const outgoingEdges = edges.filter(e => e.source === currentNodeId);
+      for (const edge of outgoingEdges) {
+        dfs(edge.target, new Set(visited));
+      }
+    }
+    
+    // Backtrack
+    currentPath.pop();
+  };
+  
+  dfs(startNodeId, new Set());
+  return allPaths;
 }
