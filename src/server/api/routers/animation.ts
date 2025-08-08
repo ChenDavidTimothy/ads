@@ -4,11 +4,7 @@ import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { logger } from "@/server/logger";
 import { isDomainError, NodeValidationError, SceneValidationError } from "@/shared/errors/domain";
-import {
-  generateSceneAnimation,
-  DEFAULT_SCENE_CONFIG,
-  type SceneAnimationConfig,
-} from "@/animation/scene-generator";
+import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
 import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
@@ -16,6 +12,7 @@ import { buildZodSchemaFromProperties } from "@/shared/types/properties";
 import { arePortsCompatible } from "@/shared/types/ports";
 import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
+import { renderQueue } from "@/server/jobs/render-queue";
 
 // Scene config schema (unchanged)
 const sceneConfigSchema = z.object({
@@ -153,7 +150,11 @@ export const animationRouter = createTRPCRouter({
           ...input.config,
         };
 
-        const videoUrl = await generateSceneAnimation(scene, config);
+        // Submit to controlled concurrency queue but keep synchronous behavior
+        const { publicUrl: videoUrl } = await renderQueue.enqueue({
+          scene,
+          config,
+        });
 
         return {
           success: true,

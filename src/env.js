@@ -11,6 +11,8 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    FFMPEG_PATH: z.string().optional(),
+    RENDER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   },
 
   /**
@@ -29,6 +31,8 @@ export const env = createEnv({
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    FFMPEG_PATH: process.env.FFMPEG_PATH,
+    RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

@@ -28,7 +28,11 @@ export class VideoEncoder {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      this.ffmpegProcess = spawn('ffmpeg', [
+      const ffmpegPath = process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
+        ? process.env.FFMPEG_PATH
+        : 'ffmpeg';
+
+      this.ffmpegProcess = spawn(ffmpegPath, [
         '-f', 'rawvideo',
         '-pix_fmt', 'rgb24',
         '-s', `${this.config.width}x${this.config.height}`,
