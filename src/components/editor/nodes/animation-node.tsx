@@ -3,7 +3,7 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import {TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
+import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 

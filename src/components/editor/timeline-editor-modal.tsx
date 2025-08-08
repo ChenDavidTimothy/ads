@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
-import { TRACK_COLORS, TRACK_ICONS } from "@/lib/constants/editor";
+import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import type { 
   AnimationTrack,
   MoveTrack,
