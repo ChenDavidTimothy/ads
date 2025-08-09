@@ -11,6 +11,11 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
+// Prevent EventEmitter memory leak warnings from multiple signal handlers
+if (typeof process !== 'undefined') {
+  process.setMaxListeners(20);
+}
+
 /**
  * 1. CONTEXT
  *

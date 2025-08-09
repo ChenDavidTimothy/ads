@@ -5,6 +5,9 @@ dotenv.config({ path: '.env.local', override: true });
 // Import worker and boss lazily after env is loaded to satisfy env validation
 
 async function main() {
+  // Increase max listeners to prevent warnings from multiple components
+  process.setMaxListeners(20);
+  
   const { registerRenderWorker, shutdownRenderWorker } = await import('./render-worker');
   const { getBoss } = await import('./pgboss-client');
   await registerRenderWorker();
@@ -21,10 +24,11 @@ async function main() {
     }
   };
 
-  process.on('SIGINT', () => {
+  // Use once() to prevent duplicate listeners if main() is called multiple times
+  process.once('SIGINT', () => {
     void shutdown();
   });
-  process.on('SIGTERM', () => {
+  process.once('SIGTERM', () => {
     void shutdown();
   });
 }

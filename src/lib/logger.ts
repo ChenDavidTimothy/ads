@@ -2,6 +2,8 @@
  * Production-ready unified logging utility
  * Combines environment-aware console logging with structured JSON output
  * Includes domain error handling and enhanced error tracking
+ * 
+ * Can be disabled by setting DISABLE_LOGGING=true environment variable
  */
 
 import { isDomainError } from "@/shared/errors/domain";
@@ -11,8 +13,11 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type LogMeta = Record<string, unknown>;
 
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isLoggingEnabled = process.env.DISABLE_LOGGING !== 'true';
 
 function log(level: LogLevel, message: string, meta?: LogMeta): void {
+  // Early return if logging is disabled
+  if (!isLoggingEnabled) return;
   const line = {
     ts: new Date().toISOString(),
     level,
@@ -78,5 +83,6 @@ export const logger = {
     } else {
       this.errorWithStack(message, error, meta);
     }
-  }
+  },
+  isEnabled: () => isLoggingEnabled
 };

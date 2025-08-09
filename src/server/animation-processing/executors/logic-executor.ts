@@ -5,6 +5,7 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import type { NodeExecutor } from "./node-executor";
 import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
+import { logger } from "@/lib/logger";
 
 export class LogicNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
@@ -60,10 +61,10 @@ export class LogicNodeExecutor implements NodeExecutor {
         break;
       default:
         outputValue = 0;
-        console.warn(`[CONSTANTS] Unknown value type: ${valueType}, defaulting to 0`);
+        logger.warn(`Unknown value type: ${valueType}, defaulting to 0`);
     }
 
-    console.log(`[CONSTANTS] ${node.data.identifier.displayName}: ${valueType} = ${outputValue}`);
+    logger.debug(`Constants ${node.data.identifier.displayName}: ${valueType} = ${outputValue}`);
     
     setNodeOutput(
       context,
@@ -90,7 +91,7 @@ export class LogicNodeExecutor implements NodeExecutor {
     );
 
     if (inputs.length === 0) {
-      console.log(`[PRINT] ${label}: <no input connected>`);
+      logger.info(`[PRINT] ${label}: <no input connected>`);
       return;
     }
 
@@ -101,7 +102,7 @@ export class LogicNodeExecutor implements NodeExecutor {
       const formattedValue = this.formatValue(value);
       
       // Log to console with clear formatting
-      console.log(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
+      logger.info(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
       
       // Store for potential UI feedback
       if (context.debugMode && context.executionLog) {
@@ -211,12 +212,12 @@ export class LogicNodeExecutor implements NodeExecutor {
     context: ExecutionContext,
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    console.log(`[MERGE] Starting merge execution for node: ${node.data.identifier.displayName}`);
+    logger.debug(`Starting merge execution for node: ${node.data.identifier.displayName}`);
     
     const data = node.data as unknown as Record<string, unknown>;
     const portCount = Number(data.inputPortCount) || 2;
     
-    console.log(`[MERGE] Port count: ${portCount}`);
+    logger.debug(`Merge port count: ${portCount}`);
     
     // Collect inputs from all ports in priority order
     const portInputs: ExecutionValue[][] = [];
@@ -228,23 +229,23 @@ export class LogicNodeExecutor implements NodeExecutor {
         `input${i}`
       );
       portInputs.push(inputs);
-      console.log(`[MERGE] Port ${i} inputs:`, inputs.length, 'connections');
+      logger.debug(`Merge port ${i} inputs`, { connections: inputs.length });
     }
 
     // Merge logic: collect all objects, resolve conflicts by port priority
     const mergedObjects = new Map<string, unknown>();
     const allCursorMaps: Record<string, number>[] = [];
 
-    console.log(`[MERGE] Processing ports in reverse order for priority (Port 1 = highest priority)`);
+    logger.debug('Processing ports in reverse order for priority (Port 1 = highest priority)');
 
     // Process ports in reverse order so Port 1 (index 0) has highest priority
     for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
-      console.log(`[MERGE] Processing port ${portIndex + 1} (${inputs.length} inputs)`);
+      logger.debug(`Processing port ${portIndex + 1}`, { inputs: inputs.length });
       
       for (const input of inputs || []) {
         const inputData = Array.isArray(input.data) ? input.data : [input.data];
-        console.log(`[MERGE] Port ${portIndex + 1} input data:`, inputData.length, 'items');
+        logger.debug(`Port ${portIndex + 1} input data`, { items: inputData.length });
         
         // Extract cursor metadata
         const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
@@ -258,18 +259,19 @@ export class LogicNodeExecutor implements NodeExecutor {
             
             const existingObject = mergedObjects.get(objectId);
             if (existingObject) {
-              console.log(`[MERGE] Object ID conflict detected: ${objectId}`);
-              console.log(`[MERGE] Existing object (from earlier port):`, existingObject);
-              console.log(`[MERGE] New object (from port ${portIndex + 1}):`, obj);
-              console.log(`[MERGE] Port ${portIndex + 1} overwrites previous (priority resolution)`);
+              logger.debug(`Object ID conflict detected: ${objectId}`, {
+                existingObject,
+                newObject: obj,
+                resolution: `Port ${portIndex + 1} overwrites previous`
+              });
             } else {
-              console.log(`[MERGE] Adding new object ID: ${objectId} from port ${portIndex + 1}`);
+              logger.debug(`Adding new object ID: ${objectId} from port ${portIndex + 1}`);
             }
             
             // Port priority: later iteration (lower port index) overwrites
             mergedObjects.set(objectId, obj);
           } else {
-            console.log(`[MERGE] Non-object or object without ID:`, obj);
+            logger.debug('Non-object or object without ID', { obj });
           }
         }
       }
@@ -278,23 +280,23 @@ export class LogicNodeExecutor implements NodeExecutor {
     const mergedResult = Array.from(mergedObjects.values());
     const mergedCursors = mergeCursorMaps(allCursorMaps);
 
-    console.log(`[MERGE] Final merged result:`);
-    console.log(`[MERGE] Input object count across all ports: ${portInputs.flat().reduce((acc, input) => {
+    const inputObjectCount = portInputs.flat().reduce((acc, input) => {
       const data = Array.isArray(input.data) ? input.data : [input.data];
       return acc + data.length;
-    }, 0)}`);
-    console.log(`[MERGE] Output object count: ${mergedResult.length}`);
-    console.log(`[MERGE] Unique object IDs in output:`, mergedResult.map(obj => 
-      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : 'NO_ID'
-    ));
-    
-    // CRITICAL: Verify no duplicate IDs in output
+    }, 0);
     const outputIds = mergedResult.map(obj => 
       typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null
     ).filter(id => id !== null);
+    logger.debug('Final merged result', {
+      inputObjectCount,
+      outputObjectCount: mergedResult.length,
+      uniqueObjectIds: outputIds
+    });
+    
+    // CRITICAL: Verify no duplicate IDs in output
     
     const uniqueOutputIds = new Set(outputIds);
-    console.log(`[MERGE] Output verification - Total IDs: ${outputIds.length}, Unique IDs: ${uniqueOutputIds.size}`);
+    logger.debug('Output verification', { totalIds: outputIds.length, uniqueIds: uniqueOutputIds.size });
     
     if (outputIds.length !== uniqueOutputIds.size) {
       console.error(`[MERGE] ERROR: Merge node is outputting duplicate object IDs!`);
@@ -312,7 +314,7 @@ export class LogicNodeExecutor implements NodeExecutor {
       { perObjectTimeCursor: mergedCursors }
     );
     
-    console.log(`[MERGE] Merge execution completed successfully`);
+    logger.debug('Merge execution completed successfully');
   }
 
   private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {

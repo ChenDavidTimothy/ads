@@ -8,6 +8,7 @@ import {
   TooManyScenesError,
   InvalidConnectionError 
 } from "@/shared/errors/domain";
+import { logger } from "@/lib/logger";
 import type { NodeData } from "@/shared/types";
 import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 
@@ -165,27 +166,27 @@ export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeD
 }
 
 export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  console.log('[VALIDATION] Starting duplicate object ID validation');
-  console.log('[VALIDATION] Nodes:', nodes.map(n => ({ id: n.data.identifier.id, type: n.type })));
-  console.log('[VALIDATION] Edges:', edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
+  logger.debug('Starting duplicate object ID validation');
+  logger.debug('Validation nodes', { nodes: nodes.map(n => ({ id: n.data.identifier.id, type: n.type })) });
+  logger.debug('Validation edges', { edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })) });
 
   for (const targetNode of nodes) {
     // Only merge nodes are allowed to receive duplicate object IDs
     if (targetNode.type === 'merge') {
-      console.log(`[VALIDATION] Skipping merge node: ${targetNode.data.identifier.displayName}`);
+      logger.debug(`Skipping merge node: ${targetNode.data.identifier.displayName}`);
       continue;
     }
 
-    console.log(`[VALIDATION] Checking node: ${targetNode.data.identifier.displayName} (${targetNode.data.identifier.id})`);
+    logger.debug(`Checking node: ${targetNode.data.identifier.displayName} (${targetNode.data.identifier.id})`);
     
     const incomingObjectIds = getIncomingObjectIds(targetNode.data.identifier.id, edges, nodes);
-    console.log(`[VALIDATION] Incoming object IDs for ${targetNode.data.identifier.displayName}:`, incomingObjectIds);
+    logger.debug(`Incoming object IDs for ${targetNode.data.identifier.displayName}`, { incomingObjectIds });
     
     const duplicates = incomingObjectIds.filter((id, index) => incomingObjectIds.indexOf(id) !== index);
-    console.log(`[VALIDATION] Duplicates found:`, duplicates);
+    logger.debug('Duplicates found', { duplicates });
     
     if (duplicates.length > 0) {
-      console.log(`[VALIDATION] THROWING ERROR: Duplicate object IDs detected for ${targetNode.data.identifier.displayName}`);
+      logger.error(`Duplicate object IDs detected for ${targetNode.data.identifier.displayName}`);
       throw new DuplicateObjectIdsError(
         targetNode.data.identifier.displayName, 
         targetNode.data.identifier.id, 
@@ -194,15 +195,15 @@ export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], e
     }
   }
   
-  console.log('[VALIDATION] No duplicate object IDs found - validation passed');
+  logger.debug('No duplicate object IDs found - validation passed');
 }
 
 // Helper functions (keeping existing implementation)
 function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): string[] {
-  console.log(`[TRACE] Starting upstream trace for node: ${targetNodeId}`);
+  logger.debug(`Starting upstream trace for node: ${targetNodeId}`);
   
   const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
-  console.log(`[TRACE] Geometry node types:`, geometryNodeTypes);
+  logger.debug('Geometry node types', { geometryNodeTypes });
 
   const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
   nodes.forEach(node => {
@@ -211,10 +212,10 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
 
   const traceUpstreamNode = (currentNodeId: string, pathVisited: Set<string>, depth: number = 0, pathId: string = 'root'): string[] => {
     const indent = '  '.repeat(depth);
-    console.log(`${indent}[TRACE] [Path ${pathId}] Visiting node: ${currentNodeId}`);
+    logger.debug(`${indent}[Path ${pathId}] Visiting node: ${currentNodeId}`);
     
     if (pathVisited.has(currentNodeId)) {
-      console.log(`${indent}[TRACE] [Path ${pathId}] Cycle detected in this path, skipping`);
+      logger.debug(`${indent}[Path ${pathId}] Cycle detected in this path, skipping`);
       return [];
     }
     
@@ -223,50 +224,50 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
     
     const currentNode = nodeByIdentifierId.get(currentNodeId);
     if (!currentNode) {
-      console.log(`${indent}[TRACE] [Path ${pathId}] Node not found for ID: ${currentNodeId}`);
+      logger.warn(`${indent}[Path ${pathId}] Node not found for ID: ${currentNodeId}`);
       return [];
     }
     
-    console.log(`${indent}[TRACE] [Path ${pathId}] Found node: ${currentNode.data.identifier.displayName} (type: ${currentNode.type})`);
+    logger.debug(`${indent}[Path ${pathId}] Found node: ${currentNode.data.identifier.displayName} (type: ${currentNode.type})`);
     
     const objectIds: string[] = [];
     
     // Special handling for merge nodes - they deduplicate upstream objects
     if (currentNode.type === 'merge') {
-      console.log(`${indent}[TRACE] [Path ${pathId}] MERGE NODE DETECTED - will deduplicate upstream objects`);
+      logger.debug(`${indent}[Path ${pathId}] MERGE NODE DETECTED - will deduplicate upstream objects`);
       
       const incomingEdges = edges.filter((edge) => edge.target === currentNodeId);
       const allUpstreamObjects: string[] = [];
       
       incomingEdges.forEach((edge, index) => {
         const subPathId = `${pathId}.merge.${index}`;
-        console.log(`${indent}[TRACE] [Path ${pathId}] Following merge input from: ${edge.source} (path: ${subPathId})`);
+        logger.debug(`${indent}[Path ${pathId}] Following merge input from: ${edge.source} (path: ${subPathId})`);
         
         const upstreamObjects = traceUpstreamNode(edge.source, newPathVisited, depth + 1, subPathId);
         allUpstreamObjects.push(...upstreamObjects);
       });
       
       const uniqueObjects = [...new Set(allUpstreamObjects)];
-      console.log(`${indent}[TRACE] [Path ${pathId}] Merge deduplication: ${allUpstreamObjects.length} → ${uniqueObjects.length} objects`);
-      console.log(`${indent}[TRACE] [Path ${pathId}] Before merge:`, allUpstreamObjects);
-      console.log(`${indent}[TRACE] [Path ${pathId}] After merge:`, uniqueObjects);
+      logger.debug(`${indent}[Path ${pathId}] Merge deduplication: ${allUpstreamObjects.length} → ${uniqueObjects.length} objects`);
+      logger.debug(`${indent}[Path ${pathId}] Before merge`, { allUpstreamObjects });
+      logger.debug(`${indent}[Path ${pathId}] After merge`, { uniqueObjects });
       
       return uniqueObjects;
     }
     
     // If this is a geometry node, add its object ID
     if (geometryNodeTypes.includes(currentNode.type!)) {
-      console.log(`${indent}[TRACE] [Path ${pathId}] Adding geometry object ID: ${currentNode.data.identifier.id}`);
+      logger.debug(`${indent}[Path ${pathId}] Adding geometry object ID: ${currentNode.data.identifier.id}`);
       objectIds.push(currentNode.data.identifier.id);
     }
     
     // Trace upstream from all incoming edges
     const incomingEdges = edges.filter((edge) => edge.target === currentNodeId);
-    console.log(`${indent}[TRACE] [Path ${pathId}] Incoming edges:`, incomingEdges.map(e => ({ from: e.source, to: e.target })));
+    logger.debug(`${indent}[Path ${pathId}] Incoming edges`, { edges: incomingEdges.map(e => ({ from: e.source, to: e.target })) });
     
     incomingEdges.forEach((edge, index) => {
       const subPathId = `${pathId}.${index}`;
-      console.log(`${indent}[TRACE] [Path ${pathId}] Following edge from: ${edge.source} (new path: ${subPathId})`);
+      logger.debug(`${indent}[Path ${pathId}] Following edge from: ${edge.source} (new path: ${subPathId})`);
       const upstreamObjects = traceUpstreamNode(edge.source, newPathVisited, depth + 1, subPathId);
       objectIds.push(...upstreamObjects);
     });
@@ -276,9 +277,9 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
 
   const result = traceUpstreamNode(targetNodeId, new Set<string>());
   
-  console.log(`[TRACE] Final result for ${targetNodeId}:`, result);
-  console.log(`[TRACE] Unique object IDs:`, [...new Set(result)]);
-  console.log(`[TRACE] Duplicate detection - Total: ${result.length}, Unique: ${new Set(result).size}`);
+  logger.debug(`Final result for ${targetNodeId}`, { result });
+  logger.debug('Unique object IDs', { uniqueIds: [...new Set(result)] });
+  logger.debug('Duplicate detection', { total: result.length, unique: new Set(result).size });
   
   return result;
 }

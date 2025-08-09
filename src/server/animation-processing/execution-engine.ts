@@ -17,6 +17,7 @@ import {
   validateNoMultipleInsertNodesInSeries,
   validateNoDuplicateObjectIds 
 } from "./graph/validation";
+import { logger } from "@/lib/logger";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 
@@ -33,29 +34,29 @@ export class ExecutionEngine {
 
   async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
     // Comprehensive validation in correct order
-    console.log('[EXECUTION] Starting comprehensive validation');
+    logger.info('Starting comprehensive validation');
     
     // 1. Basic scene structure validation
-    console.log('[EXECUTION] Validating scene structure');
+    logger.info('Validating scene structure');
     validateScene(nodes);
     
     // 2. Connection and port validation (includes new merge port validation)
-    console.log('[EXECUTION] Validating connections and ports');
+    logger.info('Validating connections and ports');
     validateConnections(nodes, edges);
     
     // 3. Flow architecture validation
-    console.log('[EXECUTION] Validating proper flow architecture');
+    logger.info('Validating proper flow architecture');
     validateProperFlow(nodes, edges);
     
     // 4. Multiple insert nodes validation
-    console.log('[EXECUTION] Validating no multiple insert nodes in series');
+    logger.info('Validating no multiple insert nodes in series');
     validateNoMultipleInsertNodesInSeries(nodes, edges);
     
     // 5. Duplicate object IDs validation (merge-aware)
-    console.log('[EXECUTION] Validating no duplicate object IDs');
+    logger.info('Validating no duplicate object IDs');
     validateNoDuplicateObjectIds(nodes, edges);
     
-    console.log('[EXECUTION] All validation passed, proceeding with execution');
+    logger.info('All validation passed, proceeding with execution');
     
     const context = createExecutionContext();
     
@@ -63,38 +64,38 @@ export class ExecutionEngine {
     const dataEdges = edges.filter((e) => (e.kind ?? 'data') === 'data');
     const executionOrder = getTopologicalOrder(nodes, dataEdges);
     
-    console.log('[EXECUTION] Execution order:', executionOrder.map(n => ({
+    logger.info('Execution order', { executionOrder: executionOrder.map(n => ({
       id: n.data.identifier.id,
       type: n.type,
       displayName: n.data.identifier.displayName
-    })));
+    })) });
     
     // Execute nodes in topological order
     for (const node of executionOrder) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
-        console.log(`[EXECUTION] Executing node: ${node.data.identifier.displayName} (${node.type})`);
+        logger.info(`Executing node: ${node.data.identifier.displayName} (${node.type})`);
         
         const executor = this.registry.find(node.type ?? '');
         if (executor) {
           await executor.execute(node, context, edges);
           markNodeExecuted(context, node.data.identifier.id);
-          console.log(`[EXECUTION] Completed node: ${node.data.identifier.displayName}`);
+          logger.info(`Completed node: ${node.data.identifier.displayName}`);
         } else {
-          console.warn(`[EXECUTION] No executor found for node type: ${node.type}`);
+          logger.warn(`No executor found for node type: ${node.type}`);
         }
       } else {
-        console.log(`[EXECUTION] Skipping already executed node: ${node.data.identifier.displayName}`);
+        logger.info(`Skipping already executed node: ${node.data.identifier.displayName}`);
       }
     }
     
-    console.log('[EXECUTION] Flow execution completed');
-    console.log(`[EXECUTION] Final context - Objects: ${context.sceneObjects.length}, Animations: ${context.sceneAnimations.length}`);
+    logger.info('Flow execution completed');
+    logger.info('Final context', { objects: context.sceneObjects.length, animations: context.sceneAnimations.length });
     
     return context;
   }
 
   async executeFlowDebug(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], targetNodeId: string): Promise<ExecutionContext> {
-    console.log(`[DEBUG] Starting debug execution to node: ${targetNodeId}`);
+    logger.debug(`Starting debug execution to node: ${targetNodeId}`);
     
     // Create context with debug mode enabled
     const context = createExecutionContext();
@@ -114,32 +115,32 @@ export class ExecutionEngine {
     // Execute only up to and including the target node
     const nodesToExecute = executionOrder.slice(0, targetNodeIndex + 1);
     
-    console.log(`[DEBUG] Will execute ${nodesToExecute.length} nodes up to target:`, nodesToExecute.map(n => ({
+    logger.debug(`Will execute ${nodesToExecute.length} nodes up to target`, { nodes: nodesToExecute.map(n => ({
       id: n.data.identifier.id,
       type: n.type,
       displayName: n.data.identifier.displayName
-    })));
+    })) });
     
     // Execute nodes in topological order up to target
     for (const node of nodesToExecute) {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
-        console.log(`[DEBUG] Executing node: ${node.data.identifier.displayName} (${node.type})`);
+        logger.debug(`Executing node: ${node.data.identifier.displayName} (${node.type})`);
         
         const executor = this.registry.find(node.type ?? '');
         if (executor) {
           await executor.execute(node, context, edges);
           markNodeExecuted(context, node.data.identifier.id);
-          console.log(`[DEBUG] Completed node: ${node.data.identifier.displayName}`);
+          logger.debug(`Completed node: ${node.data.identifier.displayName}`);
         } else {
-          console.warn(`[DEBUG] No executor found for node type: ${node.type}`);
+          logger.warn(`Debug: No executor found for node type: ${node.type}`);
         }
       } else {
-        console.log(`[DEBUG] Skipping already executed node: ${node.data.identifier.displayName}`);
+        logger.debug(`Skipping already executed node: ${node.data.identifier.displayName}`);
       }
     }
     
-    console.log(`[DEBUG] Debug execution completed at target node: ${targetNodeId}`);
-    console.log(`[DEBUG] Debug logs generated: ${context.executionLog?.length || 0}`);
+    logger.debug(`Debug execution completed at target node: ${targetNodeId}`);
+    logger.debug('Debug logs generated', { count: context.executionLog?.length || 0 });
     
     return context;
   }

@@ -1,7 +1,9 @@
 import PgBoss from 'pg-boss';
+import { logger } from '@/lib/logger';
 
 let bossSingleton: PgBoss | null = null;
 let bossStarting: Promise<PgBoss> | null = null;
+let shutdownListenersAdded = false;
 
 export async function getBoss(): Promise<PgBoss> {
   if (bossSingleton) return bossSingleton;
@@ -24,15 +26,16 @@ export async function getBoss(): Promise<PgBoss> {
   const boss = new PgBoss(bossOptions);
 
   boss.on('error', (err) => {
-    console.error('[pg-boss] error', err);
+    logger.errorWithStack('PgBoss error', err);
   });
 
   bossStarting = boss.start().then(() => {
     bossSingleton = boss;
-    console.log('[pg-boss] started');
+    logger.info('PgBoss started');
 
-    // graceful shutdown
-    if (typeof process !== 'undefined') {
+    // graceful shutdown - only add listeners once
+    if (typeof process !== 'undefined' && !shutdownListenersAdded) {
+      shutdownListenersAdded = true;
       const shutdown = async () => {
         try {
           await boss.stop();
@@ -40,8 +43,8 @@ export async function getBoss(): Promise<PgBoss> {
           // ignore
         }
       };
-      process.on('SIGINT', () => { void shutdown(); });
-      process.on('SIGTERM', () => { void shutdown(); });
+      process.once('SIGINT', () => { void shutdown(); });
+      process.once('SIGTERM', () => { void shutdown(); });
     }
 
     return boss;

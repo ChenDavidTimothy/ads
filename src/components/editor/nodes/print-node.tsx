@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { PrintNodeData } from "@/shared/types/nodes";
 import { useDebugContext } from "../flow/debug-context";
+import { logger } from "@/lib/logger";
 
 export function PrintNode({ data, selected }: NodeProps<PrintNodeData>) {
   const nodeDefinition = getNodeDefinition('print');
@@ -50,7 +51,7 @@ export function PrintNode({ data, selected }: NodeProps<PrintNodeData>) {
     try {
       await onRunToHere(data.identifier.id);
     } catch (error) {
-      console.error('[PRINT] Run to here failed:', error);
+      logger.errorWithStack('Print node run to here failed', error);
     } finally {
       setIsRunning(false);
     }

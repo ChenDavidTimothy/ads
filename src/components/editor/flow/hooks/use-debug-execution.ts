@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { api } from '@/trpc/react';
 import { useNotifications } from '@/hooks/use-notifications';
 import type { NodeData } from '@/shared/types';
+import { logger } from '@/lib/logger';
 
 // Minimal local types to avoid dependency on reactflow types at build time
 type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
@@ -37,7 +38,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     },
     onError: (error) => {
-      console.error('[DEBUG] Execution failed:', error);
+      logger.errorWithStack('Debug execution failed', error);
       const errorMessage = error instanceof Error ? error.message : 'Debug execution failed';
       toast.error('Debug failed', errorMessage);
     },
