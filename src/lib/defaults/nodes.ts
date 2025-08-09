@@ -28,7 +28,8 @@ function getNodeShortId(nodeType: NodeType): string {
     animation: 'ani',
     scene: 'scn',
     compare: 'cmp',
-    if_else: 'ife'
+    if_else: 'ife',
+    boolean_op: 'bop'
   };
   return prefixes[nodeType];
 }

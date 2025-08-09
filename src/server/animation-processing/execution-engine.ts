@@ -15,7 +15,10 @@ import {
   validateConnections, 
   validateProperFlow, 
   validateNoMultipleInsertNodesInSeries,
-  validateNoDuplicateObjectIds 
+  validateNoDuplicateObjectIds,
+  validateMergePortConnections,
+  validateBooleanPortConnections,
+  validateBooleanTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
 
@@ -32,31 +35,56 @@ export class ExecutionEngine {
     this.registry.register(new SceneNodeExecutor());
   }
 
-  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
-    // Comprehensive validation in correct order
-    logger.info('Starting comprehensive validation');
+  private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    logger.info('Starting comprehensive validation for video generation');
     
-    // 1. Basic scene structure validation
+    // 1. Basic scene structure validation (VIDEO GENERATION ONLY)
     logger.info('Validating scene structure');
     validateScene(nodes);
     
-    // 2. Connection and port validation (includes new merge port validation)
+    // Run universal validations
+    this.runUniversalValidation(nodes, edges);
+    
+    logger.info('All validation passed, proceeding with execution');
+  }
+
+  public runUniversalValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    logger.info('Starting universal validation (applies to all execution types)');
+    
+    // 1. Connection and port validation
     logger.info('Validating connections and ports');
     validateConnections(nodes, edges);
     
-    // 3. Flow architecture validation
+    // 2. Merge port connections validation
+    logger.info('Validating merge port connections');
+    validateMergePortConnections(nodes, edges);
+    
+    // 3. Boolean port connections validation
+    logger.info('Validating boolean port connections');
+    validateBooleanPortConnections(nodes, edges);
+    
+    // 4. Boolean type validation
+    logger.info('Validating boolean input types');
+    validateBooleanTypeConnections(nodes, edges);
+    
+    // 5. Flow architecture validation
     logger.info('Validating proper flow architecture');
     validateProperFlow(nodes, edges);
     
-    // 4. Multiple insert nodes validation
+    // 6. Multiple insert nodes validation
     logger.info('Validating no multiple insert nodes in series');
     validateNoMultipleInsertNodesInSeries(nodes, edges);
     
-    // 5. Duplicate object IDs validation (merge-aware)
+    // 7. Duplicate object IDs validation (merge-aware)
     logger.info('Validating no duplicate object IDs');
     validateNoDuplicateObjectIds(nodes, edges);
     
-    logger.info('All validation passed, proceeding with execution');
+    logger.info('Universal validation passed');
+  }
+
+  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
+    // Run comprehensive validation
+    this.runComprehensiveValidation(nodes, edges);
     
     const context = createExecutionContext();
     
@@ -97,6 +125,10 @@ export class ExecutionEngine {
   async executeFlowDebug(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], targetNodeId: string): Promise<ExecutionContext> {
     logger.debug(`Starting debug execution to node: ${targetNodeId}`);
     
+    // Run only universal validation (no Scene requirement for debug)
+    this.runUniversalValidation(nodes, edges);
+    logger.debug(`Debug validation passed, target node ID: ${targetNodeId}`);
+    
     // Create context with debug mode enabled
     const context = createExecutionContext();
     context.debugMode = true;
@@ -132,6 +164,12 @@ export class ExecutionEngine {
           await executor.execute(node, context, edges);
           markNodeExecuted(context, node.data.identifier.id);
           logger.debug(`Completed node: ${node.data.identifier.displayName}`);
+          
+          // Debug: Check if this is the target node and if logs were generated
+          if (node.data.identifier.id === targetNodeId) {
+            logger.debug(`Target node executed! Debug logs count: ${context.executionLog?.length || 0}`);
+            logger.debug(`Context debug mode: ${context.debugMode}, target ID: ${context.debugTargetNodeId}`);
+          }
         } else {
           logger.warn(`Debug: No executor found for node type: ${node.type}`);
         }
@@ -141,7 +179,13 @@ export class ExecutionEngine {
     }
     
     logger.debug(`Debug execution completed at target node: ${targetNodeId}`);
-    logger.debug('Debug logs generated', { count: context.executionLog?.length || 0 });
+    logger.debug('Debug logs generated', { 
+      count: context.executionLog?.length || 0,
+      logs: context.executionLog?.map(log => ({ 
+        nodeId: log.nodeId, 
+        type: (log.data as any)?.type 
+      })) || []
+    });
     
     return context;
   }

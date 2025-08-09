@@ -268,12 +268,14 @@ export const animationRouter = createTRPCRouter({
           targetNodeId: input.targetNodeId
         });
 
-        // Return error information
+        // Return detailed error information using the same translation as generate video
         const translated = translateDomainError(error);
         return {
           success: false,
           error: translated.message,
-          suggestions: translated.suggestions
+          suggestions: translated.suggestions,
+          // Add additional context for debugging
+          errorType: isDomainError(error) ? error.code : 'ERR_DEBUG_EXECUTION_FAILED'
         };
       }
     }),
@@ -740,7 +742,8 @@ async function validateFlowGracefully(
   
   try {
     const engine = new ExecutionEngine();
-    await engine.executeFlow(nodes, edges);
+    // Use universal validation only - don't require Scene node for general validation
+    engine.runUniversalValidation(nodes, edges);
   } catch (error) {
     const translated = translateDomainError(error);
     errors.push({

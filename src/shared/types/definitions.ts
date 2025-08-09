@@ -32,7 +32,7 @@ export interface NodeDefinition {
   migrate?: (data: Record<string, unknown>) => Record<string, unknown>; // optional migration hook
   metadata?: {
     supportsDynamicPorts?: boolean;
-    portGenerator?: 'merge' | 'custom';
+    portGenerator?: 'merge' | 'boolean' | 'custom';
     [key: string]: unknown;
   };
 }
@@ -541,6 +541,55 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {}
+  },
+
+  boolean_op: {
+    type: 'boolean_op',
+    label: 'Boolean Operation',
+    description: 'Boolean logic operations (AND, OR, NOT, XOR)',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input1', type: 'data', label: 'A' },
+        { id: 'input2', type: 'data', label: 'B' }
+      ],
+      outputs: [
+        { id: 'output', type: 'data', label: 'Result' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'operator', 
+          type: 'select',
+          label: 'Operation',
+          options: [
+            { value: 'and', label: 'AND' },
+            { value: 'or', label: 'OR' },
+            { value: 'not', label: 'NOT' },
+            { value: 'xor', label: 'XOR' }
+          ],
+          defaultValue: 'and'
+        }
+      ]
+    },
+    rendering: {
+      icon: '⊙',
+      colors: {
+        primary: 'bg-amber-600',
+        handle: '!bg-amber-500',
+      }
+    },
+    defaults: {
+      operator: 'and'
+    },
+    metadata: {
+      supportsDynamicPorts: true,
+      portGenerator: 'boolean'
+    }
   }
 } as const;
 

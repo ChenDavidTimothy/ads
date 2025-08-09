@@ -160,6 +160,8 @@ export function getNodeDefinitionWithDynamicPorts(nodeType: string, nodeData?: R
   switch (baseDefinition.metadata.portGenerator) {
     case 'merge':
       return generateMergePorts(baseDefinition, nodeData);
+    case 'boolean':
+      return generateBooleanPorts(baseDefinition, nodeData);
     case 'custom':
       // Future: support for custom port generators
       return generateCustomPorts(baseDefinition, nodeData);
@@ -181,6 +183,34 @@ function generateMergePorts(baseDefinition: NodeDefinition, nodeData?: Record<st
     ...baseDefinition,
     ports: {
       inputs: dynamicInputs,
+      outputs: [...baseDefinition.ports.outputs],
+    },
+  };
+}
+
+// Generate dynamic ports for boolean operation nodes
+function generateBooleanPorts(baseDefinition: NodeDefinition, nodeData?: Record<string, unknown>): NodeDefinition {
+  const operator = nodeData?.operator as string;
+  
+  if (operator === 'not') {
+    // NOT operation only needs one input
+    return {
+      ...baseDefinition,
+      ports: {
+        inputs: [{ id: 'input1', type: 'data' as const, label: 'Input' }],
+        outputs: [...baseDefinition.ports.outputs],
+      },
+    };
+  }
+  
+  // AND, OR, XOR operations need two inputs (default case)
+  return {
+    ...baseDefinition,
+    ports: {
+      inputs: [
+        { id: 'input1', type: 'data' as const, label: 'A' },
+        { id: 'input2', type: 'data' as const, label: 'B' }
+      ],
       outputs: [...baseDefinition.ports.outputs],
     },
   };

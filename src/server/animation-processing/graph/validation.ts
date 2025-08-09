@@ -22,8 +22,7 @@ export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
 export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
   // Validate port compatibility for all connections
   validatePortCompatibility(nodes, edges);
-  // Validate merge port uniqueness
-  validateMergePortConnections(nodes, edges);
+  // Note: Merge port validation is handled separately in runUniversalValidation
 }
 
 export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
@@ -48,8 +47,8 @@ export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edge
       );
     }
 
-    // Get dynamic definition for merge nodes
-    const actualTargetDefinition = targetNode.type === 'merge' 
+    // Get dynamic definition for nodes with dynamic ports
+    const actualTargetDefinition = (targetNode.type === 'merge' || targetNode.type === 'boolean_op')
       ? getNodeDefinitionWithDynamicPorts(targetNode.type, targetNode.data as unknown as Record<string, unknown>)
       : targetDefinition;
 
@@ -116,13 +115,121 @@ export function validateMergePortConnections(nodes: ReactFlowNode<NodeData>[], e
   }
 }
 
+export function validateBooleanPortConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const booleanNodes = nodes.filter(node => node.type === 'boolean_op');
+  
+  for (const booleanNode of booleanNodes) {
+    // Safety check for node data
+    if (!booleanNode.data?.identifier?.id || !booleanNode.data?.identifier?.displayName) {
+      continue; // Skip nodes with invalid data structure
+    }
+    
+    const incomingEdges = edges.filter(edge => edge.target === booleanNode.data.identifier.id);
+    const portConnections = new Map<string, ReactFlowEdge[]>();
+    
+    // Group edges by target port
+    for (const edge of incomingEdges) {
+      if (!edge.targetHandle) continue;
+      
+      const existingEdges = portConnections.get(edge.targetHandle) ?? [];
+      existingEdges.push(edge);
+      portConnections.set(edge.targetHandle, existingEdges);
+    }
+    
+    // Check for multiple connections to same port
+    for (const [portId, connectedEdges] of portConnections.entries()) {
+      if (connectedEdges.length > 1) {
+        const sourceNodeNames = connectedEdges.map(edge => {
+          const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
+          return sourceNode?.data?.identifier?.displayName ?? edge.source;
+        });
+        
+        throw new InvalidConnectionError(
+          `Multiple connections to boolean port "${portId}" on ${booleanNode.data.identifier.displayName}. Each boolean input port can only accept one connection. Connected from: ${sourceNodeNames.join(', ')}`,
+          { 
+            nodeId: booleanNode.data.identifier.id, 
+            nodeName: booleanNode.data.identifier.displayName,
+            info: { portId, connectedEdges: connectedEdges.length }
+          }
+        );
+      }
+    }
+  }
+}
+
+export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const booleanNodes = nodes.filter(node => node.type === 'boolean_op');
+  
+  for (const booleanNode of booleanNodes) {
+    // Safety check for node data
+    if (!booleanNode.data?.identifier?.id || !booleanNode.data?.identifier?.displayName) {
+      continue; // Skip nodes with invalid data structure
+    }
+    
+    const incomingEdges = edges.filter(edge => edge.target === booleanNode.data.identifier.id);
+    
+    for (const edge of incomingEdges) {
+      const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
+      if (!sourceNode || !sourceNode.data?.identifier?.displayName) continue;
+      
+      const sourceDefinition = getNodeDefinition(sourceNode.type!);
+      if (!sourceDefinition) continue;
+      
+      const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
+      if (!sourcePort) continue;
+      
+      // Check if the source port outputs boolean data
+      let isValidBooleanSource = false;
+      
+      if (sourceNode.type === 'compare' || sourceNode.type === 'boolean_op') {
+        // Compare and boolean_op nodes always output boolean
+        isValidBooleanSource = true;
+      } else if (sourceNode.type === 'constants') {
+        // Constants node: check if it's configured to output boolean
+        const constantsData = sourceNode.data as unknown as { valueType?: string };
+        isValidBooleanSource = constantsData.valueType === 'boolean';
+      }
+      // Note: Removed generic 'data' type allowance - be more strict
+      
+      if (!isValidBooleanSource) {
+        let errorMessage = `Boolean operation "${booleanNode.data.identifier.displayName}" can only accept boolean inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
+        
+        if (sourceNode.type === 'constants') {
+          const constantsData = sourceNode.data as unknown as { valueType?: string };
+          errorMessage += ` which is configured to output ${constantsData.valueType || 'unknown'} values. Set the Constants node to output boolean values instead.`;
+        } else {
+          errorMessage += ` which outputs ${sourcePort.type} data. Only boolean sources are allowed.`;
+        }
+        
+        throw new InvalidConnectionError(
+          errorMessage,
+          { 
+            nodeId: booleanNode.data.identifier.id,
+            nodeName: booleanNode.data.identifier.displayName,
+            sourceNodeId: sourceNode.data.identifier.id,
+            sourceNodeName: sourceNode.data.identifier.displayName,
+            info: { expectedType: 'boolean', actualType: sourceNode.type === 'constants' ? (sourceNode.data as any).valueType : sourcePort.type }
+          }
+        );
+      }
+    }
+  }
+}
+
 export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
   const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
   const geometryNodes = nodes.filter((n) => geometryNodeTypes.includes(n.type!));
 
+  // Find all potential terminus nodes - nodes that can end a flow
+  const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
+  const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
+  
+  // Include both output nodes (Scene) and terminal logic nodes (Print)
+  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'print')];
+
   for (const geoNode of geometryNodes) {
-    const isConnectedToScene = isNodeConnectedToScene(geoNode.data.identifier.id, edges, nodes);
-    if (isConnectedToScene) {
+    const isConnectedToAnyOutput = isNodeConnectedToAnyOutputType(geoNode.data.identifier.id, edges, nodes, allTerminusTypes);
+    if (isConnectedToAnyOutput) {
       const canReachInsert = canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
       if (!canReachInsert) {
         throw new MissingInsertConnectionError(geoNode.data.identifier.displayName, geoNode.data.identifier.id);
@@ -132,33 +239,46 @@ export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: Reac
 }
 
 export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const sceneNodes = nodes.filter((node) => node.type === 'scene');
-  if (sceneNodes.length === 0) return;
-
-  const sceneNode = sceneNodes[0];
-  if (!sceneNode) return;
+  // Find all potential terminus nodes - nodes that can end a flow
+  const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
+  const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
   
-  for (const startNode of nodes) {
-    const pathsToScene = findAllPathsToScene(startNode.data.identifier.id, sceneNode.data.identifier.id, edges, nodes);
-    
-    for (const path of pathsToScene) {
-      const insertNodesInPath = path.filter(nodeId => {
-        const node = nodes.find(n => n.data.identifier.id === nodeId);
-        return node?.type === 'insert';
-      });
+  // Include both output nodes (Scene) and terminal logic nodes (Print)
+  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'print')];
+  
+  const terminusNodes = nodes.filter((node) => allTerminusTypes.includes(node.type!));
+  
+  // If no terminus nodes, still validate all paths to catch Insert issues
+  if (terminusNodes.length === 0) {
+    // Check all possible paths between any nodes that have Insert nodes
+    validateInsertConstraintsInAllPaths(nodes, edges);
+    return;
+  }
+
+  // Check paths to each terminus node
+  for (const terminusNode of terminusNodes) {
+    for (const startNode of nodes) {
+      const pathsToOutput = findAllPathsToNode(startNode.data.identifier.id, terminusNode.data.identifier.id, edges, nodes);
       
-      if (insertNodesInPath.length > 1) {
-        const insertNodeNames = insertNodesInPath.map(nodeId => {
+      for (const path of pathsToOutput) {
+        const insertNodesInPath = path.filter(nodeId => {
           const node = nodes.find(n => n.data.identifier.id === nodeId);
-          return node?.data.identifier.displayName ?? nodeId;
+          return node?.type === 'insert';
         });
         
-        const pathDescription = path.map(nodeId => {
-          const node = nodes.find(n => n.data.identifier.id === nodeId);
-          return node?.data.identifier.displayName ?? nodeId;
-        }).join(' → ');
-        
-        throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
+        if (insertNodesInPath.length > 1) {
+          const insertNodeNames = insertNodesInPath.map(nodeId => {
+            const node = nodes.find(n => n.data.identifier.id === nodeId);
+            return node?.data.identifier.displayName ?? nodeId;
+          });
+          
+          const pathDescription = path.map(nodeId => {
+            const node = nodes.find(n => n.data.identifier.id === nodeId);
+            return node?.data.identifier.displayName ?? nodeId;
+          }).join(' → ');
+          
+          throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
+        }
       }
     }
   }
@@ -338,6 +458,15 @@ function findAllPathsToScene(
   edges: ReactFlowEdge[], 
   nodes: ReactFlowNode<NodeData>[]
 ): string[][] {
+  return findAllPathsToNode(startNodeId, targetNodeId, edges, nodes);
+}
+
+function findAllPathsToNode(
+  startNodeId: string, 
+  targetNodeId: string, 
+  edges: ReactFlowEdge[], 
+  nodes: ReactFlowNode<NodeData>[]
+): string[][] {
   const allPaths: string[][] = [];
   const currentPath: string[] = [];
   
@@ -366,4 +495,67 @@ function findAllPathsToScene(
   
   dfs(startNodeId, new Set());
   return allPaths;
+}
+
+function validateInsertConstraintsInAllPaths(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  // Find all Insert nodes
+  const insertNodes = nodes.filter(node => node.type === 'insert');
+  if (insertNodes.length <= 1) return; // No issue if 0 or 1 Insert nodes
+  
+  // Check all possible paths between nodes to find Insert chains
+  for (const startNode of nodes) {
+    for (const endNode of nodes) {
+      if (startNode.data.identifier.id === endNode.data.identifier.id) continue;
+      
+      const paths = findAllPathsToNode(startNode.data.identifier.id, endNode.data.identifier.id, edges, nodes);
+      
+      for (const path of paths) {
+        const insertNodesInPath = path.filter(nodeId => {
+          const node = nodes.find(n => n.data.identifier.id === nodeId);
+          return node?.type === 'insert';
+        });
+        
+        if (insertNodesInPath.length > 1) {
+          const insertNodeNames = insertNodesInPath.map(nodeId => {
+            const node = nodes.find(n => n.data.identifier.id === nodeId);
+            return node?.data.identifier.displayName ?? nodeId;
+          });
+          
+          const pathDescription = path.map(nodeId => {
+            const node = nodes.find(n => n.data.identifier.id === nodeId);
+            return node?.data.identifier.displayName ?? nodeId;
+          }).join(' → ');
+          
+          throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
+        }
+      }
+    }
+  }
+}
+
+function isNodeConnectedToAnyOutputType(
+  nodeId: string, 
+  edges: ReactFlowEdge[], 
+  nodes: ReactFlowNode<NodeData>[], 
+  outputTypes: string[]
+): boolean {
+  const visited = new Set<string>();
+  
+  const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
+  nodes.forEach(node => {
+    nodeByIdentifierId.set(node.data.identifier.id, node);
+  });
+  
+  const traverse = (currentNodeId: string): boolean => {
+    if (visited.has(currentNodeId)) return false;
+    visited.add(currentNodeId);
+    
+    const currentNode = nodeByIdentifierId.get(currentNodeId);
+    if (currentNode && outputTypes.includes(currentNode.type!)) return true;
+    
+    const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
+    return outgoingEdges.some((edge) => traverse(edge.target));
+  };
+  
+  return traverse(nodeId);
 }

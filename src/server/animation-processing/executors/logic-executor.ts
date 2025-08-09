@@ -16,6 +16,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     this.registerHandler('print', this.executePrint.bind(this));
     this.registerHandler('compare', this.executeCompare.bind(this));
     this.registerHandler('if_else', this.executeIfElse.bind(this));
+    this.registerHandler('boolean_op', this.executeBooleanOp.bind(this));
   }
 
 
@@ -528,5 +529,124 @@ export class LogicNodeExecutor extends BaseExecutor {
         logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, output=false on false_path`);
       }
     // Note: Error handling is done above for condition input
+  }
+
+  private async executeBooleanOp(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as {
+      operator: 'and' | 'or' | 'not' | 'xor';
+    };
+    
+    if (data.operator === 'not') {
+      // NOT operation - single input
+      let input: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
+      
+      try {
+        input = getTypedConnectedInput<boolean>(
+          context, 
+          connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+          node.data.identifier.id, 
+          'input1', 
+          'boolean'
+        );
+      } catch (error) {
+        if (error instanceof TypeValidationError) {
+          logger.error(`Type validation failed for input in Boolean NOT node ${node.data.identifier.displayName}: ${error.message}`);
+          throw error;
+        }
+        throw error;
+      }
+      
+      if (!input) {
+        throw new Error(`Boolean NOT node ${node.data.identifier.displayName} missing input`);
+      }
+      
+      const result = !input.data;
+      logger.debug(`Boolean NOT ${node.data.identifier.displayName}: !${input.data} = ${result}`);
+      
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        'output',
+        'data',
+        result,
+        { logicType: 'boolean', validated: true }
+      );
+      return;
+    }
+    
+    // Binary operations (AND, OR, XOR) - two inputs
+    let inputA: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
+    let inputB: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
+    
+    try {
+      inputA = getTypedConnectedInput<boolean>(
+        context, 
+        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+        node.data.identifier.id, 
+        'input1', 
+        'boolean'
+      );
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input A in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
+      }
+      throw error;
+    }
+    
+    try {
+      inputB = getTypedConnectedInput<boolean>(
+        context, 
+        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+        node.data.identifier.id, 
+        'input2', 
+        'boolean'
+      );
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input B in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
+      }
+      throw error;
+    }
+    
+    if (!inputA || !inputB) {
+      throw new Error(`Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`);
+    }
+    
+    const valueA = inputA.data;
+    const valueB = inputB.data;
+    
+    let result: boolean;
+    switch (data.operator) {
+      case 'and':
+        result = valueA && valueB;
+        break;
+      case 'or':
+        result = valueA || valueB;
+        break;
+      case 'xor':
+        result = valueA !== valueB; // XOR: true when inputs differ
+        break;
+      default: {
+        const _exhaustive: never = data.operator;
+        throw new Error(`Unknown boolean operator: ${String(_exhaustive)}`);
+      }
+    }
+    
+    logger.debug(`Boolean ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
+    
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'data',
+      result,
+      { logicType: 'boolean', validated: true }
+    );
   }
 }

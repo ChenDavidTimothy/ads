@@ -22,6 +22,7 @@ export function createNodeTypes(
       nodeTypes[nodeType] = (props: Parameters<typeof PrintNode>[0]) => (
         <PrintNode {...props} onOpenLogViewer={() => handleOpenPrintLogViewer(props.data.identifier.id)} />
       );
+
     } else {
       // Standard component mapping
       nodeTypes[nodeType] = Component as React.ComponentType<any>;

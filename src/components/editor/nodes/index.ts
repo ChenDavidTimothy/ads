@@ -10,3 +10,4 @@ export { AnimationNode } from "./animation-node";
 export { SceneNode } from "./scene-node";
 export { CompareNode } from "./compare-node";
 export { IfElseNode } from "./if-else-node";
+export { BooleanOpNode } from "./boolean-op-node";

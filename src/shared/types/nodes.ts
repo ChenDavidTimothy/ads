@@ -171,7 +171,12 @@ export interface IfElseNodeData extends BaseNodeData {
   // It exists for type consistency and future extensibility
 }
 
+// Boolean Operation node data
+export interface BooleanOpNodeData extends BaseNodeData {
+  operator: 'and' | 'or' | 'not' | 'xor';
+}
+
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData;
 
 // NodeType is derived from the registry (definitions)

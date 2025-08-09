@@ -24,6 +24,18 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
 
   const debugToNode = api.animation.debugToNode.useMutation({
     onSuccess: (data) => {
+      // Handle failed debug execution with validation errors
+      if (!data.success && data.error) {
+        toast.error('Debug validation failed', data.error);
+        if (data.suggestions && data.suggestions.length > 0) {
+          // Show suggestions as additional info
+          setTimeout(() => {
+            toast.info('Suggestions', data.suggestions.join(' • '));
+          }, 1000);
+        }
+        return;
+      }
+      
       if (data.debugLogs && data.debugLogs.length > 0) {
         setDebugResults(prevResults => {
           const newResults = new Map(prevResults);

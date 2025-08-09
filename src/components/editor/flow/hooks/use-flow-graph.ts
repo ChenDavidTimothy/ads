@@ -14,13 +14,14 @@ export function useFlowGraph() {
   const [flowTracker] = useState(() => new FlowTracker());
   const { toast } = useNotifications();
 
-  // Unified edge validation function for merge nodes
-  const cleanupInvalidMergeEdges = useCallback((currentNodes: Node<NodeData>[], currentEdges: Edge[]) => {
+  // Unified edge validation function for nodes with dynamic ports
+  const cleanupInvalidDynamicEdges = useCallback((currentNodes: Node<NodeData>[], currentEdges: Edge[]) => {
     const edgesToRemove: Edge[] = [];
     
     currentNodes.forEach(node => {
       if (node.type === 'merge') {
-        const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', node.data);
+        // Only handle merge nodes here - boolean nodes handle their own cleanup
+        const dynamicDefinition = getNodeDefinitionWithDynamicPorts(node.type, node.data);
         const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
         
         currentEdges.forEach(edge => {
@@ -83,6 +84,49 @@ export function useFlowGraph() {
               !validPortIds.has(edge.targetHandle))
           );
         });
+        
+        return; // Early return to avoid duplicate node update
+      }
+    }
+
+    // Handle edge cleanup for boolean operation nodes - cut ties only when involving NOT
+    if ('operator' in newData) {
+      const updatedNode = nodes.find(n => n.data.identifier.id === nodeId);
+      if (updatedNode?.type === 'boolean_op') {
+        const oldOperator = updatedNode.data.operator as string;
+        const newOperator = newData.operator as string;
+        
+        // Check if this change involves NOT operation (layout change)
+        const involvesNot = oldOperator === 'not' || newOperator === 'not';
+        
+        // Update node data
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.data.identifier.id === nodeId
+              ? { ...node, data: { ...node.data, ...newData } }
+              : node
+          )
+        );
+        
+        if (involvesNot) {
+          // Cut ALL connections when switching to/from NOT - clean slate
+          setEdges((eds) => {
+            const removedEdges = eds.filter(edge => edge.target === updatedNode.id);
+            
+            if (removedEdges.length > 0) {
+              // Clean up tracking for removed edges
+              removedEdges.forEach(edge => {
+                flowTracker.removeConnection(edge.id);
+              });
+              
+              console.log(`[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to NOT operation change - user can reconnect`);
+            }
+            
+            // Keep only edges that don't target this boolean node
+            return eds.filter(edge => edge.target !== updatedNode.id);
+          });
+        }
+        // If not involving NOT (AND↔OR↔XOR), do nothing - connections stay
         
         return; // Early return to avoid duplicate node update
       }
@@ -192,6 +236,6 @@ export function useFlowGraph() {
     onEdgesDelete,
     handleAddNode,
     flowTracker,
-    cleanupInvalidMergeEdges,
+    cleanupInvalidDynamicEdges,
   } as const;
 }
