@@ -510,27 +510,13 @@ export class LogicNodeExecutor implements NodeExecutor {
         throw new Error(`If/Else node ${node.data.identifier.displayName} missing condition input`);
       }
       
-      logger.debug(`If/Else ${node.data.identifier.displayName}: condition=${condition.data}, routing to ${condition.data ? 'true' : 'false'} path`);
-      
-      // Output execution triggers based on condition
+      // Simple: if true, output true. If false, output false.
       if (condition.data) {
-        setNodeOutput(
-          context,
-          node.data.identifier.id,
-          'true_path',
-          'trigger',
-          true,
-          { executionPath: 'true' }
-        );
+        setNodeOutput(context, node.data.identifier.id, 'true_path', 'data', true);
+        logger.debug(`If/Else ${node.data.identifier.displayName}: condition=true, output=true on true_path`);
       } else {
-        setNodeOutput(
-          context,
-          node.data.identifier.id,
-          'false_path',
-          'trigger',
-          true,
-          { executionPath: 'false' }
-        );
+        setNodeOutput(context, node.data.identifier.id, 'false_path', 'data', false);
+        logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, output=false on false_path`);
       }
     } catch (error) {
       if (error instanceof TypeValidationError) {

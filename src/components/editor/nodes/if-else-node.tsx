@@ -34,7 +34,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
       <CardContent className="p-0 space-y-2">
         <div className="bg-gray-700 p-2 rounded border text-center">
           <div className="text-sm text-white">
-            if condition
+            if true → true<br/>if false → false
           </div>
         </div>
 
@@ -44,14 +44,14 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-            Control Flow
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+            Simple
           </span>
         </div>
 
         <div className="mt-3 pt-2 border-t border-gray-700">
           <div className="text-xs text-gray-400 text-center">
-            Execution Routing
+            Condition → Output
           </div>
         </div>
       </CardContent>

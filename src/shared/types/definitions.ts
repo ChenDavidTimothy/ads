@@ -507,7 +507,7 @@ export const NODE_DEFINITIONS = {
   if_else: {
     type: 'if_else',
     label: 'If/Else',
-    description: 'Control flow routing based on boolean condition',
+    description: 'If condition is true, output on true path. If false, output on false path.',
     execution: {
       category: 'logic',
       executor: 'logic',
@@ -517,8 +517,8 @@ export const NODE_DEFINITIONS = {
         { id: 'condition', type: 'data', label: 'Condition' }
       ],
       outputs: [
-        { id: 'true_path', type: 'trigger', label: 'True' },
-        { id: 'false_path', type: 'trigger', label: 'False' }
+        { id: 'true_path', type: 'data', label: 'True' },
+        { id: 'false_path', type: 'data', label: 'False' }
       ]
     },
     properties: {
