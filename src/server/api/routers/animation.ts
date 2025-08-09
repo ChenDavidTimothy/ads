@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { logger } from "@/lib/logger";
-import { isDomainError } from "@/shared/errors/domain";
+import { isDomainError, UserJobLimitError, NoValidScenesError } from "@/shared/errors/domain";
 import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
@@ -14,6 +14,7 @@ import type { ReactFlowNode } from "@/server/animation-processing/execution-engi
 import { renderQueue, ensureWorkerReady } from "@/server/jobs/render-queue";
 import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
+import { partitionObjectsByScenes, buildAnimationSceneFromPartition } from "@/server/animation-processing/scene/scene-partitioner";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
@@ -104,11 +105,16 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
       };
 
     case 'ERR_TOO_MANY_SCENES':
+      const sceneCount = error.details?.info?.sceneCount as number | undefined;
+      const maxAllowed = error.details?.info?.maxAllowed as number | undefined;
       return {
-        message: 'Only one Scene node is allowed per workspace',
+        message: maxAllowed 
+          ? `Maximum ${maxAllowed} scenes per execution (found ${sceneCount || 'multiple'})`
+          : 'Too many Scene nodes in workspace',
         suggestions: [
-          'Remove extra Scene nodes',
-          'Keep only one Scene node as the final output'
+          'Reduce the number of Scene nodes',
+          'Split complex flows into separate executions',
+          'Consider using fewer scenes for better performance'
         ]
       };
 
@@ -178,6 +184,30 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
           'Remove connections that create loops',
           'Ensure data flows in one direction from geometry to scene',
           'Check for accidentally connected output back to input'
+        ]
+      };
+
+    case 'ERR_USER_JOB_LIMIT':
+      const currentJobs = error.details?.info?.currentJobs as number | undefined;
+      const maxJobs = error.details?.info?.maxJobs as number | undefined;
+      return {
+        message: maxJobs 
+          ? `Maximum ${maxJobs} concurrent render jobs per user${currentJobs ? ` (currently: ${currentJobs})` : ''}`
+          : 'Too many concurrent render jobs',
+        suggestions: [
+          'Wait for current jobs to complete before starting new ones',
+          'Check your job status to see which jobs are still running',
+          'Consider reducing the complexity of your animations'
+        ]
+      };
+
+    case 'ERR_NO_VALID_SCENES':
+      return {
+        message: 'No scenes received valid data',
+        suggestions: [
+          'Ensure your geometry objects are connected to Scene nodes',
+          'Check that Insert nodes are properly connected',
+          'Verify that your flow produces valid objects'
         ]
       };
 
@@ -352,8 +382,9 @@ export const animationRouter = createTRPCRouter({
           backendEdges,
         );
 
-        const sceneNode = findSceneNode(backendNodes);
-        if (!sceneNode) {
+        // Find all scene nodes for multi-scene support
+        const sceneNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'scene') as ReactFlowNode<NodeData>[];
+        if (sceneNodes.length === 0) {
           return {
             success: false,
             errors: [{
@@ -366,112 +397,141 @@ export const animationRouter = createTRPCRouter({
           };
         }
 
-        const sceneData = sceneNode.data as SceneNodeData;
+        // Check user job limits before processing
+        const supabase = createServiceClient();
+        const maxUserJobs = Number(process.env.MAX_USER_JOBS ?? '3');
+        
+        // First, clean up stale jobs (older than 10 minutes in queued/processing state)
+        const staleJobCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'failed', error: 'Job timeout - cleaned up by system' })
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing'])
+          .lt('updated_at', staleJobCutoff);
 
-        // Calculate total duration
-        const maxAnimationTime =
-          executionContext.sceneAnimations.length > 0
-            ? Math.max(
-                ...executionContext.sceneAnimations.map(
-                  (anim) => anim.startTime + anim.duration,
-                ),
-              )
-            : 0;
-        const totalDuration = Math.min(
-          Math.max(maxAnimationTime, sceneData.duration),
-          15
-        );
+        // Now check current active jobs
+        const { data: userActiveJobs, error: jobQueryError } = await supabase
+          .from('render_jobs')
+          .select('id, status, updated_at')
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing']);
 
-        // Build AnimationScene from execution context
-        const scene: AnimationScene = {
-          duration: totalDuration,
-          objects: executionContext.sceneObjects,
-          animations: executionContext.sceneAnimations,
-          background: {
-            color: sceneData.backgroundColor,
-          },
-        };
+        if (jobQueryError) {
+          logger.error('Failed to query user jobs', { error: jobQueryError, userId: ctx.user!.id });
+          // Continue without job limit check rather than blocking the user
+        } else if (userActiveJobs && userActiveJobs.length >= maxUserJobs) {
+          logger.info('User job limit reached', { 
+            userId: ctx.user!.id, 
+            activeJobs: userActiveJobs.length, 
+            maxJobs: maxUserJobs,
+            jobs: userActiveJobs 
+          });
+          throw new UserJobLimitError(userActiveJobs.length, maxUserJobs);
+        }
 
-        // Prepare scene config using registry defaults
-        const config: SceneAnimationConfig = {
-          ...DEFAULT_SCENE_CONFIG,
-          width: sceneData.width,
-          height: sceneData.height,
-          fps: sceneData.fps,
-          backgroundColor: sceneData.backgroundColor,
-          videoPreset: sceneData.videoPreset,
-          videoCrf: sceneData.videoCrf,
-          ...input.config,
-        };
+        // Partition objects by scenes
+        const scenePartitions = partitionObjectsByScenes(executionContext, sceneNodes);
+        
+        if (scenePartitions.length === 0) {
+          throw new NoValidScenesError();
+        }
 
-        // Enforce total frame cap
-        if (config.fps * totalDuration > 1800) {
+        // Create render jobs for each valid scene
+        const jobIds: string[] = [];
+        await ensureWorkerReady();
+
+        for (const partition of scenePartitions) {
+          const scene = buildAnimationSceneFromPartition(partition);
+          const sceneData = partition.sceneNode.data as SceneNodeData;
+          
+          // Prepare scene config using registry defaults
+          const config: SceneAnimationConfig = {
+            ...DEFAULT_SCENE_CONFIG,
+            width: sceneData.width,
+            height: sceneData.height,
+            fps: sceneData.fps,
+            backgroundColor: sceneData.backgroundColor,
+            videoPreset: sceneData.videoPreset,
+            videoCrf: sceneData.videoCrf,
+            ...input.config,
+          };
+
+          // Enforce frame cap per scene
+          if (config.fps * scene.duration > 1800) {
+            logger.warn(`Scene ${partition.sceneNode.data.identifier.displayName} exceeds frame limit`, {
+              frames: config.fps * scene.duration,
+              duration: scene.duration,
+              fps: config.fps
+            });
+            continue; // Skip this scene but continue with others
+          }
+
+          // Create job row for this scene
+          const payload = { scene, config } as const;
+          const { data: jobRow, error: insErr } = await supabase
+            .from('render_jobs')
+            .insert({ user_id: ctx.user!.id, status: 'queued', payload })
+            .select('id')
+            .single();
+          
+          if (insErr || !jobRow) {
+            logger.error('Failed to create job row for scene', {
+              sceneId: partition.sceneNode.data.identifier.id,
+              error: insErr
+            });
+            continue; // Skip this scene but continue with others
+          }
+
+          // Enqueue the render job
+          await renderQueue.enqueueOnly({
+            scene,
+            config,
+            userId: ctx.user!.id,
+            jobId: jobRow.id as string,
+          });
+
+          jobIds.push(jobRow.id as string);
+        }
+
+        if (jobIds.length === 0) {
           return {
             success: false,
             errors: [{
               type: 'error' as const,
-              code: 'ERR_SCENE_VALIDATION_FAILED',
-              message: `Animation too long: ${config.fps * totalDuration} frames exceeds limit of 1800`,
+              code: 'ERR_NO_VALID_SCENES',
+              message: 'No scenes could be processed',
               suggestions: [
-                'Reduce scene duration',
-                'Lower frame rate',
-                'Split into multiple shorter animations'
+                'Check that scenes have valid objects',
+                'Ensure scene durations are within limits',
+                'Verify scene configurations'
               ]
             }],
             canRetry: true
           };
         }
 
-        // Persist job row first
-        const supabase = createServiceClient();
-        const payload = { scene, config } as const;
-        const { data: jobRow, error: insErr } = await supabase
-          .from('render_jobs')
-          .insert({ user_id: ctx.user!.id, status: 'queued', payload })
-          .select('id')
-          .single();
-        
-        if (insErr || !jobRow) {
-          return {
-            success: false,
-            errors: [{
-              type: 'error' as const,
-              code: 'ERR_RENDER_QUEUE_FAILED',
-              message: 'Failed to queue render job',
-              suggestions: ['Please try again', 'Check your internet connection']
-            }],
-            canRetry: true
-          };
-        }
-
-        await ensureWorkerReady();
-        await renderQueue.enqueueOnly({
-          scene,
-          config,
-          userId: ctx.user!.id,
-          jobId: jobRow.id as string,
-        });
-
-        // Wait briefly for immediate completion
-        const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
-        const parsed = Number(inlineWaitMsRaw);
-        const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
-        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: inlineWaitMs });
-        
-        if (notify && notify.status === 'completed' && notify.publicUrl) {
-          return {
-            success: true,
-            videoUrl: notify.publicUrl,
-            scene,
-            config,
-          } as const;
+        // For single scene, maintain backward compatibility with immediate polling
+        if (jobIds.length === 1) {
+          const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+          const parsed = Number(inlineWaitMsRaw);
+          const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+          const notify = await waitForRenderJobEvent({ jobId: jobIds[0]!, timeoutMs: inlineWaitMs });
+          
+          if (notify && notify.status === 'completed' && notify.publicUrl) {
+            return {
+              success: true,
+              videoUrl: notify.publicUrl,
+              jobId: jobIds[0]!,
+              totalScenes: 1,
+            } as const;
+          }
         }
         
         return {
           success: true,
-          jobId: jobRow.id as string,
-          scene,
-          config,
+          jobIds,
+          totalScenes: scenePartitions.length,
         } as const;
 
       } catch (error) {
@@ -757,11 +817,3 @@ async function validateFlowGracefully(
   return { success: errors.filter(e => e.type === 'error').length === 0, errors };
 }
 
-function findSceneNode(
-  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>
-): typeof nodes[0] | null {
-  const outputNodes = getNodesByCategory('output');
-  const sceneNodeTypes = outputNodes.filter(def => def.type === 'scene').map(def => def.type);
-  
-  return nodes.find(node => node.type && sceneNodeTypes.includes(node.type)) ?? null;
-}

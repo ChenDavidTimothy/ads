@@ -64,6 +64,10 @@ export interface ExecutionContext {
   }>;
   sceneAnimations: SceneAnimationTrack[];
 
+  // Multi-scene support: track which objects belong to which scene
+  objectSceneMap: Map<string, string>; // objectId -> sceneNodeId
+  animationSceneMap: Map<string, string>; // animationId -> sceneNodeId
+
   // Future: Conditional execution metadata
   debugMode?: boolean;
   debugTargetNodeId?: string; // Track specific debug target for selective logging
@@ -85,6 +89,8 @@ export function createExecutionContext(): ExecutionContext {
     executionStack: [],
     sceneObjects: [],
     sceneAnimations: [],
+    objectSceneMap: new Map(),
+    animationSceneMap: new Map(),
     debugMode: false,
     executionLog: []
   };

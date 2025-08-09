@@ -21,6 +21,15 @@ interface ValidationSummary {
   allSuggestions: string[];
 }
 
+interface VideoJob {
+  jobId: string;
+  sceneName: string;
+  sceneId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  videoUrl?: string;
+  error?: string;
+}
+
 interface Props {
   onGenerate: () => void;
   canGenerate: boolean;
@@ -28,6 +37,9 @@ interface Props {
   hint: string | null;
   onDownload?: () => void;
   hasVideo: boolean;
+  // Multi-video support
+  videos?: VideoJob[];
+  onDownloadAll?: () => void;
   lastError?: string | null;
   onResetGeneration?: () => void;
   validationSummary?: ValidationSummary | null;
@@ -40,6 +52,8 @@ export function ActionsToolbar({
   hint, 
   onDownload, 
   hasVideo,
+  videos = [],
+  onDownloadAll,
   lastError,
   onResetGeneration,
   validationSummary
@@ -187,8 +201,54 @@ export function ActionsToolbar({
         </div>
       )}
 
-      {/* Success state with download */}
-      {hasVideo && onDownload && !isGenerating && (
+      {/* Multi-video progress display */}
+      {videos.length > 0 && (
+        <div className="text-xs bg-gray-800 border border-gray-600 p-3 rounded space-y-2">
+          <div className="font-medium text-gray-200 flex items-center justify-between">
+            <span>Videos ({videos.filter(v => v.status === 'completed').length}/{videos.length})</span>
+            {videos.filter(v => v.status === 'completed').length > 1 && onDownloadAll && (
+              <Button
+                onClick={onDownloadAll}
+                variant="primary"
+                size="sm"
+                className="text-xs px-2 py-1"
+              >
+                Download All
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-1">
+            {videos.slice(0, 3).map((video) => (
+              <div key={video.jobId} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    video.status === 'completed' ? 'bg-green-400' :
+                    video.status === 'processing' ? 'bg-yellow-400 animate-pulse' :
+                    video.status === 'failed' ? 'bg-red-400' :
+                    'bg-gray-500'
+                  }`} />
+                  <span className="text-gray-300 truncate">{video.sceneName}</span>
+                </div>
+                <span className="text-gray-400">
+                  {video.status === 'completed' && '✓'}
+                  {video.status === 'processing' && '⏳'}
+                  {video.status === 'failed' && '✗'}
+                  {video.status === 'pending' && '⏸'}
+                </span>
+              </div>
+            ))}
+            {videos.length > 3 && (
+              <div className="text-gray-400 text-center">
+                +{videos.length - 3} more videos
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Legacy single video download */}
+      {hasVideo && onDownload && !isGenerating && videos.length === 0 && (
         <div className="space-y-2">
           <Button 
             onClick={onDownload} 

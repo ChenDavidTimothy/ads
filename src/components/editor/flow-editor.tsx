@@ -66,10 +66,15 @@ export function FlowEditor() {
 
   const { 
     videoUrl, 
+    videos,
+    hasVideos,
+    completedVideos,
     canGenerate, 
     generateScene, 
     handleGenerateScene, 
     handleDownload,
+    handleDownloadAll,
+    handleDownloadVideo,
     lastError,
     resetGeneration,
     isGenerating,
@@ -151,12 +156,19 @@ export function FlowEditor() {
           hint={getGenerationHint()}
           onDownload={videoUrl ? handleDownload : undefined}
           hasVideo={Boolean(videoUrl)}
+          videos={videos}
+          onDownloadAll={completedVideos.length > 1 ? handleDownloadAll : undefined}
           lastError={lastError}
           onResetGeneration={resetGeneration}
           validationSummary={validationSummary}
         />
 
-        <VideoPreview videoUrl={videoUrl} />
+        <VideoPreview 
+          videoUrl={videoUrl} 
+          videos={videos}
+          onDownloadVideo={handleDownloadVideo}
+          onDownloadAll={handleDownloadAll}
+        />
       </div>
 
       <RightSidebar

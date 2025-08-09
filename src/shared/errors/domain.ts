@@ -11,7 +11,9 @@ export type DomainErrorCode =
   | 'ERR_MULTIPLE_INSERT_CONNECTIONS'
   | 'ERR_MULTIPLE_INSERT_NODES_IN_SERIES'
   | 'ERR_DUPLICATE_OBJECT_IDS'
-  | 'ERR_UNKNOWN_NODE_TYPE';
+  | 'ERR_UNKNOWN_NODE_TYPE'
+  | 'ERR_USER_JOB_LIMIT'
+  | 'ERR_NO_VALID_SCENES';
 
 export interface DomainErrorDetails {
   nodeId?: string;
@@ -120,6 +122,24 @@ export class UnknownNodeTypeError extends DomainError {
   constructor(nodeType: string) {
     super(`Unknown node type: ${nodeType}`, 'ERR_UNKNOWN_NODE_TYPE', { info: { nodeType } }, false);
     this.name = 'UnknownNodeTypeError';
+  }
+}
+
+export class UserJobLimitError extends DomainError {
+  constructor(currentJobs: number, maxJobs: number) {
+    super(
+      `Maximum ${maxJobs} concurrent render jobs per user (currently: ${currentJobs})`,
+      'ERR_USER_JOB_LIMIT',
+      { info: { currentJobs, maxJobs } }
+    );
+    this.name = 'UserJobLimitError';
+  }
+}
+
+export class NoValidScenesError extends DomainError {
+  constructor() {
+    super('No scenes received valid data', 'ERR_NO_VALID_SCENES');
+    this.name = 'NoValidScenesError';
   }
 }
 

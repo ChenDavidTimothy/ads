@@ -194,8 +194,9 @@ export function useFlowGraph() {
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
     if (nodeType === 'scene') {
       const existingSceneNodes = nodes.filter((node) => node.type === 'scene');
-      if (existingSceneNodes.length > 0) {
-        toast.warning('Scene limit reached', 'Only one scene node allowed per workspace');
+      const maxScenes = Number(process.env.NEXT_PUBLIC_MAX_SCENES_PER_EXECUTION ?? '8');
+      if (existingSceneNodes.length >= maxScenes) {
+        toast.warning('Scene limit reached', `Maximum ${maxScenes} scene nodes allowed per workspace`);
         return;
       }
     }

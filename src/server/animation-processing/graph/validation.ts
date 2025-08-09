@@ -5,9 +5,9 @@ import {
   DuplicateObjectIdsError, 
   MissingInsertConnectionError, 
   MultipleInsertNodesInSeriesError, 
-  SceneRequiredError, 
-  TooManyScenesError,
-  InvalidConnectionError 
+  SceneRequiredError,
+  InvalidConnectionError,
+  DomainError
 } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { NodeData } from "@/shared/types";
@@ -16,7 +16,16 @@ import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
   const sceneNodes = nodes.filter((node) => node.type === 'scene');
   if (sceneNodes.length === 0) throw new SceneRequiredError();
-  if (sceneNodes.length > 1) throw new TooManyScenesError();
+  
+  // Allow multiple scenes but with reasonable limits
+  const maxScenesPerExecution = Number(process.env.MAX_SCENES_PER_EXECUTION ?? '8');
+  if (sceneNodes.length > maxScenesPerExecution) {
+    throw new DomainError(
+      `Maximum ${maxScenesPerExecution} scenes per execution`,
+      'ERR_TOO_MANY_SCENES',
+      { info: { sceneCount: sceneNodes.length, maxAllowed: maxScenesPerExecution } }
+    );
+  }
 }
 
 export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {

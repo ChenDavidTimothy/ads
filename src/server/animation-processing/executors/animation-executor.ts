@@ -48,8 +48,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
           objectId ?? '',
           baseline
         );
+        
+        // Attach animations directly to the object instead of global pool
+        const animatedObject = {
+          ...(timedObject as Record<string, unknown>),
+          _attachedAnimations: animations // Attach animations to this specific object
+        };
+        
         allAnimations.push(...animations);
-        passThoughObjects.push(timedObject);
+        passThoughObjects.push(animatedObject);
 
         if (objectId) {
           const localEnd = animations.length > 0
@@ -62,6 +69,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     context.sceneAnimations.push(...allAnimations);
+    
+    // Track which Animation node created these animations
+    // This allows proper assignment to only downstream scenes
+    const animationNodeId = node.data.identifier.id;
+    for (const animation of allAnimations) {
+      const animationId = `${animation.objectId}-${animation.type}-${animation.startTime}`;
+      // Store which animation node created this animation
+      context.animationSceneMap.set(`${animationId}_source`, animationNodeId);
+    }
     const maxDuration = allAnimations.length > 0 ?
       Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) :
       context.currentTime;
