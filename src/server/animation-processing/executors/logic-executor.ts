@@ -10,12 +10,12 @@ import { logger } from "@/lib/logger";
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
   protected registerHandlers(): void {
-    this.registerHandler('filter', this.executeFilter);
-    this.registerHandler('merge', this.executeMerge);
-    this.registerHandler('constants', this.executeConstants);
-    this.registerHandler('print', this.executePrint);
-    this.registerHandler('compare', this.executeCompare);
-    this.registerHandler('if_else', this.executeIfElse);
+    this.registerHandler('filter', this.executeFilter.bind(this));
+    this.registerHandler('merge', this.executeMerge.bind(this));
+    this.registerHandler('constants', this.executeConstants.bind(this));
+    this.registerHandler('print', this.executePrint.bind(this));
+    this.registerHandler('compare', this.executeCompare.bind(this));
+    this.registerHandler('if_else', this.executeIfElse.bind(this));
   }
 
 
@@ -37,7 +37,7 @@ export class LogicNodeExecutor extends BaseExecutor {
         logicType = 'number';
         break;
       case 'string':
-        outputValue = String(data.stringValue || '');
+        outputValue = typeof data.stringValue === 'string' ? data.stringValue : (data.stringValue ?? '');
         logicType = 'string';
         break;
       case 'boolean':
@@ -45,7 +45,7 @@ export class LogicNodeExecutor extends BaseExecutor {
         logicType = 'boolean';
         break;
       case 'color':
-        outputValue = String(data.colorValue || '#ffffff');
+        outputValue = typeof data.colorValue === 'string' ? data.colorValue : (data.colorValue ?? '#ffffff');
         logicType = 'color';
         break;
       default:
@@ -54,7 +54,7 @@ export class LogicNodeExecutor extends BaseExecutor {
         logger.warn(`Unknown value type: ${valueType}, defaulting to number 0`);
     }
 
-    logger.debug(`Constants ${node.data.identifier.displayName}: ${valueType} = ${outputValue}`);
+    logger.debug(`Constants ${node.data.identifier.displayName}: ${valueType} = ${String(outputValue)}`);
     
     setNodeOutput(
       context,
@@ -72,7 +72,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const label = String(data.label || 'Debug');
+    const label = typeof data.label === 'string' ? data.label : 'Debug';
     const nodeDisplayName = node.data.identifier?.displayName || 'Print Node';
     
     const inputs = getConnectedInputs(
@@ -150,7 +150,7 @@ export class LogicNodeExecutor extends BaseExecutor {
               dataSize: this.getDataSize(value),
               isComplexObject: this.isComplexObject(value),
               hasNestedData: this.hasNestedData(value),
-              sourceMetadata: input.metadata || {}
+              sourceMetadata: input.metadata ?? {}
             }
           }
         });
@@ -170,14 +170,18 @@ export class LogicNodeExecutor extends BaseExecutor {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
     if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'object') {
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+      return String(value);
+    }
+    if (typeof value === 'object' && value !== null) {
       try {
         return JSON.stringify(value, null, 2);
       } catch {
-        return String(value);
+        return '[Complex Object]';
       }
     }
-    return String(value);
+    // For other types (function, symbol, etc.)
+    return `[${typeof value}]`;
   }
 
   // Enhanced helper methods for production debugging
@@ -320,9 +324,10 @@ export class LogicNodeExecutor extends BaseExecutor {
     // Process ports in reverse order so Port 1 (index 0) has highest priority
     for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
+      if (!inputs) continue;
       logger.debug(`Processing port ${portIndex + 1}`, { inputs: inputs.length });
       
-      for (const input of inputs || []) {
+      for (const input of inputs) {
         const inputData = Array.isArray(input.data) ? input.data : [input.data];
         logger.debug(`Port ${portIndex + 1} input data`, { items: inputData.length });
         
@@ -416,41 +421,63 @@ export class LogicNodeExecutor extends BaseExecutor {
       operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
     };
     
+    let inputA: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
+    let inputB: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
+    
     try {
-      const inputA = getTypedConnectedInput<number>(
+      inputA = getTypedConnectedInput<number>(
         context, 
         connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
         node.data.identifier.id, 
         'input_a', 
         'number'
       );
-      const inputB = getTypedConnectedInput<number>(
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input A in Compare node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
+      }
+      throw error;
+    }
+    
+    try {
+      inputB = getTypedConnectedInput<number>(
         context, 
         connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
         node.data.identifier.id, 
         'input_b', 
         'number'
       );
-      
-      if (!inputA || !inputB) {
-        throw new Error(`Compare node ${node.data.identifier.displayName} missing required inputs`);
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input B in Compare node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
       }
+      throw error;
+    }
+    
+    if (!inputA || !inputB) {
+      throw new Error(`Compare node ${node.data.identifier.displayName} missing required inputs`);
+    }
+    
+    const valueA = inputA.data;
+    const valueB = inputB.data;
       
       let result: boolean;
       switch (data.operator) {
-        case 'gt': result = inputA.data > inputB.data; break;
-        case 'lt': result = inputA.data < inputB.data; break;
-        case 'eq': result = inputA.data === inputB.data; break;
-        case 'neq': result = inputA.data !== inputB.data; break;
-        case 'gte': result = inputA.data >= inputB.data; break;
-        case 'lte': result = inputA.data <= inputB.data; break;
+        case 'gt': result = valueA > valueB; break;
+        case 'lt': result = valueA < valueB; break;
+        case 'eq': result = valueA === valueB; break;
+        case 'neq': result = valueA !== valueB; break;
+        case 'gte': result = valueA >= valueB; break;
+        case 'lte': result = valueA <= valueB; break;
         default: {
           const _exhaustive: never = data.operator;
-          throw new Error(`Unknown operator: ${_exhaustive}`);
+          throw new Error(`Unknown operator: ${String(_exhaustive)}`);
         }
       }
       
-      logger.debug(`Compare ${node.data.identifier.displayName}: ${inputA.data} ${data.operator} ${inputB.data} = ${result}`);
+      logger.debug(`Compare ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
       
       setNodeOutput(
         context,
@@ -460,13 +487,7 @@ export class LogicNodeExecutor extends BaseExecutor {
         result,
         { logicType: 'boolean', validated: true }
       );
-    } catch (error) {
-      if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed in Compare node ${node.data.identifier.displayName}: ${error.message}`);
-        throw error;
-      }
-      throw error;
-    }
+    // Note: Error handling is done above for individual inputs
   }
 
   private async executeIfElse(
@@ -474,33 +495,38 @@ export class LogicNodeExecutor extends BaseExecutor {
     context: ExecutionContext,
     connections: ReactFlowEdge[]
   ): Promise<void> {
+    let condition: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
+    
     try {
-      const condition = getTypedConnectedInput<boolean>(
+      condition = getTypedConnectedInput<boolean>(
         context, 
         connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
         node.data.identifier.id, 
         'condition', 
         'boolean'
       );
-      
-      if (!condition) {
-        throw new Error(`If/Else node ${node.data.identifier.displayName} missing condition input`);
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for condition in If/Else node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
       }
+      throw error;
+    }
+    
+    if (!condition) {
+      throw new Error(`If/Else node ${node.data.identifier.displayName} missing condition input`);
+    }
+    
+    const conditionValue = condition.data;
       
       // Simple: if true, output true. If false, output false.
-      if (condition.data) {
+      if (conditionValue) {
         setNodeOutput(context, node.data.identifier.id, 'true_path', 'data', true);
         logger.debug(`If/Else ${node.data.identifier.displayName}: condition=true, output=true on true_path`);
       } else {
         setNodeOutput(context, node.data.identifier.id, 'false_path', 'data', false);
         logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, output=false on false_path`);
       }
-    } catch (error) {
-      if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed in If/Else node ${node.data.identifier.displayName}: ${error.message}`);
-        throw error;
-      }
-      throw error;
-    }
+    // Note: Error handling is done above for condition input
   }
 }

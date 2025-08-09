@@ -1,5 +1,6 @@
 // src/server/animation-processing/graph/validation.ts
-import { getNodesByCategory, getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
+import { getNodesByCategory, getNodeDefinitionWithDynamicPorts, getNodeDefinition } from "@/shared/registry/registry-utils";
+import { arePortsCompatible, type PortType } from "@/shared/types/ports";
 import { 
   DuplicateObjectIdsError, 
   MissingInsertConnectionError, 
@@ -26,9 +27,6 @@ export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: Rea
 }
 
 export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const { arePortsCompatible } = require("@/shared/types/ports");
-  const { getNodeDefinition } = require("@/shared/registry/registry-utils");
-
   for (const edge of edges) {
     const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
     const targetNode = nodes.find(n => n.data.identifier.id === edge.target);
@@ -52,11 +50,11 @@ export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edge
 
     // Get dynamic definition for merge nodes
     const actualTargetDefinition = targetNode.type === 'merge' 
-      ? getNodeDefinitionWithDynamicPorts(targetNode.type, targetNode.data)
+      ? getNodeDefinitionWithDynamicPorts(targetNode.type, targetNode.data as unknown as Record<string, unknown>)
       : targetDefinition;
 
-    const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
-    const targetPort = actualTargetDefinition?.ports.inputs.find(p => p.id === edge.targetHandle);
+    const sourcePort = sourceDefinition.ports.outputs.find((p: { id: string }) => p.id === edge.sourceHandle);
+    const targetPort = actualTargetDefinition?.ports.inputs.find((p: { id: string }) => p.id === edge.targetHandle);
     
     if (!sourcePort) {
       throw new InvalidConnectionError(
@@ -72,9 +70,9 @@ export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edge
       );
     }
 
-    if (!arePortsCompatible(sourcePort.type, targetPort.type)) {
+    if (!arePortsCompatible((sourcePort as { type: PortType }).type, (targetPort as { type: PortType }).type)) {
       throw new InvalidConnectionError(
-        `Port types incompatible: ${sourcePort.type} output cannot connect to ${targetPort.type} input between ${sourceNode.data.identifier.displayName} and ${targetNode.data.identifier.displayName}`,
+        `Port types incompatible: ${(sourcePort as { type: PortType }).type} output cannot connect to ${(targetPort as { type: PortType }).type} input between ${sourceNode.data.identifier.displayName} and ${targetNode.data.identifier.displayName}`,
         { edgeId: edge.id, sourceNodeId: edge.source, targetNodeId: edge.target }
       );
     }
@@ -92,7 +90,7 @@ export function validateMergePortConnections(nodes: ReactFlowNode<NodeData>[], e
     for (const edge of incomingEdges) {
       if (!edge.targetHandle) continue;
       
-      const existingEdges = portConnections.get(edge.targetHandle) || [];
+      const existingEdges = portConnections.get(edge.targetHandle) ?? [];
       existingEdges.push(edge);
       portConnections.set(edge.targetHandle, existingEdges);
     }
@@ -102,7 +100,7 @@ export function validateMergePortConnections(nodes: ReactFlowNode<NodeData>[], e
       if (connectedEdges.length > 1) {
         const sourceNodeNames = connectedEdges.map(edge => {
           const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
-          return sourceNode?.data.identifier.displayName || edge.source;
+          return sourceNode?.data.identifier.displayName ?? edge.source;
         });
         
         throw new InvalidConnectionError(
@@ -137,7 +135,8 @@ export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeD
   const sceneNodes = nodes.filter((node) => node.type === 'scene');
   if (sceneNodes.length === 0) return;
 
-  const sceneNode = sceneNodes[0]; 
+  const sceneNode = sceneNodes[0];
+  if (!sceneNode) return;
   
   for (const startNode of nodes) {
     const pathsToScene = findAllPathsToScene(startNode.data.identifier.id, sceneNode.data.identifier.id, edges, nodes);
@@ -151,12 +150,12 @@ export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeD
       if (insertNodesInPath.length > 1) {
         const insertNodeNames = insertNodesInPath.map(nodeId => {
           const node = nodes.find(n => n.data.identifier.id === nodeId);
-          return node?.data.identifier.displayName || nodeId;
+          return node?.data.identifier.displayName ?? nodeId;
         });
         
         const pathDescription = path.map(nodeId => {
           const node = nodes.find(n => n.data.identifier.id === nodeId);
-          return node?.data.identifier.displayName || nodeId;
+          return node?.data.identifier.displayName ?? nodeId;
         }).join(' → ');
         
         throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
@@ -210,7 +209,7 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
     nodeByIdentifierId.set(node.data.identifier.id, node);
   });
 
-  const traceUpstreamNode = (currentNodeId: string, pathVisited: Set<string>, depth: number = 0, pathId: string = 'root'): string[] => {
+  const traceUpstreamNode = (currentNodeId: string, pathVisited: Set<string>, depth = 0, pathId = 'root'): string[] => {
     const indent = '  '.repeat(depth);
     logger.debug(`${indent}[Path ${pathId}] Visiting node: ${currentNodeId}`);
     

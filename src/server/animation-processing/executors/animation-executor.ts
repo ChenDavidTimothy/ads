@@ -8,7 +8,7 @@ import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps }
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
   protected registerHandlers(): void {
-    this.registerHandler('animation', this.executeAnimation);
+    this.registerHandler('animation', this.executeAnimation.bind(this));
   }
 
 

@@ -1,8 +1,27 @@
 // src/shared/registry/validation.ts - Runtime validation for node registration
-import { NODE_DEFINITIONS } from '../types/definitions';
+import { NODE_DEFINITIONS, type NodeType } from '../types/definitions';
 import { getNodeComponentMapping } from './registry-utils';
-import { EXECUTOR_NODE_MAPPINGS } from '../../server/animation-processing/executors/generated-mappings';
+import { EXECUTOR_NODE_MAPPINGS} from '../../server/animation-processing/executors/generated-mappings';
 import { logger } from '@/lib/logger';
+
+// Type for component mapping return value
+type ComponentMapping = Record<string, unknown>;
+
+// Type guard to check if error is an Error object
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+
+// Helper to safely convert unknown to string
+function errorToString(error: unknown): string {
+  if (isError(error)) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return String(error);
+}
 
 export interface ValidationResult {
   isValid: boolean;
@@ -42,7 +61,7 @@ export function validateNodeRegistration(): ValidationResult {
     return { isValid, errors, warnings };
     
   } catch (error) {
-    const errorMessage = `Validation failed with exception: ${error}`;
+    const errorMessage = `Validation failed with exception: ${errorToString(error)}`;
     logger.error(errorMessage);
     return {
       isValid: false,
@@ -58,8 +77,8 @@ function validateComponentMappings(): ValidationResult {
   const warnings: string[] = [];
   
   try {
-    const nodeTypes = Object.keys(NODE_DEFINITIONS);
-    const componentMapping = getNodeComponentMapping();
+    const nodeTypes = Object.keys(NODE_DEFINITIONS) as NodeType[];
+    const componentMapping = getNodeComponentMapping() as ComponentMapping;
     const componentTypes = Object.keys(componentMapping);
 
     // Check for missing components
@@ -69,7 +88,7 @@ function validateComponentMappings(): ValidationResult {
     }
 
     // Check for extra components (not necessarily an error, but worth noting)
-    const extraComponents = componentTypes.filter(type => !nodeTypes.includes(type));
+    const extraComponents = componentTypes.filter(type => !nodeTypes.includes(type as NodeType));
     if (extraComponents.length > 0) {
       warnings.push(`Extra components found (not in NODE_DEFINITIONS): ${extraComponents.join(', ')}`);
     }
@@ -86,7 +105,7 @@ function validateComponentMappings(): ValidationResult {
   } catch (error) {
     return {
       isValid: false,
-      errors: [`Component mapping validation failed: ${error}`],
+      errors: [`Component mapping validation failed: ${errorToString(error)}`],
       warnings: []
     };
   }
@@ -98,11 +117,11 @@ function validateExecutorMappings(): ValidationResult {
   const warnings: string[] = [];
   
   try {
-    const nodeTypes = Object.keys(NODE_DEFINITIONS);
+    const nodeTypes = Object.keys(NODE_DEFINITIONS) as NodeType[];
     const allExecutorNodes = Object.values(EXECUTOR_NODE_MAPPINGS).flat();
 
     // Check that all nodes are covered by executors
-    const uncoveredNodes = nodeTypes.filter(type => !allExecutorNodes.includes(type as any));
+    const uncoveredNodes = nodeTypes.filter(type => !allExecutorNodes.includes(type));
     if (uncoveredNodes.length > 0) {
       errors.push(`Nodes not covered by any executor: ${uncoveredNodes.join(', ')}`);
     }
@@ -110,7 +129,7 @@ function validateExecutorMappings(): ValidationResult {
     // Check for duplicate node coverage
     const nodeCounts = new Map<string, number>();
     allExecutorNodes.forEach(nodeType => {
-      nodeCounts.set(nodeType, (nodeCounts.get(nodeType) || 0) + 1);
+      nodeCounts.set(nodeType, (nodeCounts.get(nodeType) ?? 0) + 1);
     });
 
     const duplicateNodes = Array.from(nodeCounts.entries())
@@ -126,7 +145,7 @@ function validateExecutorMappings(): ValidationResult {
   } catch (error) {
     return {
       isValid: false,
-      errors: [`Executor mapping validation failed: ${error}`],
+      errors: [`Executor mapping validation failed: ${errorToString(error)}`],
       warnings: []
     };
   }
@@ -141,7 +160,7 @@ function validateSystemConsistency(): ValidationResult {
     // Validate that executor categories match NODE_DEFINITIONS
     for (const [executorType, nodeTypes] of Object.entries(EXECUTOR_NODE_MAPPINGS)) {
       for (const nodeType of nodeTypes) {
-        const nodeDefinition = NODE_DEFINITIONS[nodeType as keyof typeof NODE_DEFINITIONS];
+        const nodeDefinition = NODE_DEFINITIONS[nodeType];
         if (!nodeDefinition) {
           errors.push(`Executor ${executorType} references unknown node type: ${nodeType}`);
           continue;
@@ -158,9 +177,12 @@ function validateSystemConsistency(): ValidationResult {
     }
 
     // Validate dynamic port metadata
-    for (const [nodeType, definition] of Object.entries(NODE_DEFINITIONS)) {
-      if ((definition as any).metadata?.supportsDynamicPorts) {
-        if (!(definition as any).metadata.portGenerator) {
+    for (const nodeType of Object.keys(NODE_DEFINITIONS) as NodeType[]) {
+      const definition = NODE_DEFINITIONS[nodeType];
+      // Use type assertion to access metadata safely since we know some nodes have it
+      const metadata = (definition as { metadata?: { supportsDynamicPorts?: boolean; portGenerator?: string } }).metadata;
+      if (metadata?.supportsDynamicPorts) {
+        if (!metadata.portGenerator) {
           warnings.push(`Node ${nodeType} supports dynamic ports but has no portGenerator specified`);
         }
       }
@@ -171,7 +193,7 @@ function validateSystemConsistency(): ValidationResult {
   } catch (error) {
     return {
       isValid: false,
-      errors: [`System consistency validation failed: ${error}`],
+      errors: [`System consistency validation failed: ${errorToString(error)}`],
       warnings: []
     };
   }
@@ -183,7 +205,7 @@ export function validateNodeType(nodeType: string): ValidationResult {
   const warnings: string[] = [];
 
   // Check if node exists in definitions
-  const definition = NODE_DEFINITIONS[nodeType as keyof typeof NODE_DEFINITIONS];
+  const definition = NODE_DEFINITIONS[nodeType as NodeType];
   if (!definition) {
     errors.push(`Node type '${nodeType}' not found in NODE_DEFINITIONS`);
     return { isValid: false, errors, warnings };
@@ -191,19 +213,23 @@ export function validateNodeType(nodeType: string): ValidationResult {
 
   // Check component mapping
   try {
-    const componentMapping = getNodeComponentMapping();
+    const componentMapping = getNodeComponentMapping() as ComponentMapping;
     if (!componentMapping[nodeType]) {
       errors.push(`No component mapping found for node type '${nodeType}'`);
     }
   } catch (error) {
-    errors.push(`Failed to validate component for '${nodeType}': ${error}`);
+    errors.push(`Failed to validate component for '${nodeType}': ${errorToString(error)}`);
   }
 
   // Check executor mapping
   const executorType = definition.execution.executor;
-  const executorNodes = EXECUTOR_NODE_MAPPINGS[executorType as keyof typeof EXECUTOR_NODE_MAPPINGS];
-  if (!executorNodes || !executorNodes.includes(nodeType as any)) {
-    errors.push(`Node type '${nodeType}' not found in executor '${executorType}' mappings`);
+  if (executorType in EXECUTOR_NODE_MAPPINGS) {
+    const executorNodes = EXECUTOR_NODE_MAPPINGS[executorType];
+    if (!executorNodes.includes(nodeType as never)) {
+      errors.push(`Node type '${nodeType}' not found in executor '${executorType}' mappings`);
+    }
+  } else {
+    errors.push(`Unknown executor type '${executorType}' for node '${nodeType}'`);
   }
 
   return { isValid: errors.length === 0, errors, warnings };

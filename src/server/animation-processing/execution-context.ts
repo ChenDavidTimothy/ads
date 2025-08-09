@@ -138,7 +138,7 @@ export function getConnectedInput(
   targetPortId: string
 ): ExecutionValue | undefined {
   // CRITICAL: Try to find connection using identifier ID first, then React Flow ID
-  let connection = connections.find(
+  const connection = connections.find(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   

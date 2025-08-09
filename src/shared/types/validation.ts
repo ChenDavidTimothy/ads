@@ -1,5 +1,4 @@
 // src/shared/types/validation.ts - Runtime type validation for logic nodes
-import type { ExecutionValue } from "@/server/animation-processing/execution-context";
 
 export type LogicDataType = 'number' | 'boolean' | 'string' | 'color';
 
@@ -72,7 +71,7 @@ export function validateAndCoerce<T>(
     
     default: {
       const _exhaustive: never = expectedType;
-      throw new Error(`Unsupported validation type: ${_exhaustive}`);
+      throw new Error(`Unsupported validation type: ${String(_exhaustive)}`);
     }
   }
 }

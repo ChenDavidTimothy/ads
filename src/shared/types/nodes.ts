@@ -165,8 +165,10 @@ export interface CompareNodeData extends BaseNodeData {
 }
 
 // If/Else node data
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IfElseNodeData extends BaseNodeData {
-  // No additional properties for basic if/else
+  // This interface intentionally has no additional properties
+  // It exists for type consistency and future extensibility
 }
 
 // Union type for all node data

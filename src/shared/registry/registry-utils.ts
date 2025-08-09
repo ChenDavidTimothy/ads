@@ -1,5 +1,6 @@
 // src/shared/registry/registry-utils.ts - Dynamic generation from node definitions
 import { NODE_DEFINITIONS, type NodeDefinition } from '../types/definitions';
+import { COMPONENT_MAPPING } from '@/components/editor/nodes/generated-mappings';
 
 // Derive NodeType from registry to avoid duplication elsewhere
 export type NodeType = keyof typeof NODE_DEFINITIONS;
@@ -16,7 +17,15 @@ const REGISTRY: Record<string, NodeDefinition> = Object.fromEntries(
         outputs: [...def.ports.outputs],
       },
       properties: {
-        properties: [...def.properties.properties],
+        properties: def.properties.properties.map(prop => {
+          if (prop.type === 'select' && 'options' in prop) {
+            return {
+              ...prop,
+              options: [...prop.options]
+            };
+          }
+          return { ...prop };
+        }),
       },
       rendering: { ...def.rendering },
       defaults: { ...def.defaults },
@@ -114,8 +123,6 @@ export function getNodeDefinition(nodeType: string): NodeDefinition | undefined 
 
 // Build-time generated component mapping - automatically maintained
 export function getNodeComponentMapping() {
-  // Import build-time generated component mappings
-  const { COMPONENT_MAPPING } = require('@/components/editor/nodes/generated-mappings');
   return COMPONENT_MAPPING;
 }
 
@@ -180,7 +187,7 @@ function generateMergePorts(baseDefinition: NodeDefinition, nodeData?: Record<st
 }
 
 // Placeholder for future custom port generators
-function generateCustomPorts(baseDefinition: NodeDefinition, nodeData?: Record<string, unknown>): NodeDefinition {
+function generateCustomPorts(baseDefinition: NodeDefinition, _nodeData?: Record<string, unknown>): NodeDefinition {
   // Future implementation for nodes with custom port generation logic
   return baseDefinition;
 }

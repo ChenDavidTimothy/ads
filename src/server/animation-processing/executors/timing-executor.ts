@@ -8,7 +8,7 @@ import { isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler"
 export class TimingNodeExecutor extends BaseExecutor {
   // Register timing node handlers
   protected registerHandlers(): void {
-    this.registerHandler('insert', this.executeInsert);
+    this.registerHandler('insert', (node, context, connections) => this.executeInsert(node, context, connections));
   }
 
 

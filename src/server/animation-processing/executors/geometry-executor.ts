@@ -8,9 +8,9 @@ import { BaseExecutor } from "./base-executor";
 export class GeometryNodeExecutor extends BaseExecutor {
   // Register all geometry node handlers
   protected registerHandlers(): void {
-    this.registerHandler('triangle', this.executeGeometry);
-    this.registerHandler('circle', this.executeGeometry);
-    this.registerHandler('rectangle', this.executeGeometry);
+    this.registerHandler('triangle', (node, context, connections) => this.executeGeometry(node, context, connections));
+    this.registerHandler('circle', (node, context, connections) => this.executeGeometry(node, context, connections));
+    this.registerHandler('rectangle', (node, context, connections) => this.executeGeometry(node, context, connections));
   }
 
 

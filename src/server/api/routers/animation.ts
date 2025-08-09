@@ -3,9 +3,8 @@ import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { logger } from "@/lib/logger";
-import { isDomainError, NodeValidationError, SceneValidationError } from "@/shared/errors/domain";
+import { isDomainError } from "@/shared/errors/domain";
 import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
-import { validateScene } from "@/shared/types";
 import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 import { buildZodSchemaFromProperties } from "@/shared/types/properties";
@@ -236,15 +235,21 @@ export const animationRouter = createTRPCRouter({
         );
 
         // Extract debug logs from context and format for frontend consumption
-        const debugLogs = (executionContext.executionLog || [])
-          .filter(entry => entry.data && typeof entry.data === 'object' && 
-                  (entry.data as { type?: string }).type === 'print_output')
+        const executionLog = executionContext.executionLog ?? [];
+        const debugLogs = executionLog
+          .filter(entry => {
+            return entry.data && 
+                   typeof entry.data === 'object' && 
+                   entry.data !== null &&
+                   (entry.data as { type?: string }).type === 'print_output';
+          })
           .map(entry => {
+            const entryData = entry.data as { type: string; [key: string]: unknown };
             return {
               nodeId: entry.nodeId,
               timestamp: entry.timestamp,
               action: entry.action,
-              data: entry.data // Keep the full data structure for frontend processing
+              data: entryData
             };
           });
 
@@ -442,14 +447,14 @@ export const animationRouter = createTRPCRouter({
           scene,
           config,
           userId: ctx.user!.id,
-          jobId: jobRow.id,
+          jobId: jobRow.id as string,
         });
 
         // Wait briefly for immediate completion
         const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
         const parsed = Number(inlineWaitMsRaw);
         const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
-        const notify = await waitForRenderJobEvent({ jobId: jobRow.id, timeoutMs: inlineWaitMs });
+        const notify = await waitForRenderJobEvent({ jobId: jobRow.id as string, timeoutMs: inlineWaitMs });
         
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return {
@@ -462,7 +467,7 @@ export const animationRouter = createTRPCRouter({
         
         return {
           success: true,
-          jobId: jobRow.id,
+          jobId: jobRow.id as string,
           scene,
           config,
         } as const;
@@ -588,7 +593,11 @@ export const animationRouter = createTRPCRouter({
           return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;
         }
       }
-      return { status: data?.status ?? 'unknown', videoUrl: data?.output_url ?? null, error: data?.error ?? null } as const;
+      return { 
+        status: (data?.status as string) ?? 'unknown', 
+        videoUrl: (data?.output_url as string) ?? null, 
+        error: (data?.error as string) ?? null 
+      } as const;
     }),
 
   getNodeDefinition: publicProcedure

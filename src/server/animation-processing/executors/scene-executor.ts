@@ -8,7 +8,7 @@ import { MissingInsertConnectionError } from "@/shared/errors/domain";
 export class SceneNodeExecutor extends BaseExecutor {
   // Register scene node handlers
   protected registerHandlers(): void {
-    this.registerHandler('scene', this.executeScene);
+    this.registerHandler('scene', (node, context, connections) => this.executeScene(node, context, connections));
   }
 
 
