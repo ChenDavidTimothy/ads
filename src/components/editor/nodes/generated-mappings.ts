@@ -15,6 +15,7 @@ import { SceneNode } from './scene-node';
 import { CompareNode } from './compare-node';
 import { IfElseNode } from './if-else-node';
 import { BooleanOpNode } from './boolean-op-node';
+import { MathOpNode } from './math-op-node';
 
 export const COMPONENT_MAPPING = {
   'triangle': TriangleNode,
@@ -30,6 +31,7 @@ export const COMPONENT_MAPPING = {
   'compare': CompareNode,
   'if_else': IfElseNode,
   'boolean_op': BooleanOpNode,
+  'math_op': MathOpNode,
 } as const;
 
 export type ComponentMapping = typeof COMPONENT_MAPPING;

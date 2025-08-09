@@ -130,6 +130,51 @@ export function useFlowGraph() {
         
         return; // Early return to avoid duplicate node update
       }
+      
+      // Handle edge cleanup for math operation nodes - cut ties when changing port count
+      if (updatedNode?.type === 'math_op') {
+        const oldOperator = (updatedNode.data as { operator?: string }).operator;
+        const newOperator = newData.operator as string;
+        
+        // Define unary operations (1 input) vs binary operations (2 inputs)
+        const unaryOps = ['sqrt', 'abs'];
+        const oldIsUnary = oldOperator ? unaryOps.includes(oldOperator) : false;
+        const newIsUnary = unaryOps.includes(newOperator);
+        
+        // Check if this change involves port count change
+        const involvesPortChange = oldIsUnary !== newIsUnary;
+        
+        // Update node data
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.data.identifier.id === nodeId
+              ? { ...node, data: { ...node.data, ...newData } }
+              : node
+          )
+        );
+        
+        if (involvesPortChange) {
+          // Cut ALL connections when switching between unary/binary operations
+          setEdges((eds) => {
+            const removedEdges = eds.filter(edge => edge.target === updatedNode.id);
+            
+            if (removedEdges.length > 0) {
+              // Clean up tracking for removed edges
+              removedEdges.forEach(edge => {
+                flowTracker.removeConnection(edge.id);
+              });
+              
+              console.log(`[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to math operation port change - user can reconnect`);
+            }
+            
+            // Keep only edges that don't target this math node
+            return eds.filter(edge => edge.target !== updatedNode.id);
+          });
+        }
+        // If no port change (binary↔binary or unary↔unary), do nothing - connections stay
+        
+        return; // Early return to avoid duplicate node update
+      }
     }
     
     // Regular node data update for non-merge nodes or non-port-count changes

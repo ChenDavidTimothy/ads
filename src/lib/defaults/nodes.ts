@@ -29,7 +29,8 @@ function getNodeShortId(nodeType: NodeType): string {
     scene: 'scn',
     compare: 'cmp',
     if_else: 'ife',
-    boolean_op: 'bop'
+    boolean_op: 'bop',
+    math_op: 'mat'
   };
   return prefixes[nodeType];
 }

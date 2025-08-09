@@ -18,7 +18,8 @@ import {
   validateNoDuplicateObjectIds,
   validateMergePortConnections,
   validateBooleanPortConnections,
-  validateBooleanTypeConnections
+  validateBooleanTypeConnections,
+  validateMathTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
 
@@ -123,7 +124,11 @@ export class ExecutionEngine {
     logger.info('Validating boolean input types');
     validateBooleanTypeConnections(nodes, edges);
     
-    // 5. Flow architecture validation
+    // 5. Math type validation
+    logger.info('Validating math input types');
+    validateMathTypeConnections(nodes, edges);
+    
+    // 6. Flow architecture validation
     logger.info('Validating proper flow architecture');
     validateProperFlow(nodes, edges);
     

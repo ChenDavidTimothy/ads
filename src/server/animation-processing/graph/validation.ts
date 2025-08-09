@@ -220,6 +220,64 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
   }
 }
 
+export function validateMathTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const mathNodes = nodes.filter(node => node.type === 'math_op');
+  
+  for (const mathNode of mathNodes) {
+    // Safety check for node data
+    if (!mathNode.data?.identifier?.id || !mathNode.data?.identifier?.displayName) {
+      continue; // Skip nodes with invalid data structure
+    }
+    
+    const incomingEdges = edges.filter(edge => edge.target === mathNode.data.identifier.id);
+    
+    for (const edge of incomingEdges) {
+      const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
+      if (!sourceNode?.data?.identifier?.displayName) continue;
+      
+      const sourceDefinition = getNodeDefinition(sourceNode.type!);
+      if (!sourceDefinition) continue;
+      
+      const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
+      if (!sourcePort) continue;
+      
+      // Check if the source port outputs number data
+      let isValidNumberSource = false;
+      
+      if (sourceNode.type === 'math_op') {
+        // Math nodes always output numbers
+        isValidNumberSource = true;
+      } else if (sourceNode.type === 'constants') {
+        // Constants node: check if it's configured to output number
+        const constantsData = sourceNode.data as unknown as { valueType?: string };
+        isValidNumberSource = constantsData.valueType === 'number';
+      }
+      // Note: Compare nodes output boolean, not numbers
+      
+      if (!isValidNumberSource) {
+        let errorMessage = `Math operation "${mathNode.data.identifier.displayName}" can only accept number inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
+        
+        if (sourceNode.type === 'constants') {
+          const constantsData = sourceNode.data as unknown as { valueType?: string };
+          errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output number values instead.`;
+        } else {
+          errorMessage += ` which outputs ${sourcePort.type} data. Only number sources are allowed.`;
+        }
+        
+        throw new InvalidConnectionError(
+          errorMessage,
+          { 
+            nodeId: mathNode.data.identifier.id,
+            nodeName: mathNode.data.identifier.displayName,
+            sourceNodeId: sourceNode.data.identifier.id,
+            info: { expectedType: 'number', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : sourcePort.type }
+          }
+        );
+      }
+    }
+  }
+}
+
 export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
   const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
   const geometryNodes = nodes.filter((n) => geometryNodeTypes.includes(n.type!));

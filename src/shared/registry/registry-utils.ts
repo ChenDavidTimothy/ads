@@ -162,6 +162,8 @@ export function getNodeDefinitionWithDynamicPorts(nodeType: string, nodeData?: R
       return generateMergePorts(baseDefinition, nodeData);
     case 'boolean':
       return generateBooleanPorts(baseDefinition, nodeData);
+    case 'math':
+      return generateMathPorts(baseDefinition, nodeData);
     case 'custom':
       // Future: support for custom port generators
       return generateCustomPorts(baseDefinition, nodeData);
@@ -210,6 +212,34 @@ function generateBooleanPorts(baseDefinition: NodeDefinition, nodeData?: Record<
       inputs: [
         { id: 'input1', type: 'data' as const, label: 'A' },
         { id: 'input2', type: 'data' as const, label: 'B' }
+      ],
+      outputs: [...baseDefinition.ports.outputs],
+    },
+  };
+}
+
+// Generate dynamic ports for math operation nodes
+function generateMathPorts(baseDefinition: NodeDefinition, nodeData?: Record<string, unknown>): NodeDefinition {
+  const operator = nodeData?.operator as string;
+  
+  // Unary operations only need one input
+  if (operator === 'sqrt' || operator === 'abs') {
+    return {
+      ...baseDefinition,
+      ports: {
+        inputs: [{ id: 'input_a', type: 'data' as const, label: 'A' }],
+        outputs: [...baseDefinition.ports.outputs],
+      },
+    };
+  }
+  
+  // Binary operations need two inputs (default case)
+  return {
+    ...baseDefinition,
+    ports: {
+      inputs: [
+        { id: 'input_a', type: 'data' as const, label: 'A' },
+        { id: 'input_b', type: 'data' as const, label: 'B' }
       ],
       outputs: [...baseDefinition.ports.outputs],
     },

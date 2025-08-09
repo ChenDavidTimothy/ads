@@ -176,7 +176,12 @@ export interface BooleanOpNodeData extends BaseNodeData {
   operator: 'and' | 'or' | 'not' | 'xor';
 }
 
+// Math Operation node data
+export interface MathOpNodeData extends BaseNodeData {
+  operator: 'add' | 'subtract' | 'multiply' | 'divide' | 'modulo' | 'power' | 'sqrt' | 'abs' | 'min' | 'max';
+}
+
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
 
 // NodeType is derived from the registry (definitions)

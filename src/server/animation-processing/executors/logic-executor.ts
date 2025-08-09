@@ -17,6 +17,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     this.registerHandler('compare', this.executeCompare.bind(this));
     this.registerHandler('if_else', this.executeIfElse.bind(this));
     this.registerHandler('boolean_op', this.executeBooleanOp.bind(this));
+    this.registerHandler('math_op', this.executeMathOp.bind(this));
   }
 
 
@@ -647,6 +648,172 @@ export class LogicNodeExecutor extends BaseExecutor {
       'data',
       result,
       { logicType: 'boolean', validated: true }
+    );
+  }
+
+  private async executeMathOp(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as {
+      operator: 'add' | 'subtract' | 'multiply' | 'divide' | 'modulo' | 'power' | 'sqrt' | 'abs' | 'min' | 'max';
+    };
+    
+    if (data.operator === 'sqrt' || data.operator === 'abs') {
+      // Unary operations - single input
+      let input: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
+      
+      try {
+        input = getTypedConnectedInput<number>(
+          context, 
+          connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+          node.data.identifier.id, 
+          'input_a', 
+          'number'
+        );
+      } catch (error) {
+        if (error instanceof TypeValidationError) {
+          logger.error(`Type validation failed for input in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+          throw error;
+        }
+        throw error;
+      }
+      
+      if (!input) {
+        throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing input`);
+      }
+      
+      let result: number;
+      switch (data.operator) {
+        case 'sqrt':
+          if (input.data < 0) {
+            throw new Error(`Math SQRT node ${node.data.identifier.displayName}: Cannot take square root of negative number (${input.data})`);
+          }
+          result = Math.sqrt(input.data);
+          break;
+        case 'abs':
+          result = Math.abs(input.data);
+          break;
+        default: {
+          const _exhaustive: never = data.operator;
+          throw new Error(`Unknown unary math operator: ${String(_exhaustive)}`);
+        }
+      }
+      
+      logger.debug(`Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${data.operator}(${input.data}) = ${result}`);
+      
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        'output',
+        'data',
+        result,
+        { logicType: 'number', validated: true }
+      );
+      return;
+    }
+    
+    // Binary operations - two inputs
+    let inputA: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
+    let inputB: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
+    
+    try {
+      inputA = getTypedConnectedInput<number>(
+        context, 
+        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+        node.data.identifier.id, 
+        'input_a', 
+        'number'
+      );
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input A in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
+      }
+      throw error;
+    }
+    
+    try {
+      inputB = getTypedConnectedInput<number>(
+        context, 
+        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
+        node.data.identifier.id, 
+        'input_b', 
+        'number'
+      );
+    } catch (error) {
+      if (error instanceof TypeValidationError) {
+        logger.error(`Type validation failed for input B in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        throw error;
+      }
+      throw error;
+    }
+    
+    if (!inputA || !inputB) {
+      throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`);
+    }
+    
+    const valueA = inputA.data;
+    const valueB = inputB.data;
+    
+    let result: number;
+    switch (data.operator) {
+      case 'add': 
+        result = valueA + valueB; 
+        break;
+      case 'subtract': 
+        result = valueA - valueB; 
+        break;
+      case 'multiply': 
+        result = valueA * valueB; 
+        break;
+      case 'divide': 
+        if (valueB === 0) {
+          throw new Error(`Math DIVIDE node ${node.data.identifier.displayName}: Division by zero (A=${valueA}, B=${valueB})`);
+        }
+        result = valueA / valueB; 
+        break;
+      case 'modulo': 
+        if (valueB === 0) {
+          throw new Error(`Math MODULO node ${node.data.identifier.displayName}: Modulo by zero (A=${valueA}, B=${valueB})`);
+        }
+        result = valueA % valueB; 
+        break;
+      case 'power':
+        result = Math.pow(valueA, valueB);
+        break;
+      case 'min': 
+        result = Math.min(valueA, valueB); 
+        break;
+      case 'max': 
+        result = Math.max(valueA, valueB); 
+        break;
+      default: {
+        const _exhaustive: never = data.operator;
+        throw new Error(`Unknown binary math operator: ${String(_exhaustive)}`);
+      }
+    }
+    
+    // Handle special cases for result validation
+    if (!Number.isFinite(result)) {
+      if (Number.isNaN(result)) {
+        throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in NaN (A=${valueA}, B=${valueB})`);
+      }
+      if (!Number.isFinite(result)) {
+        logger.warn(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in ${result} (A=${valueA}, B=${valueB})`);
+      }
+    }
+    
+    logger.debug(`Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
+    
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'data',
+      result,
+      { logicType: 'number', validated: true }
     );
   }
 }

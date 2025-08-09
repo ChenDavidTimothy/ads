@@ -32,7 +32,7 @@ export interface NodeDefinition {
   migrate?: (data: Record<string, unknown>) => Record<string, unknown>; // optional migration hook
   metadata?: {
     supportsDynamicPorts?: boolean;
-    portGenerator?: 'merge' | 'boolean' | 'custom';
+    portGenerator?: 'merge' | 'boolean' | 'math' | 'custom';
     [key: string]: unknown;
   };
 }
@@ -589,6 +589,61 @@ export const NODE_DEFINITIONS = {
     metadata: {
       supportsDynamicPorts: true,
       portGenerator: 'boolean'
+    }
+  },
+
+  math_op: {
+    type: 'math_op',
+    label: 'Math Operation',
+    description: 'Mathematical operations (+, -, ×, ÷, %, ^, √, abs, min, max)',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input_a', type: 'data', label: 'A' },
+        { id: 'input_b', type: 'data', label: 'B' }
+      ],
+      outputs: [
+        { id: 'output', type: 'data', label: 'Result' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'operator', 
+          type: 'select',
+          label: 'Operation',
+          options: [
+            { value: 'add', label: 'Add (+)' },
+            { value: 'subtract', label: 'Subtract (-)' },
+            { value: 'multiply', label: 'Multiply (×)' },
+            { value: 'divide', label: 'Divide (÷)' },
+            { value: 'modulo', label: 'Modulo (%)' },
+            { value: 'power', label: 'Power (^)' },
+            { value: 'sqrt', label: 'Square Root (√)' },
+            { value: 'abs', label: 'Absolute (|x|)' },
+            { value: 'min', label: 'Minimum' },
+            { value: 'max', label: 'Maximum' }
+          ],
+          defaultValue: 'add'
+        }
+      ]
+    },
+    rendering: {
+      icon: '🧮',
+      colors: {
+        primary: 'bg-emerald-600',
+        handle: '!bg-emerald-500',
+      }
+    },
+    defaults: {
+      operator: 'add'
+    },
+    metadata: {
+      supportsDynamicPorts: true,
+      portGenerator: 'math'
     }
   }
 } as const;
