@@ -127,7 +127,9 @@ export function getNodeComponentMapping() {
     ConstantsNode,
     PrintNode,
     AnimationNode,
-    SceneNode
+    SceneNode,
+    CompareNode,
+    IfElseNode
   } = require('@/components/editor/nodes');
 
   const mapping: Record<string, React.ComponentType<any>> = {};
@@ -148,6 +150,8 @@ export function getNodeComponentMapping() {
         else if (nodeType === 'merge') mapping[nodeType] = MergeNode;
         else if (nodeType === 'constants') mapping[nodeType] = ConstantsNode;
         else if (nodeType === 'print') mapping[nodeType] = PrintNode;
+        else if (nodeType === 'compare') mapping[nodeType] = CompareNode;
+        else if (nodeType === 'if_else') mapping[nodeType] = IfElseNode;
         break;
       case 'animation':
         mapping[nodeType] = AnimationNode;

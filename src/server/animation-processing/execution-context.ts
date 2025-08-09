@@ -1,5 +1,7 @@
 // src/server/animation-processing/execution-context.ts - Future-proof execution context with ID consistency fixes
 import type { PortType, SceneAnimationTrack, GeometryProperties } from "@/shared/types";
+import type { LogicDataType, TypedValue } from "@/shared/types/validation";
+import { validateAndCoerce } from "@/shared/types/validation";
 
 // Expanded data types for future logic nodes
 export type ExecutionDataType = 
@@ -292,4 +294,40 @@ export function coerceExecutionValue(
     default:
       return value;
   }
+}
+
+// Type-aware helper functions for logic nodes
+export function getTypedConnectedInput<T>(
+  context: ExecutionContext,
+  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+  targetNodeId: string,
+  targetPortId: string,
+  expectedType: LogicDataType
+): TypedValue<T> | undefined {
+  const input = getConnectedInput(context, connections, targetNodeId, targetPortId);
+  if (!input) return undefined;
+  
+  return validateAndCoerce<T>(input.data, expectedType, {
+    nodeId: targetNodeId,
+    portId: targetPortId,
+    sourceNodeId: input.nodeId
+  });
+}
+
+export function getTypedConnectedInputs<T>(
+  context: ExecutionContext,
+  connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+  targetNodeId: string,
+  targetPortId: string,
+  expectedType: LogicDataType
+): TypedValue<T>[] {
+  const inputs = getConnectedInputs(context, connections, targetNodeId, targetPortId);
+  
+  return inputs.map(input => 
+    validateAndCoerce<T>(input.data, expectedType, {
+      nodeId: targetNodeId,
+      portId: targetPortId,
+      sourceNodeId: input.nodeId
+    })
+  );
 }

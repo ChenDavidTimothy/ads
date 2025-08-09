@@ -26,7 +26,9 @@ function getNodeShortId(nodeType: NodeType): string {
     constants: 'con',
     print: 'prt',
     animation: 'ani',
-    scene: 'scn'
+    scene: 'scn',
+    compare: 'cmp',
+    if_else: 'ife'
   };
   return prefixes[nodeType];
 }

@@ -159,7 +159,17 @@ export interface SceneNodeData extends BaseNodeData {
   videoCrf: number;
 }
 
+// Compare node data
+export interface CompareNodeData extends BaseNodeData {
+  operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
+}
+
+// If/Else node data
+export interface IfElseNodeData extends BaseNodeData {
+  // No additional properties for basic if/else
+}
+
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData;
 
 // NodeType is derived from the registry (definitions)

@@ -455,6 +455,83 @@ export const NODE_DEFINITIONS = {
       videoPreset: "medium",
       videoCrf: 18,
     }
+  },
+
+  compare: {
+    type: 'compare',
+    label: 'Compare',
+    description: 'Compares two values with runtime type validation',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input_a', type: 'data', label: 'A' },
+        { id: 'input_b', type: 'data', label: 'B' }
+      ],
+      outputs: [
+        { id: 'output', type: 'data', label: 'Result' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'operator', 
+          type: 'select', 
+          label: 'Operator',
+          options: [
+            { value: 'gt', label: 'Greater than (>)' },
+            { value: 'lt', label: 'Less than (<)' },
+            { value: 'eq', label: 'Equal (==)' },
+            { value: 'neq', label: 'Not equal (!=)' },
+            { value: 'gte', label: 'Greater or equal (>=)' },
+            { value: 'lte', label: 'Less or equal (<=)' }
+          ],
+          defaultValue: 'gt'
+        }
+      ]
+    },
+    rendering: {
+      icon: '≷',
+      colors: {
+        primary: 'bg-purple-600',
+        handle: '!bg-purple-500',
+      }
+    },
+    defaults: {
+      operator: 'gt'
+    }
+  },
+
+  if_else: {
+    type: 'if_else',
+    label: 'If/Else',
+    description: 'Control flow routing based on boolean condition',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'condition', type: 'data', label: 'Condition' }
+      ],
+      outputs: [
+        { id: 'true_path', type: 'trigger', label: 'True' },
+        { id: 'false_path', type: 'trigger', label: 'False' }
+      ]
+    },
+    properties: {
+      properties: []
+    },
+    rendering: {
+      icon: '🔀',
+      colors: {
+        primary: 'bg-indigo-600',
+        handle: '!bg-indigo-500',
+      }
+    },
+    defaults: {}
   }
 } as const;
 
