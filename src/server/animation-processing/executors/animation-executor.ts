@@ -1,18 +1,19 @@
 // src/server/animation-processing/executors/animation-executor.ts
-import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeExecutor } from "./node-executor";
+import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
 
-export class AnimationNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const executionConfig = getNodeExecutionConfig(nodeType);
-    return executionConfig?.executor === 'animation';
+export class AnimationNodeExecutor extends BaseExecutor {
+  // Register animation node handlers
+  protected registerHandlers(): void {
+    this.registerHandler('animation', this.executeAnimation);
   }
 
-  async execute(
+
+
+  private async executeAnimation(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     connections: ReactFlowEdge[]

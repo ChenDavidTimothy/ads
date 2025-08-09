@@ -1,18 +1,19 @@
 // src/server/animation-processing/executors/timing-executor.ts
-import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 import type { NodeData } from "@/shared/types";
 import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeExecutor } from "./node-executor";
+import { BaseExecutor } from "./base-executor";
 import { isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
 
-export class TimingNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const executionConfig = getNodeExecutionConfig(nodeType);
-    return executionConfig?.executor === 'timing';
+export class TimingNodeExecutor extends BaseExecutor {
+  // Register timing node handlers
+  protected registerHandlers(): void {
+    this.registerHandler('insert', this.executeInsert);
   }
 
-  async execute(
+
+
+  private async executeInsert(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     connections: ReactFlowEdge[]

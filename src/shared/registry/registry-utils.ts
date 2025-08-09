@@ -28,9 +28,7 @@ export function registerNodeDefinition(definition: NodeDefinition): void {
   REGISTRY[definition.type] = definition;
 }
 
-export function listNodeTypes(): string[] {
-  return Object.keys(REGISTRY);
-}
+
 
 // Generate node colors from definitions (replaces hardcoded constants)
 export function generateNodeColors() {
@@ -114,55 +112,11 @@ export function getNodeDefinition(nodeType: string): NodeDefinition | undefined 
   return REGISTRY[nodeType];
 }
 
-// Dynamic component mapping - returns actual component references
+// Build-time generated component mapping - automatically maintained
 export function getNodeComponentMapping() {
-  // Import components dynamically to avoid circular dependencies
-  const {
-    TriangleNode,
-    CircleNode, 
-    RectangleNode,
-    InsertNode,
-    FilterNode,
-    MergeNode,
-    ConstantsNode,
-    PrintNode,
-    AnimationNode,
-    SceneNode,
-    CompareNode,
-    IfElseNode
-  } = require('@/components/editor/nodes');
-
-  const mapping: Record<string, React.ComponentType<any>> = {};
-  
-  for (const [nodeType, definition] of Object.entries(REGISTRY)) {
-    // Map to actual component references based on category
-    switch (definition.execution.category) {
-      case 'geometry':
-        if (nodeType === 'triangle') mapping[nodeType] = TriangleNode;
-        else if (nodeType === 'circle') mapping[nodeType] = CircleNode;
-        else if (nodeType === 'rectangle') mapping[nodeType] = RectangleNode;
-        break;
-      case 'timing':
-        mapping[nodeType] = InsertNode;
-        break;
-      case 'logic':
-        if (nodeType === 'filter') mapping[nodeType] = FilterNode;
-        else if (nodeType === 'merge') mapping[nodeType] = MergeNode;
-        else if (nodeType === 'constants') mapping[nodeType] = ConstantsNode;
-        else if (nodeType === 'print') mapping[nodeType] = PrintNode;
-        else if (nodeType === 'compare') mapping[nodeType] = CompareNode;
-        else if (nodeType === 'if_else') mapping[nodeType] = IfElseNode;
-        break;
-      case 'animation':
-        mapping[nodeType] = AnimationNode;
-        break;
-      case 'output':
-        mapping[nodeType] = SceneNode;
-        break;
-    }
-  }
-  
-  return mapping;
+  // Import build-time generated component mappings
+  const { COMPONENT_MAPPING } = require('@/components/editor/nodes/generated-mappings');
+  return COMPONENT_MAPPING;
 }
 
 // Validate node type at runtime
@@ -191,8 +145,24 @@ export function getNodeExecutionConfig(nodeType: string) {
 // Dynamic port generation for nodes with configurable ports
 export function getNodeDefinitionWithDynamicPorts(nodeType: string, nodeData?: Record<string, unknown>): NodeDefinition | undefined {
   const baseDefinition = getNodeDefinition(nodeType);
-  if (!baseDefinition || nodeType !== 'merge') return baseDefinition;
-  
+  if (!baseDefinition?.metadata?.supportsDynamicPorts) {
+    return baseDefinition;
+  }
+
+  // Generic port generation based on metadata
+  switch (baseDefinition.metadata.portGenerator) {
+    case 'merge':
+      return generateMergePorts(baseDefinition, nodeData);
+    case 'custom':
+      // Future: support for custom port generators
+      return generateCustomPorts(baseDefinition, nodeData);
+    default:
+      return baseDefinition;
+  }
+}
+
+// Generate dynamic ports for merge nodes
+function generateMergePorts(baseDefinition: NodeDefinition, nodeData?: Record<string, unknown>): NodeDefinition {
   const portCount = Number(nodeData?.inputPortCount) || 2;
   const dynamicInputs = Array.from({ length: portCount }, (_, i) => ({
     id: `input${i + 1}`,
@@ -209,12 +179,13 @@ export function getNodeDefinitionWithDynamicPorts(nodeType: string, nodeData?: R
   };
 }
 
-// Future-proof: Get nodes that support conditional execution
-export function getConditionalExecutionNodes(): NodeDefinition[] {
-  return Object.values(REGISTRY).filter(def =>
-    def.execution.executionPriority !== undefined || def.execution.category === 'logic'
-  );
+// Placeholder for future custom port generators
+function generateCustomPorts(baseDefinition: NodeDefinition, nodeData?: Record<string, unknown>): NodeDefinition {
+  // Future implementation for nodes with custom port generation logic
+  return baseDefinition;
 }
+
+
 
 // Resolution presets (preserved from existing)
 export const RESOLUTION_PRESETS = [

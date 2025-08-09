@@ -1,4 +1,4 @@
-// src/components/editor/flow/node-types.tsx - Dynamic registry-driven component mapping
+// src/components/editor/flow/node-types.tsx - Build-time generated component mapping
 import type { NodeTypes } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
 import { AnimationNode, PrintNode } from "../nodes";
@@ -10,7 +10,7 @@ export function createNodeTypes(
   const componentMapping = getNodeComponentMapping();
   const nodeTypes: NodeTypes = {};
   
-  // Create dynamic mapping from registry
+  // Create mapping from build-time generated components
   for (const [nodeType, Component] of Object.entries(componentMapping)) {
     if (nodeType === 'animation') {
       // Special handling for animation node with timeline editor callback
@@ -24,7 +24,7 @@ export function createNodeTypes(
       );
     } else {
       // Standard component mapping
-      nodeTypes[nodeType] = Component;
+      nodeTypes[nodeType] = Component as React.ComponentType<any>;
     }
   }
   

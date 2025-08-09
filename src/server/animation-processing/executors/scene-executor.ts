@@ -1,18 +1,19 @@
 // src/server/animation-processing/executors/scene-executor.ts
-import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 import type { NodeData } from "@/shared/types";
 import { getConnectedInputs, type ExecutionContext } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeExecutor } from "./node-executor";
+import { BaseExecutor } from "./base-executor";
 import { MissingInsertConnectionError } from "@/shared/errors/domain";
 
-export class SceneNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const executionConfig = getNodeExecutionConfig(nodeType);
-    return executionConfig?.executor === 'scene';
+export class SceneNodeExecutor extends BaseExecutor {
+  // Register scene node handlers
+  protected registerHandlers(): void {
+    this.registerHandler('scene', this.executeScene);
   }
 
-  async execute(
+
+
+  private async executeScene(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     connections: ReactFlowEdge[]

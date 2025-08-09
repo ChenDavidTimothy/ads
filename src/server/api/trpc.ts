@@ -10,11 +10,15 @@ import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { validateOnStartup } from "@/shared/registry/validation";
 
 // Prevent EventEmitter memory leak warnings from multiple signal handlers
 if (typeof process !== 'undefined') {
   process.setMaxListeners(20);
 }
+
+// Run node registration validation on server startup
+validateOnStartup();
 
 /**
  * 1. CONTEXT

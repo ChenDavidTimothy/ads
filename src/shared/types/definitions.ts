@@ -30,6 +30,11 @@ export interface NodeDefinition {
   defaults: Record<string, unknown>;
   version?: string; // optional semantic version for migrations
   migrate?: (data: Record<string, unknown>) => Record<string, unknown>; // optional migration hook
+  metadata?: {
+    supportsDynamicPorts?: boolean;
+    portGenerator?: 'merge' | 'custom';
+    [key: string]: unknown;
+  };
 }
 
 // Video and FPS options (existing)
@@ -275,6 +280,10 @@ export const NODE_DEFINITIONS = {
     },
     defaults: {
       inputPortCount: 2,
+    },
+    metadata: {
+      supportsDynamicPorts: true,
+      portGenerator: 'merge'
     }
   },
 

@@ -1,18 +1,22 @@
 // src/server/animation-processing/executors/geometry-executor.ts
-import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 import { UnknownNodeTypeError } from "@/shared/errors/domain";
 import type { NodeData } from "@/shared/types";
 import { setNodeOutput, type ExecutionContext } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeExecutor } from "./node-executor";
+import { BaseExecutor } from "./base-executor";
 
-export class GeometryNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const executionConfig = getNodeExecutionConfig(nodeType);
-    return executionConfig?.executor === 'geometry';
+export class GeometryNodeExecutor extends BaseExecutor {
+  // Register all geometry node handlers
+  protected registerHandlers(): void {
+    this.registerHandler('triangle', this.executeGeometry);
+    this.registerHandler('circle', this.executeGeometry);
+    this.registerHandler('rectangle', this.executeGeometry);
   }
 
-  async execute(
+
+
+  // Single method handles all geometry nodes
+  private async executeGeometry(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     _connections: ReactFlowEdge[]

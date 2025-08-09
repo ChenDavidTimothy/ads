@@ -1,47 +1,24 @@
 // src/server/animation-processing/executors/logic-executor.ts
-import { getNodeExecutionConfig } from "@/shared/registry/registry-utils";
 import type { NodeData } from "@/shared/types";
 import { setNodeOutput, getConnectedInputs, getTypedConnectedInput, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeExecutor } from "./node-executor";
+import { BaseExecutor } from "./base-executor";
 import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
 import { TypeValidationError } from "@/shared/types/validation";
 import { logger } from "@/lib/logger";
 
-export class LogicNodeExecutor implements NodeExecutor {
-  canHandle(nodeType: string): boolean {
-    const executionConfig = getNodeExecutionConfig(nodeType);
-    return executionConfig?.executor === 'logic';
+export class LogicNodeExecutor extends BaseExecutor {
+  // Register all logic node handlers
+  protected registerHandlers(): void {
+    this.registerHandler('filter', this.executeFilter);
+    this.registerHandler('merge', this.executeMerge);
+    this.registerHandler('constants', this.executeConstants);
+    this.registerHandler('print', this.executePrint);
+    this.registerHandler('compare', this.executeCompare);
+    this.registerHandler('if_else', this.executeIfElse);
   }
 
-  async execute(
-    node: ReactFlowNode<NodeData>,
-    context: ExecutionContext,
-    connections: ReactFlowEdge[]
-  ): Promise<void> {
-    switch (node.type) {
-      case 'filter':
-        await this.executeFilter(node, context, connections);
-        break;
-      case 'merge':
-        await this.executeMerge(node, context, connections);
-        break;
-      case 'constants':
-        await this.executeConstants(node, context, connections);
-        break;
-      case 'print':
-        await this.executePrint(node, context, connections);
-        break;
-      case 'compare':
-        await this.executeCompare(node, context, connections);
-        break;
-      case 'if_else':
-        await this.executeIfElse(node, context, connections);
-        break;
-      default:
-        throw new Error(`Unknown logic node type: ${node.type}`);
-    }
-  }
+
 
   private async executeConstants(
     node: ReactFlowNode<NodeData>,
