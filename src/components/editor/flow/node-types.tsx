@@ -1,5 +1,5 @@
 // src/components/editor/flow/node-types.tsx - Build-time generated component mapping
-import type { NodeTypes } from 'reactflow';
+import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
 import { AnimationNode, PrintNode } from "../nodes";
 
@@ -25,7 +25,7 @@ export function createNodeTypes(
 
     } else {
       // Standard component mapping
-      nodeTypes[nodeType] = Component as React.ComponentType<any>;
+      nodeTypes[nodeType] = Component as React.ComponentType<NodeProps>;
     }
   }
   

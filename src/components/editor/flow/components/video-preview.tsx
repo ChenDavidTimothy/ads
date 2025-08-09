@@ -95,7 +95,7 @@ export function VideoPreview({ videoUrl, videos, onDownloadVideo, onDownloadAll 
           </div>
           
           <div className="space-y-1">
-            {videos.map((video, index) => {
+            {videos.map((video, _index) => {
               const isCompleted = video.status === 'completed' && video.videoUrl;
               const isActive = isCompleted && completedVideos.indexOf(video) === activeVideoIndex;
               

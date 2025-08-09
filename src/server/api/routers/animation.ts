@@ -109,7 +109,7 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
       const maxAllowed = error.details?.info?.maxAllowed as number | undefined;
       return {
         message: maxAllowed 
-          ? `Maximum ${maxAllowed} scenes per execution (found ${sceneCount || 'multiple'})`
+          ? `Maximum ${maxAllowed} scenes per execution (found ${sceneCount ?? 'multiple'})`
           : 'Too many Scene nodes in workspace',
         suggestions: [
           'Reduce the number of Scene nodes',
@@ -442,7 +442,7 @@ export const animationRouter = createTRPCRouter({
         await ensureWorkerReady();
 
         for (const partition of scenePartitions) {
-          const scene = buildAnimationSceneFromPartition(partition);
+          const scene: AnimationScene = buildAnimationSceneFromPartition(partition);
           const sceneData = partition.sceneNode.data as SceneNodeData;
           
           // Prepare scene config using registry defaults

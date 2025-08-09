@@ -67,10 +67,8 @@ export function FlowEditor() {
   const { 
     videoUrl, 
     videos,
-    hasVideos,
     completedVideos,
     canGenerate, 
-    generateScene, 
     handleGenerateScene, 
     handleDownload,
     handleDownloadAll,
@@ -143,7 +141,7 @@ export function FlowEditor() {
           <PrintLogModal
             isOpen={printLogModalState.isOpen}
             onClose={handleClosePrintLogViewer}
-            nodeId={printLogModalState.nodeId || ''}
+            nodeId={printLogModalState.nodeId ?? ''}
             nodeName={getPrintNodeData().name}
             nodeLabel={getPrintNodeData().label}
           />

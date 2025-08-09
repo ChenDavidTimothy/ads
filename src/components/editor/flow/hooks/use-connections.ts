@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import { addEdge, type Connection, type Edge, type Node } from 'reactflow';
 import type { NodeData } from '@/shared/types';
 import type { FlowTracker } from '@/lib/flow/flow-tracking';
-import { useNotifications } from '@/hooks/use-notifications';
 
 export function useConnections(
   nodes: Node<NodeData>[],
@@ -11,7 +10,7 @@ export function useConnections(
   setEdges: (updater: Edge[] | ((eds: Edge[]) => Edge[])) => void,
   flowTracker: FlowTracker,
 ) {
-  const { toast } = useNotifications();
+  // Toast notifications removed for connections as they're frequent user actions
 
   const onConnect = useCallback((params: Connection) => {
     const sourceNode = nodes.find((n) => n.id === params.source);

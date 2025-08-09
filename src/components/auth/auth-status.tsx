@@ -51,27 +51,29 @@ export function AuthStatus() {
 
     console.log(`[AUTH] Scheduling session refresh in ${Math.round(refreshTime / 1000)} seconds`);
 
-    refreshTimeoutRef.current = setTimeout(async () => {
-      console.log('[AUTH] Auto-refreshing session');
-      const supabase = createBrowserClient();
-      
-      try {
-        const { data, error } = await supabase.auth.refreshSession();
-        if (error) {
-          console.error('[AUTH] Auto-refresh failed:', error);
-          showToastOnce('refresh-failed', () => {
-            toast.warning('Session refresh failed', 'Please log in again if you experience issues');
-          });
-          setAuthState('unauthenticated');
-        } else if (data.session) {
-          console.log('[AUTH] Session auto-refreshed successfully');
-          setSessionExpiresAt(new Date(data.session.expires_at! * 1000));
-          scheduleSessionRefresh(new Date(data.session.expires_at! * 1000));
+    refreshTimeoutRef.current = setTimeout(() => {
+      void (async () => {
+        console.log('[AUTH] Auto-refreshing session');
+        const supabase = createBrowserClient();
+        
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error) {
+            console.error('[AUTH] Auto-refresh failed:', error);
+            showToastOnce('refresh-failed', () => {
+              toast.warning('Session refresh failed', 'Please log in again if you experience issues');
+            });
+            setAuthState('unauthenticated');
+          } else if (data.session) {
+            console.log('[AUTH] Session auto-refreshed successfully');
+            setSessionExpiresAt(new Date(data.session.expires_at! * 1000));
+            scheduleSessionRefresh(new Date(data.session.expires_at! * 1000));
+          }
+        } catch (error) {
+          console.error('[AUTH] Auto-refresh error:', error);
+          setAuthState('error');
         }
-      } catch (error) {
-        console.error('[AUTH] Auto-refresh error:', error);
-        setAuthState('error');
-      }
+      })();
     }, refreshTime);
   }, [showToastOnce, toast]);
 
@@ -89,7 +91,7 @@ export function AuthStatus() {
         return;
       }
 
-      if (data.session && data.session.user) {
+      if (data.session?.user) {
         const expiresAt = new Date(data.session.expires_at! * 1000);
         const now = new Date();
         
@@ -110,14 +112,14 @@ export function AuthStatus() {
           }
           
           // Update with refreshed session
-          setEmail(refreshData.session.user.email || null);
+          setEmail(refreshData.session.user.email ?? null);
           setAuthState('authenticated');
           const newExpiresAt = new Date(refreshData.session.expires_at! * 1000);
           setSessionExpiresAt(newExpiresAt);
           scheduleSessionRefresh(newExpiresAt);
         } else {
           // Session is valid
-          setEmail(data.session.user.email || null);
+          setEmail(data.session.user.email ?? null);
           setAuthState('authenticated');
           setSessionExpiresAt(expiresAt);
           // Only schedule refresh if none is currently scheduled
@@ -145,7 +147,7 @@ export function AuthStatus() {
     let isMounted = true;
 
     // Initial check
-    checkAuthState();
+    void checkAuthState();
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -156,7 +158,7 @@ export function AuthStatus() {
       switch (event) {
         case 'SIGNED_IN':
           if (session?.user) {
-            setEmail(session.user.email || null);
+            setEmail(session.user.email ?? null);
             setAuthState('authenticated');
             const expiresAt = new Date(session.expires_at! * 1000);
             setSessionExpiresAt(expiresAt);
@@ -185,7 +187,7 @@ export function AuthStatus() {
         case 'TOKEN_REFRESHED':
           if (session?.user) {
             console.log('[AUTH] Token refreshed');
-            setEmail(session.user.email || null);
+            setEmail(session.user.email ?? null);
             setAuthState('authenticated');
             const expiresAt = new Date(session.expires_at! * 1000);
             setSessionExpiresAt(expiresAt);
@@ -195,7 +197,7 @@ export function AuthStatus() {
           
         case 'USER_UPDATED':
           if (session?.user) {
-            setEmail(session.user.email || null);
+            setEmail(session.user.email ?? null);
           }
           break;
       }
@@ -204,7 +206,7 @@ export function AuthStatus() {
     // Periodic session health check (every 30 seconds)
     sessionCheckIntervalRef.current = setInterval(() => {
       if (isMounted) {
-        checkAuthState();
+        void checkAuthState();
       }
     }, 30 * 1000);
 

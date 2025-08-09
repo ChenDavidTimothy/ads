@@ -66,7 +66,7 @@ export function PrintLogModal({
       type: result.type,
       timestamp: result.timestamp,
       formattedValue: formatValue(result.value),
-      executionId: result.executionId || `exec-${result.timestamp}`,
+      executionId: result.executionId ?? `exec-${result.timestamp}`,
       flowState: result.flowState,
       hasConnections: result.hasConnections,
       inputCount: result.inputCount
@@ -88,7 +88,7 @@ export function PrintLogModal({
           type: result.type,
           timestamp: result.timestamp,
           formattedValue: formatValue(result.value),
-          executionId: result.executionId || `exec-${result.timestamp}`,
+          executionId: result.executionId ?? `exec-${result.timestamp}`,
           flowState: result.flowState,
           hasConnections: result.hasConnections,
           inputCount: result.inputCount
@@ -105,14 +105,20 @@ export function PrintLogModal({
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
     if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'object') {
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value === 'symbol') return value.toString();
+    if (typeof value === 'function') return '[Function]';
+    if (typeof value === 'object' && value !== null) {
       try {
         return JSON.stringify(value, null, 2);
       } catch {
-        return String(value);
+        return '[Complex Object - cannot stringify]';
       }
     }
-    return String(value);
+    // This should never be reached, but handle any edge case
+    return '[Unknown]';
   };
 
   const getValueTypeColor = (type: string): string => {
@@ -142,7 +148,7 @@ export function PrintLogModal({
       type: result.type,
       timestamp: result.timestamp,
       formattedValue: formatValue(result.value),
-      executionId: result.executionId || `exec-${result.timestamp}`,
+      executionId: result.executionId ?? `exec-${result.timestamp}`,
       flowState: result.flowState,
       hasConnections: result.hasConnections,
       inputCount: result.inputCount
@@ -238,7 +244,7 @@ export function PrintLogModal({
             {logs.length > 0 && (
               <span className="text-gray-300">
                 Latest: <span className="text-white font-medium">
-                  {new Date(logs[logs.length - 1].timestamp).toLocaleTimeString()}
+                  {new Date(logs[logs.length - 1]!.timestamp).toLocaleTimeString()}
                 </span>
               </span>
             )}
@@ -270,7 +276,7 @@ export function PrintLogModal({
               </div>
               <h3 className="text-lg font-medium mb-2">No Debug Output Yet</h3>
               <p className="text-sm text-center max-w-md">
-                Click "Run to Here" on the print node to execute your flow and see debug output here.
+                Click &quot;Run to Here&quot; on the print node to execute your flow and see debug output here.
                 This is a production-ready debugging tool for your customers.
               </p>
             </div>

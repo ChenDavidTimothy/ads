@@ -175,7 +175,7 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
     
     for (const edge of incomingEdges) {
       const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
-      if (!sourceNode || !sourceNode.data?.identifier?.displayName) continue;
+      if (!sourceNode?.data?.identifier?.displayName) continue;
       
       const sourceDefinition = getNodeDefinition(sourceNode.type!);
       if (!sourceDefinition) continue;
@@ -201,7 +201,7 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
         
         if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as { valueType?: string };
-          errorMessage += ` which is configured to output ${constantsData.valueType || 'unknown'} values. Set the Constants node to output boolean values instead.`;
+          errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output boolean values instead.`;
         } else {
           errorMessage += ` which outputs ${sourcePort.type} data. Only boolean sources are allowed.`;
         }
@@ -212,8 +212,7 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
             nodeId: booleanNode.data.identifier.id,
             nodeName: booleanNode.data.identifier.displayName,
             sourceNodeId: sourceNode.data.identifier.id,
-            sourceNodeName: sourceNode.data.identifier.displayName,
-            info: { expectedType: 'boolean', actualType: sourceNode.type === 'constants' ? (sourceNode.data as any).valueType : sourcePort.type }
+            info: { expectedType: 'boolean', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : sourcePort.type }
           }
         );
       }
@@ -290,24 +289,32 @@ export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeD
 }
 
 export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  logger.debug('Starting duplicate object ID validation');
-  logger.debug('Validation nodes', { nodes: nodes.map(n => ({ id: n.data.identifier.id, type: n.type })) });
-  logger.debug('Validation edges', { edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })) });
+  // Enable verbose logging based on environment or flow complexity
+  const shouldLogVerbose = process.env.DEBUG_VALIDATION === 'true' || nodes.length > 10;
+  
+  if (shouldLogVerbose) {
+    logger.debug('Starting duplicate object ID validation');
+    logger.debug('Validation nodes', { nodes: nodes.map(n => ({ id: n.data.identifier.id, type: n.type })) });
+    logger.debug('Validation edges', { edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })) });
+  }
 
   for (const targetNode of nodes) {
     // Only merge nodes are allowed to receive duplicate object IDs
     if (targetNode.type === 'merge') {
-      logger.debug(`Skipping merge node: ${targetNode.data.identifier.displayName}`);
+      if (shouldLogVerbose) logger.debug(`Skipping merge node: ${targetNode.data.identifier.displayName}`);
       continue;
     }
-
-    logger.debug(`Checking node: ${targetNode.data.identifier.displayName} (${targetNode.data.identifier.id})`);
     
-    const incomingObjectIds = getIncomingObjectIds(targetNode.data.identifier.id, edges, nodes);
-    logger.debug(`Incoming object IDs for ${targetNode.data.identifier.displayName}`, { incomingObjectIds });
-    
+    const incomingObjectIds = getIncomingObjectIds(targetNode.data.identifier.id, edges, nodes, shouldLogVerbose);
     const duplicates = incomingObjectIds.filter((id, index) => incomingObjectIds.indexOf(id) !== index);
-    logger.debug('Duplicates found', { duplicates });
+    
+    // Only log verbose details for complex flows or when explicitly enabled
+    if (shouldLogVerbose && incomingObjectIds.length > 1) {
+      logger.debug(`Checked ${targetNode.data.identifier.displayName}`, { 
+        incomingObjectIds: incomingObjectIds.length,
+        duplicates: duplicates.length
+      });
+    }
     
     if (duplicates.length > 0) {
       logger.error(`Duplicate object IDs detected for ${targetNode.data.identifier.displayName}`);
@@ -319,15 +326,21 @@ export function validateNoDuplicateObjectIds(nodes: ReactFlowNode<NodeData>[], e
     }
   }
   
-  logger.debug('No duplicate object IDs found - validation passed');
+  if (shouldLogVerbose) {
+    logger.debug('No duplicate object IDs found - validation passed');
+  }
 }
 
-// Helper functions (keeping existing implementation)
-function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): string[] {
-  logger.debug(`Starting upstream trace for node: ${targetNodeId}`);
+// Helper functions (optimized for complex flows)
+function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[], enableDetailedLogging = false): string[] {
+  if (enableDetailedLogging) {
+    logger.debug(`Starting upstream trace for node: ${targetNodeId}`);
+  }
   
   const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
-  logger.debug('Geometry node types', { geometryNodeTypes });
+  if (enableDetailedLogging) {
+    logger.debug('Geometry node types', { geometryNodeTypes });
+  }
 
   const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
   nodes.forEach(node => {
@@ -336,10 +349,14 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
 
   const traceUpstreamNode = (currentNodeId: string, pathVisited: Set<string>, depth = 0, pathId = 'root'): string[] => {
     const indent = '  '.repeat(depth);
-    logger.debug(`${indent}[Path ${pathId}] Visiting node: ${currentNodeId}`);
+    if (enableDetailedLogging) {
+      logger.debug(`${indent}[Path ${pathId}] Visiting node: ${currentNodeId}`);
+    }
     
     if (pathVisited.has(currentNodeId)) {
-      logger.debug(`${indent}[Path ${pathId}] Cycle detected in this path, skipping`);
+      if (enableDetailedLogging) {
+        logger.debug(`${indent}[Path ${pathId}] Cycle detected in this path, skipping`);
+      }
       return [];
     }
     
@@ -352,46 +369,60 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
       return [];
     }
     
-    logger.debug(`${indent}[Path ${pathId}] Found node: ${currentNode.data.identifier.displayName} (type: ${currentNode.type})`);
+    if (enableDetailedLogging) {
+      logger.debug(`${indent}[Path ${pathId}] Found node: ${currentNode.data.identifier.displayName} (type: ${currentNode.type})`);
+    }
     
     const objectIds: string[] = [];
     
     // Special handling for merge nodes - they deduplicate upstream objects
     if (currentNode.type === 'merge') {
-      logger.debug(`${indent}[Path ${pathId}] MERGE NODE DETECTED - will deduplicate upstream objects`);
+      if (enableDetailedLogging) {
+        logger.debug(`${indent}[Path ${pathId}] MERGE NODE DETECTED - will deduplicate upstream objects`);
+      }
       
       const incomingEdges = edges.filter((edge) => edge.target === currentNodeId);
       const allUpstreamObjects: string[] = [];
       
       incomingEdges.forEach((edge, index) => {
         const subPathId = `${pathId}.merge.${index}`;
-        logger.debug(`${indent}[Path ${pathId}] Following merge input from: ${edge.source} (path: ${subPathId})`);
+        if (enableDetailedLogging) {
+          logger.debug(`${indent}[Path ${pathId}] Following merge input from: ${edge.source} (path: ${subPathId})`);
+        }
         
         const upstreamObjects = traceUpstreamNode(edge.source, newPathVisited, depth + 1, subPathId);
         allUpstreamObjects.push(...upstreamObjects);
       });
       
       const uniqueObjects = [...new Set(allUpstreamObjects)];
-      logger.debug(`${indent}[Path ${pathId}] Merge deduplication: ${allUpstreamObjects.length} → ${uniqueObjects.length} objects`);
-      logger.debug(`${indent}[Path ${pathId}] Before merge`, { allUpstreamObjects });
-      logger.debug(`${indent}[Path ${pathId}] After merge`, { uniqueObjects });
+      if (enableDetailedLogging) {
+        logger.debug(`${indent}[Path ${pathId}] Merge deduplication: ${allUpstreamObjects.length} → ${uniqueObjects.length} objects`);
+        logger.debug(`${indent}[Path ${pathId}] Before merge`, { allUpstreamObjects });
+        logger.debug(`${indent}[Path ${pathId}] After merge`, { uniqueObjects });
+      }
       
       return uniqueObjects;
     }
     
     // If this is a geometry node, add its object ID
     if (geometryNodeTypes.includes(currentNode.type!)) {
-      logger.debug(`${indent}[Path ${pathId}] Adding geometry object ID: ${currentNode.data.identifier.id}`);
+      if (enableDetailedLogging) {
+        logger.debug(`${indent}[Path ${pathId}] Adding geometry object ID: ${currentNode.data.identifier.id}`);
+      }
       objectIds.push(currentNode.data.identifier.id);
     }
     
     // Trace upstream from all incoming edges
     const incomingEdges = edges.filter((edge) => edge.target === currentNodeId);
-    logger.debug(`${indent}[Path ${pathId}] Incoming edges`, { edges: incomingEdges.map(e => ({ from: e.source, to: e.target })) });
+    if (enableDetailedLogging) {
+      logger.debug(`${indent}[Path ${pathId}] Incoming edges`, { edges: incomingEdges.map(e => ({ from: e.source, to: e.target })) });
+    }
     
     incomingEdges.forEach((edge, index) => {
       const subPathId = `${pathId}.${index}`;
-      logger.debug(`${indent}[Path ${pathId}] Following edge from: ${edge.source} (new path: ${subPathId})`);
+      if (enableDetailedLogging) {
+        logger.debug(`${indent}[Path ${pathId}] Following edge from: ${edge.source} (new path: ${subPathId})`);
+      }
       const upstreamObjects = traceUpstreamNode(edge.source, newPathVisited, depth + 1, subPathId);
       objectIds.push(...upstreamObjects);
     });
@@ -401,9 +432,11 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
 
   const result = traceUpstreamNode(targetNodeId, new Set<string>());
   
-  logger.debug(`Final result for ${targetNodeId}`, { result });
-  logger.debug('Unique object IDs', { uniqueIds: [...new Set(result)] });
-  logger.debug('Duplicate detection', { total: result.length, unique: new Set(result).size });
+  if (enableDetailedLogging) {
+    logger.debug(`Final result for ${targetNodeId}`, { result });
+    logger.debug('Unique object IDs', { uniqueIds: [...new Set(result)] });
+    logger.debug('Duplicate detection', { total: result.length, unique: new Set(result).size });
+  }
   
   return result;
 }
@@ -435,36 +468,9 @@ function canReachNodeType(
   return traverse(startNodeId);
 }
 
-function isNodeConnectedToScene(nodeId: string, edges: ReactFlowEdge[], nodes: ReactFlowNode<NodeData>[]): boolean {
-  const visited = new Set<string>();
-  
-  const nodeByIdentifierId = new Map<string, ReactFlowNode<NodeData>>();
-  nodes.forEach(node => {
-    nodeByIdentifierId.set(node.data.identifier.id, node);
-  });
-  
-  const traverse = (currentNodeId: string): boolean => {
-    if (visited.has(currentNodeId)) return false;
-    visited.add(currentNodeId);
-    
-    const currentNode = nodeByIdentifierId.get(currentNodeId);
-    if (currentNode?.type === 'scene') return true;
-    
-    const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
-    return outgoingEdges.some((edge) => traverse(edge.target));
-  };
-  
-  return traverse(nodeId);
-}
+// isNodeConnectedToScene function removed as it was unused
 
-function findAllPathsToScene(
-  startNodeId: string, 
-  targetNodeId: string, 
-  edges: ReactFlowEdge[], 
-  nodes: ReactFlowNode<NodeData>[]
-): string[][] {
-  return findAllPathsToNode(startNodeId, targetNodeId, edges, nodes);
-}
+// findAllPathsToScene function removed as it was unused
 
 function findAllPathsToNode(
   startNodeId: string, 

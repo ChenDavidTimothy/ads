@@ -14,8 +14,7 @@ import type {
   AnimationNodeData, 
   SceneNodeData,
   FilterNodeData,
-  ConstantsNodeData,
-  PrintNodeData
+  ConstantsNodeData
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
 
@@ -46,9 +45,6 @@ function isConstantsNodeData(data: NodeData): data is ConstantsNodeData {
   return 'valueType' in data;
 }
 
-function isPrintNodeData(data: NodeData): data is PrintNodeData {
-  return 'label' in data && !('tracks' in data) && !('selectedObjectIds' in data);
-}
 
 export function PropertyPanel({ 
   node, 

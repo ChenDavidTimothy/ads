@@ -1,7 +1,7 @@
 // src/components/editor/nodes/print-node.tsx - Production-ready debug node with modal viewer
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

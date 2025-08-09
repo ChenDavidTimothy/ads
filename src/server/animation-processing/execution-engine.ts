@@ -36,19 +36,75 @@ export class ExecutionEngine {
   }
 
   private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    const flowKey = this.getFlowCacheKey(nodes, edges);
+    const validationState = this.getValidationState(flowKey);
+    
     logger.info('Starting comprehensive validation for video generation');
     
-    // 1. Basic scene structure validation (VIDEO GENERATION ONLY)
-    logger.info('Validating scene structure');
-    validateScene(nodes);
+    // 1. Basic scene structure validation (VIDEO GENERATION ONLY) - only if not done
+    if (!validationState.sceneValidated) {
+      logger.info('Validating scene structure');
+      validateScene(nodes);
+      validationState.sceneValidated = true;
+    } else {
+      logger.debug('⚡ Skipping scene validation - already validated');
+    }
     
-    // Run universal validations
+    // 2. Run universal validations (will skip if already done)
     this.runUniversalValidation(nodes, edges);
     
     logger.info('All validation passed, proceeding with execution');
   }
 
+  // Request-scoped validation state to prevent redundant validation
+  private static validationStates = new Map<string, {
+    universalValidated: boolean;
+    sceneValidated: boolean;
+    timestamp: number;
+  }>();
+  private static readonly VALIDATION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  private getFlowCacheKey(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): string {
+    // Generate deterministic key from flow structure
+    const nodeIds = nodes.map(n => n.data.identifier.id).sort().join(',');
+    const edgeIds = edges.map(e => `${e.source}->${e.target}`).sort().join(',');
+    return `${nodeIds}|${edgeIds}`;
+  }
+
+  private static cleanupExpiredValidations(): void {
+    const now = Date.now();
+    for (const [key, state] of ExecutionEngine.validationStates.entries()) {
+      if (now - state.timestamp > ExecutionEngine.VALIDATION_CACHE_TTL) {
+        ExecutionEngine.validationStates.delete(key);
+      }
+    }
+  }
+
+  private getValidationState(flowKey: string) {
+    ExecutionEngine.cleanupExpiredValidations();
+    
+    let state = ExecutionEngine.validationStates.get(flowKey);
+    if (!state) {
+      state = {
+        universalValidated: false,
+        sceneValidated: false,
+        timestamp: Date.now()
+      };
+      ExecutionEngine.validationStates.set(flowKey, state);
+    }
+    return state;
+  }
+
   public runUniversalValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+    const flowKey = this.getFlowCacheKey(nodes, edges);
+    const validationState = this.getValidationState(flowKey);
+    
+    // Skip if already validated for this flow structure
+    if (validationState.universalValidated) {
+      logger.debug('⚡ Skipping universal validation - already validated this flow structure');
+      return;
+    }
+
     logger.info('Starting universal validation (applies to all execution types)');
     
     // 1. Connection and port validation
@@ -78,6 +134,9 @@ export class ExecutionEngine {
     // 7. Duplicate object IDs validation (merge-aware)
     logger.info('Validating no duplicate object IDs');
     validateNoDuplicateObjectIds(nodes, edges);
+    
+    // Mark as validated
+    validationState.universalValidated = true;
     
     logger.info('Universal validation passed');
   }
@@ -191,7 +250,7 @@ export class ExecutionEngine {
       count: context.executionLog?.length || 0,
       logs: context.executionLog?.map(log => ({ 
         nodeId: log.nodeId, 
-        type: (log.data as any)?.type 
+        type: (log.data as { type?: string })?.type 
       })) || []
     });
     

@@ -133,7 +133,7 @@ export class FlowTracker {
       visited.add(currentNodeId);
       
       // CRITICAL FIX: Try both ID types to find the current node
-      let currentNode = getNodeByReactFlowId(currentNodeId) || getNodeByIdentifierId(currentNodeId);
+      const currentNode = getNodeByReactFlowId(currentNodeId) ?? getNodeByIdentifierId(currentNodeId);
       
       if (!currentNode) {
         console.warn(`Node not found for ID: ${currentNodeId}`);
@@ -148,7 +148,7 @@ export class FlowTracker {
       
       // CRITICAL FIX: Find edges targeting this node using BOTH ID types
       const incomingEdges = allEdges.filter(edge => 
-        edge.target === currentNode!.id || edge.target === currentNode!.data.identifier.id
+        edge.target === currentNode.id || edge.target === currentNode.data.identifier.id
       );
       
       // Recursively traverse all source nodes

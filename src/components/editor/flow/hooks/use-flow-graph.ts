@@ -21,8 +21,8 @@ export function useFlowGraph() {
     currentNodes.forEach(node => {
       if (node.type === 'merge') {
         // Only handle merge nodes here - boolean nodes handle their own cleanup
-        const dynamicDefinition = getNodeDefinitionWithDynamicPorts(node.type, node.data);
-        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
+        const dynamicDefinition = getNodeDefinitionWithDynamicPorts(node.type, node.data as unknown as Record<string, unknown>);
+        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) ?? []);
         
         currentEdges.forEach(edge => {
           if (edge.target === node.id && edge.targetHandle && !validPortIds.has(edge.targetHandle)) {
@@ -49,7 +49,7 @@ export function useFlowGraph() {
         
         // Get the new dynamic port definition
         const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', updatedNodeData);
-        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) || []);
+        const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) ?? []);
         
         // Update both nodes and edges in a single synchronous operation
         setNodes((nds) =>
@@ -93,7 +93,7 @@ export function useFlowGraph() {
     if ('operator' in newData) {
       const updatedNode = nodes.find(n => n.data.identifier.id === nodeId);
       if (updatedNode?.type === 'boolean_op') {
-        const oldOperator = updatedNode.data.operator as string;
+        const oldOperator = (updatedNode.data as { operator?: string }).operator;
         const newOperator = newData.operator as string;
         
         // Check if this change involves NOT operation (layout change)

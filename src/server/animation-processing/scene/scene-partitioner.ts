@@ -33,10 +33,9 @@ export function partitionObjectsByScenes(
     // CRITICAL FIX: Get path-specific objects directly from per-scene storage
     // OLD: context.sceneObjects.filter(...) // Global array filtering - WRONG
     // NEW: Direct retrieval of scene-specific objects with correct properties
-    const sceneObjects = context.sceneObjectsByScene.get(sceneId) || [];
+    const sceneObjects = context.sceneObjectsByScene.get(sceneId) ?? [];
     
-    // Get object IDs for this scene
-    const sceneObjectIds = new Set(sceneObjects.map(obj => obj.id));
+    // Object IDs are available directly from sceneObjects if needed
     
     // Animations for this scene (based on explicit scene assignments)
     const sceneAnimations = context.sceneAnimations.filter(anim => {
@@ -102,7 +101,7 @@ export function calculateSceneDuration(
 export function buildAnimationSceneFromPartition(
   partition: ScenePartition
 ): AnimationScene {
-  const sceneData = partition.sceneNode.data as Record<string, unknown>;
+  const sceneData = partition.sceneNode.data as unknown as Record<string, unknown>;
   const duration = calculateSceneDuration(partition.animations, sceneData);
   
   return {

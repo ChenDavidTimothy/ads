@@ -57,7 +57,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
               if (logData.type === 'print_output') {
                 const newEntry: DebugResult = {
                   value: logData.value,
-                  type: logData.valueType || 'unknown',
+                  type: logData.valueType ?? 'unknown',
                   timestamp: log.timestamp,
                   executionId: logData.executionContext?.executionId,
                   flowState: logData.executionContext?.flowState,
@@ -66,7 +66,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                 };
                 
                 // Accumulate results for this node
-                const existingResults = newResults.get(log.nodeId) || [];
+                const existingResults = newResults.get(log.nodeId) ?? [];
                 
                 // Check if this exact entry already exists (avoid duplicates)
                 const isDuplicate = existingResults.some(existing => 
@@ -127,13 +127,13 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }
   }, [nodes, edges, debugToNode]);
 
-  const getDebugResult = useCallback((nodeId: string) => {
+  const getDebugResult = useCallback((nodeId: string): DebugResult | null => {
     const results = debugResults.get(nodeId);
-    return results && results.length > 0 ? results[results.length - 1] : null; // Return latest result for backward compatibility
+    return results && results.length > 0 ? results[results.length - 1] ?? null : null; // Return latest result for backward compatibility
   }, [debugResults]);
 
   const getAllDebugResults = useCallback((nodeId: string) => {
-    return debugResults.get(nodeId) || [];
+    return debugResults.get(nodeId) ?? [];
   }, [debugResults]);
 
   return {

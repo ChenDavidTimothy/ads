@@ -7,7 +7,7 @@ import { getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-ut
 import type { BooleanOpNodeData } from "@/shared/types/nodes";
 
 export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
-  const nodeDefinition = getNodeDefinitionWithDynamicPorts('boolean_op', data);
+  const nodeDefinition = getNodeDefinitionWithDynamicPorts('boolean_op', data as unknown as Record<string, unknown>);
   
   const getOperatorDisplay = () => {
     switch (data.operator) {

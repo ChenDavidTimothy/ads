@@ -235,24 +235,60 @@ export function validateNodeType(nodeType: string): ValidationResult {
   return { isValid: errors.length === 0, errors, warnings };
 }
 
-// Development helper: validate on startup in development
-export function validateOnStartup(): void {
-  if (process.env.NODE_ENV === 'development') {
-    logger.info('🔍 Running node registration validation...');
-    const result = validateNodeRegistration();
+// TTL-based registry validation cache
+interface RegistryValidationCache {
+  isValid: boolean;
+  timestamp: number;
+  result: ValidationResult;
+}
+
+let registryValidationCache: RegistryValidationCache | null = null;
+const REGISTRY_VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Development helper: validate on startup with TTL caching
+export function validateOnStartup(): ValidationResult | null {
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
+  const now = Date.now();
+  
+  // Return cached result if recently validated
+  if (registryValidationCache && (now - registryValidationCache.timestamp) < REGISTRY_VALIDATION_TTL) {
+    logger.debug('⚡ Skipping node registration validation - recently validated');
+    return registryValidationCache.result;
+  }
+
+  const processInfo = `PID:${process.pid}`;
+  logger.debug(`🔍 Running node registration validation... (${processInfo})`);
+  const result = validateNodeRegistration();
+  
+  // Cache the result with timestamp
+  registryValidationCache = {
+    isValid: result.isValid,
+    timestamp: now,
+    result
+  };
+
+  if (!result.isValid) {
+    logger.error('❌ Node registration validation failed on startup');
+    result.errors.forEach(error => logger.error(`  • ${error}`));
+    result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
     
-    if (!result.isValid) {
-      logger.error('❌ Node registration validation failed on startup');
-      result.errors.forEach(error => logger.error(`  • ${error}`));
+    // In development, we could throw to prevent startup with invalid configuration
+    // throw new Error('Node registration validation failed');
+  } else {
+    // Success message already logged by validateNodeRegistration()
+    // Only log additional warnings if present
+    if (result.warnings.length > 0) {
       result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
-      
-      // In development, we could throw to prevent startup with invalid configuration
-      // throw new Error('Node registration validation failed');
-    } else {
-      logger.info('✅ Node registration validation passed');
-      if (result.warnings.length > 0) {
-        result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
-      }
     }
   }
+
+  return result;
+}
+
+// Force re-validation (useful for testing or when node definitions change)
+export function resetValidationCache(): void {
+  registryValidationCache = null;
 }

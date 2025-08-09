@@ -19,28 +19,13 @@ interface ValidationError {
   nodeName?: string;
 }
 
-interface GracefulErrorResponse {
-  success: false;
-  errors: ValidationError[];
-  canRetry: boolean;
-}
+// GracefulErrorResponse type removed as unused
 
-interface SingleSceneSuccessResponse {
-  success: true;
-  videoUrl?: string;
-  jobId: string;
-  totalScenes: 1;
-}
 
-interface MultiSceneSuccessResponse {
-  success: true;
-  jobIds: string[];
-  totalScenes: number;
-}
 
-type SuccessResponse = SingleSceneSuccessResponse | MultiSceneSuccessResponse;
+// SuccessResponse type removed as unused
 
-type GenerationResponse = GracefulErrorResponse | SuccessResponse;
+// GenerationResponse type removed as it was unused
 
 interface VideoJob {
   jobId: string;
@@ -91,7 +76,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       generationAttemptRef.current += 1;
       console.log(`[GENERATION] Starting attempt #${generationAttemptRef.current}`);
     },
-    onSuccess: (data: GenerationResponse) => {
+    onSuccess: (data) => {
       const currentAttempt = generationAttemptRef.current;
       console.log(`[GENERATION] Success response for attempt #${currentAttempt}:`, data);
       console.log(`[GENERATION] Response type analysis:`, {
@@ -137,7 +122,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       // Handle multi-scene response (jobIds array)
       if ('jobIds' in data) {
         const { jobIds, totalScenes } = data;
-        if (jobIds.length === 0) {
+        if (!jobIds || jobIds.length === 0) {
           setIsGenerating(false);
           setLastError('Invalid multi-scene response - no jobs created');
           toast.error('Generation failed', 'No render jobs were created');
@@ -150,15 +135,15 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           const sceneNode = sceneNodes[index];
           return {
             jobId,
-            sceneName: sceneNode?.data?.identifier?.displayName || `Scene ${index + 1}`,
-            sceneId: sceneNode?.data?.identifier?.id || `scene-${index}`,
+            sceneName: sceneNode?.data?.identifier?.displayName ?? `Scene ${index + 1}`,
+            sceneId: sceneNode?.data?.identifier?.id ?? `scene-${index}`,
             status: 'pending' as const
           };
         });
         
         setVideos(videoJobs);
         
-        if (totalScenes > 1) {
+        if (totalScenes && totalScenes > 1) {
           toast.success(`Processing ${totalScenes} scenes`, 'Multiple videos will be generated');
         }
         
@@ -220,7 +205,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       // Generic error fallback
       const genericMessage = 'Generation failed - please try again';
       setLastError(genericMessage);
-      toast.error('Generation failed', errorMessage || genericMessage);
+      toast.error('Generation failed', errorMessage ?? genericMessage);
     },
     retry: false,
   });
@@ -264,7 +249,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         });
         
         const results = await Promise.all(jobPromises);
-        let hasUpdates = false;
+        // hasUpdates tracking removed as it was unused
         let completedCount = 0;
         let failedCount = 0;
         
@@ -279,12 +264,12 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                              result.status === 'processing' ? 'processing' : 'pending';
             
             if (newStatus !== video.status) {
-              hasUpdates = true;
+              // Status change detected
               
               if (newStatus === 'completed') {
                 completedCount++;
                 // Set primary video URL for backward compatibility
-                if (!videoUrl && result.videoUrl) {
+                if (!videoUrl && 'videoUrl' in result && result.videoUrl) {
                   setVideoUrl(result.videoUrl);
                 }
               } else if (newStatus === 'failed') {
@@ -295,8 +280,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
             return {
               ...video,
               status: newStatus,
-              videoUrl: result.videoUrl || video.videoUrl,
-              error: result.error || video.error
+              videoUrl: ('videoUrl' in result ? result.videoUrl : undefined) ?? video.videoUrl,
+              error: result.error ?? video.error
             };
           });
         });
@@ -324,7 +309,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         // Continue polling if there are pending jobs
         if (pollAttempts < maxPollAttempts) {
           const delay = Math.min(1000 + (pollAttempts * 100), 4000);
-          pollTimeoutRef.current = setTimeout(pollAllJobs, delay);
+          pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           setIsGenerating(false);
           setLastError('Generation timeout - some videos may still be processing');
@@ -347,7 +332,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         if (pollAttempts < maxPollAttempts) {
           const delay = Math.min(2000 + (pollAttempts * 200), 8000);
-          pollTimeoutRef.current = setTimeout(pollAllJobs, delay);
+          pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
             setIsGenerating(false);
@@ -358,7 +343,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     };
     
-    pollTimeoutRef.current = setTimeout(pollAllJobs, 500);
+    pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 500);
   }, [utils.animation.getRenderJobStatus, toast, router, videoUrl]);
 
   // Extract polling logic into a separate function (legacy single job)
@@ -401,15 +386,15 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         if (res.status === 'failed') {
           if (currentAttempt === generationAttemptRef.current) {
             setIsGenerating(false);
-            setLastError(res.error || 'Generation failed on server');
-            toast.error('Video generation failed', res.error || 'Unknown server error');
+            setLastError(res.error ?? 'Generation failed on server');
+            toast.error('Video generation failed', res.error ?? 'Unknown server error');
           }
           return;
         }
         
         if (pollAttempts < maxPollAttempts) {
           const delay = Math.min(1000 + (pollAttempts * 100), 4000);
-          pollTimeoutRef.current = setTimeout(poll, delay);
+          pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
             setIsGenerating(false);
@@ -433,7 +418,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         if (pollAttempts < maxPollAttempts) {
           const delay = Math.min(2000 + (pollAttempts * 200), 8000);
-          pollTimeoutRef.current = setTimeout(poll, delay);
+          pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
             setIsGenerating(false);
@@ -444,7 +429,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     };
     
-    pollTimeoutRef.current = setTimeout(poll, 500);
+    pollTimeoutRef.current = setTimeout(() => void poll(), 500);
   }, [utils.animation.getRenderJobStatus, toast, router]);
 
   const isSceneConnected = useMemo(() => {
@@ -512,7 +497,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       link.click();
       document.body.removeChild(link);
       toast.success('Download started', 'Your video is being downloaded');
-    } catch (error) {
+    } catch {
       toast.error('Download failed', 'Please try right-clicking the video and selecting "Save video as..."');
     }
   }, [videoUrl, toast]);
@@ -544,8 +529,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       warningCount: warnings.length,
       errors,
       warnings,
-      primaryError: errors[0] || null,
-      allSuggestions: [...errors, ...warnings].flatMap(e => e.suggestions || [])
+      primaryError: errors[0] ?? null,
+      allSuggestions: [...errors, ...warnings].flatMap(e => e.suggestions ?? [])
     };
   }, [validationErrors]);
 
@@ -571,7 +556,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       toast.success(`Downloading ${completedVideos.length} videos`, 'Check your downloads folder');
-    } catch (error) {
+    } catch {
       toast.error('Download failed', 'Please try downloading videos individually');
     }
   }, [videos, toast]);
@@ -591,7 +576,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       link.click();
       document.body.removeChild(link);
       toast.success(`Downloading ${video.sceneName}`, 'Check your downloads folder');
-    } catch (error) {
+    } catch {
       toast.error('Download failed', 'Please try right-clicking the video and selecting "Save video as..."');
     }
   }, [videos, toast]);
@@ -645,6 +630,6 @@ function getUserFriendlyErrorMessage(code: string, originalMessage?: string): st
     case 'ERR_SCENE_VALIDATION_FAILED':
       return 'Scene validation failed - check your animation setup';
     default:
-      return originalMessage || 'An error occurred while generating the video';
+      return originalMessage ?? 'An error occurred while generating the video';
   }
 }

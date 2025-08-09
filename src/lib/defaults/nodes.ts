@@ -136,6 +136,7 @@ export function getDefaultTrackProperties(trackType: AnimationTrack['type']):
     default:
       {
         const _exhaustiveCheck: never = trackType;
+        void _exhaustiveCheck;
         throw new Error('Unknown track type');
       }
   }

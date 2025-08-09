@@ -30,7 +30,7 @@ export class SceneNodeExecutor extends BaseExecutor {
     let objectsAddedToThisScene = 0;
 
     // CRITICAL FIX: Get or create per-scene storage for this scene
-    const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) || [];
+    const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) ?? [];
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -93,7 +93,7 @@ export class SceneNodeExecutor extends BaseExecutor {
           const attachedAnimations = (item as { _attachedAnimations?: unknown })._attachedAnimations;
           if (Array.isArray(attachedAnimations)) {
             for (const animation of attachedAnimations) {
-              const animationId = `${animation.objectId}-${animation.type}-${animation.startTime}`;
+              const animationId = `${(animation as { objectId?: string }).objectId ?? 'unknown'}-${(animation as { type?: string }).type ?? 'unknown'}-${(animation as { startTime?: number }).startTime ?? 0}`;
               context.animationSceneMap.set(animationId, sceneNodeId);
               logger.debug(`Animation ${animationId} assigned to scene ${sceneNodeId} (attached to object ${objectId})`);
             }

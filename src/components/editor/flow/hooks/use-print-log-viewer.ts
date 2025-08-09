@@ -41,7 +41,7 @@ export function usePrintLogViewer(nodes: Node<NodeData>[]) {
     }>;
     
     return {
-      name: data.identifier?.displayName || 'Print Node',
+      name: data.identifier?.displayName ?? 'Print Node',
       label: (typeof data.label === 'string' ? data.label : 'Debug Output'),
     };
   }, [printNode]);
