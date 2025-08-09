@@ -13,6 +13,8 @@ import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
 import { useTimelineEditor } from "./flow/hooks/use-timeline-editor";
 import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
+import { useDebugExecution } from "./flow/hooks/use-debug-execution";
+import { DebugProvider } from "./flow/debug-context";
 import { FlowCanvas } from "./flow/components/flow-canvas";
 import { ActionsToolbar } from "./flow/components/actions-toolbar";
 import { RightSidebar } from "./flow/components/right-sidebar";
@@ -43,6 +45,8 @@ export function FlowEditor() {
     handleCloseTimelineEditor,
     getTimelineNodeData,
   } = useTimelineEditor(nodes);
+
+  const { runToNode, getDebugResult, isDebugging } = useDebugExecution(nodes, edges);
 
   const nodeTypes: NodeTypes = useMemo(
     () => createNodeTypes(handleOpenTimelineEditor),
@@ -107,19 +111,21 @@ export function FlowEditor() {
       <NodePalette onAddNode={handleAddNode} />
 
       <div className="flex-1 relative">
-        <FlowCanvas
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          onNodesDelete={onNodesDelete}
-          onEdgesDelete={onEdgesDelete}
-          disableDeletion={timelineModalState.isOpen}
-        />
+        <DebugProvider value={{ runToNode, getDebugResult, isDebugging }}>
+          <FlowCanvas
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            onNodesDelete={onNodesDelete}
+            onEdgesDelete={onEdgesDelete}
+            disableDeletion={timelineModalState.isOpen}
+          />
+        </DebugProvider>
 
         <ActionsToolbar
           onGenerate={handleGenerateScene}

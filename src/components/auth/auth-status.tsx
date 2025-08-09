@@ -120,7 +120,10 @@ export function AuthStatus() {
           setEmail(data.session.user.email || null);
           setAuthState('authenticated');
           setSessionExpiresAt(expiresAt);
-          scheduleSessionRefresh(expiresAt);
+          // Only schedule refresh if none is currently scheduled
+          if (!refreshTimeoutRef.current) {
+            scheduleSessionRefresh(expiresAt);
+          }
         }
       } else {
         // No session
@@ -299,7 +302,6 @@ export function AuthStatus() {
         <button 
           onClick={handleLogout} 
           className="underline hover:text-gray-300"
-          disabled={authState === 'loading'}
         >
           Logout
         </button>

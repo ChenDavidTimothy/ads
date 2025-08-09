@@ -22,6 +22,9 @@ function getNodeShortId(nodeType: NodeType): string {
     rectangle: 'rec',
     insert: 'ins',
     filter: 'flt',
+    merge: 'mrg',
+    constants: 'con',
+    print: 'prt',
     animation: 'ani',
     scene: 'scn'
   };

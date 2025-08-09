@@ -1,21 +1,47 @@
 // src/components/editor/nodes/print-node.tsx - Debug terminal node with "Run to Here"
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { PrintNodeData } from "@/shared/types/nodes";
+import { useDebugContext } from "../flow/debug-context";
 
-interface PrintNodeProps extends NodeProps<PrintNodeData> {
-  onRunToHere?: (nodeId: string) => void;
-}
-
-export function PrintNode({ data, selected, onRunToHere }: PrintNodeProps) {
+export function PrintNode({ data, selected }: NodeProps<PrintNodeData>) {
   const nodeDefinition = getNodeDefinition('print');
   const [isRunning, setIsRunning] = useState(false);
   const [lastValue, setLastValue] = useState<{ value: unknown; type: string; timestamp: number } | null>(null);
+  
+  // Use debug context if available
+  const debugContext = useDebugContext();
+  const onRunToHere = debugContext?.runToNode;
+  const getDebugResult = debugContext?.getDebugResult;
+
+  // Update lastValue when debug result changes
+  useEffect(() => {
+    if (getDebugResult) {
+      const result = getDebugResult(data.identifier.id);
+      if (result) {
+        setLastValue(result);
+      }
+    }
+  }, [getDebugResult, data.identifier.id]);
+
+  // Poll for debug results periodically when debugging is active
+  useEffect(() => {
+    if (!getDebugResult || !debugContext?.isDebugging) return;
+
+    const interval = setInterval(() => {
+      const result = getDebugResult(data.identifier.id);
+      if (result && (!lastValue || result.timestamp > lastValue.timestamp)) {
+        setLastValue(result);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [getDebugResult, data.identifier.id, debugContext?.isDebugging, lastValue]);
 
   const handleRunToHere = async () => {
     if (!onRunToHere) return;

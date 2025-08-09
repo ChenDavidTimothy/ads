@@ -92,4 +92,55 @@ export class ExecutionEngine {
     
     return context;
   }
+
+  async executeFlowDebug(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], targetNodeId: string): Promise<ExecutionContext> {
+    console.log(`[DEBUG] Starting debug execution to node: ${targetNodeId}`);
+    
+    // Create context with debug mode enabled
+    const context = createExecutionContext();
+    context.debugMode = true;
+    context.executionLog = [];
+    
+    // Filter to data edges only for execution ordering
+    const dataEdges = edges.filter((e) => (e.kind ?? 'data') === 'data');
+    const executionOrder = getTopologicalOrder(nodes, dataEdges);
+    
+    // Find the target node in the execution order
+    const targetNodeIndex = executionOrder.findIndex(n => n.data.identifier.id === targetNodeId);
+    if (targetNodeIndex === -1) {
+      throw new Error(`Target node ${targetNodeId} not found in execution order`);
+    }
+    
+    // Execute only up to and including the target node
+    const nodesToExecute = executionOrder.slice(0, targetNodeIndex + 1);
+    
+    console.log(`[DEBUG] Will execute ${nodesToExecute.length} nodes up to target:`, nodesToExecute.map(n => ({
+      id: n.data.identifier.id,
+      type: n.type,
+      displayName: n.data.identifier.displayName
+    })));
+    
+    // Execute nodes in topological order up to target
+    for (const node of nodesToExecute) {
+      if (!isNodeExecuted(context, node.data.identifier.id)) {
+        console.log(`[DEBUG] Executing node: ${node.data.identifier.displayName} (${node.type})`);
+        
+        const executor = this.registry.find(node.type ?? '');
+        if (executor) {
+          await executor.execute(node, context, edges);
+          markNodeExecuted(context, node.data.identifier.id);
+          console.log(`[DEBUG] Completed node: ${node.data.identifier.displayName}`);
+        } else {
+          console.warn(`[DEBUG] No executor found for node type: ${node.type}`);
+        }
+      } else {
+        console.log(`[DEBUG] Skipping already executed node: ${node.data.identifier.displayName}`);
+      }
+    }
+    
+    console.log(`[DEBUG] Debug execution completed at target node: ${targetNodeId}`);
+    console.log(`[DEBUG] Debug logs generated: ${context.executionLog?.length || 0}`);
+    
+    return context;
+  }
 }
