@@ -49,8 +49,14 @@ export class SceneRequiredError extends DomainError {
 }
 
 export class TooManyScenesError extends DomainError {
-  constructor() {
-    super('Only one scene node allowed per workspace', 'ERR_TOO_MANY_SCENES');
+  constructor(currentCount?: number, maxAllowed?: number) {
+    const message = currentCount && maxAllowed 
+      ? `Too many scene nodes: ${currentCount} found, maximum ${maxAllowed} allowed`
+      : 'Too many scene nodes in workspace';
+    
+    super(message, 'ERR_TOO_MANY_SCENES', { 
+      info: { currentCount, maxAllowed } 
+    });
     this.name = 'TooManyScenesError';
   }
 }

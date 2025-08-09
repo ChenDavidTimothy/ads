@@ -20,9 +20,9 @@ export function partitionObjectsByScenes(
   sceneNodes: ReactFlowNode<NodeData>[]
 ): ScenePartition[] {
   logger.info('Partitioning objects by scenes', { 
-    totalObjects: context.sceneObjects.length,
-    totalAnimations: context.sceneAnimations.length,
-    sceneCount: sceneNodes.length 
+    totalScenes: sceneNodes.length,
+    scenesWithObjects: context.sceneObjectsByScene.size,
+    totalAnimations: context.sceneAnimations.length
   });
 
   const partitions: ScenePartition[] = [];
@@ -30,23 +30,10 @@ export function partitionObjectsByScenes(
   for (const sceneNode of sceneNodes) {
     const sceneId = sceneNode.data.identifier.id;
     
-    // Objects that belong to this scene (including branched objects)
-    const sceneObjects = context.sceneObjects.filter(obj => {
-      const primaryScene = context.objectSceneMap.get(obj.id);
-      const branchedScenes = context.objectSceneMap.get(`${obj.id}_scenes`);
-      
-      // Check if this scene is the primary scene or one of the branched scenes
-      if (primaryScene === sceneId) {
-        return true;
-      }
-      
-      if (branchedScenes) {
-        const sceneList = branchedScenes.split(',');
-        return sceneList.includes(sceneId);
-      }
-      
-      return false;
-    });
+    // CRITICAL FIX: Get path-specific objects directly from per-scene storage
+    // OLD: context.sceneObjects.filter(...) // Global array filtering - WRONG
+    // NEW: Direct retrieval of scene-specific objects with correct properties
+    const sceneObjects = context.sceneObjectsByScene.get(sceneId) || [];
     
     // Get object IDs for this scene
     const sceneObjectIds = new Set(sceneObjects.map(obj => obj.id));
@@ -63,7 +50,13 @@ export function partitionObjectsByScenes(
     logger.debug(`Scene ${sceneNode.data.identifier.displayName}`, {
       sceneId,
       objectCount: sceneObjects.length,
-      animationCount: sceneAnimations.length
+      animationCount: sceneAnimations.length,
+      objectIds: sceneObjects.map(obj => obj.id),
+      objectProperties: sceneObjects.map(obj => ({ 
+        id: obj.id, 
+        type: obj.type,
+        hasAnimations: sceneAnimations.filter(anim => anim.objectId === obj.id).length > 0
+      }))
     });
     
     // Only include scenes that have objects

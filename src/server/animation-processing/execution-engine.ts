@@ -117,7 +117,15 @@ export class ExecutionEngine {
     }
     
     logger.info('Flow execution completed');
-    logger.info('Final context', { objects: context.sceneObjects.length, animations: context.sceneAnimations.length });
+    // Calculate total objects across all scenes
+    const totalObjects = Array.from(context.sceneObjectsByScene.values())
+      .reduce((total, sceneObjects) => total + sceneObjects.length, 0);
+    
+    logger.info('Final context', { 
+      objects: totalObjects, 
+      animations: context.sceneAnimations.length,
+      scenesWithObjects: context.sceneObjectsByScene.size
+    });
     
     return context;
   }

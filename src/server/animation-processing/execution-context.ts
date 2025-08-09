@@ -51,8 +51,9 @@ export interface ExecutionContext {
   conditionalPaths: Map<string, 'true' | 'false' | 'default'>;
   executionStack: string[]; // For nested conditional execution
   
-  // Scene building - properly typed
-  sceneObjects: Array<{
+  // Scene building - per-scene storage to preserve path-specific properties
+  // CRITICAL FIX: Replace global sceneObjects with per-scene storage
+  sceneObjectsByScene: Map<string, Array<{
     id: string;
     type: 'triangle' | 'circle' | 'rectangle';
     properties: GeometryProperties;
@@ -61,7 +62,7 @@ export interface ExecutionContext {
     initialScale?: { x: number; y: number };
     initialOpacity?: number;
     appearanceTime?: number;
-  }>;
+  }>>;
   sceneAnimations: SceneAnimationTrack[];
 
   // Multi-scene support: track which objects belong to which scene
@@ -87,7 +88,7 @@ export function createExecutionContext(): ExecutionContext {
     currentTime: 0,
     conditionalPaths: new Map(),
     executionStack: [],
-    sceneObjects: [],
+    sceneObjectsByScene: new Map(), // CRITICAL FIX: Per-scene storage
     sceneAnimations: [],
     objectSceneMap: new Map(),
     animationSceneMap: new Map(),

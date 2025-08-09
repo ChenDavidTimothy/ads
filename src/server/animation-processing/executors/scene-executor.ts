@@ -29,8 +29,8 @@ export class SceneNodeExecutor extends BaseExecutor {
     const sceneNodeId = node.data.identifier.id;
     let objectsAddedToThisScene = 0;
 
-    // Track which objects came through this scene for animation assignment
-    const objectsInThisScene = new Set<string>();
+    // CRITICAL FIX: Get or create per-scene storage for this scene
+    const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) || [];
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -39,38 +39,42 @@ export class SceneNodeExecutor extends BaseExecutor {
         if (typeof item === 'object' && item !== null && 'id' in item && 'appearanceTime' in item) {
           const objectId = (item as { id: string }).id;
           
-          // Track scene affinity for multi-scene support
-          // Allow objects to exist in multiple scenes (branching from insert nodes)
+          // CRITICAL FIX: Always store path-specific properties for this scene
+          // Each scene gets exactly what flows to it - no more "first scene wins"
+          sceneObjects.push(item as never);
+          objectsAddedToThisScene++;
+          
+          logger.debug(`Object ${objectId} with path-specific properties stored in scene ${sceneNodeId}`, {
+            objectId,
+            sceneId: sceneNodeId,
+            hasAnimations: !!(item as { _attachedAnimations?: unknown })._attachedAnimations,
+            properties: (item as { properties?: unknown }).properties
+          });
+          
+          // Track scene membership for validation compatibility (but properties are per-scene now)
           const existingSceneId = context.objectSceneMap.get(objectId);
-          
-          // Track that this object flows through this scene
-          objectsInThisScene.add(objectId);
-          
           if (!existingSceneId) {
-            // First scene to claim this object - add to global objects list
             context.objectSceneMap.set(objectId, sceneNodeId);
-            context.sceneObjects.push(item as never);
-            objectsAddedToThisScene++;
-            logger.debug(`Object ${objectId} assigned to scene ${sceneNodeId}`);
           } else if (existingSceneId !== sceneNodeId) {
-            // Object already belongs to another scene - this indicates branching
-            // Don't add to global list again, just track the branching
-            logger.debug(`Object ${objectId} branching: already in scene ${existingSceneId}, also adding to ${sceneNodeId}`);
-            
-            // Store additional scene mappings for branched objects
+            // Object branching to multiple scenes - track additional scenes
             const existingMappings = context.objectSceneMap.get(`${objectId}_scenes`);
-            const sceneMappings = existingMappings ? 
-              `${existingMappings},${sceneNodeId}` : 
-              `${existingSceneId},${sceneNodeId}`;
+            const sceneMappings = existingMappings 
+              ? `${existingMappings},${sceneNodeId}` 
+              : `${existingSceneId},${sceneNodeId}`;
             context.objectSceneMap.set(`${objectId}_scenes`, sceneMappings);
-            objectsAddedToThisScene++; // Count this as handled for this scene
-          } else {
-            // Same scene processing the same object again - just count it
-            objectsAddedToThisScene++;
+            
+            logger.debug(`Object ${objectId} branching with different properties`, {
+              previousScene: existingSceneId,
+              currentScene: sceneNodeId,
+              branchMappings: sceneMappings
+            });
           }
         }
       }
     }
+
+    // CRITICAL: Store the scene-specific objects back to context
+    context.sceneObjectsByScene.set(sceneNodeId, sceneObjects);
 
     if (objectsAddedToThisScene === 0) {
       throw new MissingInsertConnectionError(node.data.identifier.displayName, node.data.identifier.id);
