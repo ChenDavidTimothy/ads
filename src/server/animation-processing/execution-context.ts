@@ -64,6 +64,7 @@ export interface ExecutionContext {
 
   // Future: Conditional execution metadata
   debugMode?: boolean;
+  debugTargetNodeId?: string; // Track specific debug target for selective logging
   executionLog?: Array<{
     nodeId: string;
     timestamp: number;

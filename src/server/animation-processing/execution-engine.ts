@@ -100,6 +100,7 @@ export class ExecutionEngine {
     // Create context with debug mode enabled
     const context = createExecutionContext();
     context.debugMode = true;
+    context.debugTargetNodeId = targetNodeId; // Set specific debug target for selective logging
     context.executionLog = [];
     
     // Filter to data edges only for execution ordering

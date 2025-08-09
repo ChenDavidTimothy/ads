@@ -95,8 +95,11 @@ export class LogicNodeExecutor implements NodeExecutor {
       const noInputMessage = '<no input connected>';
       logger.info(`[PRINT] ${label}: ${noInputMessage}`);
       
+      // Only capture debug logs if this node is the debug target
+      const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
+      
       // Store "no input" state for production debugging
-      if (context.debugMode && context.executionLog) {
+      if (context.debugMode && context.executionLog && isDebugTarget) {
         context.executionLog.push({
           nodeId: node.data.identifier.id,
           timestamp: Date.now(),
@@ -130,8 +133,11 @@ export class LogicNodeExecutor implements NodeExecutor {
       // Enhanced console logging for development
       logger.info(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
       
+      // Only capture debug logs if this node is the debug target
+      const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
+      
       // Production-ready debug storage with comprehensive metadata
-      if (context.debugMode && context.executionLog) {
+      if (context.debugMode && context.executionLog && isDebugTarget) {
         context.executionLog.push({
           nodeId: node.data.identifier.id,
           timestamp: Date.now(),
