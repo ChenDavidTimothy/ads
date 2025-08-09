@@ -8,31 +8,74 @@ import { logger } from '@/lib/logger';
 type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
 type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
 
+interface DebugResult {
+  value: unknown;
+  type: string;
+  timestamp: number;
+  executionId?: string;
+  flowState?: string;
+  hasConnections?: boolean;
+  inputCount?: number;
+}
+
 export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
-  const [debugResults, setDebugResults] = useState<Map<string, { value: unknown; type: string; timestamp: number }>>(new Map());
+  const [debugResults, setDebugResults] = useState<Map<string, DebugResult[]>>(new Map());
   const { toast } = useNotifications();
 
   const debugToNode = api.animation.debugToNode.useMutation({
     onSuccess: (data) => {
-      // Extract debug logs and update results
       if (data.debugLogs && data.debugLogs.length > 0) {
-        const newResults = new Map(debugResults);
-        
-        data.debugLogs.forEach((log) => {
-          if (log.data && typeof log.data === 'object' && log.data !== null) {
-            const logData = log.data as { type?: string; value?: unknown; valueType?: string; formattedValue?: string };
-            if (logData.type === 'print_output') {
-              newResults.set(log.nodeId, {
-                value: logData.value,
-                type: logData.valueType || 'unknown',
-                timestamp: log.timestamp
-              });
+        setDebugResults(prevResults => {
+          const newResults = new Map(prevResults);
+          
+          data.debugLogs.forEach((log) => {
+            if (log.data && typeof log.data === 'object' && log.data !== null) {
+              const logData = log.data as { 
+                type?: string; 
+                value?: unknown; 
+                valueType?: string; 
+                formattedValue?: string;
+                executionContext?: {
+                  executionId?: string;
+                  flowState?: string;
+                  hasConnections?: boolean;
+                  inputCount?: number;
+                };
+              };
+              if (logData.type === 'print_output') {
+                const newEntry: DebugResult = {
+                  value: logData.value,
+                  type: logData.valueType || 'unknown',
+                  timestamp: log.timestamp,
+                  executionId: logData.executionContext?.executionId,
+                  flowState: logData.executionContext?.flowState,
+                  hasConnections: logData.executionContext?.hasConnections,
+                  inputCount: logData.executionContext?.inputCount
+                };
+                
+                // Accumulate results for this node
+                const existingResults = newResults.get(log.nodeId) || [];
+                
+                // Check if this exact entry already exists (avoid duplicates)
+                const isDuplicate = existingResults.some(existing => 
+                  existing.timestamp === newEntry.timestamp &&
+                  existing.executionId === newEntry.executionId &&
+                  JSON.stringify(existing.value) === JSON.stringify(newEntry.value)
+                );
+                
+                if (!isDuplicate) {
+                  const updatedResults = [...existingResults, newEntry]
+                    .sort((a, b) => a.timestamp - b.timestamp);
+                  newResults.set(log.nodeId, updatedResults);
+                }
+              }
             }
-          }
+          });
+          
+          return newResults;
         });
         
-        setDebugResults(newResults);
-        toast.success('Debug execution completed');
+        toast.success(`Debug execution completed - ${data.debugLogs.length} output(s) captured`);
       } else {
         toast.info('Debug completed', 'No output from print nodes');
       }
@@ -73,12 +116,18 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   }, [nodes, edges, debugToNode]);
 
   const getDebugResult = useCallback((nodeId: string) => {
-    return debugResults.get(nodeId) || null;
+    const results = debugResults.get(nodeId);
+    return results && results.length > 0 ? results[results.length - 1] : null; // Return latest result for backward compatibility
+  }, [debugResults]);
+
+  const getAllDebugResults = useCallback((nodeId: string) => {
+    return debugResults.get(nodeId) || [];
   }, [debugResults]);
 
   return {
     runToNode,
     getDebugResult,
+    getAllDebugResults,
     isDebugging: debugToNode.isPending,
   };
 }

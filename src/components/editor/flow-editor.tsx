@@ -7,11 +7,13 @@ import "reactflow/dist/style.css";
 
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
+import { PrintLogModal } from "./print-log-modal";
 import type { NodeData, AnimationTrack } from "@/shared/types";
 import { createNodeTypes } from "./flow/node-types";
 import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
 import { useTimelineEditor } from "./flow/hooks/use-timeline-editor";
+import { usePrintLogViewer } from "./flow/hooks/use-print-log-viewer";
 import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
 import { useDebugExecution } from "./flow/hooks/use-debug-execution";
 import { DebugProvider } from "./flow/debug-context";
@@ -46,11 +48,18 @@ export function FlowEditor() {
     getTimelineNodeData,
   } = useTimelineEditor(nodes);
 
-  const { runToNode, getDebugResult, isDebugging } = useDebugExecution(nodes, edges);
+  const {
+    printLogModalState,
+    handleOpenPrintLogViewer,
+    handleClosePrintLogViewer,
+    getPrintNodeData,
+  } = usePrintLogViewer(nodes);
+
+  const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
   const nodeTypes: NodeTypes = useMemo(
-    () => createNodeTypes(handleOpenTimelineEditor),
-    [handleOpenTimelineEditor]
+    () => createNodeTypes(handleOpenTimelineEditor, handleOpenPrintLogViewer),
+    [handleOpenTimelineEditor, handleOpenPrintLogViewer]
   );
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
@@ -111,7 +120,7 @@ export function FlowEditor() {
       <NodePalette onAddNode={handleAddNode} />
 
       <div className="flex-1 relative">
-        <DebugProvider value={{ runToNode, getDebugResult, isDebugging }}>
+        <DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, isDebugging }}>
           <FlowCanvas
             nodes={nodes}
             edges={edges}
@@ -123,7 +132,15 @@ export function FlowEditor() {
             onPaneClick={onPaneClick}
             onNodesDelete={onNodesDelete}
             onEdgesDelete={onEdgesDelete}
-            disableDeletion={timelineModalState.isOpen}
+            disableDeletion={timelineModalState.isOpen || printLogModalState.isOpen}
+          />
+
+          <PrintLogModal
+            isOpen={printLogModalState.isOpen}
+            onClose={handleClosePrintLogViewer}
+            nodeId={printLogModalState.nodeId || ''}
+            nodeName={getPrintNodeData().name}
+            nodeLabel={getPrintNodeData().label}
           />
         </DebugProvider>
 
@@ -159,6 +176,7 @@ export function FlowEditor() {
         tracks={timelineNodeData.tracks}
         onSave={handleSaveTimeline}
       />
+
     </div>
   );
 }

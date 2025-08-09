@@ -1,8 +1,19 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 
+interface DebugResult {
+  value: unknown;
+  type: string;
+  timestamp: number;
+  executionId?: string;
+  flowState?: string;
+  hasConnections?: boolean;
+  inputCount?: number;
+}
+
 interface DebugContextValue {
   runToNode: (nodeId: string) => Promise<void>;
-  getDebugResult: (nodeId: string) => { value: unknown; type: string; timestamp: number } | null;
+  getDebugResult: (nodeId: string) => DebugResult | null;
+  getAllDebugResults: (nodeId: string) => DebugResult[];
   isDebugging: boolean;
 }
 

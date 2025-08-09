@@ -82,6 +82,7 @@ export class LogicNodeExecutor implements NodeExecutor {
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const label = String(data.label || 'Debug');
+    const nodeDisplayName = node.data.identifier?.displayName || 'Print Node';
     
     const inputs = getConnectedInputs(
       context,
@@ -91,20 +92,10 @@ export class LogicNodeExecutor implements NodeExecutor {
     );
 
     if (inputs.length === 0) {
-      logger.info(`[PRINT] ${label}: <no input connected>`);
-      return;
-    }
-
-    // Process all connected inputs
-    for (const input of inputs) {
-      const value = input.data;
-      const valueType = this.getValueType(value);
-      const formattedValue = this.formatValue(value);
+      const noInputMessage = '<no input connected>';
+      logger.info(`[PRINT] ${label}: ${noInputMessage}`);
       
-      // Log to console with clear formatting
-      logger.info(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
-      
-      // Store for potential UI feedback
+      // Store "no input" state for production debugging
       if (context.debugMode && context.executionLog) {
         context.executionLog.push({
           nodeId: node.data.identifier.id,
@@ -113,9 +104,57 @@ export class LogicNodeExecutor implements NodeExecutor {
           data: {
             type: 'print_output',
             label,
+            nodeDisplayName,
+            value: null,
+            valueType: 'no_input',
+            formattedValue: noInputMessage,
+            executionContext: {
+              hasConnections: false,
+              inputCount: 0,
+              executionId: `exec-${Date.now()}`,
+              flowState: 'no_input_connected'
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    // Process all connected inputs with enhanced production logging
+    for (const [inputIndex, input] of inputs.entries()) {
+      const value = input.data;
+      const valueType = this.getValueType(value);
+      const formattedValue = this.formatValue(value);
+      const executionId = `exec-${Date.now()}-${inputIndex}`;
+      
+      // Enhanced console logging for development
+      logger.info(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
+      
+      // Production-ready debug storage with comprehensive metadata
+      if (context.debugMode && context.executionLog) {
+        context.executionLog.push({
+          nodeId: node.data.identifier.id,
+          timestamp: Date.now(),
+          action: 'execute',
+          data: {
+            type: 'print_output',
+            label,
+            nodeDisplayName,
             value,
             valueType,
-            formattedValue
+            formattedValue,
+            executionContext: {
+              hasConnections: true,
+              inputCount: inputs.length,
+              currentInputIndex: inputIndex,
+              executionId,
+              flowState: 'executed_successfully',
+              // Additional metadata for customer debugging
+              dataSize: this.getDataSize(value),
+              isComplexObject: this.isComplexObject(value),
+              hasNestedData: this.hasNestedData(value),
+              sourceMetadata: input.metadata || {}
+            }
           }
         });
       }
@@ -142,6 +181,49 @@ export class LogicNodeExecutor implements NodeExecutor {
       }
     }
     return String(value);
+  }
+
+  // Enhanced helper methods for production debugging
+  private getDataSize(value: unknown): string {
+    if (value === null || value === undefined) return '0 bytes';
+    
+    try {
+      const str = JSON.stringify(value);
+      const bytes = new Blob([str]).size;
+      
+      if (bytes < 1024) return `${bytes} bytes`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    } catch {
+      return 'unknown size';
+    }
+  }
+
+  private isComplexObject(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return false;
+    if (Array.isArray(value)) return value.length > 10;
+    
+    try {
+      const keys = Object.keys(value);
+      return keys.length > 5;
+    } catch {
+      return false;
+    }
+  }
+
+  private hasNestedData(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return false;
+    
+    try {
+      if (Array.isArray(value)) {
+        return value.some(item => typeof item === 'object' && item !== null);
+      }
+      
+      const values = Object.values(value);
+      return values.some(val => typeof val === 'object' && val !== null);
+    } catch {
+      return false;
+    }
   }
 
   private async executeFilter(

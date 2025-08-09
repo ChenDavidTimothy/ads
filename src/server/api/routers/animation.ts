@@ -235,24 +235,16 @@ export const animationRouter = createTRPCRouter({
           targetIdentifierId
         );
 
-        // Extract debug logs from context
+        // Extract debug logs from context and format for frontend consumption
         const debugLogs = (executionContext.executionLog || [])
           .filter(entry => entry.data && typeof entry.data === 'object' && 
                   (entry.data as { type?: string }).type === 'print_output')
           .map(entry => {
-            const data = entry.data as { 
-              label: string; 
-              value: unknown; 
-              valueType: string; 
-              formattedValue: string; 
-            };
             return {
               nodeId: entry.nodeId,
               timestamp: entry.timestamp,
-              label: data.label,
-              value: data.value,
-              valueType: data.valueType,
-              formattedValue: data.formattedValue
+              action: entry.action,
+              data: entry.data // Keep the full data structure for frontend processing
             };
           });
 

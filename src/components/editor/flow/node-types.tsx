@@ -1,9 +1,12 @@
 // src/components/editor/flow/node-types.tsx - Dynamic registry-driven component mapping
 import type { NodeTypes } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
-import { AnimationNode } from "../nodes";
+import { AnimationNode, PrintNode } from "../nodes";
 
-export function createNodeTypes(handleOpenTimelineEditor: (nodeId: string) => void): NodeTypes {
+export function createNodeTypes(
+  handleOpenTimelineEditor: (nodeId: string) => void,
+  handleOpenPrintLogViewer: (nodeId: string) => void
+): NodeTypes {
   const componentMapping = getNodeComponentMapping();
   const nodeTypes: NodeTypes = {};
   
@@ -13,6 +16,11 @@ export function createNodeTypes(handleOpenTimelineEditor: (nodeId: string) => vo
       // Special handling for animation node with timeline editor callback
       nodeTypes[nodeType] = (props: Parameters<typeof AnimationNode>[0]) => (
         <AnimationNode {...props} onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} />
+      );
+    } else if (nodeType === 'print') {
+      // Special handling for print node with log viewer callback
+      nodeTypes[nodeType] = (props: Parameters<typeof PrintNode>[0]) => (
+        <PrintNode {...props} onOpenLogViewer={() => handleOpenPrintLogViewer(props.data.identifier.id)} />
       );
     } else {
       // Standard component mapping
