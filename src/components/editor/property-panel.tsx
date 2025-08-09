@@ -13,7 +13,9 @@ import type {
   NodeData, 
   AnimationNodeData, 
   SceneNodeData,
-  FilterNodeData
+  FilterNodeData,
+  ConstantsNodeData,
+  PrintNodeData
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
 
@@ -27,7 +29,7 @@ interface PropertyPanelProps {
   flowTracker: FlowTracker;
 }
 
-// Type guard functions (unchanged)
+// Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
   return 'duration' in data && 'tracks' in data;
 }
@@ -38,6 +40,14 @@ function isSceneNodeData(data: NodeData): data is SceneNodeData {
 
 function isFilterNodeData(data: NodeData): data is FilterNodeData {
   return 'selectedObjectIds' in data;
+}
+
+function isConstantsNodeData(data: NodeData): data is ConstantsNodeData {
+  return 'valueType' in data;
+}
+
+function isPrintNodeData(data: NodeData): data is PrintNodeData {
+  return 'label' in data && !('tracks' in data) && !('selectedObjectIds' in data);
 }
 
 export function PropertyPanel({ 
@@ -154,6 +164,7 @@ export function PropertyPanel({
         properties={nodeDefinition.properties.properties}
         data={node.data}
         onChange={onChange}
+        nodeType={node.type!}
       />
       
       {/* Special handling for complex node types */}
@@ -189,15 +200,26 @@ interface SchemaBasedProps {
   properties: PropertySchema[];
   data: NodeData;
   onChange: (data: Partial<NodeData>) => void;
+  nodeType: string;
 }
 
 function SchemaBasedProperties({ 
   properties, 
   data, 
-  onChange 
+  onChange,
+  nodeType
 }: SchemaBasedProps) {
   const renderProperty = (schema: PropertySchema) => {
     const value = (data as unknown as Record<string, unknown>)[schema.key] ?? schema.defaultValue;
+
+    // Special handling for Constants node - conditional property display
+    if (nodeType === 'constants' && isConstantsNodeData(data)) {
+      // Only show value properties that match the current valueType
+      if (schema.key === 'numberValue' && data.valueType !== 'number') return null;
+      if (schema.key === 'stringValue' && data.valueType !== 'string') return null;
+      if (schema.key === 'booleanValue' && data.valueType !== 'boolean') return null;
+      if (schema.key === 'colorValue' && data.valueType !== 'color') return null;
+    }
 
     switch (schema.type) {
       case 'number':
@@ -320,7 +342,7 @@ function SchemaBasedProperties({
 
   return (
     <>
-      {properties.map(renderProperty)}
+      {properties.map(renderProperty).filter(Boolean)}
     </>
   );
 }

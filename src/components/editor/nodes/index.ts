@@ -4,5 +4,7 @@ export { RectangleNode } from "./rectangle-node";
 export { InsertNode } from "./insert-node";
 export { FilterNode } from "./filter-node";
 export { MergeNode } from "./merge-node";
+export { ConstantsNode } from "./constants-node";
+export { PrintNode } from "./print-node";
 export { AnimationNode } from "./animation-node";
 export { SceneNode } from "./scene-node";

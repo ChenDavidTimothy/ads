@@ -1,4 +1,4 @@
-// src/server/api/routers/animation.ts - Graceful error handling with comprehensive validation
+// src/server/api/routers/animation.ts - Graceful error handling with comprehensive validation + debug execution
 import { z } from "zod";
 import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
@@ -59,8 +59,16 @@ const validateSceneInputSchema = z.object({
   edges: z.array(reactFlowEdgeSchema),
 });
 
+// Debug execution schema
+const debugExecutionInputSchema = z.object({
+  nodes: z.array(reactFlowNodeSchema),
+  edges: z.array(reactFlowEdgeSchema),
+  targetNodeId: z.string(), // Stop execution at this node
+});
+
 type GenerateSceneInput = z.infer<typeof generateSceneInputSchema>;
 type ValidateSceneInput = z.infer<typeof validateSceneInputSchema>;
+type DebugExecutionInput = z.infer<typeof debugExecutionInputSchema>;
 type ReactFlowNodeInput = z.infer<typeof reactFlowNodeSchema>;
 type ReactFlowEdgeInput = z.infer<typeof reactFlowEdgeSchema>;
 
@@ -183,6 +191,96 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
 }
 
 export const animationRouter = createTRPCRouter({
+  // Debug execution endpoint for "Run to Here" functionality
+  debugToNode: protectedProcedure
+    .input(debugExecutionInputSchema)
+    .mutation(async ({ input, ctx }: { input: DebugExecutionInput; ctx: TRPCContext }) => {
+      try {
+        // Convert React Flow nodes to backend format with proper ID mapping
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+
+        // Convert React Flow edges to backend format with identifier ID mapping
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
+            if (identifier?.id) {
+              nodeIdMap.set(n.id, identifier.id);
+            }
+          }
+        });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Get target node identifier ID
+        const targetReactFlowId = input.targetNodeId;
+        const targetIdentifierId = nodeIdMap.get(targetReactFlowId) ?? targetReactFlowId;
+
+        // Execute flow with debug stopping point
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlowDebug(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges,
+          targetIdentifierId
+        );
+
+        // Extract debug logs from context
+        const debugLogs = (executionContext.executionLog || [])
+          .filter(entry => entry.data && typeof entry.data === 'object' && 
+                  (entry.data as { type?: string }).type === 'print_output')
+          .map(entry => {
+            const data = entry.data as { 
+              label: string; 
+              value: unknown; 
+              valueType: string; 
+              formattedValue: string; 
+            };
+            return {
+              nodeId: entry.nodeId,
+              timestamp: entry.timestamp,
+              label: data.label,
+              value: data.value,
+              valueType: data.valueType,
+              formattedValue: data.formattedValue
+            };
+          });
+
+        return {
+          success: true,
+          executedNodeCount: executionContext.executedNodes.size,
+          debugLogs,
+          stoppedAt: targetIdentifierId
+        };
+
+      } catch (error) {
+        // Log server-side error
+        logger.domain('Debug execution failed', error, {
+          path: 'animation.debugToNode',
+          userId: ctx.user?.id,
+          targetNodeId: input.targetNodeId
+        });
+
+        // Return error information
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          error: translated.message,
+          suggestions: translated.suggestions
+        };
+      }
+    }),
+
   // Main scene generation with comprehensive graceful validation
   generateScene: protectedProcedure
     .input(generateSceneInputSchema)

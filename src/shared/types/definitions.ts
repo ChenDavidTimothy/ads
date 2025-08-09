@@ -278,6 +278,96 @@ export const NODE_DEFINITIONS = {
     }
   },
 
+  constants: {
+    type: 'constants',
+    label: 'Constants',
+    description: 'Outputs constant values (numbers, strings, colors, booleans)',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [],
+      outputs: [
+        { id: 'output', type: 'data', label: 'Value' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'valueType', 
+          type: 'select', 
+          label: 'Type',
+          options: [
+            { value: 'number', label: 'Number' },
+            { value: 'string', label: 'String' },
+            { value: 'boolean', label: 'Boolean' },
+            { value: 'color', label: 'Color' }
+          ],
+          defaultValue: 'number'
+        },
+        { key: 'numberValue', type: 'number', label: 'Number Value', defaultValue: 0 },
+        { key: 'stringValue', type: 'string', label: 'String Value', defaultValue: '' },
+        { 
+          key: 'booleanValue', 
+          type: 'select', 
+          label: 'Boolean Value',
+          options: [
+            { value: 'true', label: 'True' },
+            { value: 'false', label: 'False' }
+          ],
+          defaultValue: 'true'
+        },
+        { key: 'colorValue', type: 'color', label: 'Color Value', defaultValue: '#ffffff' }
+      ]
+    },
+    rendering: {
+      icon: '🔢',
+      colors: {
+        primary: 'bg-cyan-600',
+        handle: '!bg-cyan-500',
+      }
+    },
+    defaults: {
+      valueType: 'number',
+      numberValue: 0,
+      stringValue: '',
+      booleanValue: 'true',
+      colorValue: '#ffffff'
+    }
+  },
+
+  print: {
+    type: 'print',
+    label: 'Print',
+    description: 'Debug node that logs values to console with "Run to Here" functionality',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'data', label: 'Value' }
+      ],
+      outputs: []
+    },
+    properties: {
+      properties: [
+        { key: 'label', type: 'string', label: 'Debug Label', defaultValue: 'Debug' }
+      ]
+    },
+    rendering: {
+      icon: '🖨️',
+      colors: {
+        primary: 'bg-yellow-600',
+        handle: '!bg-yellow-500',
+      }
+    },
+    defaults: {
+      label: 'Debug'
+    }
+  },
+
   animation: {
     type: 'animation',
     label: 'Animation',

@@ -124,6 +124,8 @@ export function getNodeComponentMapping() {
     InsertNode,
     FilterNode,
     MergeNode,
+    ConstantsNode,
+    PrintNode,
     AnimationNode,
     SceneNode
   } = require('@/components/editor/nodes');
@@ -144,6 +146,8 @@ export function getNodeComponentMapping() {
       case 'logic':
         if (nodeType === 'filter') mapping[nodeType] = FilterNode;
         else if (nodeType === 'merge') mapping[nodeType] = MergeNode;
+        else if (nodeType === 'constants') mapping[nodeType] = ConstantsNode;
+        else if (nodeType === 'print') mapping[nodeType] = PrintNode;
         break;
       case 'animation':
         mapping[nodeType] = AnimationNode;

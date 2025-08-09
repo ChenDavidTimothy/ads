@@ -24,9 +24,123 @@ export class LogicNodeExecutor implements NodeExecutor {
       case 'merge':
         await this.executeMerge(node, context, connections);
         break;
+      case 'constants':
+        await this.executeConstants(node, context, connections);
+        break;
+      case 'print':
+        await this.executePrint(node, context, connections);
+        break;
       default:
         throw new Error(`Unknown logic node type: ${node.type}`);
     }
+  }
+
+  private async executeConstants(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    _connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const valueType = data.valueType as string;
+    
+    let outputValue: unknown;
+    
+    switch (valueType) {
+      case 'number':
+        outputValue = Number(data.numberValue);
+        break;
+      case 'string':
+        outputValue = String(data.stringValue || '');
+        break;
+      case 'boolean':
+        outputValue = (data.booleanValue as string) === 'true';
+        break;
+      case 'color':
+        outputValue = String(data.colorValue || '#ffffff');
+        break;
+      default:
+        outputValue = 0;
+        console.warn(`[CONSTANTS] Unknown value type: ${valueType}, defaulting to 0`);
+    }
+
+    console.log(`[CONSTANTS] ${node.data.identifier.displayName}: ${valueType} = ${outputValue}`);
+    
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'data',
+      outputValue
+    );
+  }
+
+  private async executePrint(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const label = String(data.label || 'Debug');
+    
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+
+    if (inputs.length === 0) {
+      console.log(`[PRINT] ${label}: <no input connected>`);
+      return;
+    }
+
+    // Process all connected inputs
+    for (const input of inputs) {
+      const value = input.data;
+      const valueType = this.getValueType(value);
+      const formattedValue = this.formatValue(value);
+      
+      // Log to console with clear formatting
+      console.log(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
+      
+      // Store for potential UI feedback
+      if (context.debugMode && context.executionLog) {
+        context.executionLog.push({
+          nodeId: node.data.identifier.id,
+          timestamp: Date.now(),
+          action: 'execute',
+          data: {
+            type: 'print_output',
+            label,
+            value,
+            valueType,
+            formattedValue
+          }
+        });
+      }
+    }
+  }
+
+  private getValueType(value: unknown): string {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (Array.isArray(value)) return `array[${value.length}]`;
+    if (typeof value === 'object') return `object`;
+    return typeof value;
+  }
+
+  private formatValue(value: unknown): string {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
   }
 
   private async executeFilter(

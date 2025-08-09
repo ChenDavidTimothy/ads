@@ -67,6 +67,20 @@ export interface MergeNodeData extends BaseNodeData {
   inputPortCount: number;
 }
 
+// Constants node data
+export interface ConstantsNodeData extends BaseNodeData {
+  valueType: 'number' | 'string' | 'boolean' | 'color';
+  numberValue: number;
+  stringValue: string;
+  booleanValue: string; // 'true' | 'false' as string from select
+  colorValue: string;
+}
+
+// Print node data
+export interface PrintNodeData extends BaseNodeData {
+  label: string;
+}
+
 // Animation track properties - aligned with API schema
 export interface MoveTrackProperties {
   from: Point2D;
@@ -146,6 +160,6 @@ export interface SceneNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | AnimationNodeData | SceneNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData;
 
 // NodeType is derived from the registry (definitions)
