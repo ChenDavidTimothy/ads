@@ -192,8 +192,9 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
   }
 }
 
-export function validateMathTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const mathNodes = nodes.filter(node => node.type === 'math_op');
+export function validateNumberTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  // Validate both math operations and compare nodes - they all require number inputs
+  const mathNodes = nodes.filter(node => node.type === 'math_op' || node.type === 'compare');
   
   for (const mathNode of mathNodes) {
     // Safety check for node data
@@ -227,7 +228,8 @@ export function validateMathTypeConnections(nodes: ReactFlowNode<NodeData>[], ed
       // Note: Compare nodes output boolean, not numbers
       
       if (!isValidNumberSource) {
-        let errorMessage = `Math operation "${mathNode.data.identifier.displayName}" can only accept number inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
+        const nodeTypeLabel = mathNode.type === 'compare' ? 'Compare operation' : 'Math operation';
+        let errorMessage = `${nodeTypeLabel} "${mathNode.data.identifier.displayName}" can only accept number inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
         
         if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as { valueType?: string };
@@ -258,8 +260,8 @@ export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: Reac
   const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
   const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
   
-  // Include both output nodes (Scene) and terminal logic nodes (Print)
-  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'print')];
+  // Include both output nodes (Scene) and terminal logic nodes (Result)
+  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'result')];
 
   for (const geoNode of geometryNodes) {
     const isConnectedToAnyOutput = isNodeConnectedToAnyOutputType(geoNode.data.identifier.id, edges, nodes, allTerminusTypes);
@@ -277,8 +279,8 @@ export function validateNoMultipleInsertNodesInSeries(nodes: ReactFlowNode<NodeD
   const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
   const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
   
-  // Include both output nodes (Scene) and terminal logic nodes (Print)
-  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'print')];
+  // Include both output nodes (Scene) and terminal logic nodes (Result)
+  const allTerminusTypes = [...outputNodeTypes, ...logicNodeTypes.filter(type => type === 'result')];
   
   const terminusNodes = nodes.filter((node) => allTerminusTypes.includes(node.type!));
   

@@ -5,7 +5,7 @@ export { InsertNode } from "./insert-node";
 export { FilterNode } from "./filter-node";
 export { MergeNode } from "./merge-node";
 export { ConstantsNode } from "./constants-node";
-export { PrintNode } from "./print-node";
+export { ResultNode } from "./result-node";
 export { AnimationNode } from "./animation-node";
 export { SceneNode } from "./scene-node";
 export { CompareNode } from "./compare-node";

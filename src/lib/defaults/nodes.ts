@@ -24,7 +24,7 @@ function getNodeShortId(nodeType: NodeType): string {
     filter: 'flt',
     merge: 'mrg',
     constants: 'con',
-    print: 'prt',
+    result: 'res',
     animation: 'ani',
     scene: 'scn',
     compare: 'cmp',

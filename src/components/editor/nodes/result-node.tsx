@@ -1,4 +1,4 @@
-// src/components/editor/nodes/print-node.tsx - Production-ready debug node with modal viewer
+// src/components/editor/nodes/result-node.tsx - Production-ready debug node with modal viewer
 "use client";
 
 import { useState } from "react";
@@ -6,16 +6,16 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { PrintNodeData } from "@/shared/types/nodes";
+import type { ResultNodeData } from "@/shared/types/nodes";
 import { useDebugContext } from "../flow/debug-context";
 import { logger } from "@/lib/logger";
 
-interface PrintNodeProps extends NodeProps<PrintNodeData> {
+interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;
 }
 
-export function PrintNode({ data, selected, onOpenLogViewer }: PrintNodeProps) {
-  const nodeDefinition = getNodeDefinition('print');
+export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps) {
+  const nodeDefinition = getNodeDefinition('result');
   const [isRunning, setIsRunning] = useState(false);
   
   // Use debug context if available
@@ -29,7 +29,7 @@ export function PrintNode({ data, selected, onOpenLogViewer }: PrintNodeProps) {
     try {
       await onRunToHere(data.identifier.id);
     } catch (error) {
-      logger.errorWithStack('Print node run to here failed', error);
+      logger.errorWithStack('Result node run to here failed', error);
     } finally {
       setIsRunning(false);
     }
@@ -63,8 +63,8 @@ export function PrintNode({ data, selected, onOpenLogViewer }: PrintNodeProps) {
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-yellow-600 flex items-center justify-center rounded text-white font-bold text-sm">
-            🖨️
+          <div className="w-6 h-6 bg-green-600 flex items-center justify-center rounded text-white font-bold text-sm">
+            📊
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-white truncate">

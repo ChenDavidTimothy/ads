@@ -9,7 +9,7 @@ import { InsertNode } from './insert-node';
 import { FilterNode } from './filter-node';
 import { MergeNode } from './merge-node';
 import { ConstantsNode } from './constants-node';
-import { PrintNode } from './print-node';
+import { ResultNode } from './result-node';
 import { AnimationNode } from './animation-node';
 import { SceneNode } from './scene-node';
 import { CompareNode } from './compare-node';
@@ -25,7 +25,7 @@ export const COMPONENT_MAPPING = {
   'filter': FilterNode,
   'merge': MergeNode,
   'constants': ConstantsNode,
-  'print': PrintNode,
+  'result': ResultNode,
   'animation': AnimationNode,
   'scene': SceneNode,
   'compare': CompareNode,

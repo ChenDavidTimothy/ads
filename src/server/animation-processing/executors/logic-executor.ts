@@ -13,7 +13,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     this.registerHandler('filter', this.executeFilter.bind(this));
     this.registerHandler('merge', this.executeMerge.bind(this));
     this.registerHandler('constants', this.executeConstants.bind(this));
-    this.registerHandler('print', this.executePrint.bind(this));
+    this.registerHandler('result', this.executeResult.bind(this));
     this.registerHandler('compare', this.executeCompare.bind(this));
     this.registerHandler('if_else', this.executeIfElse.bind(this));
     this.registerHandler('boolean_op', this.executeBooleanOp.bind(this));
@@ -68,14 +68,14 @@ export class LogicNodeExecutor extends BaseExecutor {
     );
   }
 
-  private async executePrint(
+  private async executeResult(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     connections: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const label = typeof data.label === 'string' ? data.label : 'Debug';
-    const nodeDisplayName = node.data.identifier?.displayName || 'Print Node';
+    const nodeDisplayName = node.data.identifier?.displayName || 'Result Node';
     
     const inputs = getConnectedInputs(
       context,
@@ -86,7 +86,7 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     if (inputs.length === 0) {
       const noInputMessage = '<no input connected>';
-      logger.info(`[PRINT] ${label}: ${noInputMessage}`);
+      logger.info(`[RESULT] ${label}: ${noInputMessage}`);
       
       // Only capture debug logs if this node is the debug target
       const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
@@ -98,7 +98,7 @@ export class LogicNodeExecutor extends BaseExecutor {
           timestamp: Date.now(),
           action: 'execute',
           data: {
-            type: 'print_output',
+            type: 'result_output',
             label,
             nodeDisplayName,
             value: null,
@@ -124,7 +124,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       const executionId = `exec-${Date.now()}-${inputIndex}`;
       
       // Enhanced console logging for development
-      logger.info(`[PRINT] ${label}: ${formattedValue} (${valueType})`);
+      logger.info(`[RESULT] ${label}: ${formattedValue} (${valueType})`);
       
       // Only capture debug logs if this node is the debug target
       const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
@@ -136,7 +136,7 @@ export class LogicNodeExecutor extends BaseExecutor {
           timestamp: Date.now(),
           action: 'execute',
           data: {
-            type: 'print_output',
+            type: 'result_output',
             label,
             nodeDisplayName,
             value,

@@ -1,11 +1,11 @@
 // src/components/editor/flow/node-types.tsx - Build-time generated component mapping
 import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
-import { AnimationNode, PrintNode } from "../nodes";
+import { AnimationNode, ResultNode } from "../nodes";
 
 export function createNodeTypes(
   handleOpenTimelineEditor: (nodeId: string) => void,
-  handleOpenPrintLogViewer: (nodeId: string) => void
+  handleOpenResultLogViewer: (nodeId: string) => void
 ): NodeTypes {
   const componentMapping = getNodeComponentMapping();
   const nodeTypes: NodeTypes = {};
@@ -17,10 +17,10 @@ export function createNodeTypes(
       nodeTypes[nodeType] = (props: Parameters<typeof AnimationNode>[0]) => (
         <AnimationNode {...props} onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} />
       );
-    } else if (nodeType === 'print') {
-      // Special handling for print node with log viewer callback
-      nodeTypes[nodeType] = (props: Parameters<typeof PrintNode>[0]) => (
-        <PrintNode {...props} onOpenLogViewer={() => handleOpenPrintLogViewer(props.data.identifier.id)} />
+    } else if (nodeType === 'result') {
+      // Special handling for result node with log viewer callback
+      nodeTypes[nodeType] = (props: Parameters<typeof ResultNode>[0]) => (
+        <ResultNode {...props} onOpenLogViewer={() => handleOpenResultLogViewer(props.data.identifier.id)} />
       );
 
     } else {

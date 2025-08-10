@@ -18,7 +18,7 @@ import {
   validateNoDuplicateObjectIds,
   validateLogicNodePortConnections,
   validateBooleanTypeConnections,
-  validateMathTypeConnections
+  validateNumberTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
 
@@ -119,9 +119,9 @@ export class ExecutionEngine {
     logger.info('Validating boolean input types for logic nodes');
     validateBooleanTypeConnections(nodes, edges);
     
-    // 4. Math type validation
-    logger.info('Validating math input types');
-    validateMathTypeConnections(nodes, edges);
+    // 4. Number type validation (math operations and compare operations)
+    logger.info('Validating number input types for numeric operations');
+    validateNumberTypeConnections(nodes, edges);
     
     // 5. Flow architecture validation
     logger.info('Validating proper flow architecture');

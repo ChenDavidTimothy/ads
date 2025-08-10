@@ -271,7 +271,7 @@ export const animationRouter = createTRPCRouter({
             return entry.data && 
                    typeof entry.data === 'object' && 
                    entry.data !== null &&
-                   (entry.data as { type?: string }).type === 'print_output';
+                   (entry.data as { type?: string }).type === 'result_output';
           })
           .map(entry => {
             const entryData = entry.data as { type: string; [key: string]: unknown };

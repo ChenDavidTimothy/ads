@@ -54,7 +54,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                   inputCount?: number;
                 };
               };
-              if (logData.type === 'print_output') {
+              if (logData.type === 'result_output') {
                 const newEntry: DebugResult = {
                   value: logData.value,
                   type: logData.valueType ?? 'unknown',
@@ -89,7 +89,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         toast.success(`Debug execution completed - ${data.debugLogs.length} output(s) captured`);
       } else {
-        toast.info('Debug completed', 'No output from print nodes');
+        toast.info('Debug completed', 'No output from result nodes');
       }
     },
     onError: (error) => {

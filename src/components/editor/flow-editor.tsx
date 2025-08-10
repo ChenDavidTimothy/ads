@@ -7,13 +7,13 @@ import "reactflow/dist/style.css";
 
 import { NodePalette } from "./node-palette";
 import { TimelineEditorModal } from "./timeline-editor-modal";
-import { PrintLogModal } from "./print-log-modal";
+import { ResultLogModal } from "./result-log-modal";
 import type { NodeData, AnimationTrack } from "@/shared/types";
 import { createNodeTypes } from "./flow/node-types";
 import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
 import { useTimelineEditor } from "./flow/hooks/use-timeline-editor";
-import { usePrintLogViewer } from "./flow/hooks/use-print-log-viewer";
+import { useResultLogViewer } from "./flow/hooks/use-result-log-viewer";
 import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
 import { useDebugExecution } from "./flow/hooks/use-debug-execution";
 import { DebugProvider } from "./flow/debug-context";
@@ -49,17 +49,17 @@ export function FlowEditor() {
   } = useTimelineEditor(nodes);
 
   const {
-    printLogModalState,
-    handleOpenPrintLogViewer,
-    handleClosePrintLogViewer,
-    getPrintNodeData,
-  } = usePrintLogViewer(nodes);
+    resultLogModalState,
+    handleOpenResultLogViewer,
+    handleCloseResultLogViewer,
+    getResultNodeData,
+  } = useResultLogViewer(nodes);
 
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
   const nodeTypes: NodeTypes = useMemo(
-    () => createNodeTypes(handleOpenTimelineEditor, handleOpenPrintLogViewer),
-    [handleOpenTimelineEditor, handleOpenPrintLogViewer]
+    () => createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer),
+    [handleOpenTimelineEditor, handleOpenResultLogViewer]
   );
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
@@ -135,15 +135,15 @@ export function FlowEditor() {
             onPaneClick={onPaneClick}
             onNodesDelete={onNodesDelete}
             onEdgesDelete={onEdgesDelete}
-            disableDeletion={timelineModalState.isOpen || printLogModalState.isOpen}
+            disableDeletion={timelineModalState.isOpen || resultLogModalState.isOpen}
           />
 
-          <PrintLogModal
-            isOpen={printLogModalState.isOpen}
-            onClose={handleClosePrintLogViewer}
-            nodeId={printLogModalState.nodeId ?? ''}
-            nodeName={getPrintNodeData().name}
-            nodeLabel={getPrintNodeData().label}
+          <ResultLogModal
+            isOpen={resultLogModalState.isOpen}
+            onClose={handleCloseResultLogViewer}
+            nodeId={resultLogModalState.nodeId ?? ''}
+            nodeName={getResultNodeData().name}
+            nodeLabel={getResultNodeData().label}
           />
         </DebugProvider>
 

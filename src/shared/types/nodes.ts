@@ -76,8 +76,8 @@ export interface ConstantsNodeData extends BaseNodeData {
   colorValue: string;
 }
 
-// Print node data
-export interface PrintNodeData extends BaseNodeData {
+// Result node data
+export interface ResultNodeData extends BaseNodeData {
   label: string;
 }
 
@@ -182,6 +182,6 @@ export interface MathOpNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | PrintNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
 
 // NodeType is derived from the registry (definitions)

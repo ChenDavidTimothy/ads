@@ -346,9 +346,9 @@ export const NODE_DEFINITIONS = {
     }
   },
 
-  print: {
-    type: 'print',
-    label: 'Print',
+  result: {
+    type: 'result',
+    label: 'Result',
     description: 'Debug node that logs values to console with "Run to Here" functionality',
     execution: {
       category: 'logic',
@@ -366,10 +366,10 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      icon: '🖨️',
+      icon: '📊',
       colors: {
-        primary: 'bg-yellow-600',
-        handle: '!bg-yellow-500',
+        primary: 'bg-green-600',
+        handle: '!bg-green-500',
       }
     },
     defaults: {
