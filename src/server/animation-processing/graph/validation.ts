@@ -133,7 +133,8 @@ export function validateLogicNodePortConnections(nodes: ReactFlowNode<NodeData>[
 }
 
 export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const booleanNodes = nodes.filter(node => node.type === 'boolean_op');
+  // Validate both boolean operations and conditional logic nodes (if_else) - they all require boolean inputs
+  const booleanNodes = nodes.filter(node => node.type === 'boolean_op' || node.type === 'if_else');
   
   for (const booleanNode of booleanNodes) {
     // Safety check for node data
@@ -167,7 +168,8 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
       // Note: Removed generic 'data' type allowance - be more strict
       
       if (!isValidBooleanSource) {
-        let errorMessage = `Boolean operation "${booleanNode.data.identifier.displayName}" can only accept boolean inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
+        const nodeTypeLabel = booleanNode.type === 'if_else' ? 'If/Else' : 'Boolean operation';
+        let errorMessage = `${nodeTypeLabel} "${booleanNode.data.identifier.displayName}" can only accept boolean inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
         
         if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as { valueType?: string };

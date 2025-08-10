@@ -115,8 +115,8 @@ export class ExecutionEngine {
     logger.info('Validating logic node port connections (prevents logical contradictions)');
     validateLogicNodePortConnections(nodes, edges);
     
-    // 3. Boolean type validation
-    logger.info('Validating boolean input types');
+    // 3. Boolean type validation (boolean operations and conditional logic)
+    logger.info('Validating boolean input types for logic nodes');
     validateBooleanTypeConnections(nodes, edges);
     
     // 4. Math type validation
