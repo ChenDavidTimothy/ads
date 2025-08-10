@@ -20,11 +20,6 @@ import type {
   FadeTrackProperties,
   ColorTrackProperties
 } from "@/shared/types/nodes";
-import type { Node } from "reactflow";
-import type { NodeData } from "@/shared/types";
-import type { PropertyOverrides } from "@/shared/types/nodes";
-import { PropertyMappingModal } from "./property-mapping-modal";
-import { getDefaultTrackPropertiesFromRegistry } from "@/shared/registry/track-registry";
 
 interface TimelineEditorModalProps {
   isOpen: boolean;
@@ -32,10 +27,6 @@ interface TimelineEditorModalProps {
   duration: number;
   tracks: AnimationTrack[];
   onSave: (duration: number, tracks: AnimationTrack[]) => void;
-  nodeId: string | null;
-  upstreamObjects: Node<NodeData>[];
-  propertyOverrides?: PropertyOverrides;
-  onChangeNodeData: (nodeId: string, updates: Partial<NodeData>) => void;
 }
 
 interface DragState {
@@ -78,9 +69,20 @@ function getDefaultTrackProperties(trackType: 'color'): ColorTrackProperties;
 function getDefaultTrackProperties(
   trackType: AnimationTrack['type']
 ): MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
-  const defaults = getDefaultTrackPropertiesFromRegistry(trackType);
-  if (!defaults) throw new Error(`Unknown track type: ${String(trackType)}`);
-  return defaults as unknown as MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties;
+  switch (trackType) {
+    case 'move':
+      return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
+    case 'rotate':
+      return { rotations: 1 };
+    case 'scale':
+      return { from: 1, to: 1.5 };
+    case 'fade':
+      return { from: 1, to: 0.5 };
+    case 'color':
+      return { from: '#ff0000', to: '#00ff00', property: 'fill' };
+    default:
+      throw new Error(`Unknown track type: ${String(trackType)}`);
+  }
 }
 
 export function TimelineEditorModal({
@@ -88,18 +90,12 @@ export function TimelineEditorModal({
   onClose,
   duration: initialDuration,
   tracks: initialTracks,
-  onSave,
-  nodeId,
-  upstreamObjects,
-  propertyOverrides,
-  onChangeNodeData,
+  onSave
 }: TimelineEditorModalProps) {
   const [duration, setDuration] = useState(initialDuration);
   const [tracks, setTracks] = useState<AnimationTrack[]>(initialTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [isMappingOpen, setIsMappingOpen] = useState(false);
-  const [mapping, setMapping] = useState<{ trackId: string; propertyKey: string } | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -113,10 +109,9 @@ export function TimelineEditorModal({
   }, [isOpen, initialDuration, initialTracks]);
 
   const addTrack = useCallback((type: AnimationTrack['type']) => {
-    const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const id = `${type}-${Date.now()}`;
     const baseTrack = {
       id,
-      displayName: '',
       startTime: 0,
       duration: Math.min(2, duration),
     };
@@ -170,13 +165,7 @@ export function TimelineEditorModal({
         throw new Error(`Unknown track type: ${String(exhaustiveCheck)}`);
     }
     
-    setTracks(prev => {
-      const existingOfSameType = prev.filter(t => t.type === type);
-      const nextIndex = existingOfSameType.length + 1;
-      const humanName = `${type} ${nextIndex}`;
-      (newTrack as any).displayName = humanName;
-      return [...prev, newTrack];
-    });
+    setTracks(prev => [...prev, newTrack]);
   }, [duration]);
 
   const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
@@ -273,12 +262,6 @@ export function TimelineEditorModal({
   };
 
   const selectedTrack = tracks.find(t => t.id === selectedTrackId);
-  const openMapping = useCallback((trackId: string, propertyKey: string) => {
-    // Always set mapping fresh to avoid any stale state
-    setMapping({ trackId, propertyKey });
-    // Open modal on next tick to ensure props propagate
-    setTimeout(() => setIsMappingOpen(true), 0);
-  }, []);
 
   return (
     <Modal 
@@ -313,7 +296,7 @@ export function TimelineEditorModal({
 
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-300">Add Transform:</span>
+              <span className="text-sm font-medium text-gray-300">Add Track:</span>
               {(['move', 'rotate', 'scale', 'fade', 'color'] as const).map((type) => (
                 <Button
                   key={type}
@@ -350,9 +333,9 @@ export function TimelineEditorModal({
                 <div key={track.id} className="relative">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-white w-40 truncate">
-                {TRACK_ICONS[track.type]} {(track as any).displayName || track.type}
-              </span>
+                      <span className="text-sm font-medium text-white w-16">
+                        {TRACK_ICONS[track.type]} {track.type}
+                      </span>
                       {selectedTrackId === track.id && (
                         <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
                           SELECTED
@@ -430,17 +413,12 @@ export function TimelineEditorModal({
         </div>
 
         <div className="w-80 border-l border-gray-600 p-4 bg-gray-850">
-          <h3 className="text-lg font-semibold text-white mb-4">Transform Properties</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Properties</h3>
           
           {selectedTrack ? (
             <TrackProperties 
               track={selectedTrack}
               onChange={(updates) => updateTrack(selectedTrack.id, updates)}
-              onOpenMapping={(propertyKey) => {
-                setMapping({ trackId: selectedTrack.id, propertyKey });
-                setIsMappingOpen(true);
-              }}
-              propertyOverrides={propertyOverrides}
             />
           ) : (
             <div className="text-gray-400 text-sm">
@@ -449,27 +427,6 @@ export function TimelineEditorModal({
           )}
         </div>
       </div>
-      {mapping && nodeId && (
-        <PropertyMappingModal
-          isOpen={isMappingOpen}
-          onClose={() => {
-            setIsMappingOpen(false);
-            // Clear mapping to avoid stale fixed values in subsequent opens
-            setMapping(null);
-          }}
-          animationData={{
-            identifier: { id: nodeId, type: 'animation', createdAt: 0, sequence: 0, displayName: '' },
-            lineage: { parentNodes: [], childNodes: [], flowPath: [] },
-            duration,
-            tracks,
-            propertyOverrides: propertyOverrides,
-          } as unknown as NodeData as any}
-          onChange={(updates: Partial<NodeData>) => onChangeNodeData(nodeId, updates)}
-          upstreamObjects={upstreamObjects}
-          fixedTrackId={mapping.trackId}
-          fixedPropertyKey={mapping.propertyKey}
-        />
-      )}
     </Modal>
   );
 }
@@ -477,11 +434,9 @@ export function TimelineEditorModal({
 interface TrackPropertiesProps {
   track: AnimationTrack;
   onChange: (updates: Partial<AnimationTrack>) => void;
-  onOpenMapping: (propertyKey: string) => void;
-  propertyOverrides?: PropertyOverrides;
 }
 
-function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: TrackPropertiesProps) {
+function TrackProperties({ track, onChange }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -537,93 +492,38 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
         <div className="space-y-3">
           <div className="text-sm font-medium text-white">Move Properties</div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <NumberField
-                  label="From X"
-                  value={track.properties.from.x}
-                  onChange={(x) => updateProperties({ 
-                    from: { ...track.properties.from, x }
-                  })}
-                  defaultValue={0}
-                />
-              </div>
-              {propertyOverrides?.[track.id]?.['from.x'] && Object.keys(propertyOverrides[track.id]!['from.x']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <button
-                type="button"
-                className="text-[11px] text-blue-300 hover:text-blue-200 underline"
-                onClick={() => onOpenMapping('from.x')}
-                title="Map overrides for From X"
-              >Map</button>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <NumberField
-                  label="From Y"
-                  value={track.properties.from.y}
-                  onChange={(y) => updateProperties({ 
-                    from: { ...track.properties.from, y }
-                  })}
-                  defaultValue={0}
-                />
-              </div>
-              {propertyOverrides?.[track.id]?.['from.y'] && Object.keys(propertyOverrides[track.id]!['from.y']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <button
-                type="button"
-                className="text-[11px] text-blue-300 hover:text-blue-200 underline"
-                onClick={() => onOpenMapping('from.y')}
-                title="Map overrides for From Y"
-              >Map</button>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <NumberField
-                  label="To X"
-                  value={track.properties.to.x}
-                  onChange={(x) => updateProperties({ 
-                    to: { ...track.properties.to, x }
-                  })}
-                  defaultValue={100}
-                />
-              </div>
-              {propertyOverrides?.[track.id]?.['to.x'] && Object.keys(propertyOverrides[track.id]!['to.x']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <button
-                type="button"
-                className="text-[11px] text-blue-300 hover:text-blue-200 underline"
-                onClick={() => onOpenMapping('to.x')}
-                title="Map overrides for To X"
-              >Map</button>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <NumberField
-                  label="To Y"
-                  value={track.properties.to.y}
-                  onChange={(y) => updateProperties({ 
-                    to: { ...track.properties.to, y }
-                  })}
-                  defaultValue={100}
-                />
-              </div>
-              {propertyOverrides?.[track.id]?.['to.y'] && Object.keys(propertyOverrides[track.id]!['to.y']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <button
-                type="button"
-                className="text-[11px] text-blue-300 hover:text-blue-200 underline"
-                onClick={() => onOpenMapping('to.y')}
-                title="Map overrides for To Y"
-              >Map</button>
-            </div>
+            <NumberField
+              label="From X"
+              value={track.properties.from.x}
+              onChange={(x) => updateProperties({ 
+                from: { ...track.properties.from, x }
+              })}
+              defaultValue={0}
+            />
+            <NumberField
+              label="From Y"
+              value={track.properties.from.y}
+              onChange={(y) => updateProperties({ 
+                from: { ...track.properties.from, y }
+              })}
+              defaultValue={0}
+            />
+            <NumberField
+              label="To X"
+              value={track.properties.to.x}
+              onChange={(x) => updateProperties({ 
+                to: { ...track.properties.to, x }
+              })}
+              defaultValue={100}
+            />
+            <NumberField
+              label="To Y"
+              value={track.properties.to.y}
+              onChange={(y) => updateProperties({ 
+                to: { ...track.properties.to, y }
+              })}
+              defaultValue={100}
+            />
           </div>
         </div>
       )}
@@ -638,12 +538,6 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
             step={0.1}
             defaultValue={1}
           />
-          <div className="flex items-center gap-2">
-            {propertyOverrides?.[track.id]?.['rotations'] && Object.keys(propertyOverrides[track.id]!['rotations']!.overrides).length > 0 && (
-              <span className="text-[11px] text-emerald-300">Assigned</span>
-            )}
-            <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('rotations')} title="Map overrides for Rotations">Map</div>
-          </div>
         </div>
       )}
 
@@ -659,12 +553,6 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
               min={0}
               defaultValue={1}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['from'] && Object.keys(propertyOverrides[track.id]!['from']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('from')} title="Map overrides for From">Map</div>
-            </div>
             <NumberField
               label="To"
               value={track.properties.to}
@@ -673,12 +561,6 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
               min={0}
               defaultValue={1.5}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['to'] && Object.keys(propertyOverrides[track.id]!['to']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('to')} title="Map overrides for To">Map</div>
-            </div>
           </div>
         </div>
       )}
@@ -696,12 +578,6 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
               max={1}
               defaultValue={1}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['from'] && Object.keys(propertyOverrides[track.id]!['from']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('from')} title="Map overrides for From Opacity">Map</div>
-            </div>
             <NumberField
               label="To Opacity"
               value={track.properties.to}
@@ -711,12 +587,6 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
               max={1}
               defaultValue={0.5}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['to'] && Object.keys(propertyOverrides[track.id]!['to']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('to')} title="Map overrides for To Opacity">Map</div>
-            </div>
           </div>
         </div>
       )}
@@ -735,35 +605,17 @@ function TrackProperties({ track, onChange, onOpenMapping, propertyOverrides }: 
               { value: 'stroke', label: 'Stroke' }
             ]}
           />
-          <div className="flex items-center gap-2">
-            {propertyOverrides?.[track.id]?.['property'] && Object.keys(propertyOverrides[track.id]!['property']!.overrides).length > 0 && (
-              <span className="text-[11px] text-emerald-300">Assigned</span>
-            )}
-            <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('property')} title="Map overrides for Property">Map</div>
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <ColorField
               label="From Color"
               value={track.properties.from}
               onChange={(from) => updateProperties({ from })}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['from'] && Object.keys(propertyOverrides[track.id]!['from']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('from')} title="Map overrides for From Color">Map</div>
-            </div>
             <ColorField
               label="To Color"
               value={track.properties.to}
               onChange={(to) => updateProperties({ to })}
             />
-            <div className="self-end flex items-center gap-2">
-              {propertyOverrides?.[track.id]?.['to'] && Object.keys(propertyOverrides[track.id]!['to']!.overrides).length > 0 && (
-                <span className="text-[11px] text-emerald-300">Assigned</span>
-              )}
-              <div className="text-[11px] text-blue-300 cursor-pointer" onClick={() => onOpenMapping('to')} title="Map overrides for To Color">Map</div>
-            </div>
           </div>
         </div>
       )}

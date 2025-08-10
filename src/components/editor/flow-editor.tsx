@@ -185,10 +185,6 @@ export function FlowEditor() {
         duration={timelineNodeData.duration}
         tracks={timelineNodeData.tracks}
         onSave={handleSaveTimeline}
-        nodeId={timelineModalState.nodeId}
-        upstreamObjects={flowTracker.getUpstreamGeometryObjects(timelineModalState.nodeId ?? '', nodes, edges)}
-        propertyOverrides={timelineNodeData.propertyOverrides as any}
-        onChangeNodeData={(nodeId, updates) => updateNodeData(nodeId, updates)}
       />
 
     </div>

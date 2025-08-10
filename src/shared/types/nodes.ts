@@ -110,7 +110,6 @@ export interface ColorTrackProperties {
 // Animation track types - aligned with API schema
 export interface BaseAnimationTrack {
   id: string;
-  displayName: string;
   startTime: number;
   duration: number;
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
@@ -147,8 +146,6 @@ export type AnimationTrack = MoveTrack | RotateTrack | ScaleTrack | FadeTrack | 
 export interface AnimationNodeData extends BaseNodeData {
   duration: number;
   tracks: AnimationTrack[];
-  // Per-object property overrides keyed by stable trackId
-  propertyOverrides?: PropertyOverrides;
 }
 
 // Scene node data
@@ -188,15 +185,3 @@ export interface MathOpNodeData extends BaseNodeData {
 export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
 
 // NodeType is derived from the registry (definitions)
-
-// Override typing
-export type OverrideSource =
-  | { type: 'manual'; value: unknown }
-  | { type: 'resultNode'; id: string };
-
-export interface PropertyOverrideEntry {
-  overrides: Record<string, OverrideSource>; // objectId -> source/value
-}
-
-// PropertyOverrides: trackId -> propertyKey -> overrides
-export type PropertyOverrides = Record<string, Record<string, PropertyOverrideEntry>>;

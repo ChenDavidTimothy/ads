@@ -177,9 +177,8 @@ export function PropertyPanel({
       
       {nodeDefinition.execution.category === 'animation' && isAnimationNodeData(node.data) && (
         <AnimationSpecialProperties 
-          data={node.data}
-          onChange={onChange}
-          upstreamObjects={flowTracker.getUpstreamGeometryObjects(node.data.identifier.id, allNodes, allEdges)}
+          data={node.data} 
+          onChange={onChange} 
         />
       )}
       
@@ -468,18 +467,17 @@ function FilterSpecialProperties({
 interface AnimationSpecialProps {
   data: AnimationNodeData;
   onChange: (data: Partial<NodeData>) => void;
-  upstreamObjects: Node<NodeData>[];
 }
 
-function AnimationSpecialProperties({ data, onChange, upstreamObjects }: AnimationSpecialProps) {
+function AnimationSpecialProperties({ data }: AnimationSpecialProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">Tracks</label>
       <div className="text-xs text-gray-400">
         {data.tracks?.length ?? 0} animation tracks defined
       </div>
-      <div className="flex items-center gap-2 mt-2">
-        <div className="text-xs text-blue-400">Double-click the node to edit timeline</div>
+      <div className="text-xs text-blue-400 mt-2">
+        Double-click the node to edit timeline
       </div>
     </div>
   );
