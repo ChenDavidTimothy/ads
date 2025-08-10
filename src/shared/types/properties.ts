@@ -74,21 +74,6 @@ export interface NodePropertyConfig {
   properties: PropertySchema[];
 }
 
-// Helper to get default values from schema
-export function getDefaultPropertiesFromSchema(
-  schemas: PropertySchema[]
-): Record<string, string | number | boolean | Point2D> {
-  const defaults: Record<string, string | number | boolean | Point2D> = {};
-  
-  for (const schema of schemas) {
-    if (schema.defaultValue !== undefined) {
-      defaults[schema.key] = schema.defaultValue;
-    }
-  }
-  
-  return defaults;
-}
-
 // Generate a Zod schema from PropertySchema for robust runtime validation
 export function buildZodSchemaFromProperties(
   schemas: PropertySchema[]

@@ -13,6 +13,7 @@ import type {
   ColorTrackProperties
 } from "@/shared/types";
 import { getNodeDefinition, getNodeDefaults } from "@/shared/registry/registry-utils";
+import { getDefaultTrackPropertiesFromRegistry } from "@/shared/registry/track-registry";
 
 // Utility functions for node identification (unchanged)
 function getNodeShortId(nodeType: NodeType): string {
@@ -121,24 +122,15 @@ export function getDefaultNodeData(
 }
 
 // Track property defaults (unchanged - future logic node preparation)
-export function getDefaultTrackProperties(trackType: AnimationTrack['type']): 
-  MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
-  switch (trackType) {
-    case 'move':
-      return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
-    case 'rotate':
-      return { rotations: 1 };
-    case 'scale':
-      return { from: 1, to: 1.5 };
-    case 'fade':
-      return { from: 1, to: 0.5 };
-    case 'color':
-      return { from: '#ff0000', to: '#00ff00', property: 'fill' };
-    default:
-      {
-        const _exhaustiveCheck: never = trackType;
-        void _exhaustiveCheck;
-        throw new Error('Unknown track type');
-      }
+export function getDefaultTrackProperties(
+  trackType: AnimationTrack['type']
+): MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties {
+  const defaults = getDefaultTrackPropertiesFromRegistry(trackType);
+  if (!defaults) {
+    const _exhaustiveCheck: never = trackType as never;
+    void _exhaustiveCheck;
+    throw new Error('Unknown track type');
   }
+  return defaults as unknown as
+    MoveTrackProperties | RotateTrackProperties | ScaleTrackProperties | FadeTrackProperties | ColorTrackProperties;
 }

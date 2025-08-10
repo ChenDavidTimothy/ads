@@ -21,11 +21,12 @@ export function useTimelineEditor(nodes: Node<NodeData>[]) {
   );
 
   const getTimelineNodeData = useCallback(() => {
-    if (!timelineNode) return { duration: 3, tracks: [] as AnimationTrack[] };
-    const data = timelineNode.data as unknown as Partial<{ duration: number; tracks: AnimationTrack[] }>;
+    if (!timelineNode) return { duration: 3, tracks: [] as AnimationTrack[], propertyOverrides: undefined as unknown };
+    const data = timelineNode.data as unknown as Partial<{ duration: number; tracks: AnimationTrack[]; propertyOverrides: unknown }>;
     return {
       duration: (typeof data.duration === 'number' ? data.duration : 3),
       tracks: Array.isArray(data.tracks) ? data.tracks : ([] as AnimationTrack[]),
+      propertyOverrides: data.propertyOverrides,
     };
   }, [timelineNode]);
 
