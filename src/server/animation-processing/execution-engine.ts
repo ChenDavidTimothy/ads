@@ -16,8 +16,7 @@ import {
   validateProperFlow, 
   validateNoMultipleInsertNodesInSeries,
   validateNoDuplicateObjectIds,
-  validateMergePortConnections,
-  validateBooleanPortConnections,
+  validateLogicNodePortConnections,
   validateBooleanTypeConnections,
   validateMathTypeConnections
 } from "./graph/validation";
@@ -112,23 +111,19 @@ export class ExecutionEngine {
     logger.info('Validating connections and ports');
     validateConnections(nodes, edges);
     
-    // 2. Merge port connections validation
-    logger.info('Validating merge port connections');
-    validateMergePortConnections(nodes, edges);
+    // 2. Universal logic node port connections validation
+    logger.info('Validating logic node port connections (prevents logical contradictions)');
+    validateLogicNodePortConnections(nodes, edges);
     
-    // 3. Boolean port connections validation
-    logger.info('Validating boolean port connections');
-    validateBooleanPortConnections(nodes, edges);
-    
-    // 4. Boolean type validation
+    // 3. Boolean type validation
     logger.info('Validating boolean input types');
     validateBooleanTypeConnections(nodes, edges);
     
-    // 5. Math type validation
+    // 4. Math type validation
     logger.info('Validating math input types');
     validateMathTypeConnections(nodes, edges);
     
-    // 6. Flow architecture validation
+    // 5. Flow architecture validation
     logger.info('Validating proper flow architecture');
     validateProperFlow(nodes, edges);
     

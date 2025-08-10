@@ -27,7 +27,7 @@ export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
 export function validateConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
   // Validate port compatibility for all connections
   validatePortCompatibility(nodes, edges);
-  // Note: Merge port validation is handled separately in runUniversalValidation
+  // Note: Logic node port validation is handled separately in runUniversalValidation
 }
 
 export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
@@ -83,53 +83,23 @@ export function validatePortCompatibility(nodes: ReactFlowNode<NodeData>[], edge
   }
 }
 
-export function validateMergePortConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const mergeNodes = nodes.filter(node => node.type === 'merge');
+/**
+ * Universal validation for ALL logic nodes to prevent multiple edges to the same input port.
+ * This prevents logical contradictions and ambiguity in logic operations.
+ * Applies to: merge, boolean_op, filter, if_else, compare, math_op, and any future logic nodes.
+ */
+export function validateLogicNodePortConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  // Get all logic node types (current and future)
+  const logicNodeTypes = getNodesByCategory('logic').map(def => def.type);
+  const logicNodes = nodes.filter(node => logicNodeTypes.includes(node.type!));
   
-  for (const mergeNode of mergeNodes) {
-    const incomingEdges = edges.filter(edge => edge.target === mergeNode.data.identifier.id);
-    const portConnections = new Map<string, ReactFlowEdge[]>();
-    
-    // Group edges by target port
-    for (const edge of incomingEdges) {
-      if (!edge.targetHandle) continue;
-      
-      const existingEdges = portConnections.get(edge.targetHandle) ?? [];
-      existingEdges.push(edge);
-      portConnections.set(edge.targetHandle, existingEdges);
-    }
-    
-    // Check for multiple connections to same port
-    for (const [portId, connectedEdges] of portConnections.entries()) {
-      if (connectedEdges.length > 1) {
-        const sourceNodeNames = connectedEdges.map(edge => {
-          const sourceNode = nodes.find(n => n.data.identifier.id === edge.source);
-          return sourceNode?.data.identifier.displayName ?? edge.source;
-        });
-        
-        throw new InvalidConnectionError(
-          `Multiple connections to merge port "${portId}" on ${mergeNode.data.identifier.displayName}. Each merge input port can only accept one connection. Connected from: ${sourceNodeNames.join(', ')}`,
-          { 
-            nodeId: mergeNode.data.identifier.id, 
-            nodeName: mergeNode.data.identifier.displayName,
-            info: { portId, connectedEdges: connectedEdges.length }
-          }
-        );
-      }
-    }
-  }
-}
-
-export function validateBooleanPortConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  const booleanNodes = nodes.filter(node => node.type === 'boolean_op');
-  
-  for (const booleanNode of booleanNodes) {
+  for (const logicNode of logicNodes) {
     // Safety check for node data
-    if (!booleanNode.data?.identifier?.id || !booleanNode.data?.identifier?.displayName) {
+    if (!logicNode.data?.identifier?.id || !logicNode.data?.identifier?.displayName) {
       continue; // Skip nodes with invalid data structure
     }
     
-    const incomingEdges = edges.filter(edge => edge.target === booleanNode.data.identifier.id);
+    const incomingEdges = edges.filter(edge => edge.target === logicNode.data.identifier.id);
     const portConnections = new Map<string, ReactFlowEdge[]>();
     
     // Group edges by target port
@@ -150,11 +120,11 @@ export function validateBooleanPortConnections(nodes: ReactFlowNode<NodeData>[],
         });
         
         throw new InvalidConnectionError(
-          `Multiple connections to boolean port "${portId}" on ${booleanNode.data.identifier.displayName}. Each boolean input port can only accept one connection. Connected from: ${sourceNodeNames.join(', ')}`,
+          `Multiple connections to logic port "${portId}" on ${logicNode.data.identifier.displayName}. Each logic input port can only accept one connection to prevent logical contradictions. Connected from: ${sourceNodeNames.join(', ')}`,
           { 
-            nodeId: booleanNode.data.identifier.id, 
-            nodeName: booleanNode.data.identifier.displayName,
-            info: { portId, connectedEdges: connectedEdges.length }
+            nodeId: logicNode.data.identifier.id, 
+            nodeName: logicNode.data.identifier.displayName,
+            info: { portId, connectedEdges: connectedEdges.length, nodeType: logicNode.type }
           }
         );
       }
