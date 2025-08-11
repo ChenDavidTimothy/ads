@@ -3,16 +3,13 @@ import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/typ
 import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
-import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
-import { transformFactory } from "@/shared/registry/transforms";
+import { convertTracksToSceneAnimations, isPerObjectCursorMap } from "../scene/scene-assembler";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
   protected registerHandlers(): void {
     this.registerHandler('animation', this.executeAnimation.bind(this));
   }
-
-
 
   private async executeAnimation(
     node: ReactFlowNode<NodeData>,
@@ -101,14 +98,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
   }
 
   private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
-    const maps: Record<string, number>[] = [];
+    const cursorMap: Record<string, number> = {};
+    
     for (const input of inputs) {
-      const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
-      if (isPerObjectCursorMap(maybeMap)) {
-        maps.push(maybeMap);
+      if (input.metadata?.perObjectTimeCursor && isPerObjectCursorMap(input.metadata.perObjectTimeCursor)) {
+        for (const [objectId, time] of Object.entries(input.metadata.perObjectTimeCursor)) {
+          cursorMap[objectId] = Math.max(cursorMap[objectId] ?? 0, time);
+        }
       }
     }
-    return mergeCursorMaps(maps);
+    
+    return cursorMap;
   }
 }
 

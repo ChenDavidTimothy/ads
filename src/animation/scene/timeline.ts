@@ -16,7 +16,6 @@ import type {
 
 // Import the new registry system
 import { 
-  transformFactory,
   TransformEvaluator,
   getTransformDefinition
 } from '@/shared/registry/transforms';
@@ -24,9 +23,6 @@ import {
 // Create an instance of the transform evaluator
 const transformEvaluator = new TransformEvaluator();
 
-import { 
-  lerp
-} from '../core/interpolation';
 type AnimationValue = Point2D | number | string | boolean | null;
 
 // (Legacy easing and color helpers removed; modern evaluator handles interpolation)
@@ -35,7 +31,7 @@ type AnimationValue = Point2D | number | string | boolean | null;
 function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
   // Delegate to the evaluator with absolute time so it can correctly
   // handle start/end boundaries and easing.
-  return transformEvaluator.evaluateTransform(animation as any, time);
+  return transformEvaluator.evaluateTransform(animation, time);
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
@@ -127,16 +123,17 @@ export function getObjectStateAtTime(
   return state;
 }
 
-// Helper function to update accumulated state with end values
+// Helper function to update accumulated state from animation end value
 function updateAccumulatedState(
   accumulatedState: ObjectState, 
   animation: SceneAnimationTrack, 
   endValue: AnimationValue
 ): void {
   const definition = getTransformDefinition(animation.type);
-  if (!definition?.metadata?.targetProperty) return;
+  const property = definition?.metadata?.targetProperty;
+  if (!property) return;
   
-  switch (definition.metadata.targetProperty) {
+  switch (property) {
     case 'position':
       accumulatedState.position = endValue as Point2D;
       break;
@@ -156,7 +153,7 @@ function updateAccumulatedState(
       accumulatedState.opacity = endValue as number;
       break;
     case 'color':
-      const colorProperty = (animation.properties as any).property;
+      const colorProperty = (animation.properties as { property: string }).property;
       if (colorProperty === 'fill') {
         accumulatedState.colors.fill = endValue as string;
       } else if (colorProperty === 'stroke') {
@@ -174,30 +171,30 @@ function updateStateFromAnimation(
   targetProperty?: string
 ): void {
   const definition = getTransformDefinition(animation.type);
-  const property = targetProperty || definition?.metadata?.targetProperty;
+  const property = targetProperty ?? definition?.metadata?.targetProperty;
   if (!property) return;
   
   if (typeof value === 'object' && value !== null && 'position' in value) {
     // Value is an ObjectState, extract the specific property
     switch (property) {
       case 'position':
-        state.position = (value as ObjectState).position;
+        state.position = value.position;
         break;
       case 'rotation':
-        state.rotation = (value as ObjectState).rotation;
+        state.rotation = value.rotation;
         break;
       case 'scale':
-        state.scale = (value as ObjectState).scale;
+        state.scale = value.scale;
         break;
       case 'opacity':
-        state.opacity = (value as ObjectState).opacity;
+        state.opacity = value.opacity;
         break;
       case 'color':
-        const colorProperty = (animation.properties as any).property;
+        const colorProperty = (animation.properties as { property: string }).property;
         if (colorProperty === 'fill') {
-          state.colors.fill = (value as ObjectState).colors.fill;
+          state.colors.fill = value.colors.fill;
         } else if (colorProperty === 'stroke') {
-          state.colors.stroke = (value as ObjectState).colors.stroke;
+          state.colors.stroke = value.colors.stroke;
         }
         break;
     }
@@ -223,7 +220,7 @@ function updateStateFromAnimation(
         state.opacity = value as number;
         break;
       case 'color':
-        const colorProperty = (animation.properties as any).property;
+        const colorProperty = (animation.properties as { property: string }).property;
         if (colorProperty === 'fill') {
           state.colors.fill = value as string;
         } else if (colorProperty === 'stroke') {
@@ -253,22 +250,15 @@ export function createMoveAnimation(
   to: Point2D,
   startTime: number,
   duration: number,
-  easing = 'easeInOut'
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('move', { from, to });
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId: sceneTransform.objectId,
-    type: 'move' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
+    objectId,
+    type: 'move',
+    startTime,
+    duration,
+    easing,
+    properties: { from, to }
   };
 }
 
@@ -278,22 +268,15 @@ export function createRotateAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing = 'linear'
+  _easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('rotate', { from, to });
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId: sceneTransform.objectId,
-    type: 'rotate' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
+    objectId,
+    type: 'rotate',
+    startTime,
+    duration,
+    easing: _easing,
+    properties: { from, to }
   };
 }
 
@@ -303,21 +286,14 @@ export function createScaleAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing = 'easeInOut'
+  _easing = 'easeInOut'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('scale', { from, to });
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId: sceneTransform.objectId,
-    type: 'scale' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
+    objectId,
+    type: 'scale',
+    startTime,
+    duration,
+    easing: 'easeInOut',
+    properties: { from, to }
   };
 }
