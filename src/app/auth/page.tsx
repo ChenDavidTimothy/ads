@@ -40,6 +40,11 @@ export default function AuthPage() {
           throw signInError;
         }
         
+        // Mark that this navigation follows an explicit sign-in action
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('justSignedIn', '1');
+        }
+
         router.push("/workspace-selector");
       }
     } catch (err) {

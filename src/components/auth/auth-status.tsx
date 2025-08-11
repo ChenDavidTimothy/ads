@@ -163,9 +163,13 @@ export function AuthStatus() {
             const expiresAt = new Date(session.expires_at! * 1000);
             setSessionExpiresAt(expiresAt);
             scheduleSessionRefresh(expiresAt);
-            showToastOnce('signed-in', () => {
-              toast.success('Signed in successfully', `Welcome back, ${session.user.email}`);
-            });
+            // Only show welcome toast when we know the user explicitly just logged in
+            if (typeof window !== 'undefined' && sessionStorage.getItem('justSignedIn') === '1') {
+              sessionStorage.removeItem('justSignedIn');
+              showToastOnce('signed-in', () => {
+                toast.success('Signed in successfully', `Welcome back, ${session.user.email}`);
+              });
+            }
           }
           break;
           
