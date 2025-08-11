@@ -80,7 +80,6 @@ export interface SceneRotateTrack extends BaseSceneAnimationTrack {
   properties: {
     from: number;
     to: number;
-    rotations?: number;
   };
 }
 

@@ -88,6 +88,28 @@ export class TransformFactoryImpl implements TransformFactory {
     return Object.values(REGISTRY).filter(def => def.category === category);
   }
 
+  // Get track colors for UI rendering
+  getTrackColors(): Record<string, string> {
+    const colors: Record<string, string> = {};
+    for (const [type, definition] of Object.entries(REGISTRY)) {
+      if (definition.metadata?.trackColor) {
+        colors[type] = definition.metadata.trackColor;
+      }
+    }
+    return colors;
+  }
+
+  // Get track icons for UI rendering
+  getTrackIcons(): Record<string, string> {
+    const icons: Record<string, string> = {};
+    for (const [type, definition] of Object.entries(REGISTRY)) {
+      if (definition.metadata?.trackIcon) {
+        icons[type] = definition.metadata.trackIcon;
+      }
+    }
+    return icons;
+  }
+
   // Get default properties for a transform type
   getDefaultProperties(type: string): Record<string, unknown> | undefined {
     const definition = this.getTransformDefinition(type);

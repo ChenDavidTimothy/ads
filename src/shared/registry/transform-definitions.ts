@@ -33,20 +33,36 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      targetProperty: 'position',
+      trackColor: 'bg-purple-600',
+      trackIcon: '→',
     },
   },
 
   rotate: {
     type: 'rotate',
     label: 'Rotate',
-    description: 'Rotate object by specified number of rotations',
-    category: 'transformation',
+    description: 'Rotate object from one rotation to another',
+    category: 'movement',
     properties: [
       {
-        key: 'rotations',
+        key: 'from',
         type: 'number',
-        label: 'Rotations',
-        description: 'Number of full rotations (1 = 360°, 0.5 = 180°)',
+        label: 'From Rotation',
+        description: 'Starting rotation in rotations (1 = 360°)',
+        defaultValue: 0,
+        required: true,
+        constraints: {
+          min: -10,
+          max: 10,
+          step: 0.1,
+        },
+      },
+      {
+        key: 'to',
+        type: 'number',
+        label: 'To Rotation',
+        description: 'Ending rotation in rotations (1 = 360°)',
         defaultValue: 1,
         required: true,
         constraints: {
@@ -57,11 +73,15 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
       },
     ],
     defaults: {
-      rotations: 1,
+      from: 0,
+      to: 1,
     },
     metadata: {
       supportsEasing: true,
       defaultEasing: 'linear',
+      targetProperty: 'rotation',
+      trackColor: 'bg-indigo-600',
+      trackIcon: '↻',
     },
   },
 
@@ -105,6 +125,8 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      trackColor: 'bg-pink-600',
+      trackIcon: '⚹',
     },
   },
 
@@ -148,6 +170,8 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      trackColor: 'bg-yellow-600',
+      trackIcon: '◐',
     },
   },
 
@@ -193,6 +217,8 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      trackColor: 'bg-orange-600',
+      trackIcon: '🎨',
     },
   },
 };

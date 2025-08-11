@@ -88,7 +88,8 @@ export interface MoveTrackProperties {
 }
 
 export interface RotateTrackProperties {
-  rotations: number;
+  from: number;
+  to: number;
 }
 
 export interface ScaleTrackProperties {

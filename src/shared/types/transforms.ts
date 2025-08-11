@@ -37,6 +37,9 @@ export interface TransformDefinition {
   metadata?: {
     supportsEasing?: boolean;
     defaultEasing?: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+    targetProperty?: string;
+    trackColor?: string;
+    trackIcon?: string;
     [key: string]: unknown;
   };
 }

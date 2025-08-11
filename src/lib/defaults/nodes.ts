@@ -127,7 +127,7 @@ export function getDefaultTrackProperties(trackType: AnimationTrack['type']):
     case 'move':
       return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
     case 'rotate':
-      return { rotations: 1 };
+      return { from: 0, to: 1 };
     case 'scale':
       return { from: 1, to: 1.5 };
     case 'fade':

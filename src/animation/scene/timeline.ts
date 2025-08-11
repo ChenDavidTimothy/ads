@@ -11,20 +11,14 @@ import type {
 
 import type { Point2D } from '@/shared/types/core';
 import type { 
-  SceneAnimationTrack,
-  SceneMoveTrack,
-  SceneRotateTrack,
-  SceneScaleTrack,
-  SceneFadeTrack,
-  SceneColorTrack
+  SceneAnimationTrack
 } from '@/shared/types';
 
 // Import the new registry system
 import { 
   transformFactory,
   TransformEvaluator,
-  getTransformDefinition,
-  getDefaultProperties
+  getTransformDefinition
 } from '@/shared/registry/transforms';
 
 // Create an instance of the transform evaluator
@@ -41,16 +35,6 @@ import {
 
 type EasingType = 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 type AnimationValue = Point2D | number | string | boolean | null;
-
-// Type guards for scene animation tracks - now using the registry system
-// These are now generated dynamically from the registry
-import { 
-  isSceneMoveTrack,
-  isSceneRotateTrack,
-  isSceneScaleTrack,
-  isSceneFadeTrack,
-  isSceneColorTrack
-} from '@/shared/types/scene';
 
 // Get easing function by name - now using the registry system
 function getEasingFunction(easing: string) {
@@ -115,55 +99,12 @@ function evaluateAnimation(animation: SceneAnimationTrack, time: number): Animat
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
   // Use the new transform evaluator for consistent end value calculation
-  try {
-    return transformEvaluator.getEndValue(animation);
-  } catch (error) {
-    // Fallback to legacy evaluation if needed
-    console.warn('Transform end value calculation failed, falling back to legacy:', error);
-    if (isSceneMoveTrack(animation)) {
-      return animation.properties.to;
-    } else if (isSceneRotateTrack(animation)) {
-      return animation.properties.rotations 
-        ? animation.properties.from + (animation.properties.rotations * Math.PI * 2)
-        : animation.properties.to;
-    } else if (isSceneScaleTrack(animation)) {
-      return animation.properties.to;
-    } else if (isSceneFadeTrack(animation)) {
-      return animation.properties.to;
-    } else if (isSceneColorTrack(animation)) {
-      return animation.properties.to;
-    }
-    return null;
-  }
+  return transformEvaluator.getEndValue(animation);
 }
 
 function interpolateAnimation(animation: SceneAnimationTrack, progress: number): AnimationValue {
   // Use the new transform evaluator for consistent interpolation
-  try {
-    return transformEvaluator.evaluateTransform(animation, progress);
-  } catch (error) {
-    // Fallback to legacy interpolation if needed
-    console.warn('Transform interpolation failed, falling back to legacy:', error);
-  if (isSceneMoveTrack(animation)) {
-    return lerpPoint(animation.properties.from, animation.properties.to, progress);
-  } else if (isSceneRotateTrack(animation)) {
-    if (animation.properties.rotations) {
-      return animation.properties.from + (progress * animation.properties.rotations * Math.PI * 2);
-    }
-    return lerp(animation.properties.from, animation.properties.to, progress);
-  } else if (isSceneScaleTrack(animation)) {
-    if (typeof animation.properties.from === 'number' && typeof animation.properties.to === 'number') {
-      const scaleValue = lerp(animation.properties.from, animation.properties.to, progress);
-      return { x: scaleValue, y: scaleValue };
-    }
-    return lerpPoint(animation.properties.from as Point2D, animation.properties.to as Point2D, progress);
-  } else if (isSceneFadeTrack(animation)) {
-    return lerp(animation.properties.from, animation.properties.to, progress);
-  } else if (isSceneColorTrack(animation)) {
-    return lerpColor(animation.properties.from, animation.properties.to, progress);
-  }
-  return null;
-  }
+  return transformEvaluator.evaluateTransform(animation, progress);
 }
 
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
@@ -214,7 +155,7 @@ export function getObjectStateAtTime(
     
     // Use the registry system to determine how to apply the value
     const definition = getTransformDefinition(animation.type);
-    if (definition?.metadata) {
+    if (definition?.metadata?.targetProperty) {
       // Apply the value based on the transform definition
       switch (definition.metadata.targetProperty) {
         case 'position':
@@ -238,40 +179,10 @@ export function getObjectStateAtTime(
           }
           break;
         default:
-          // Fallback to legacy type checking
-          if (isSceneMoveTrack(animation)) {
-            state.position = value as Point2D;
-          } else if (isSceneRotateTrack(animation)) {
-            state.rotation = value as number;
-          } else if (isSceneScaleTrack(animation)) {
-            state.scale = value as Point2D;
-          } else if (isSceneFadeTrack(animation)) {
-            state.opacity = value as number;
-          } else if (isSceneColorTrack(animation)) {
-            if (animation.properties.property === 'fill') {
-              state.colors.fill = value as string;
-            } else {
-              state.colors.stroke = value as string;
-            }
-          }
+          console.warn(`Unknown target property: ${definition.metadata.targetProperty}`);
       }
     } else {
-      // Fallback to legacy type checking if no definition found
-      if (isSceneMoveTrack(animation)) {
-        state.position = value as Point2D;
-      } else if (isSceneRotateTrack(animation)) {
-        state.rotation = value as number;
-      } else if (isSceneScaleTrack(animation)) {
-        state.scale = value as Point2D;
-      } else if (isSceneFadeTrack(animation)) {
-        state.opacity = value as number;
-      } else if (isSceneColorTrack(animation)) {
-        if (animation.properties.property === 'fill') {
-          state.colors.fill = value as string;
-        } else {
-          state.colors.stroke = value as string;
-        }
-      }
+      console.warn(`No metadata found for transform type: ${animation.type}`);
     }
   }
   
@@ -290,7 +201,7 @@ export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<st
   return sceneState;
 }
 
-// Helper to create common animation patterns
+// Helper to create common animation patterns - now using the registry system
 export function createMoveAnimation(
   objectId: string,
   from: Point2D,
@@ -298,31 +209,46 @@ export function createMoveAnimation(
   startTime: number,
   duration: number,
   easing = 'easeInOut'
-): SceneMoveTrack {
+): SceneAnimationTrack {
+  const transform = transformFactory.createTransform('move', { from, to });
+  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
+  
+  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId,
-    type: 'move',
-    startTime,
-    duration,
-    easing: easing as EasingType,
-    properties: { from, to }
+    objectId: sceneTransform.objectId,
+    type: 'move' as const,
+    startTime: sceneTransform.startTime,
+    duration: sceneTransform.duration,
+    easing: sceneTransform.easing,
+    properties: {
+      from: from,
+      to: to
+    }
   };
 }
 
 export function createRotateAnimation(
   objectId: string,
-  rotations: number,
+  from: number,
+  to: number,
   startTime: number,
   duration: number,
   easing = 'linear'
-): SceneRotateTrack {
+): SceneAnimationTrack {
+  const transform = transformFactory.createTransform('rotate', { from, to });
+  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
+  
+  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId,
-    type: 'rotate',
-    startTime,
-    duration,
-    easing: easing as EasingType,
-    properties: { from: 0, to: 0, rotations }
+    objectId: sceneTransform.objectId,
+    type: 'rotate' as const,
+    startTime: sceneTransform.startTime,
+    duration: sceneTransform.duration,
+    easing: sceneTransform.easing,
+    properties: {
+      from: from,
+      to: to
+    }
   };
 }
 
@@ -333,13 +259,20 @@ export function createScaleAnimation(
   startTime: number,
   duration: number,
   easing = 'easeInOut'
-): SceneScaleTrack {
+): SceneAnimationTrack {
+  const transform = transformFactory.createTransform('scale', { from, to });
+  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
+  
+  // Convert SceneTransform to SceneAnimationTrack
   return {
-    objectId,
-    type: 'scale',
-    startTime,
-    duration,
-    easing: easing as EasingType,
-    properties: { from, to }
+    objectId: sceneTransform.objectId,
+    type: 'scale' as const,
+    startTime: sceneTransform.startTime,
+    duration: sceneTransform.duration,
+    easing: sceneTransform.easing,
+    properties: {
+      from: from,
+      to: to
+    }
   };
 }

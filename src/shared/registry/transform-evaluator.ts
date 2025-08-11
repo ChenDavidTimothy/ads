@@ -70,9 +70,9 @@ export class TransformEvaluator {
         return transform.properties.to as Point2D;
       case 'rotate':
         // For rotate, we need to calculate the final rotation
-        const rotations = transform.properties.rotations as number;
-        const fromRotation = 0; // Always start from 0 for scene transforms
-        return fromRotation + (rotations * Math.PI * 2);
+        const fromRotation = transform.properties.from as number;
+        const toRotation = transform.properties.to as number;
+        return toRotation;
       case 'scale':
         return transform.properties.to as number;
       case 'fade':
@@ -120,11 +120,9 @@ export class TransformEvaluator {
 
   // Interpolate rotate transform
   private interpolateRotate(transform: SceneTransform, progress: number): number {
-    const rotations = transform.properties.rotations as number;
-    const fromRotation = 0; // Always start from 0 for scene transforms
-    const toRotation = fromRotation + (rotations * Math.PI * 2);
-    const interpolator = getInterpolator('number');
-    return interpolator.interpolate(fromRotation, toRotation, progress) as number;
+    const fromRotation = transform.properties.from as number;
+    const toRotation = transform.properties.to as number;
+    return fromRotation + (progress * (toRotation - fromRotation));
   }
 
   // Interpolate scale transform
