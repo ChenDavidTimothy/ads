@@ -100,7 +100,7 @@ export function generateNodePalette() {
     icon: def.rendering.icon
   }));
 
-  const utilityNodes = getNodesByCategory('output').map(def => ({
+  const outputNodes = getNodesByCategory('output').map(def => ({
     type: def.type as NodeType,
     label: def.label,
     icon: def.rendering.icon
@@ -111,7 +111,7 @@ export function generateNodePalette() {
     timingNodes,
     logicNodes,
     animationNodes,
-    utilityNodes
+    outputNodes
   };
 }
 

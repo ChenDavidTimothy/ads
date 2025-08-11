@@ -63,8 +63,8 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-green-600 flex items-center justify-center rounded text-white font-bold text-sm">
-            📊
+          <div className="w-6 h-6 bg-blue-600 flex items-center justify-center rounded text-white font-bold text-sm">
+            🎯
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-white truncate">
@@ -99,13 +99,13 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
 
         <div className="mt-3 pt-2 border-t border-gray-700">
           <div className="text-xs text-gray-400 text-center">
-            Customer Debug Output
+            Result Output Node
           </div>
           <div className="text-xs text-blue-400 text-center mt-1">
             Double-click to view debug logs
           </div>
-          <div className="text-xs text-green-500 text-center mt-1">
-            Production Ready
+          <div className="text-xs text-blue-500 text-center mt-1">
+            Accepts multiple connections
           </div>
         </div>
       </CardContent>

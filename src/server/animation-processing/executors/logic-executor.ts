@@ -6,6 +6,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
 import { TypeValidationError } from "@/shared/types/validation";
+import { MultipleResultValuesError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 
 export class LogicNodeExecutor extends BaseExecutor {
@@ -85,6 +86,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       'input'
     );
 
+    // VALIDATION: Exactly one value required at execution time
     if (inputs.length === 0) {
       const noInputMessage = '<no input connected>';
       logger.info(`[RESULT] ${label}: ${noInputMessage}`);
@@ -117,48 +119,61 @@ export class LogicNodeExecutor extends BaseExecutor {
       return;
     }
 
-    // Process all connected inputs with enhanced production logging
-    for (const [inputIndex, input] of inputs.entries()) {
-      const value = input.data;
-      const valueType = this.getValueType(value);
-      const formattedValue = this.formatValue(value);
-      const executionId = `exec-${Date.now()}-${inputIndex}`;
-      
-      // Enhanced console logging for development
-      logger.info(`[RESULT] ${label}: ${formattedValue} (${valueType})`);
-      
-      // Only capture debug logs if this node is the debug target
-      const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
-      
-      // Production-ready debug storage with comprehensive metadata
-      if (context.debugMode && context.executionLog && isDebugTarget) {
-        context.executionLog.push({
-          nodeId: node.data.identifier.id,
-          timestamp: Date.now(),
-          action: 'execute',
-          data: {
-            type: 'result_output',
-            label,
-            nodeDisplayName,
-            value,
-            valueType,
-            formattedValue,
-            executionContext: {
-              hasConnections: true,
-              inputCount: inputs.length,
-              currentInputIndex: inputIndex,
-              executionId,
-              flowState: 'executed_successfully',
-              // Additional metadata for customer debugging
-              dataSize: this.getDataSize(value),
-              isComplexObject: this.isComplexObject(value),
-              hasNestedData: this.hasNestedData(value),
-              sourceMetadata: input.metadata ?? {}
-            }
-          }
-        });
-      }
+    if (inputs.length > 1) {
+      const sourceNames = inputs.map(input => `${input.nodeId}:${input.portId}`).join(', ');
+      throw new MultipleResultValuesError(nodeDisplayName, sourceNames.split(', '));
     }
+
+    // Process the single connected input
+    const input = inputs[0]!; // We know this exists because we checked inputs.length > 0
+    const value = input.data;
+    const valueType = this.getValueType(value);
+    const formattedValue = this.formatValue(value);
+    const executionId = `exec-${Date.now()}`;
+    
+    // Enhanced console logging for development
+    logger.info(`[RESULT] ${label}: ${formattedValue} (${valueType})`);
+    
+    // Only capture debug logs if this node is the debug target
+    const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
+    
+    // Production-ready debug storage with comprehensive metadata
+    if (context.debugMode && context.executionLog && isDebugTarget) {
+      context.executionLog.push({
+        nodeId: node.data.identifier.id,
+        timestamp: Date.now(),
+        action: 'execute',
+        data: {
+          type: 'result_output',
+          label,
+          nodeDisplayName,
+          value,
+          valueType,
+          formattedValue,
+          executionContext: {
+            hasConnections: true,
+            inputCount: 1,
+            executionId,
+            flowState: 'executed_successfully',
+            // Additional metadata for customer debugging
+            dataSize: this.getDataSize(value),
+            isComplexObject: this.isComplexObject(value),
+            hasNestedData: this.hasNestedData(value),
+            sourceMetadata: input!.metadata ?? {}
+          }
+        }
+      });
+    }
+
+    // Store result for potential debugging/display
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'result',
+      'data',
+      value,
+      { resultType: valueType, displayValue: String(value) }
+    );
   }
 
   private getValueType(value: unknown): string {
