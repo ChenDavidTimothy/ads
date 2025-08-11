@@ -189,6 +189,91 @@ export class TransformEvaluator {
     return results;
   }
 
+  // Get the final accumulated state for an object at a specific time
+  getAccumulatedObjectState(
+    transforms: SceneTransform[], 
+    time: number,
+    initialState: { position?: Point2D; rotation?: number; scale?: Point2D; opacity?: number }
+  ): Map<string, AnimationValue> {
+    const results = new Map<string, AnimationValue>();
+    
+    // Sort transforms by start time to ensure proper order
+    const sortedTransforms = [...transforms].sort((a, b) => a.startTime - b.startTime);
+    
+    // Track accumulated values
+    const accumulated: { [key: string]: AnimationValue } = {
+      position: initialState.position || { x: 0, y: 0 },
+      rotation: initialState.rotation || 0,
+      scale: initialState.scale || { x: 1, y: 1 },
+      opacity: initialState.opacity || 1
+    };
+    
+    for (const transform of sortedTransforms) {
+      const animationEndTime = transform.startTime + transform.duration;
+      
+      if (time >= animationEndTime) {
+        // Animation has completed, use its end value
+        const endValue = this.getEndValue(transform);
+        if (endValue !== null) {
+          this.accumulateTransformValue(accumulated, transform, endValue);
+        }
+      } else if (time >= transform.startTime) {
+        // Animation is active, use current interpolated value
+        const currentValue = this.evaluateTransform(transform, time);
+        if (currentValue !== null) {
+          this.accumulateTransformValue(accumulated, transform, currentValue);
+        }
+      }
+      // If animation hasn't started yet, skip it
+    }
+    
+    // Convert accumulated values to results map
+    for (const [key, value] of Object.entries(accumulated)) {
+      if (value !== undefined) {
+        results.set(key, value);
+      }
+    }
+    
+    return results;
+  }
+
+  // Helper method to accumulate transform values
+  private accumulateTransformValue(
+    accumulated: { [key: string]: AnimationValue },
+    transform: SceneTransform,
+    value: AnimationValue
+  ): void {
+    const definition = transformFactory.getTransformDefinition(transform.type);
+    if (!definition?.metadata?.targetProperty) return;
+    
+    const targetProperty = definition.metadata.targetProperty;
+    
+    switch (targetProperty) {
+      case 'position':
+        if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
+          accumulated.position = value as Point2D;
+        }
+        break;
+      case 'rotation':
+        if (typeof value === 'number') {
+          accumulated.rotation = value;
+        }
+        break;
+      case 'scale':
+        if (typeof value === 'number') {
+          accumulated.scale = { x: value, y: value };
+        } else if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
+          accumulated.scale = value as Point2D;
+        }
+        break;
+      case 'opacity':
+        if (typeof value === 'number') {
+          accumulated.opacity = value;
+        }
+        break;
+    }
+  }
+
   // Get all transform types that are active at a specific time
   getActiveTransforms(transforms: SceneTransform[], time: number): SceneTransform[] {
     return transforms.filter(transform => {
@@ -209,6 +294,7 @@ export const transformEvaluator = new TransformEvaluator();
 export const {
   evaluateTransform,
   evaluateObjectTransforms,
+  getAccumulatedObjectState,
   getActiveTransforms,
   hasActiveTransforms,
 } = transformEvaluator;

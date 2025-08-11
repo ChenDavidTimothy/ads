@@ -96,6 +96,26 @@ export function convertTracksToSceneAnimations(
     return undefined;
   };
 
+  // Helper: get the end value of a track from the same animation sequence
+  const getEndValueFromSameSequence = (
+    track: AnimationTrack,
+    allTracks: AnimationTrack[],
+    targetProperty: string | undefined
+  ): unknown => {
+    if (!targetProperty) return undefined;
+    
+    // Find tracks of the same type that come before this one in the same sequence
+    const sameTypeTracks = allTracks
+      .filter(t => t.type === track.type && t.startTime < track.startTime)
+      .sort((a, b) => b.startTime - a.startTime); // Most recent first
+    
+    if (sameTypeTracks.length === 0) return undefined;
+    
+    // Get the end value of the most recent track of the same type
+    const mostRecent = sameTypeTracks[0]!;
+    return (mostRecent.properties as any).to;
+  };
+
   const sortedTracks = [...tracks].sort((a, b) => a.startTime - b.startTime);
   const sceneTracks: SceneAnimationTrack[] = [];
 
@@ -106,8 +126,20 @@ export function convertTracksToSceneAnimations(
     // Clone properties so we can adjust 'from' if chaining applies
     const properties = { ...(track.properties as any) } as any;
 
+    // Priority order for 'from' value:
+    // 1. Explicit 'from' value in track properties
+    // 2. End value from previous track of same type in this sequence
+    // 3. End value from prior animations for this object
+    // 4. Default 'from' value
     if (properties.from === undefined || isDefaultFrom(track.type, properties.from)) {
-      const inherited = getPriorValue(targetProperty, effectiveStart, track);
+      // Try to get from the same sequence first
+      let inherited = getEndValueFromSameSequence(track, sortedTracks, targetProperty);
+      
+      // If not found in same sequence, try prior animations
+      if (inherited === undefined) {
+        inherited = getPriorValue(targetProperty, effectiveStart, track);
+      }
+      
       if (inherited !== undefined) {
         properties.from = inherited as any;
       }

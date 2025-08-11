@@ -90,50 +90,148 @@ export function getObjectStateAtTime(
     // Ensure chronological application so later transforms override earlier ones
     .sort((a, b) => a.startTime - b.startTime);
   
+  // Track the accumulated state from completed animations
+  const accumulatedState: ObjectState = {
+    position: { ...object.initialPosition },
+    rotation: object.initialRotation ?? 0,
+    scale: object.initialScale ?? { x: 1, y: 1 },
+    opacity: object.initialOpacity ?? 1,
+    colors: {
+      fill: object.properties.color,
+      stroke: getStrokeColor(object.properties, object.type)
+    }
+  };
+  
   for (const animation of objectAnimations) {
-    const value = evaluateAnimation(animation, time);
-    if (value === null) continue;
+    const animationEndTime = animation.startTime + animation.duration;
     
-    // Use the registry system to determine how to apply the value
-    const definition = getTransformDefinition(animation.type);
-    if (definition?.metadata?.targetProperty) {
-      // Apply the value based on the transform definition
-      switch (definition.metadata.targetProperty) {
-        case 'position':
-          state.position = value as Point2D;
-          break;
-        case 'rotation':
-          state.rotation = value as number;
-          break;
-        case 'scale': {
-          const v = value as number | Point2D;
-          if (typeof v === 'number') {
-            state.scale = { x: v, y: v };
-          } else {
-            state.scale = v;
-          }
-          break;
-        }
-        case 'opacity':
-          state.opacity = value as number;
-          break;
-        case 'color':
-          const colorProperty = (animation.properties as any).property;
-          if (colorProperty === 'fill') {
-            state.colors.fill = value as string;
-          } else {
-            state.colors.stroke = value as string;
-          }
-          break;
-        default:
-          console.warn(`Unknown target property: ${definition.metadata.targetProperty}`);
+    // If this animation has completed, update the accumulated state
+    if (time >= animationEndTime) {
+      const endValue = getAnimationEndValue(animation);
+      if (endValue !== null) {
+        updateAccumulatedState(accumulatedState, animation, endValue);
       }
-    } else {
-      console.warn(`No metadata found for transform type: ${animation.type}`);
+    }
+    
+    // Apply the current animation value (if active) or use accumulated state
+    const value = evaluateAnimation(animation, time);
+    if (value !== null) {
+      // For active animations, use the current value
+      updateStateFromAnimation(state, animation, value);
+    } else if (time >= animationEndTime) {
+      // For completed animations, use the accumulated state
+      updateStateFromAnimation(state, animation, accumulatedState, animation.type);
     }
   }
   
   return state;
+}
+
+// Helper function to update accumulated state with end values
+function updateAccumulatedState(
+  accumulatedState: ObjectState, 
+  animation: SceneAnimationTrack, 
+  endValue: AnimationValue
+): void {
+  const definition = getTransformDefinition(animation.type);
+  if (!definition?.metadata?.targetProperty) return;
+  
+  switch (definition.metadata.targetProperty) {
+    case 'position':
+      accumulatedState.position = endValue as Point2D;
+      break;
+    case 'rotation':
+      accumulatedState.rotation = endValue as number;
+      break;
+    case 'scale': {
+      const v = endValue as number | Point2D;
+      if (typeof v === 'number') {
+        accumulatedState.scale = { x: v, y: v };
+      } else {
+        accumulatedState.scale = v;
+      }
+      break;
+    }
+    case 'opacity':
+      accumulatedState.opacity = endValue as number;
+      break;
+    case 'color':
+      const colorProperty = (animation.properties as any).property;
+      if (colorProperty === 'fill') {
+        accumulatedState.colors.fill = endValue as string;
+      } else if (colorProperty === 'stroke') {
+        accumulatedState.colors.stroke = endValue as string;
+      }
+      break;
+  }
+}
+
+// Helper function to update state from animation value or accumulated state
+function updateStateFromAnimation(
+  state: ObjectState, 
+  animation: SceneAnimationTrack, 
+  value: AnimationValue | ObjectState,
+  targetProperty?: string
+): void {
+  const definition = getTransformDefinition(animation.type);
+  const property = targetProperty || definition?.metadata?.targetProperty;
+  if (!property) return;
+  
+  if (typeof value === 'object' && value !== null && 'position' in value) {
+    // Value is an ObjectState, extract the specific property
+    switch (property) {
+      case 'position':
+        state.position = (value as ObjectState).position;
+        break;
+      case 'rotation':
+        state.rotation = (value as ObjectState).rotation;
+        break;
+      case 'scale':
+        state.scale = (value as ObjectState).scale;
+        break;
+      case 'opacity':
+        state.opacity = (value as ObjectState).opacity;
+        break;
+      case 'color':
+        const colorProperty = (animation.properties as any).property;
+        if (colorProperty === 'fill') {
+          state.colors.fill = (value as ObjectState).colors.fill;
+        } else if (colorProperty === 'stroke') {
+          state.colors.stroke = (value as ObjectState).colors.stroke;
+        }
+        break;
+    }
+  } else {
+    // Value is a direct animation value
+    switch (property) {
+      case 'position':
+        state.position = value as Point2D;
+        break;
+      case 'rotation':
+        state.rotation = value as number;
+        break;
+      case 'scale': {
+        const v = value as number | Point2D;
+        if (typeof v === 'number') {
+          state.scale = { x: v, y: v };
+        } else {
+          state.scale = v;
+        }
+        break;
+      }
+      case 'opacity':
+        state.opacity = value as number;
+        break;
+      case 'color':
+        const colorProperty = (animation.properties as any).property;
+        if (colorProperty === 'fill') {
+          state.colors.fill = value as string;
+        } else if (colorProperty === 'stroke') {
+          state.colors.stroke = value as string;
+        }
+        break;
+    }
+  }
 }
 
 // Get states of all objects at a specific time
