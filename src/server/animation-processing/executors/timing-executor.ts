@@ -50,7 +50,10 @@ export class TimingNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       timedObjects,
-      { perObjectTimeCursor: upstreamCursorMap }
+      {
+        perObjectTimeCursor: upstreamCursorMap,
+        perObjectAnimations: (inputs[0]?.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations
+      }
     );
   }
 

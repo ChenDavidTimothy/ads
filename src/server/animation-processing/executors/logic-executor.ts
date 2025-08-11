@@ -269,13 +269,14 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     const filteredIds = extractObjectIdsFromInputs([{ data: filteredResults }]);
     const propagatedCursors = pickCursorsForIds(upstreamCursorMap, filteredIds);
+    const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], filteredIds);
     setNodeOutput(
       context,
       node.data.identifier.id,
       'output',
       'object_stream',
       filteredResults,
-      { perObjectTimeCursor: propagatedCursors }
+      { perObjectTimeCursor: propagatedCursors, perObjectAnimations: propagatedAnimations }
     );
   }
 
@@ -365,6 +366,10 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     const mergedResult = Array.from(mergedObjects.values());
     const mergedCursors = mergeCursorMaps(allCursorMaps);
+    const mergedIds = mergedResult
+      .map(obj => (typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null))
+      .filter(Boolean) as string[];
+    const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(portInputs.flat() as unknown as ExecutionValue[], mergedIds);
 
     const inputObjectCount = portInputs.flat().reduce((acc, input) => {
       const data = Array.isArray(input.data) ? input.data : [input.data];
@@ -397,7 +402,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       mergedResult,
-      { perObjectTimeCursor: mergedCursors }
+      { perObjectTimeCursor: mergedCursors, perObjectAnimations: propagatedAnimations }
     );
     
     logger.debug('Merge execution completed successfully');
@@ -412,6 +417,19 @@ export class LogicNodeExecutor extends BaseExecutor {
       }
     }
     return mergeCursorMaps(maps);
+  }
+
+  private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[], allowIds: string[]): Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> {
+    const merged: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> = {};
+    for (const input of inputs) {
+      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      if (!fromMeta) continue;
+      for (const [objectId, animations] of Object.entries(fromMeta)) {
+        if (!allowIds.includes(objectId)) continue;
+        merged[objectId] = [...(merged[objectId] ?? []), ...animations];
+      }
+    }
+    return merged;
   }
 
   private async executeCompare(

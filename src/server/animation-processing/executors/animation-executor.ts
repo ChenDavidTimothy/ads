@@ -30,7 +30,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const passThoughObjects: unknown[] = [];
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
-    const perObjectAnimations: Record<string, SceneAnimationTrack[]> = {};
+    const perObjectAnimations: Record<string, SceneAnimationTrack[]> = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[]);
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -101,6 +101,18 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
     return mergeCursorMaps(maps);
+  }
+
+  private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[]): Record<string, SceneAnimationTrack[]> {
+    const merged: Record<string, SceneAnimationTrack[]> = {};
+    for (const input of inputs) {
+      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      if (!fromMeta) continue;
+      for (const [objectId, animations] of Object.entries(fromMeta)) {
+        merged[objectId] = [...(merged[objectId] ?? []), ...animations];
+      }
+    }
+    return merged;
   }
 }
 
