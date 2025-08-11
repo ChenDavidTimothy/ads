@@ -1,5 +1,6 @@
 // src/server/animation-processing/executors/scene-executor.ts
 import type { NodeData } from "@/shared/types";
+import type { SceneAnimationTrack } from "@/shared/types/scene";
 import { getConnectedInputs, type ExecutionContext } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
@@ -79,7 +80,7 @@ export class SceneNodeExecutor extends BaseExecutor {
 
     // Assign animations to this scene using per-object metadata from inputs
     for (const input of inputs) {
-      const perObjectAnimations = (input.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      const perObjectAnimations = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
       if (!perObjectAnimations) continue;
       for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
         for (const animation of animations) {

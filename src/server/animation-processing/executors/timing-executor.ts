@@ -1,5 +1,6 @@
 // src/server/animation-processing/executors/timing-executor.ts
 import type { NodeData } from "@/shared/types";
+import type { SceneAnimationTrack } from "@/shared/types/scene";
 import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
@@ -52,7 +53,7 @@ export class TimingNodeExecutor extends BaseExecutor {
       timedObjects,
       {
         perObjectTimeCursor: upstreamCursorMap,
-        perObjectAnimations: (inputs[0]?.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations
+        perObjectAnimations: (inputs[0]?.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations
       }
     );
   }

@@ -1,5 +1,6 @@
 // src/server/animation-processing/executors/logic-executor.ts
 import type { NodeData } from "@/shared/types";
+import type { SceneAnimationTrack } from "@/shared/types/scene";
 import { setNodeOutput, getConnectedInputs, getTypedConnectedInput, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
@@ -419,10 +420,10 @@ export class LogicNodeExecutor extends BaseExecutor {
     return mergeCursorMaps(maps);
   }
 
-  private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[], allowIds: string[]): Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> {
-    const merged: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> = {};
+  private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[], allowIds: string[]): Record<string, SceneAnimationTrack[]> {
+    const merged: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
       if (!fromMeta) continue;
       for (const [objectId, animations] of Object.entries(fromMeta)) {
         if (!allowIds.includes(objectId)) continue;
