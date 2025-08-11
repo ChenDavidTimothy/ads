@@ -96,19 +96,3 @@ export type EasingRegistry = Record<string, EasingFunction>;
 
 // Animation value union - what gets returned during evaluation
 export type AnimationValue = Point2D | number | string | boolean | null;
-
-// Evaluation context for transforms
-export interface TransformEvaluationContext {
-  time: number;
-  progress: number;
-  easing: EasingFunction;
-  objectId: string;
-}
-
-// Transform evaluator interface
-export interface TransformEvaluator {
-  evaluate(
-    transform: SceneTransform,
-    context: TransformEvaluationContext
-  ): AnimationValue;
-}

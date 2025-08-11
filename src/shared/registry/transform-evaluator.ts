@@ -123,7 +123,9 @@ export class TransformEvaluator {
     for (const transform of transforms) {
       const value = this.evaluateTransform(transform, time);
       if (value !== null) {
-        results.set(transform.type, value);
+        const definition = transformFactory.getTransformDefinition(transform.type);
+        const key = definition?.metadata?.targetProperty ?? transform.type;
+        results.set(key, value);
       }
     }
     

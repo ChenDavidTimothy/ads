@@ -134,7 +134,7 @@ export function getObjectStateAtTime(
     if (value !== null) {
       updateStateFromAnimation(state, animation, value);
     } else if (time >= animationEndTime) {
-      updateStateFromAnimation(state, animation, accumulatedState, animation.type);
+      updateStateFromAnimation(state, animation, accumulatedState);
     }
   }
   
