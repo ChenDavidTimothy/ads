@@ -51,8 +51,6 @@ function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
   return transformEvaluator.getEndValue(sceneTrackToSceneTransform(animation));
 }
 
-// (Legacy interpolateAnimation removed)
-
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
   switch (objectType) {
     case 'triangle':
@@ -76,16 +74,21 @@ function evaluateVisibility(object: SceneObject, time: number): number {
   return object.initialOpacity ?? 1;
 }
 
-// Get the state of an object at a specific time
+// Defensive clones
+function clonePoint(p: Point2D): Point2D {
+  return { x: p.x, y: p.y };
+}
+
+// Get the state of an object at a specific time (pure, given animations for that object)
 export function getObjectStateAtTime(
   object: SceneObject, 
   animations: SceneAnimationTrack[], 
   time: number
 ): ObjectState {
   const state: ObjectState = {
-    position: { ...object.initialPosition },
+    position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale ?? { x: 1, y: 1 },
+    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: evaluateVisibility(object, time),
     colors: {
       fill: object.properties.color,
@@ -98,9 +101,9 @@ export function getObjectStateAtTime(
   
   // Track the accumulated state from completed animations
   const accumulatedState: ObjectState = {
-    position: { ...object.initialPosition },
+    position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale ?? { x: 1, y: 1 },
+    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: object.initialOpacity ?? 1,
     colors: {
       fill: object.properties.color,
@@ -110,13 +113,20 @@ export function getObjectStateAtTime(
   
   for (const animation of objectAnimations) {
     const animationEndTime = animation.startTime + animation.duration;
-    
+
     // If this animation has completed, update the accumulated state
     if (time >= animationEndTime) {
       const endValue = getAnimationEndValue(animation);
       if (endValue !== null) {
         updateAccumulatedState(accumulatedState, animation, endValue);
       }
+      // Optimization: if the animation ends far before current time, continue
+      // We still must process all to accumulate correct end state
+    }
+
+    // If animation starts after current time and tracks are sorted, we can break
+    if (time < animation.startTime) {
+      break;
     }
     
     // Apply the current animation value (if active) or use accumulated state
@@ -142,7 +152,7 @@ function updateAccumulatedState(
   
   switch (definition.metadata.targetProperty) {
     case 'position':
-      accumulatedState.position = endValue as Point2D;
+      accumulatedState.position = clonePoint(endValue as Point2D);
       break;
     case 'rotation':
       accumulatedState.rotation = endValue as number;
@@ -152,7 +162,7 @@ function updateAccumulatedState(
       if (typeof v === 'number') {
         accumulatedState.scale = { x: v, y: v };
       } else {
-        accumulatedState.scale = v;
+        accumulatedState.scale = clonePoint(v);
       }
       break;
     }
@@ -163,9 +173,9 @@ function updateAccumulatedState(
       if (animation.type === 'color') {
         const colorProperty = animation.properties.property;
         if (colorProperty === 'fill') {
-          accumulatedState.colors.fill = endValue as string;
+          accumulatedState.colors.fill = (endValue as string);
         } else if (colorProperty === 'stroke') {
-          accumulatedState.colors.stroke = endValue as string;
+          accumulatedState.colors.stroke = (endValue as string);
         }
       }
       break;
@@ -191,13 +201,13 @@ function updateStateFromAnimation(
     // Value is an ObjectState, extract the specific property
     switch (property) {
       case 'position':
-        state.position = value.position;
+        state.position = clonePoint(value.position);
         break;
       case 'rotation':
         state.rotation = value.rotation;
         break;
       case 'scale':
-        state.scale = value.scale;
+        state.scale = clonePoint(value.scale);
         break;
       case 'opacity':
         state.opacity = value.opacity;
@@ -217,7 +227,7 @@ function updateStateFromAnimation(
     // Value is a direct animation value
     switch (property) {
       case 'position':
-        state.position = value as Point2D;
+        state.position = clonePoint(value as Point2D);
         break;
       case 'rotation':
         state.rotation = value as number;
@@ -227,7 +237,7 @@ function updateStateFromAnimation(
         if (typeof v === 'number') {
           state.scale = { x: v, y: v };
         } else {
-          state.scale = v;
+          state.scale = clonePoint(v);
         }
         break;
       }
@@ -248,7 +258,7 @@ function updateStateFromAnimation(
   }
 }
 
-// Get states of all objects at a specific time
+// Get states of all objects at a specific time (one-shot)
 export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<string, ObjectState> {
   const sceneState = new Map<string, ObjectState>();
 
@@ -274,7 +284,70 @@ export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<st
   return sceneState;
 }
 
-// Helper to create common animation patterns - now using the registry system
+// Timeline class for cached evaluation across frames
+export class Timeline {
+  private readonly scene: AnimationScene;
+  private readonly animationsByObject: Map<string, SceneAnimationTrack[]>;
+
+  constructor(scene: AnimationScene) {
+    this.scene = scene;
+    this.animationsByObject = new Map();
+
+    // Pre-index and sort once
+    for (const anim of scene.animations) {
+      const list = this.animationsByObject.get(anim.objectId) ?? [];
+      list.push(anim);
+      this.animationsByObject.set(anim.objectId, list);
+    }
+    for (const [key, list] of this.animationsByObject) {
+      list.sort((a, b) => a.startTime - b.startTime);
+      this.animationsByObject.set(key, list);
+    }
+  }
+
+  getObjectState(objectId: string, time: number): ObjectState | undefined {
+    const object = this.scene.objects.find(o => o.id === objectId);
+    if (!object) return undefined;
+    const tracks = this.animationsByObject.get(objectId) ?? [];
+    return getObjectStateAtTime(object, tracks, time);
+  }
+
+  getSceneState(time: number): Map<string, ObjectState> {
+    const state = new Map<string, ObjectState>();
+    for (const object of this.scene.objects) {
+      const objState = this.getObjectState(object.id, time);
+      if (objState) state.set(object.id, objState);
+    }
+    return state;
+  }
+}
+
+// Helper to create common animation patterns - generic factory + thin wrappers
+function createAnimationTrack<TProps extends Record<string, unknown>>(
+  type: 'move' | 'rotate' | 'scale' | 'fade' | 'color',
+  objectId: string,
+  props: TProps,
+  startTime: number,
+  duration: number,
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut'
+): SceneAnimationTrack {
+  const transform = transformFactory.createTransform(type, props);
+  transform.easing = easing;
+  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
+
+  return {
+    id: `${objectId}::${type}::${startTime}`,
+    objectId: sceneTransform.objectId,
+    // type is narrowed by caller wrappers
+    // @ts-ignore
+    type,
+    startTime: sceneTransform.startTime,
+    duration: sceneTransform.duration,
+    easing: sceneTransform.easing,
+    properties: props as never,
+  } as SceneAnimationTrack;
+}
+
 export function createMoveAnimation(
   objectId: string,
   from: Point2D,
@@ -283,23 +356,7 @@ export function createMoveAnimation(
   duration: number,
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('move', { from, to });
-  transform.easing = easing;
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
-  return {
-    id: `${objectId}::move::${startTime}`,
-    objectId: sceneTransform.objectId,
-    type: 'move' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
-  };
+  return createAnimationTrack('move', objectId, { from, to }, startTime, duration, easing);
 }
 
 export function createRotateAnimation(
@@ -310,23 +367,7 @@ export function createRotateAnimation(
   duration: number,
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('rotate', { from, to });
-  transform.easing = easing;
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
-  return {
-    id: `${objectId}::rotate::${startTime}`,
-    objectId: sceneTransform.objectId,
-    type: 'rotate' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
-  };
+  return createAnimationTrack('rotate', objectId, { from, to }, startTime, duration, easing);
 }
 
 export function createScaleAnimation(
@@ -337,21 +378,5 @@ export function createScaleAnimation(
   duration: number,
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
-  const transform = transformFactory.createTransform('scale', { from, to });
-  transform.easing = easing;
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
-  
-  // Convert SceneTransform to SceneAnimationTrack
-  return {
-    id: `${objectId}::scale::${startTime}`,
-    objectId: sceneTransform.objectId,
-    type: 'scale' as const,
-    startTime: sceneTransform.startTime,
-    duration: sceneTransform.duration,
-    easing: sceneTransform.easing,
-    properties: {
-      from: from,
-      to: to
-    }
-  };
+  return createAnimationTrack('scale', objectId, { from, to }, startTime, duration, easing);
 }

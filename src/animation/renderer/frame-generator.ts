@@ -131,4 +131,15 @@ export class FrameGenerator {
   setEasing(easingFunction: EasingFunction): void {
     this.easingFunction = easingFunction;
   }
+
+  dispose(): void {
+    // Release references to allow GC
+    // node-canvas does not require explicit destroy, but nulling helps GC on long runs
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.ctx as any) = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.canvas as any) = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.config as any) = null;
+  }
 }
