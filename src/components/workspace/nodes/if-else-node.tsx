@@ -11,13 +11,22 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
 
   return (
     <Card selected={selected} className="p-4 min-w-[220px]">
-      {/* Input port */}
+      {/* Condition input port */}
       <Handle
         type="target"
         position={Position.Left}
         id="condition"
         className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-indigo-500'} !border-2 !border-white`}
-        style={{ top: '50%' }}
+        style={{ top: '35%' }}
+      />
+
+      {/* Data input port */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="data"
+        className="w-3 h-3 bg-blue-500 !border-2 !border-white"
+        style={{ top: '65%' }}
       />
 
       <CardHeader className="p-0 pb-3">
@@ -34,7 +43,8 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
       <CardContent className="p-0 space-y-2">
         <div className="bg-gray-700 p-2 rounded border text-center">
           <div className="text-sm text-white">
-            if true → true<br/>if false → false
+            if condition → route data to true<br/>
+            else → route data to false
           </div>
         </div>
 
@@ -44,15 +54,11 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-            Simple
-          </span>
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">Data Router</span>
         </div>
 
         <div className="mt-3 pt-2 border-t border-gray-700">
-          <div className="text-xs text-gray-400 text-center">
-            Condition → Output
-          </div>
+          <div className="text-xs text-gray-400 text-center">Condition + Data → Routed Data</div>
         </div>
       </CardContent>
 

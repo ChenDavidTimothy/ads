@@ -133,7 +133,7 @@ export function validateLogicNodePortConnections(nodes: ReactFlowNode<NodeData>[
 }
 
 export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
-  // Validate both boolean operations and conditional logic nodes (if_else) - they all require boolean inputs
+  // Validate boolean inputs for boolean operations and the condition input of if_else
   const booleanNodes = nodes.filter(node => node.type === 'boolean_op' || node.type === 'if_else');
   
   for (const booleanNode of booleanNodes) {
@@ -145,37 +145,26 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
     const incomingEdges = edges.filter(edge => edge.target === booleanNode.data.identifier.id);
     
     for (const edge of incomingEdges) {
+      // For if_else nodes, only the 'condition' port must be boolean. Skip other ports.
+      if (booleanNode.type === 'if_else' && edge.targetHandle !== 'condition') {
+        continue;
+      }
       const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
       if (!sourceNode?.data?.identifier?.displayName) continue;
-      
-      const sourceDefinition = getNodeDefinition(sourceNode.type!);
-      if (!sourceDefinition) continue;
-      
-      const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
-      if (!sourcePort) continue;
-      
-      // Check if the source port outputs boolean data
-      let isValidBooleanSource = false;
-      
-      if (sourceNode.type === 'compare' || sourceNode.type === 'boolean_op') {
-        // Compare and boolean_op nodes always output boolean
-        isValidBooleanSource = true;
-      } else if (sourceNode.type === 'constants') {
-        // Constants node: check if it's configured to output boolean
-        const constantsData = sourceNode.data as unknown as { valueType?: string };
-        isValidBooleanSource = constantsData.valueType === 'boolean';
-      }
-      // Note: Removed generic 'data' type allowance - be more strict
+
+      // Infer effective logical type, resolving pass-through (e.g., if_else)
+      const effectiveType = inferEffectiveLogicalType(edge.source, edge.sourceHandle!, nodes, edges);
+      const isValidBooleanSource = effectiveType === 'boolean';
       
       if (!isValidBooleanSource) {
         const nodeTypeLabel = booleanNode.type === 'if_else' ? 'If/Else' : 'Boolean operation';
-        let errorMessage = `${nodeTypeLabel} "${booleanNode.data.identifier.displayName}" can only accept boolean inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
+        let errorMessage = `${nodeTypeLabel} "${booleanNode.data.identifier.displayName}" can only accept boolean inputs on port "${edge.targetHandle}". Connected from "${sourceNode.data.identifier.displayName}"`;
         
         if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as { valueType?: string };
           errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output boolean values instead.`;
         } else {
-          errorMessage += ` which outputs ${sourcePort.type} data. Only boolean sources are allowed.`;
+          errorMessage += ` which is not inferred as boolean. Only boolean sources are allowed.`;
         }
         
         throw new InvalidConnectionError(
@@ -184,7 +173,7 @@ export function validateBooleanTypeConnections(nodes: ReactFlowNode<NodeData>[],
             nodeId: booleanNode.data.identifier.id,
             nodeName: booleanNode.data.identifier.displayName,
             sourceNodeId: sourceNode.data.identifier.id,
-            info: { expectedType: 'boolean', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : sourcePort.type }
+            info: { expectedType: 'boolean', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : effectiveType }
           }
         );
       }
@@ -207,26 +196,11 @@ export function validateNumberTypeConnections(nodes: ReactFlowNode<NodeData>[], 
     for (const edge of incomingEdges) {
       const sourceNode = nodes.find(n => n.data?.identifier?.id === edge.source);
       if (!sourceNode?.data?.identifier?.displayName) continue;
-      
-      const sourceDefinition = getNodeDefinition(sourceNode.type!);
-      if (!sourceDefinition) continue;
-      
-      const sourcePort = sourceDefinition.ports.outputs.find(p => p.id === edge.sourceHandle);
-      if (!sourcePort) continue;
-      
-      // Check if the source port outputs number data
-      let isValidNumberSource = false;
-      
-      if (sourceNode.type === 'math_op') {
-        // Math nodes always output numbers
-        isValidNumberSource = true;
-      } else if (sourceNode.type === 'constants') {
-        // Constants node: check if it's configured to output number
-        const constantsData = sourceNode.data as unknown as { valueType?: string };
-        isValidNumberSource = constantsData.valueType === 'number';
-      }
-      // Note: Compare nodes output boolean, not numbers
-      
+
+      // Infer effective logical type, resolving pass-through (e.g., if_else)
+      const effectiveType = inferEffectiveLogicalType(edge.source, edge.sourceHandle!, nodes, edges);
+      const isValidNumberSource = effectiveType === 'number';
+
       if (!isValidNumberSource) {
         const nodeTypeLabel = mathNode.type === 'compare' ? 'Compare operation' : 'Math operation';
         let errorMessage = `${nodeTypeLabel} "${mathNode.data.identifier.displayName}" can only accept number inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
@@ -235,7 +209,7 @@ export function validateNumberTypeConnections(nodes: ReactFlowNode<NodeData>[], 
           const constantsData = sourceNode.data as unknown as { valueType?: string };
           errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output number values instead.`;
         } else {
-          errorMessage += ` which outputs ${sourcePort.type} data. Only number sources are allowed.`;
+          errorMessage += ` which is not inferred as number. Only number sources are allowed.`;
         }
         
         throw new InvalidConnectionError(
@@ -244,11 +218,61 @@ export function validateNumberTypeConnections(nodes: ReactFlowNode<NodeData>[], 
             nodeId: mathNode.data.identifier.id,
             nodeName: mathNode.data.identifier.displayName,
             sourceNodeId: sourceNode.data.identifier.id,
-            info: { expectedType: 'number', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : sourcePort.type }
+            info: { expectedType: 'number', actualType: sourceNode.type === 'constants' ? (sourceNode.data as { valueType?: string }).valueType : effectiveType }
           }
         );
       }
     }
+  }
+}
+
+// Helper: infer effective logical type of a node's output by tracing upstream
+type LogicalType = 'number' | 'boolean' | 'string' | 'color' | 'unknown';
+
+function inferEffectiveLogicalType(
+  sourceNodeId: string,
+  sourcePortId: string,
+  nodes: ReactFlowNode<NodeData>[],
+  edges: ReactFlowEdge[],
+  visited: Set<string> = new Set()
+): LogicalType {
+  const visitKey = `${sourceNodeId}::${sourcePortId}`;
+  if (visited.has(visitKey)) return 'unknown';
+  visited.add(visitKey);
+
+  const node = nodes.find(n => n.data?.identifier?.id === sourceNodeId);
+  if (!node) return 'unknown';
+
+  switch (node.type) {
+    case 'math_op':
+      return 'number';
+    case 'compare':
+    case 'boolean_op':
+      return 'boolean';
+    case 'constants': {
+      const data = node.data as unknown as { valueType?: string };
+      const vt = (data.valueType ?? 'unknown') as LogicalType;
+      return vt === 'number' || vt === 'boolean' || vt === 'string' || vt === 'color' ? vt : 'unknown';
+    }
+    case 'if_else': {
+      // Outputs inherit type of 'data' input
+      const incoming = edges.filter(e => e.target === sourceNodeId && e.targetHandle === 'data');
+      if (incoming.length !== 1) return 'unknown';
+      const from = incoming[0];
+      return inferEffectiveLogicalType(from.source, from.sourceHandle!, nodes, edges, visited);
+    }
+    case 'merge': {
+      // Homogeneous type pass-through: all inputs must resolve to the same non-unknown type
+      const incoming = edges.filter(e => e.target === sourceNodeId && !!e.targetHandle);
+      if (incoming.length === 0) return 'unknown';
+      const types = incoming.map(e => inferEffectiveLogicalType(e.source, e.sourceHandle!, nodes, edges, visited))
+        .filter(t => t !== 'unknown');
+      if (types.length === 0) return 'unknown';
+      const unique = Array.from(new Set(types));
+      return unique.length === 1 ? unique[0] : 'unknown';
+    }
+    default:
+      return 'unknown';
   }
 }
 

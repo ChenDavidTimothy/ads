@@ -1,7 +1,7 @@
 // src/server/animation-processing/executors/logic-executor.ts
 import type { NodeData } from "@/shared/types";
 import type { SceneAnimationTrack } from "@/shared/types/scene";
-import { setNodeOutput, getConnectedInputs, getTypedConnectedInput, type ExecutionContext, type ExecutionValue } from "../execution-context";
+import { setNodeOutput, getConnectedInputs, getTypedConnectedInput, getConnectedInput, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
@@ -552,18 +552,27 @@ export class LogicNodeExecutor extends BaseExecutor {
     if (!condition) {
       throw new Error(`If/Else node ${node.data.identifier.displayName} missing condition input`);
     }
-    
-    const conditionValue = condition.data;
-      
-      // Simple: if true, output true. If false, output false.
-      if (conditionValue) {
-        setNodeOutput(context, node.data.identifier.id, 'true_path', 'data', true);
-        logger.debug(`If/Else ${node.data.identifier.displayName}: condition=true, output=true on true_path`);
-      } else {
-        setNodeOutput(context, node.data.identifier.id, 'false_path', 'data', false);
-        logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, output=false on false_path`);
-      }
-    // Note: Error handling is done above for condition input
+    // Fetch required data input
+    const dataInput = getConnectedInput(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'data'
+    );
+
+    if (!dataInput) {
+      throw new Error(`If/Else node ${node.data.identifier.displayName} missing data input`);
+    }
+
+    // Route actual data based on the boolean condition
+    if (condition.data) {
+      setNodeOutput(context, node.data.identifier.id, 'true_path', 'data', dataInput.data);
+      logger.debug(`If/Else ${node.data.identifier.displayName}: condition=true, routing data to true_path`);
+    } else {
+      setNodeOutput(context, node.data.identifier.id, 'false_path', 'data', dataInput.data);
+      logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, routing data to false_path`);
+    }
+    // Note: Error handling is done above for inputs
   }
 
   private async executeBooleanOp(

@@ -1,7 +1,7 @@
 // src/server/animation-processing/execution-engine.ts - Enhanced with comprehensive validation
 import type { NodeData } from "@/shared/types";
 import type { ExecutionContext } from "./execution-context";
-import { createExecutionContext, markNodeExecuted, isNodeExecuted } from "./execution-context";
+import { createExecutionContext, markNodeExecuted, isNodeExecuted, getNodeOutput } from "./execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 import { ExecutorRegistry } from "./executors/node-executor";
 import { GeometryNodeExecutor } from "./executors/geometry-executor";
@@ -21,6 +21,7 @@ import {
   validateNumberTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 
@@ -162,6 +163,12 @@ export class ExecutionEngine {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
         logger.info(`Executing node: ${node.data.identifier.displayName} (${node.type})`);
         
+        // Branch-aware gating: skip nodes whose required inputs are missing due to an unselected If/Else path
+        if (shouldSkipDueToConditionalRouting(node, context, nodes, dataEdges)) {
+          logger.info(`Skipping node due to conditional routing: ${node.data.identifier.displayName}`);
+          continue;
+        }
+
         const executor = this.registry.find(node.type ?? '');
         if (executor) {
           await executor.execute(node, context, edges);
@@ -232,6 +239,12 @@ export class ExecutionEngine {
       if (!isNodeExecuted(context, node.data.identifier.id)) {
         logger.debug(`Executing node: ${node.data.identifier.displayName} (${node.type})`);
         
+        // Branch-aware gating: skip nodes whose required inputs are missing due to an unselected If/Else path
+        if (shouldSkipDueToConditionalRouting(node, context, nodes, dataEdges)) {
+          logger.debug(`Skipping node due to conditional routing: ${node.data.identifier.displayName}`);
+          continue;
+        }
+
         const executor = this.registry.find(node.type ?? '');
         if (executor) {
           await executor.execute(node, context, edges);
@@ -262,4 +275,62 @@ export class ExecutionEngine {
     
     return context;
   }
+}
+
+// Determine if a node should be skipped because its required inputs are connected to an If/Else branch that was not selected
+function shouldSkipDueToConditionalRouting(
+  node: ReactFlowNode<NodeData>,
+  context: ExecutionContext,
+  allNodes: ReactFlowNode<NodeData>[],
+  edges: ReactFlowEdge[]
+): boolean {
+  // Build a quick map for node lookup by id
+  const nodeById = new Map(allNodes.map((n) => [n.data.identifier.id, n] as const));
+
+  // Group incoming edges by target port (only data edges)
+  const incomingByPort = new Map<string, ReactFlowEdge[]>();
+  for (const e of edges) {
+    if (e.target !== node.data.identifier.id || !e.targetHandle) continue;
+    const arr = incomingByPort.get(e.targetHandle) ?? [];
+    arr.push(e);
+    incomingByPort.set(e.targetHandle, arr);
+  }
+
+  // If no incoming edges at all, do not skip here (let normal logic handle unconnected cases)
+  if (incomingByPort.size === 0) return false;
+
+  // If ANY connected input port has only if_else branch sources and none produced a value, skip the node
+  for (const [portId, incomingEdges] of incomingByPort.entries()) {
+    // If port has no connections, ignore
+    if (!incomingEdges.length) continue;
+
+    // If any edge produced a value, this port is satisfied
+    let anyValuePresent = false;
+    for (const edge of incomingEdges) {
+      const val = getNodeOutput(context, edge.source, edge.sourceHandle ?? '');
+      if (val !== undefined) {
+        anyValuePresent = true;
+        break;
+      }
+    }
+    if (anyValuePresent) continue;
+
+    // No value present for this port: check if all sources are unselected if_else branches
+    let allSourcesAreIfElseBranches = true;
+    for (const edge of incomingEdges) {
+      const src = nodeById.get(edge.source);
+      const isIfElseBranch = src?.type === 'if_else' && (edge.sourceHandle === 'true_path' || edge.sourceHandle === 'false_path');
+      if (!isIfElseBranch) {
+        allSourcesAreIfElseBranches = false;
+        break;
+      }
+    }
+
+    if (allSourcesAreIfElseBranches) {
+      // This input port is unsatisfied solely because the connected if_else branch(es) did not emit → skip node
+      return true;
+    }
+  }
+
+  return false;
 }

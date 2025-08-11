@@ -516,14 +516,15 @@ export const NODE_DEFINITIONS = {
   if_else: {
     type: 'if_else',
     label: 'If/Else',
-    description: 'If condition is true, output on true path. If false, output on false path.',
+    description: 'Routes data to different paths based on boolean condition',
     execution: {
       category: 'logic',
       executor: 'logic',
     },
     ports: {
       inputs: [
-        { id: 'condition', type: 'data', label: 'Condition' }
+        { id: 'condition', type: 'boolean', label: 'Condition', required: true },
+        { id: 'data', type: 'data', label: 'Data', required: true }
       ],
       outputs: [
         { id: 'true_path', type: 'data', label: 'True' },
