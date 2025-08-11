@@ -1,6 +1,6 @@
 // src/shared/registry/registry-utils.ts - Dynamic generation from node definitions
 import { NODE_DEFINITIONS, type NodeDefinition } from '../types/definitions';
-import { COMPONENT_MAPPING } from '@/components/editor/nodes/generated-mappings';
+import { COMPONENT_MAPPING } from '@/components/workspace/nodes/generated-mappings';
 
 // Derive NodeType from registry to avoid duplication elsewhere
 export type NodeType = keyof typeof NODE_DEFINITIONS;

@@ -25,7 +25,7 @@ function getComponentFilename(nodeType: string): string {
 // Validate component files exist
 function validateComponentExists(nodeType: string): void {
   const filename = getComponentFilename(nodeType);
-  const componentPath = path.join(__dirname, '../src/components/editor/nodes', filename);
+  const componentPath = path.join(__dirname, '../src/components/workspace/nodes', filename);
   if (!fs.existsSync(componentPath)) {
     throw new Error(`Component file not found: ${componentPath}\nExpected for node type: ${nodeType}`);
   }
@@ -107,7 +107,7 @@ export type ExecutorType = keyof typeof EXECUTOR_NODE_MAPPINGS;
 // Main generation function
 async function generateMappings(): Promise<void> {
   try {
-    const outputDir = path.join(__dirname, '../src/components/editor/nodes');
+    const outputDir = path.join(__dirname, '../src/components/workspace/nodes');
     const componentMappingPath = path.join(outputDir, 'generated-mappings.ts');
     const executorMappingPath = path.join(__dirname, '../src/server/animation-processing/executors/generated-mappings.ts');
     

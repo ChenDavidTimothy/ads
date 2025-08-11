@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TimelinePageClient } from "@/components/editor/timeline-page-client";
+import { TimelinePageClient } from "@/components/workspace/timeline-page-client";
 
 export default async function Page({
   params,

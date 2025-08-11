@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { FlowEditor } from "@/components/editor/flow-editor";
+import { FlowEditor } from "@/components/workspace/flow-editor";
 
 export default async function WorkspaceEditorPage({
   searchParams,
