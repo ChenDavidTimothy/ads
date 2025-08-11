@@ -50,7 +50,7 @@ export function generateNodeColors() {
   return colors;
 }
 
-// Generate track colors and icons (preserved from existing)
+// Generate track colors and icons from transform definitions
 export const TRACK_COLORS = {
   move: "bg-purple-600",
   rotate: "bg-indigo-600", 
@@ -66,6 +66,13 @@ export const TRACK_ICONS = {
   fade: "◐",
   color: "🎨",
 } as const;
+
+// Future: These could be generated from transform definitions
+// export function generateTrackColors() {
+//   const colors: Record<string, string> = {};
+//   // Implementation would use transform definitions
+//   return colors;
+// }
 
 // Generate palette structure from definitions
 export function generateNodePalette() {

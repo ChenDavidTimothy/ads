@@ -19,6 +19,17 @@ import type {
   SceneColorTrack
 } from '@/shared/types';
 
+// Import the new registry system
+import { 
+  transformFactory,
+  TransformEvaluator,
+  getTransformDefinition,
+  getDefaultProperties
+} from '@/shared/registry/transforms';
+
+// Create an instance of the transform evaluator
+const transformEvaluator = new TransformEvaluator();
+
 import { 
   linear, 
   easeInOutCubic, 
@@ -29,38 +40,27 @@ import {
 } from '../core/interpolation';
 
 type EasingType = 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
-type AnimationValue = Point2D | number | string | null;
+type AnimationValue = Point2D | number | string | boolean | null;
 
-// Type guards for scene animation tracks
-function isSceneMoveTrack(track: SceneAnimationTrack): track is SceneMoveTrack {
-  return track.type === 'move';
-}
+// Type guards for scene animation tracks - now using the registry system
+// These are now generated dynamically from the registry
+import { 
+  isSceneMoveTrack,
+  isSceneRotateTrack,
+  isSceneScaleTrack,
+  isSceneFadeTrack,
+  isSceneColorTrack
+} from '@/shared/types/scene';
 
-function isSceneRotateTrack(track: SceneAnimationTrack): track is SceneRotateTrack {
-  return track.type === 'rotate';
-}
-
-function isSceneScaleTrack(track: SceneAnimationTrack): track is SceneScaleTrack {
-  return track.type === 'scale';
-}
-
-function isSceneFadeTrack(track: SceneAnimationTrack): track is SceneFadeTrack {
-  return track.type === 'fade';
-}
-
-function isSceneColorTrack(track: SceneAnimationTrack): track is SceneColorTrack {
-  return track.type === 'color';
-}
-
-// Get easing function by name
+// Get easing function by name - now using the registry system
 function getEasingFunction(easing: string) {
-  switch (easing) {
-    case 'linear': return linear;
-    case 'easeInOut': return easeInOutCubic;
-    case 'easeIn': return easeInCubic;
-    case 'easeOut': return easeOutCubic;
-    default: return linear;
-  }
+  const easingRegistry = {
+    linear,
+    easeInOut: easeInOutCubic,
+    easeIn: easeInCubic,
+    easeOut: easeOutCubic,
+  };
+  return easingRegistry[easing as keyof typeof easingRegistry] || linear;
 }
 
 // Color interpolation helper
@@ -100,30 +100,50 @@ function evaluateAnimation(animation: SceneAnimationTrack, time: number): Animat
   
   const localTime = time - animation.startTime;
   const progress = localTime / animation.duration;
-  const easingFunction = getEasingFunction(animation.easing);
-  const easedProgress = easingFunction(progress);
   
-  return interpolateAnimation(animation, easedProgress);
+  // Use the new transform evaluator for consistent evaluation
+  try {
+    return transformEvaluator.evaluateTransform(animation, progress);
+  } catch (error) {
+    // Fallback to legacy evaluation if needed
+    console.warn('Transform evaluation failed, falling back to legacy:', error);
+    const easingFunction = getEasingFunction(animation.easing);
+    const easedProgress = easingFunction(progress);
+    return interpolateAnimation(animation, easedProgress);
+  }
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
-  if (isSceneMoveTrack(animation)) {
-    return animation.properties.to;
-  } else if (isSceneRotateTrack(animation)) {
-    return animation.properties.rotations 
-      ? animation.properties.from + (animation.properties.rotations * Math.PI * 2)
-      : animation.properties.to;
-  } else if (isSceneScaleTrack(animation)) {
-    return animation.properties.to;
-  } else if (isSceneFadeTrack(animation)) {
-    return animation.properties.to;
-  } else if (isSceneColorTrack(animation)) {
-    return animation.properties.to;
+  // Use the new transform evaluator for consistent end value calculation
+  try {
+    return transformEvaluator.getEndValue(animation);
+  } catch (error) {
+    // Fallback to legacy evaluation if needed
+    console.warn('Transform end value calculation failed, falling back to legacy:', error);
+    if (isSceneMoveTrack(animation)) {
+      return animation.properties.to;
+    } else if (isSceneRotateTrack(animation)) {
+      return animation.properties.rotations 
+        ? animation.properties.from + (animation.properties.rotations * Math.PI * 2)
+        : animation.properties.to;
+    } else if (isSceneScaleTrack(animation)) {
+      return animation.properties.to;
+    } else if (isSceneFadeTrack(animation)) {
+      return animation.properties.to;
+    } else if (isSceneColorTrack(animation)) {
+      return animation.properties.to;
+    }
+    return null;
   }
-  return null;
 }
 
 function interpolateAnimation(animation: SceneAnimationTrack, progress: number): AnimationValue {
+  // Use the new transform evaluator for consistent interpolation
+  try {
+    return transformEvaluator.evaluateTransform(animation, progress);
+  } catch (error) {
+    // Fallback to legacy interpolation if needed
+    console.warn('Transform interpolation failed, falling back to legacy:', error);
   if (isSceneMoveTrack(animation)) {
     return lerpPoint(animation.properties.from, animation.properties.to, progress);
   } else if (isSceneRotateTrack(animation)) {
@@ -143,6 +163,7 @@ function interpolateAnimation(animation: SceneAnimationTrack, progress: number):
     return lerpColor(animation.properties.from, animation.properties.to, progress);
   }
   return null;
+  }
 }
 
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
@@ -191,19 +212,65 @@ export function getObjectStateAtTime(
     const value = evaluateAnimation(animation, time);
     if (value === null) continue;
     
-    if (isSceneMoveTrack(animation)) {
-      state.position = value as Point2D;
-    } else if (isSceneRotateTrack(animation)) {
-      state.rotation = value as number;
-    } else if (isSceneScaleTrack(animation)) {
-      state.scale = value as Point2D;
-    } else if (isSceneFadeTrack(animation)) {
-      state.opacity = value as number;
-    } else if (isSceneColorTrack(animation)) {
-      if (animation.properties.property === 'fill') {
-        state.colors.fill = value as string;
-      } else {
-        state.colors.stroke = value as string;
+    // Use the registry system to determine how to apply the value
+    const definition = getTransformDefinition(animation.type);
+    if (definition?.metadata) {
+      // Apply the value based on the transform definition
+      switch (definition.metadata.targetProperty) {
+        case 'position':
+          state.position = value as Point2D;
+          break;
+        case 'rotation':
+          state.rotation = value as number;
+          break;
+        case 'scale':
+          state.scale = value as Point2D;
+          break;
+        case 'opacity':
+          state.opacity = value as number;
+          break;
+        case 'color':
+          const colorProperty = (animation.properties as any).property;
+          if (colorProperty === 'fill') {
+            state.colors.fill = value as string;
+          } else {
+            state.colors.stroke = value as string;
+          }
+          break;
+        default:
+          // Fallback to legacy type checking
+          if (isSceneMoveTrack(animation)) {
+            state.position = value as Point2D;
+          } else if (isSceneRotateTrack(animation)) {
+            state.rotation = value as number;
+          } else if (isSceneScaleTrack(animation)) {
+            state.scale = value as Point2D;
+          } else if (isSceneFadeTrack(animation)) {
+            state.opacity = value as number;
+          } else if (isSceneColorTrack(animation)) {
+            if (animation.properties.property === 'fill') {
+              state.colors.fill = value as string;
+            } else {
+              state.colors.stroke = value as string;
+            }
+          }
+      }
+    } else {
+      // Fallback to legacy type checking if no definition found
+      if (isSceneMoveTrack(animation)) {
+        state.position = value as Point2D;
+      } else if (isSceneRotateTrack(animation)) {
+        state.rotation = value as number;
+      } else if (isSceneScaleTrack(animation)) {
+        state.scale = value as Point2D;
+      } else if (isSceneFadeTrack(animation)) {
+        state.opacity = value as number;
+      } else if (isSceneColorTrack(animation)) {
+        if (animation.properties.property === 'fill') {
+          state.colors.fill = value as string;
+        } else {
+          state.colors.stroke = value as string;
+        }
       }
     }
   }
