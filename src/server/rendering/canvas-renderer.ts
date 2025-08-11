@@ -33,18 +33,22 @@ export class CanvasRenderer implements Renderer {
 
     const prepared = await this.storageProvider.prepareTarget("mp4");
 
-    await frameGenerator.generateAnimation(
-      prepared.filePath,
-      (ctx, frame) => {
-        sceneRenderer.renderFrame(ctx, frame.time);
-      },
-      {
-        preset: config.videoPreset,
-        crf: config.videoCrf,
-      }
-    );
+    try {
+      await frameGenerator.generateAnimation(
+        prepared.filePath,
+        (ctx, frame) => {
+          sceneRenderer.renderFrame(ctx, frame.time);
+        },
+        {
+          preset: config.videoPreset,
+          crf: config.videoCrf,
+        }
+      );
 
-    const { publicUrl } = await this.storageProvider.finalize(prepared);
-    return { filePath: prepared.filePath, publicUrl };
+      const { publicUrl } = await this.storageProvider.finalize(prepared);
+      return { filePath: prepared.filePath, publicUrl };
+    } finally {
+      frameGenerator.dispose();
+    }
   }
 }

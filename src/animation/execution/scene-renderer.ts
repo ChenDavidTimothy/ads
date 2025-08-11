@@ -1,7 +1,7 @@
 // src/animation/execution/scene-renderer.ts
 import type { NodeCanvasContext, Point2D } from '@/shared/types/core';
 import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
-import { getSceneStateAtTime } from '../scene/timeline';
+import { Timeline } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
@@ -16,10 +16,12 @@ export interface SceneRenderConfig {
 export class SceneRenderer {
   private scene: AnimationScene;
   private config: SceneRenderConfig;
+  private timeline: Timeline;
 
   constructor(scene: AnimationScene, config: SceneRenderConfig) {
     this.scene = scene;
     this.config = config;
+    this.timeline = new Timeline(scene);
   }
 
   renderFrame(ctx: NodeCanvasContext, time: number): void {
@@ -28,8 +30,8 @@ export class SceneRenderer {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, this.config.width, this.config.height);
 
-    // Get current state of all objects
-    const sceneState = getSceneStateAtTime(this.scene, time);
+    // Get current state of all objects using cached timeline index
+    const sceneState = this.timeline.getSceneState(time);
 
     // Render each object
     for (const object of this.scene.objects) {

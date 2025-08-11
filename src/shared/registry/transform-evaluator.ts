@@ -5,7 +5,7 @@ import type {
 } from '../types/transforms';
 import type { Point2D } from '../types/core';
 import { transformFactory } from './transform-factory';
-import { getInterpolator } from './interpolator-registry';
+import { getInterpolator, getInterpolatorForValue } from './interpolator-registry';
 import { 
   linear, 
   easeInOutCubic, 
@@ -57,29 +57,23 @@ export class TransformEvaluator {
 
   // Get the end value of a transform
   public getEndValue(transform: SceneTransform): AnimationValue {
+    // Prefer explicit 'to' if present
+    if (Object.prototype.hasOwnProperty.call(transform.properties, 'to')) {
+      return transform.properties['to'] as AnimationValue;
+    }
+
+    // Fallback: try property schema from definition
     const definition = transformFactory.getTransformDefinition(transform.type);
     if (!definition) {
       return null;
     }
-
-    // For most transforms, we need to determine the end value based on the transform type
-    switch (transform.type) {
-      case 'move':
-        return transform.properties.to as Point2D;
-      case 'rotate':
-        // For rotate, we need to calculate the final rotation
-        const toRotation = transform.properties.to as number;
-        return toRotation;
-      case 'scale':
-        return transform.properties.to as number;
-      case 'fade':
-        return transform.properties.to as number;
-      case 'color':
-        return transform.properties.to as string;
-      default:
-        // For unknown transforms, try to get the end value from properties
-        return transform.properties.to as AnimationValue;
+    const toDef = definition.properties.find(p => p.key === 'to');
+    if (toDef) {
+      return transform.properties[toDef.key] as AnimationValue;
     }
+
+    // Last resort: return null if cannot determine end value
+    return null;
   }
 
   // Interpolate a transform at a specific progress
@@ -89,81 +83,31 @@ export class TransformEvaluator {
       return null;
     }
 
-    // Handle each transform type using the registry system
-    switch (transform.type) {
-      case 'move':
-        return this.interpolateMove(transform, progress);
-      case 'rotate':
-        return this.interpolateRotate(transform, progress);
-      case 'scale':
-        return this.interpolateScale(transform, progress);
-      case 'fade':
-        return this.interpolateFade(transform, progress);
-      case 'color':
-        return this.interpolateColor(transform, progress);
-      default:
-        // For unknown transforms, try to interpolate based on property types
-        return this.interpolateGeneric(transform, progress);
-    }
-  }
+    // Generic interpolation: assume standard from/to schema, guided by definition
+    const fromKey = definition.properties.find(p => p.key === 'from')?.key ?? 'from';
+    const toKey = definition.properties.find(p => p.key === 'to')?.key ?? 'to';
 
-  // Interpolate move transform
-  private interpolateMove(transform: SceneTransform, progress: number): Point2D {
-    const from = transform.properties.from as Point2D;
-    const to = transform.properties.to as Point2D;
-    const interpolator = getInterpolator('point2d');
-    return interpolator.interpolate(from, to, progress) as Point2D;
-  }
+    const from = transform.properties[fromKey];
+    const to = transform.properties[toKey];
 
-  // Interpolate rotate transform
-  private interpolateRotate(transform: SceneTransform, progress: number): number {
-    const fromRotation = transform.properties.from as number;
-    const toRotation = transform.properties.to as number;
-    return fromRotation + (progress * (toRotation - fromRotation));
-  }
-
-  // Interpolate scale transform
-  private interpolateScale(transform: SceneTransform, progress: number): number {
-    const from = transform.properties.from as number;
-    const to = transform.properties.to as number;
-    const interpolator = getInterpolator('number');
-    return interpolator.interpolate(from, to, progress) as number;
-  }
-
-  // Interpolate fade transform
-  private interpolateFade(transform: SceneTransform, progress: number): number {
-    const from = transform.properties.from as number;
-    const to = transform.properties.to as number;
-    const interpolator = getInterpolator('number');
-    return interpolator.interpolate(from, to, progress) as number;
-  }
-
-  // Interpolate color transform
-  private interpolateColor(transform: SceneTransform, progress: number): string {
-    const from = transform.properties.from as string;
-    const to = transform.properties.to as string;
-    const interpolator = getInterpolator('color');
-    return interpolator.interpolate(from, to, progress) as string;
-  }
-
-  // Generic interpolation for unknown transform types
-  private interpolateGeneric(transform: SceneTransform, progress: number): AnimationValue {
-    const definition = transformFactory.getTransformDefinition(transform.type);
-    if (!definition) {
+    // If either from or to is missing, nothing to interpolate
+    if (from === undefined || to === undefined) {
       return null;
     }
 
-    // Try to find properties that can be interpolated
-    for (const propDef of definition.properties) {
-      const from = transform.properties[propDef.key];
-      const to = transform.properties[`to_${propDef.key}`] ?? transform.properties[propDef.key];
-      
-      if (from !== undefined && to !== undefined && from !== to) {
-        const interpolator = getInterpolator(propDef.type);
-        if (interpolator) {
-          return interpolator.interpolate(from, to, progress) as AnimationValue;
-        }
-      }
+    // Determine type from definition first, then by value
+    const typeFromDef = definition.properties.find(p => p.key === toKey)?.type
+      ?? definition.properties.find(p => p.key === fromKey)?.type;
+
+    if (typeFromDef) {
+      const interpolator = getInterpolator(typeFromDef);
+      return interpolator.interpolate(from as never, to as never, progress) as AnimationValue;
+    }
+
+    // Fallback: detect interpolator by runtime value type
+    const runtimeInterpolator = getInterpolatorForValue(to) ?? getInterpolatorForValue(from);
+    if (runtimeInterpolator) {
+      return runtimeInterpolator.interpolate(from as never, to as never, progress) as AnimationValue;
     }
 
     return null;
@@ -198,7 +142,7 @@ export class TransformEvaluator {
     const sortedTransforms = [...transforms].sort((a, b) => a.startTime - b.startTime);
     
     // Track accumulated values
-  const accumulated: Record<string, AnimationValue> = {
+    const accumulated: Record<string, AnimationValue> = {
       position: initialState.position ?? { x: 0, y: 0 },
       rotation: initialState.rotation ?? 0,
       scale: initialState.scale ?? { x: 1, y: 1 },
@@ -249,7 +193,7 @@ export class TransformEvaluator {
       case 'position':
         if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
           const point = value as { x: number; y: number };
-          accumulated.position = point;
+          accumulated.position = { x: point.x, y: point.y } as unknown as AnimationValue;
         }
         break;
       case 'rotation':
@@ -259,16 +203,19 @@ export class TransformEvaluator {
         break;
       case 'scale':
         if (typeof value === 'number') {
-          accumulated.scale = { x: value, y: value };
+          accumulated.scale = { x: value, y: value } as unknown as AnimationValue;
         } else if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
           const point = value as { x: number; y: number };
-          accumulated.scale = point;
+          accumulated.scale = { x: point.x, y: point.y } as unknown as AnimationValue;
         }
         break;
       case 'opacity':
         if (typeof value === 'number') {
           accumulated.opacity = value;
         }
+        break;
+      case 'color':
+        // color accumulation is handled at application time using animation.properties.property
         break;
     }
   }
