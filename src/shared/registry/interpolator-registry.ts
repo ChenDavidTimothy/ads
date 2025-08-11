@@ -1,10 +1,15 @@
 // src/shared/registry/interpolator-registry.ts - Interpolator registry system
 import type { 
   InterpolatorEntry, 
+  InterpolatorFunction, 
   PropertyType
 } from '../types/transforms';
 import type { Point2D } from '../types/core';
 import { 
+  linear, 
+  easeInOutCubic, 
+  easeInCubic, 
+  easeOutCubic,
   lerp,
   lerpPoint 
 } from '../../animation/core/interpolation';
@@ -103,8 +108,8 @@ const booleanInterpolator: InterpolatorEntry<boolean> = {
   },
 };
 
-// Interpolator registry
-const INTERPOLATOR_REGISTRY: Record<PropertyType, InterpolatorEntry<unknown>> = {
+// Interpolator registry - maps property types to their interpolators
+export const INTERPOLATOR_REGISTRY: Record<PropertyType, InterpolatorEntry<unknown>> = {
   number: numberInterpolator as InterpolatorEntry<unknown>,
   point2d: point2dInterpolator as InterpolatorEntry<unknown>,
   color: colorInterpolator as InterpolatorEntry<unknown>,
@@ -117,9 +122,9 @@ export function getInterpolator(propertyType: PropertyType): InterpolatorEntry {
   return INTERPOLATOR_REGISTRY[propertyType];
 }
 
-// Get interpolator for a specific value
-export function getInterpolatorForValue(value: unknown): InterpolatorEntry<unknown> | null {
-  for (const [, interpolator] of Object.entries(INTERPOLATOR_REGISTRY)) {
+// Get interpolator for a value (auto-detect type)
+export function getInterpolatorForValue(value: unknown): InterpolatorEntry | null {
+  for (const [type, interpolator] of Object.entries(INTERPOLATOR_REGISTRY)) {
     if (interpolator.validate(value)) {
       return interpolator;
     }
@@ -127,7 +132,7 @@ export function getInterpolatorForValue(value: unknown): InterpolatorEntry<unkno
   return null;
 }
 
-// Check if a value can be interpolated
+// Validate if a value can be interpolated
 export function canInterpolate(value: unknown): boolean {
   return getInterpolatorForValue(value) !== null;
 }

@@ -44,21 +44,21 @@ export function convertTracksToSceneAnimations(
 ): SceneAnimationTrack[] {
   // Helper: deep-ish equality for 'from' defaults
   const isDefaultFrom = (type: string, value: unknown): boolean => {
-    const defaults = transformFactory.getDefaultProperties(type);
+    const defaults = transformFactory.getDefaultProperties(type) as any | undefined;
     if (!defaults) return false;
-    const def = defaults.from;
+    const def = (defaults as any).from;
     if (typeof def === 'number') return value === def;
     if (typeof def === 'string') return value === def;
-    if (typeof def === 'object' && def && typeof (def as Point2D).x === 'number' && typeof (def as Point2D).y === 'number') {
+    if (typeof def === 'object' && def && typeof (def as any).x === 'number' && typeof (def as any).y === 'number') {
       const v = value as Point2D | undefined;
-      return !!v && v.x === (def as Point2D).x && v.y === (def as Point2D).y;
+      return !!v && v.x === (def as any).x && v.y === (def as any).y;
     }
     return false;
   };
 
   // Helper: get target property for a transform type
   const getTargetProperty = (type: string): string | undefined => {
-    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty;
+    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty as string | undefined;
   };
 
   // Helper: compute last value at a given absolute time from prior animations for the same target property
@@ -73,8 +73,8 @@ export function convertTracksToSceneAnimations(
 
     // Special-case color: restrict to same fill/stroke property
     if (currentTrack?.type === 'color') {
-      const prop = (currentTrack.properties as { property: string })?.property;
-      relevant = relevant.filter(a => a.type === 'color' && (a.properties as { property: string })?.property === prop);
+      const prop = (currentTrack.properties as any)?.property;
+      relevant = relevant.filter(a => a.type === 'color' && (a.properties as any)?.property === prop);
     }
     if (relevant.length === 0) return undefined;
 
@@ -84,13 +84,13 @@ export function convertTracksToSceneAnimations(
       .sort((a, b) => (a.startTime + a.duration) - (b.startTime + b.duration));
     if (completed.length > 0) {
       const last = completed[completed.length - 1]!;
-      return transformEvaluator.getEndValue(last);
+      return transformEvaluator.getEndValue(last as any);
     }
 
     // Otherwise, if an animation is active at 'atTime', sample it
     const active = relevant.find(a => atTime >= a.startTime && atTime < a.startTime + a.duration);
     if (active) {
-      return transformEvaluator.evaluateTransform(active, atTime);
+      return transformEvaluator.evaluateTransform(active as any, atTime);
     }
 
     return undefined;
@@ -113,7 +113,7 @@ export function convertTracksToSceneAnimations(
     
     // Get the end value of the most recent track of the same type
     const mostRecent = sameTypeTracks[0]!;
-    return (mostRecent.properties as { to: unknown }).to;
+    return (mostRecent.properties as any).to;
   };
 
   const sortedTracks = [...tracks].sort((a, b) => a.startTime - b.startTime);
@@ -124,7 +124,7 @@ export function convertTracksToSceneAnimations(
     const targetProperty = getTargetProperty(track.type);
 
     // Clone properties so we can adjust 'from' if chaining applies
-    const properties = { ...track.properties } as Record<string, unknown>;
+    const properties = { ...(track.properties as any) } as any;
 
     // Priority order for 'from' value:
     // 1. Explicit 'from' value in track properties (must NEVER be overridden)
@@ -142,7 +142,7 @@ export function convertTracksToSceneAnimations(
       }
       
       if (inherited !== undefined) {
-        properties.from = inherited;
+        properties.from = inherited as any;
       }
     }
 

@@ -11,6 +11,7 @@ import {
   TRANSFORM_DEFINITIONS
 } from './transform-definitions';
 import { 
+  INTERPOLATOR_REGISTRY, 
   getInterpolator, 
   canInterpolate 
 } from './interpolator-registry';
@@ -118,7 +119,7 @@ export class TransformFactoryImpl implements TransformFactory {
   // Get property definitions for a transform type
   getPropertyDefinitions(type: string): PropertyDefinition[] {
     const definition = this.getTransformDefinition(type);
-    return definition?.properties ?? [];
+    return definition?.properties || [];
   }
 
   // Check if a transform type supports easing
@@ -130,7 +131,7 @@ export class TransformFactoryImpl implements TransformFactory {
   // Get default easing for a transform type
   getDefaultEasing(type: string): 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' {
     const definition = this.getTransformDefinition(type);
-    return definition?.metadata?.defaultEasing ?? 'linear';
+    return (definition?.metadata?.defaultEasing as any) ?? 'linear';
   }
 
   // Validate and merge properties with defaults
@@ -143,7 +144,7 @@ export class TransformFactoryImpl implements TransformFactory {
       if (providedValue !== undefined) {
         // Validate the provided value
         if (!this.validatePropertyValue(propDef, providedValue)) {
-          throw new Error(`Invalid value for property ${propDef.key}: ${JSON.stringify(providedValue)}`);
+          throw new Error(`Invalid value for property ${propDef.key}: ${String(providedValue)}`);
         }
         result[propDef.key] = providedValue;
       } else if (propDef.required) {
@@ -220,7 +221,7 @@ export class TransformFactoryImpl implements TransformFactory {
 
   // Get all property types that support interpolation
   getInterpolatablePropertyTypes(): PropertyType[] {
-    return ['number', 'point2d', 'color', 'string', 'boolean'] as PropertyType[];
+    return Object.keys(INTERPOLATOR_REGISTRY) as PropertyType[];
   }
 }
 

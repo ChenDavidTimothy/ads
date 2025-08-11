@@ -1,7 +1,7 @@
 // src/animation/core/animation-chain-test.ts
 // This file demonstrates the expected behavior of chained animations
 
-import type { AnimationTrack, MoveTrack, RotateTrack, ScaleTrack } from '@/shared/types/nodes';
+import type { AnimationTrack, MoveTrack, RotateTrack } from '@/shared/types/nodes';
 import type { Point2D } from '@/shared/types/core';
 
 // Example: Chaining move and rotate animations
@@ -110,7 +110,7 @@ Key Points:
 // Example: Mixed transform types
 export function createMixedTransformExample(): {
   moveTrack: MoveTrack;
-  scaleTrack: ScaleTrack;
+  scaleTrack: any; // Scale track
   expectedBehavior: string;
 } {
   // Move animation
@@ -127,7 +127,7 @@ export function createMixedTransformExample(): {
   };
 
   // Scale animation (simplified for example)
-  const scaleTrack: ScaleTrack = {
+  const scaleTrack = {
     id: 'scale-1',
     type: 'scale',
     startTime: 1000, // Start when move ends
@@ -176,26 +176,26 @@ export function simulateAnimationState(
       const progress = (time - track.startTime) / track.duration;
       
       if (track.type === 'move') {
-        const props = track.properties;
+        const props = track.properties as any;
         position.x = props.from.x + (props.to.x - props.from.x) * progress;
         position.y = props.from.y + (props.to.y - props.from.y) * progress;
       } else if (track.type === 'rotate') {
-        const props = track.properties;
+        const props = track.properties as any;
         rotation = props.from + (props.to - props.from) * progress;
       } else if (track.type === 'scale') {
-        const props = track.properties;
+        const props = track.properties as any;
         scale = props.from + (props.to - props.from) * progress;
       }
     } else if (time >= track.startTime + track.duration) {
       // Animation has completed, use end values
       if (track.type === 'move') {
-        const props = track.properties;
+        const props = track.properties as any;
         position = props.to;
       } else if (track.type === 'rotate') {
-        const props = track.properties;
+        const props = track.properties as any;
         rotation = props.to;
       } else if (track.type === 'scale') {
-        const props = track.properties;
+        const props = track.properties as any;
         scale = props.to;
       }
     }

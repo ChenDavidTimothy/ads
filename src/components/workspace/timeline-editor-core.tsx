@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
 import { transformFactory } from '@/shared/registry/transforms';
 import type {
   AnimationTrack,
+  MoveTrack,
+  RotateTrack,
+  ScaleTrack,
   MoveTrackProperties,
   RotateTrackProperties,
   ScaleTrackProperties,
@@ -55,6 +58,8 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
 
+  const timelineRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     setDuration(initialDuration);
     setTracks(initialTracks);
@@ -70,31 +75,11 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
         id,
         startTime: 0,
         duration: Math.min(2, duration),
-        easing: definition?.metadata?.defaultEasing ?? "easeInOut",
+        easing: (definition?.metadata?.defaultEasing || "easeInOut") as 'linear' | 'easeInOut' | 'easeIn' | 'easeOut',
         properties: getDefaultTrackProperties(type),
       };
 
-      let newTrack: AnimationTrack;
-      switch (type) {
-        case 'move':
-          newTrack = { ...baseTrack, type, properties: baseTrack.properties as unknown as MoveTrackProperties };
-          break;
-        case 'rotate':
-          newTrack = { ...baseTrack, type, properties: baseTrack.properties as unknown as RotateTrackProperties };
-          break;
-        case 'scale':
-          newTrack = { ...baseTrack, type, properties: baseTrack.properties as unknown as ScaleTrackProperties };
-          break;
-        case 'fade':
-          newTrack = { ...baseTrack, type, properties: baseTrack.properties as unknown as FadeTrackProperties };
-          break;
-        case 'color':
-          newTrack = { ...baseTrack, type, properties: baseTrack.properties as unknown as ColorTrackProperties };
-          break;
-        default:
-          throw new Error(`Unknown track type: ${String(type)}`);
-      }
-      
+      const newTrack: AnimationTrack = { ...baseTrack, type } as any;
       setTracks((prev) => [...prev, newTrack]);
     },
     [duration],
@@ -105,7 +90,7 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
       prev.map((track) => {
         if (track.id !== trackId) return track;
         if (track.type !== (updates.type ?? track.type)) return track;
-        return { ...track, ...updates };
+        return { ...track, ...updates } as AnimationTrack;
       }),
     );
   }, []);
@@ -118,6 +103,16 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
       }
     },
     [selectedTrackId],
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, trackId: string, type: DragState["type"]) => {
+      e.preventDefault();
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return;
+      setDragState({ trackId, type, startX: e.clientX, startTime: track.startTime, startDuration: track.duration });
+    },
+    [tracks],
   );
 
   const handleMouseMove = useCallback(
@@ -175,66 +170,127 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
               onChange={setDuration}
               min={0.1}
               step={0.1}
+              defaultValue={3}
+              className="w-32"
             />
-            <Button onClick={() => onSave(duration, tracks)}>Save</Button>
-            <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => onSave(duration, tracks)} variant="success" size="sm">
+              Save
+            </Button>
+            <Button onClick={onCancel} variant="secondary" size="sm">
+              Cancel
+            </Button>
           </div>
         </div>
 
-        <div className="flex gap-4 mb-4">
-            <Button variant="ghost" onClick={() => addTrack("move")}>
-              Add Move Track
-            </Button>
-            <Button variant="ghost" onClick={() => addTrack("rotate")}>
-              Add Rotate Track
-            </Button>
-            <Button variant="ghost" onClick={() => addTrack("scale")}>
-              Add Scale Track
-            </Button>
-            <Button variant="ghost" onClick={() => addTrack("fade")}>
-              Add Fade Track
-            </Button>
-            <Button variant="ghost" onClick={() => addTrack("color")}>
-              Add Color Track
-            </Button>
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-medium text-gray-300">Add Track:</span>
+            {transformFactory.getAllTransformTypes().map((type) => {
+              const trackColors = transformFactory.getTrackColors();
+              const trackIcons = transformFactory.getTrackIcons();
+              return (
+                <Button 
+                  key={type} 
+                  onClick={() => addTrack(type as AnimationTrack["type"])} 
+                  className={cn("text-xs", trackColors[type] || "bg-gray-600")} 
+                  size="sm"
+                >
+                  {trackIcons[type] || "●"} {type}
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          {tracks.map((track) => (
-            <div
-              key={track.id}
-              className={cn(
-                "flex items-center gap-2 p-2 border rounded cursor-pointer",
-                selectedTrackId === track.id ? "border-blue-500 bg-blue-50" : "border-gray-300"
-              )}
-              onClick={() => setSelectedTrackId(track.id)}
-            >
-              <div className="flex-1">
-                <div className="text-sm font-medium">{track.type}</div>
-                <div className="text-xs text-gray-500">
-                  {track.startTime.toFixed(1)}s - {(track.startTime + track.duration).toFixed(1)}s ({track.duration.toFixed(1)}s)
+        <div ref={timelineRef} className="relative bg-gray-900 rounded-lg p-4" style={{ width: `${TIMELINE_WIDTH}px` }}>
+          <div className="relative h-6 mb-4">
+            {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
+              <div key={i} className="absolute flex flex-col items-center" style={{ left: `${(i / duration) * 100}%` }}>
+                <div className="w-px h-4 bg-gray-500" />
+                <span className="text-xs text-gray-400 mt-1">{i}s</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {tracks.map((track) => (
+              <div key={track.id} className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white w-16">
+                      {(() => {
+                        const trackIcons = transformFactory.getTrackIcons();
+                        return trackIcons[track.type] || "●";
+                      })()} {track.type}
+                    </span>
+                    {selectedTrackId === track.id && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">SELECTED</span>
+                    )}
+                  </div>
+                  <Button onClick={() => deleteTrack(track.id)} variant="danger" size="sm" className="text-xs">
+                    Delete
+                  </Button>
+                </div>
+
+                <div className="relative h-8 bg-gray-700 rounded">
+                  <div
+                    className={cn(
+                      "absolute h-6 rounded cursor-move transition-all text-white",
+                      (() => {
+                        const trackColors = transformFactory.getTrackColors();
+                        return trackColors[track.type] || "bg-gray-600";
+                      })(),
+                      selectedTrackId === track.id ? "ring-2 ring-blue-400 shadow-lg" : "hover:brightness-110",
+                      dragState?.trackId === track.id ? "opacity-80" : "",
+                    )}
+                    style={{ left: `${(track.startTime / duration) * 100}%`, width: `${(track.duration / duration) * 100}%`, top: "1px" }}
+                    onMouseDown={(e) => handleMouseDown(e, track.id, "move")}
+                    onClick={() => setSelectedTrackId(track.id)}
+                  >
+                    <div className="flex items-center justify-between h-full px-2">
+                      <span className="text-xs font-medium truncate">{track.type}</span>
+                      <span className="text-xs text-white/80">{track.duration.toFixed(1)}s</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="absolute w-3 h-6 cursor-w-resize bg-white/30 hover:bg-white/50 rounded-l z-10"
+                    style={{ left: `${(track.startTime / duration) * 100}%`, top: "1px" }}
+                    onMouseDown={(e) => handleMouseDown(e, track.id, "resize-start")}
+                  />
+                  <div
+                    className="absolute w-3 h-6 cursor-e-resize bg-white/30 hover:bg-white/50 rounded-r z-10"
+                    style={{ left: `${((track.startTime + track.duration) / duration) * 100 - (12 / TIMELINE_WIDTH) * 100}%`, top: "1px" }}
+                    onMouseDown={(e) => handleMouseDown(e, track.id, "resize-end")}
+                  />
+                </div>
+
+                <div className="text-xs text-gray-400 mt-1">
+                  {track.startTime.toFixed(1)}s - {(track.startTime + track.duration).toFixed(1)}s
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteTrack(track.id);
-                }}
-              >
-                Delete
-              </Button>
+            ))}
+          </div>
+
+          {tracks.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <div className="text-lg mb-2">No animation tracks</div>
+              <div className="text-sm mb-4">Click the colored buttons above to add animation tracks</div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      {selectedTrack && (
-        <div className="w-80 p-4 border-l bg-gray-50">
+      <div className="w-80 border-l border-gray-600 p-4 bg-gray-850">
+        <h3 className="text-lg font-semibold text-white mb-4">Properties</h3>
+        {selectedTrack ? (
           <TrackProperties track={selectedTrack} onChange={(updates) => updateTrack(selectedTrack.id, updates)} />
-        </div>
-      )}
+        ) : (
+          <div className="text-gray-400 text-sm">Click a track to select and edit its properties</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -245,40 +301,64 @@ interface TrackPropertiesProps {
 }
 
 function TrackProperties({ track, onChange }: TrackPropertiesProps) {
-  const updateProperties = (properties: Record<string, unknown>) => {
-    onChange({ properties: { ...track.properties, ...properties } } as Partial<AnimationTrack>);
-  };
+  const easingOptions = [
+    { value: "linear", label: "Linear" },
+    { value: "easeInOut", label: "Ease In Out" },
+    { value: "easeIn", label: "Ease In" },
+    { value: "easeOut", label: "Ease Out" },
+  ];
+
+  const updateProperties = useCallback(
+    (
+      updates: Partial<
+        | MoveTrackProperties
+        | RotateTrackProperties
+        | ScaleTrackProperties
+        | FadeTrackProperties
+        | ColorTrackProperties
+      >,
+    ) => {
+      switch (track.type) {
+        case "move": {
+          const merged: MoveTrackProperties = { ...track.properties, ...(updates as Partial<MoveTrackProperties>) };
+          onChange({ properties: merged });
+          break;
+        }
+        case "rotate": {
+          const merged: RotateTrackProperties = { ...track.properties, ...(updates as Partial<RotateTrackProperties>) };
+          onChange({ properties: merged });
+          break;
+        }
+        case "scale": {
+          const merged: ScaleTrackProperties = { ...track.properties, ...(updates as Partial<ScaleTrackProperties>) };
+          onChange({ properties: merged });
+          break;
+        }
+        case "fade": {
+          const merged: FadeTrackProperties = { ...track.properties, ...(updates as Partial<FadeTrackProperties>) };
+          onChange({ properties: merged });
+          break;
+        }
+        case "color": {
+          const merged: ColorTrackProperties = { ...track.properties, ...(updates as Partial<ColorTrackProperties>) };
+          onChange({ properties: merged });
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [track.type, track.properties, onChange],
+  );
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        <div className="text-sm font-medium text-white">General Properties</div>
-        <NumberField
-          label="Start Time (seconds)"
-          value={track.startTime}
-          onChange={(startTime) => onChange({ startTime })}
-          min={0}
-          step={0.1}
-        />
-        <NumberField
-          label="Duration (seconds)"
-          value={track.duration}
-          onChange={(duration) => onChange({ duration })}
-          min={0.1}
-          step={0.1}
-        />
-        <SelectField
-          label="Easing"
-          value={track.easing}
-          onChange={(easing) => onChange({ easing: easing as 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' })}
-          options={[
-            { value: "linear", label: "Linear" },
-            { value: "easeInOut", label: "Ease In/Out" },
-            { value: "easeIn", label: "Ease In" },
-            { value: "easeOut", label: "Ease Out" },
-          ]}
-        />
-      </div>
+      <SelectField
+        label="Easing"
+        value={track.easing}
+        onChange={(easing) => onChange({ easing: easing as AnimationTrack["easing"] })}
+        options={easingOptions}
+      />
 
       {isMoveTrack(track) && (
         <div className="space-y-3">
@@ -288,25 +368,25 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
               label="From X"
               value={track.properties.from.x}
               onChange={(x) => updateProperties({ from: { ...track.properties.from, x } })}
-              step={1}
+              defaultValue={0}
             />
             <NumberField
               label="From Y"
               value={track.properties.from.y}
               onChange={(y) => updateProperties({ from: { ...track.properties.from, y } })}
-              step={1}
+              defaultValue={0}
             />
             <NumberField
               label="To X"
               value={track.properties.to.x}
               onChange={(x) => updateProperties({ to: { ...track.properties.to, x } })}
-              step={1}
+              defaultValue={100}
             />
             <NumberField
               label="To Y"
               value={track.properties.to.y}
               onChange={(y) => updateProperties({ to: { ...track.properties.to, y } })}
-              step={1}
+              defaultValue={100}
             />
           </div>
         </div>
@@ -318,14 +398,14 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Rotation"
-              value={track.properties.from}
+              value={(track.properties as any).from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
             />
             <NumberField
               label="To Rotation"
-              value={track.properties.to}
+              value={(track.properties as any).to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
@@ -340,7 +420,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From"
-              value={track.properties.from}
+              value={(track.properties as any).from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -348,7 +428,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             />
             <NumberField
               label="To"
-              value={track.properties.to}
+              value={(track.properties as any).to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -364,7 +444,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Opacity"
-              value={track.properties.from}
+              value={(track.properties as any).from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -373,7 +453,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             />
             <NumberField
               label="To Opacity"
-              value={track.properties.to}
+              value={(track.properties as any).to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -389,7 +469,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="text-sm font-medium text-white">Color Properties</div>
           <SelectField
             label="Property"
-            value={track.properties.property}
+            value={(track.properties as any).property}
             onChange={(property) => updateProperties({ property: property as "fill" | "stroke" })}
             options={[
               { value: "fill", label: "Fill" },
@@ -397,8 +477,8 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             ]}
           />
           <div className="grid grid-cols-2 gap-2">
-            <ColorField label="From Color" value={track.properties.from} onChange={(from) => updateProperties({ from })} />
-            <ColorField label="To Color" value={track.properties.to} onChange={(to) => updateProperties({ to })} />
+            <ColorField label="From Color" value={(track.properties as any).from} onChange={(from) => updateProperties({ from })} />
+            <ColorField label="To Color" value={(track.properties as any).to} onChange={(to) => updateProperties({ to })} />
           </div>
         </div>
       )}

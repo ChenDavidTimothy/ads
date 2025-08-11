@@ -1,7 +1,7 @@
-// src/shared/types/transforms.ts - Transform system type definitions
+// src/shared/types/transforms.ts - Robust transform registry system
 import type { Point2D } from './core';
 
-// Property type definitions
+// Property type definitions for validation and UI generation
 export type PropertyType = 'number' | 'point2d' | 'color' | 'string' | 'boolean';
 
 export interface PropertyDefinition {
@@ -20,7 +20,9 @@ export interface PropertyDefinition {
 }
 
 // Transform property schemas - defines what properties each transform type needs
-export type TransformProperties = Record<string, unknown>;
+export interface TransformProperties {
+  [key: string]: unknown;
+}
 
 // Base transform definition - follows the same pattern as NodeDefinition
 export interface TransformDefinition {
@@ -92,7 +94,9 @@ export interface TransformFactory {
 export type EasingFunction = (progress: number) => number;
 
 // Easing registry
-export type EasingRegistry = Record<string, EasingFunction>;
+export interface EasingRegistry {
+  [name: string]: EasingFunction;
+}
 
 // Animation value union - what gets returned during evaluation
 export type AnimationValue = Point2D | number | string | boolean | null;
@@ -106,7 +110,7 @@ export interface TransformEvaluationContext {
 }
 
 // Transform evaluator interface
-export interface TransformEvaluator {
+export interface TransformEvaluator<T extends TransformProperties = TransformProperties> {
   evaluate(
     transform: SceneTransform,
     context: TransformEvaluationContext

@@ -239,7 +239,7 @@ export function getTransformDefinition(transformType: string): TransformDefiniti
 }
 
 export function getAllTransformTypes(): TransformType[] {
-  return Object.keys(TRANSFORM_DEFINITIONS);
+  return Object.keys(TRANSFORM_DEFINITIONS) as TransformType[];
 }
 
 export function getTransformsByCategory(category: TransformDefinition['category']): TransformDefinition[] {

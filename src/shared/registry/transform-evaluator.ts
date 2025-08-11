@@ -1,7 +1,9 @@
 // src/shared/registry/transform-evaluator.ts - Transform evaluator system
 import type { 
   SceneTransform, 
-  AnimationValue
+  TransformEvaluationContext, 
+  AnimationValue,
+  PropertyType
 } from '../types/transforms';
 import type { Point2D } from '../types/core';
 import { transformFactory } from './transform-factory';
@@ -23,7 +25,7 @@ const EASING_REGISTRY = {
 
 // Get easing function by name
 function getEasingFunction(easing: string) {
-  return EASING_REGISTRY[easing as keyof typeof EASING_REGISTRY] ?? linear;
+  return EASING_REGISTRY[easing as keyof typeof EASING_REGISTRY] || linear;
 }
 
 // Transform evaluator class
@@ -68,6 +70,7 @@ export class TransformEvaluator {
         return transform.properties.to as Point2D;
       case 'rotate':
         // For rotate, we need to calculate the final rotation
+        const fromRotation = transform.properties.from as number;
         const toRotation = transform.properties.to as number;
         return toRotation;
       case 'scale':
@@ -102,6 +105,7 @@ export class TransformEvaluator {
       case 'color':
         return this.interpolateColor(transform, progress);
       default:
+        // For unknown transforms, try to interpolate based on property types
         return this.interpolateGeneric(transform, progress);
     }
   }
@@ -110,31 +114,31 @@ export class TransformEvaluator {
   private interpolateMove(transform: SceneTransform, progress: number): Point2D {
     const from = transform.properties.from as Point2D;
     const to = transform.properties.to as Point2D;
-    return {
-      x: from.x + (to.x - from.x) * progress,
-      y: from.y + (to.y - from.y) * progress
-    };
+    const interpolator = getInterpolator('point2d');
+    return interpolator.interpolate(from, to, progress) as Point2D;
   }
 
   // Interpolate rotate transform
   private interpolateRotate(transform: SceneTransform, progress: number): number {
-    const from = transform.properties.from as number;
-    const to = transform.properties.to as number;
-    return from + (to - from) * progress;
+    const fromRotation = transform.properties.from as number;
+    const toRotation = transform.properties.to as number;
+    return fromRotation + (progress * (toRotation - fromRotation));
   }
 
   // Interpolate scale transform
   private interpolateScale(transform: SceneTransform, progress: number): number {
     const from = transform.properties.from as number;
     const to = transform.properties.to as number;
-    return from + (to - from) * progress;
+    const interpolator = getInterpolator('number');
+    return interpolator.interpolate(from, to, progress) as number;
   }
 
   // Interpolate fade transform
   private interpolateFade(transform: SceneTransform, progress: number): number {
     const from = transform.properties.from as number;
     const to = transform.properties.to as number;
-    return from + (to - from) * progress;
+    const interpolator = getInterpolator('number');
+    return interpolator.interpolate(from, to, progress) as number;
   }
 
   // Interpolate color transform
@@ -142,10 +146,7 @@ export class TransformEvaluator {
     const from = transform.properties.from as string;
     const to = transform.properties.to as string;
     const interpolator = getInterpolator('color');
-    if (interpolator) {
-      return interpolator.interpolate(from, to, progress) as string;
-    }
-    return to;
+    return interpolator.interpolate(from, to, progress) as string;
   }
 
   // Generic interpolation for unknown transform types
@@ -158,7 +159,7 @@ export class TransformEvaluator {
     // Try to find properties that can be interpolated
     for (const propDef of definition.properties) {
       const from = transform.properties[propDef.key];
-      const to = transform.properties[`to_${propDef.key}`] ?? transform.properties[propDef.key];
+      const to = transform.properties[`to_${propDef.key}`] || transform.properties[propDef.key];
       
       if (from !== undefined && to !== undefined && from !== to) {
         const interpolator = getInterpolator(propDef.type);
@@ -200,11 +201,11 @@ export class TransformEvaluator {
     const sortedTransforms = [...transforms].sort((a, b) => a.startTime - b.startTime);
     
     // Track accumulated values
-    const accumulated: Record<string, AnimationValue> = {
-      position: initialState.position ?? { x: 0, y: 0 },
-      rotation: initialState.rotation ?? 0,
-      scale: initialState.scale ?? { x: 1, y: 1 },
-      opacity: initialState.opacity ?? 1
+    const accumulated: { [key: string]: AnimationValue } = {
+      position: initialState.position || { x: 0, y: 0 },
+      rotation: initialState.rotation || 0,
+      scale: initialState.scale || { x: 1, y: 1 },
+      opacity: initialState.opacity || 1
     };
     
     for (const transform of sortedTransforms) {
@@ -238,7 +239,7 @@ export class TransformEvaluator {
 
   // Helper method to accumulate transform values
   private accumulateTransformValue(
-    accumulated: Record<string, AnimationValue>,
+    accumulated: { [key: string]: AnimationValue },
     transform: SceneTransform,
     value: AnimationValue
   ): void {
@@ -250,7 +251,7 @@ export class TransformEvaluator {
     switch (targetProperty) {
       case 'position':
         if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
-          accumulated.position = value;
+          accumulated.position = value as Point2D;
         }
         break;
       case 'rotation':
@@ -262,7 +263,7 @@ export class TransformEvaluator {
         if (typeof value === 'number') {
           accumulated.scale = { x: value, y: value };
         } else if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
-          accumulated.scale = value;
+          accumulated.scale = value as Point2D;
         }
         break;
       case 'opacity':
@@ -290,8 +291,10 @@ export class TransformEvaluator {
 export const transformEvaluator = new TransformEvaluator();
 
 // Export convenience functions
-export const evaluateTransform = transformEvaluator.evaluateTransform.bind(transformEvaluator);
-export const evaluateObjectTransforms = transformEvaluator.evaluateObjectTransforms.bind(transformEvaluator);
-export const getAccumulatedObjectState = transformEvaluator.getAccumulatedObjectState.bind(transformEvaluator);
-export const getActiveTransforms = transformEvaluator.getActiveTransforms.bind(transformEvaluator);
-export const hasActiveTransforms = transformEvaluator.hasActiveTransforms.bind(transformEvaluator);
+export const {
+  evaluateTransform,
+  evaluateObjectTransforms,
+  getAccumulatedObjectState,
+  getActiveTransforms,
+  hasActiveTransforms,
+} = transformEvaluator;
