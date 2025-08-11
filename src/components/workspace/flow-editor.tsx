@@ -139,6 +139,8 @@ export function FlowEditor() {
   // Debounced autosave when nodes/edges change
   useEffect(() => {
     if (!workspaceId) return;
+    // Avoid saving until we've hydrated from the server to prevent initial races
+    if (!hydratedOnceRef.current || !workspace) return;
     // If nothing changed since last successful save (or last queued), don't schedule a new save
     if (flowSnapshot === lastSavedSnapshotRef.current || flowSnapshot === lastQueuedSnapshotRef.current) {
       return;
@@ -153,7 +155,7 @@ export function FlowEditor() {
       currentVersionRef.current = version + 1;
     }, 1200);
     return () => clearTimeout(timer);
-  }, [flowSnapshot, nodes, edges, workspaceId, saveWorkspace, workspace?.version]);
+  }, [flowSnapshot, nodes, edges, workspaceId, saveWorkspace, workspace?.version, workspace]);
 
   const { 
     videoUrl, 

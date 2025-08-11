@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 // Runtime schemas to type outputs precisely and avoid `any` in consumers
@@ -89,11 +90,11 @@ export const workspaceRouter = createTRPCRouter({
         .eq("user_id", user.id)
         .eq("version", input.version)
         .select("version, updated_at")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) {
-        throw new Error("CONFLICT: Workspace has changed since last load. Please reload.");
+        throw new TRPCError({ code: "CONFLICT", message: "Workspace has changed since last load. Please reload." });
       }
 
       return saveResultSchema.parse(data);
