@@ -335,17 +335,16 @@ function createAnimationTrack<TProps extends Record<string, unknown>>(
   transform.easing = easing;
   const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
 
-  return {
+  const track = {
     id: `${objectId}::${type}::${startTime}`,
     objectId: sceneTransform.objectId,
-    // type is narrowed by caller wrappers
-    // @ts-ignore
     type,
     startTime: sceneTransform.startTime,
     duration: sceneTransform.duration,
     easing: sceneTransform.easing,
-    properties: props as never,
-  } as SceneAnimationTrack;
+    properties: props as unknown,
+  } as unknown as SceneAnimationTrack;
+  return track;
 }
 
 export function createMoveAnimation(
