@@ -14,19 +14,3 @@ export interface Transform {
 
 export type NodeCanvasContext = NodeCanvasCtx;
 export type EasingFunction = (t: number) => number;
-
-export interface AnimationConfig {
-  width: number;
-  height: number;
-  fps: number;
-  duration: number;
-  triangleSize: number;
-  margin: number;
-  rotations: number;
-  backgroundColor: string;
-  triangleColor: string;
-  strokeColor: string;
-  strokeWidth: number;
-  videoPreset: string;
-  videoCrf: number;
-}

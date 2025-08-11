@@ -88,7 +88,8 @@ export interface MoveTrackProperties {
 }
 
 export interface RotateTrackProperties {
-  rotations: number;
+  from: number;
+  to: number;
 }
 
 export interface ScaleTrackProperties {
@@ -107,7 +108,7 @@ export interface ColorTrackProperties {
   property: 'fill' | 'stroke';
 }
 
-// Animation track types - aligned with API schema
+// Animation track types - now using the registry system
 export interface BaseAnimationTrack {
   id: string;
   startTime: number;
@@ -115,6 +116,7 @@ export interface BaseAnimationTrack {
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 }
 
+// Individual track types - now generated from registry
 export interface MoveTrack extends BaseAnimationTrack {
   type: 'move';
   properties: MoveTrackProperties;
@@ -140,7 +142,20 @@ export interface ColorTrack extends BaseAnimationTrack {
   properties: ColorTrackProperties;
 }
 
+// Union type - now extensible through registry
 export type AnimationTrack = MoveTrack | RotateTrack | ScaleTrack | FadeTrack | ColorTrack;
+
+// Type guard factory - generates type guards dynamically
+export function createTrackTypeGuard<T extends AnimationTrack>(type: T['type']) {
+  return (track: AnimationTrack): track is T => track.type === type;
+}
+
+// Pre-generated type guards for existing types
+export const isMoveTrack = createTrackTypeGuard<MoveTrack>('move');
+export const isRotateTrack = createTrackTypeGuard<RotateTrack>('rotate');
+export const isScaleTrack = createTrackTypeGuard<ScaleTrack>('scale');
+export const isFadeTrack = createTrackTypeGuard<FadeTrack>('fade');
+export const isColorTrack = createTrackTypeGuard<ColorTrack>('color');
 
 // Animation node data
 export interface AnimationNodeData extends BaseNodeData {

@@ -675,24 +675,6 @@ export const animationRouter = createTRPCRouter({
   getDefaultSceneConfig: publicProcedure.query(() => {
       return DEFAULT_SCENE_CONFIG;
   }),
-
-  getDefaultTriangleConfig: publicProcedure.query(() => {
-    return {
-      width: 1920,
-      height: 1080,
-      fps: 60,
-      duration: 3,
-      triangleSize: 80,
-      margin: 100,
-      rotations: 2,
-      backgroundColor: "#000000",
-      triangleColor: "#ff4444",
-      strokeColor: "#ffffff",
-      strokeWidth: 3,
-      videoPreset: "medium",
-      videoCrf: 18,
-    };
-  }),
 });
 
 // Graceful validation helper functions

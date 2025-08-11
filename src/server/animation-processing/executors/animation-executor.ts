@@ -4,6 +4,7 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
+import { transformFactory } from "@/shared/registry/transforms";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers

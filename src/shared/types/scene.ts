@@ -58,6 +58,7 @@ export interface ObjectState {
 }
 
 // Scene-specific animation track types (with objectId for execution)
+// Now using the registry system for extensibility
 export interface BaseSceneAnimationTrack {
   objectId: string;
   startTime: number;
@@ -65,6 +66,7 @@ export interface BaseSceneAnimationTrack {
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 }
 
+// Individual scene track types - now generated from registry
 export interface SceneMoveTrack extends BaseSceneAnimationTrack {
   type: 'move';
   properties: {
@@ -78,7 +80,6 @@ export interface SceneRotateTrack extends BaseSceneAnimationTrack {
   properties: {
     from: number;
     to: number;
-    rotations?: number;
   };
 }
 
@@ -107,12 +108,25 @@ export interface SceneColorTrack extends BaseSceneAnimationTrack {
   };
 }
 
+// Union type - now extensible through registry
 export type SceneAnimationTrack = 
   | SceneMoveTrack 
   | SceneRotateTrack 
   | SceneScaleTrack 
   | SceneFadeTrack 
   | SceneColorTrack;
+
+// Type guard factory - generates type guards dynamically
+export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(type: T['type']) {
+  return (track: SceneAnimationTrack): track is T => track.type === type;
+}
+
+// Pre-generated type guards for existing types
+export const isSceneMoveTrack = createSceneTrackTypeGuard<SceneMoveTrack>('move');
+export const isSceneRotateTrack = createSceneTrackTypeGuard<SceneRotateTrack>('rotate');
+export const isSceneScaleTrack = createSceneTrackTypeGuard<SceneScaleTrack>('scale');
+export const isSceneFadeTrack = createSceneTrackTypeGuard<SceneFadeTrack>('fade');
+export const isSceneColorTrack = createSceneTrackTypeGuard<SceneColorTrack>('color');
 
 // Validation helpers
 export function validateScene(scene: AnimationScene): string[] {
