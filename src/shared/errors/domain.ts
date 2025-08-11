@@ -13,7 +13,8 @@ export type DomainErrorCode =
   | 'ERR_DUPLICATE_OBJECT_IDS'
   | 'ERR_UNKNOWN_NODE_TYPE'
   | 'ERR_USER_JOB_LIMIT'
-  | 'ERR_NO_VALID_SCENES';
+  | 'ERR_NO_VALID_SCENES'
+  | 'ERR_MULTIPLE_RESULT_VALUES';
 
 export interface DomainErrorDetails {
   nodeId?: string;
@@ -146,6 +147,17 @@ export class NoValidScenesError extends DomainError {
   constructor() {
     super('No scenes received valid data', 'ERR_NO_VALID_SCENES');
     this.name = 'NoValidScenesError';
+  }
+}
+
+export class MultipleResultValuesError extends DomainError {
+  constructor(nodeName: string, sourceNames: string[]) {
+    super(
+      `Result node "${nodeName}" received multiple values: [${sourceNames.join(', ')}]. Use conditional logic to ensure only one path executes.`,
+      'ERR_MULTIPLE_RESULT_VALUES',
+      { nodeName, info: { sourceNames } }
+    );
+    this.name = 'MultipleResultValuesError';
   }
 }
 

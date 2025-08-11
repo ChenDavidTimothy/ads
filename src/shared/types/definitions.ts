@@ -348,10 +348,10 @@ export const NODE_DEFINITIONS = {
 
   result: {
     type: 'result',
-    label: 'Result',
-    description: 'Debug node that logs values to console with "Run to Here" functionality',
+    label: 'Result Display',
+    description: 'Displays final calculated result from logic operations',
     execution: {
-      category: 'logic',
+      category: 'output',
       executor: 'logic',
     },
     ports: {
@@ -366,10 +366,10 @@ export const NODE_DEFINITIONS = {
       ]
     },
     rendering: {
-      icon: '📊',
+      icon: '🎯',
       colors: {
-        primary: 'bg-green-600',
-        handle: '!bg-green-500',
+        primary: 'bg-blue-600',
+        handle: '!bg-blue-500',
       }
     },
     defaults: {

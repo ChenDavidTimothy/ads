@@ -211,6 +211,16 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
         ]
       };
 
+    case 'ERR_MULTIPLE_RESULT_VALUES':
+      return {
+        message: 'Result node received multiple values simultaneously',
+        suggestions: [
+          'Use If-Else or Boolean logic to ensure only one path executes',
+          'Check that conditional branches don\'t execute simultaneously',
+          'Verify logic flow produces single result'
+        ]
+      };
+
     default:
       return {
         message: error.message || 'Validation error occurred',

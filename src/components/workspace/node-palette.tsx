@@ -54,7 +54,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       {renderNodeSection("Timing", palette.timingNodes)}
       {renderNodeSection("Logic", palette.logicNodes)}
       {renderNodeSection("Animation", palette.animationNodes)}
-      {renderNodeSection("Output", palette.utilityNodes)}
+      {renderNodeSection("Output", palette.outputNodes)}
 
       <div className="mt-8 p-3 bg-gray-700 rounded-lg">
         <h4 className="text-sm font-semibold text-white mb-2">Flow</h4>
