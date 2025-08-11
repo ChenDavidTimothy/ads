@@ -35,11 +35,11 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
       next.nodes[idx] = { ...next.nodes[idx], data: { ...next.nodes[idx].data, duration: newDuration, tracks: newTracks } };
     }
     await saveMutation.mutateAsync({ id: ws.id, flowData: next, version: ws.version });
-    window.location.href = `/editor?workspace=${workspaceId}`;
+    window.location.href = `/workspace?workspace=${workspaceId}`;
   };
 
   const handleCancel = () => {
-    window.location.href = `/editor?workspace=${workspaceId}`;
+    window.location.href = `/workspace?workspace=${workspaceId}`;
   };
 
   return (

@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 import { FlowEditor } from "@/components/editor/flow-editor";
 
-export default function EditorPage({ searchParams }: { searchParams?: { workspace?: string } }) {
-  const workspaceId = searchParams?.workspace;
+export default async function WorkspaceEditorPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ workspace?: string }>;
+}) {
+  const { workspace: workspaceId } = (await searchParams) ?? {};
   if (!workspaceId) {
     redirect("/workspace-selector");
   }
@@ -12,3 +16,5 @@ export default function EditorPage({ searchParams }: { searchParams?: { workspac
     </div>
   );
 }
+
+

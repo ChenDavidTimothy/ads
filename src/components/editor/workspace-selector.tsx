@@ -12,7 +12,7 @@ export function WorkspaceSelector() {
   const createWorkspace = api.workspace.create.useMutation({
     onSuccess: async (ws) => {
       await utils.workspace.list.invalidate();
-      router.push(`/editor?workspace=${ws.id}`);
+      router.push(`/workspace?workspace=${ws.id}`);
     },
   });
 
@@ -65,7 +65,7 @@ export function WorkspaceSelector() {
               <div className="text-xs text-gray-400">Last updated {new Date(ws.updated_at).toLocaleString()}</div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => router.push(`/editor?workspace=${ws.id}`)}>Open</Button>
+              <Button size="sm" onClick={() => router.push(`/workspace?workspace=${ws.id}`)}>Open</Button>
             </div>
           </li>
         ))}

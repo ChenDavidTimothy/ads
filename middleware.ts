@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   
   const url = request.nextUrl.clone()
   const isAuthPage = url.pathname === '/auth'
-  const isProtectedRoute = url.pathname.startsWith('/editor') || url.pathname.startsWith('/workspace-selector')
+  const isProtectedRoute = url.pathname.startsWith('/workspace') || url.pathname.startsWith('/workspace-selector')
   
   // Redirect unauthenticated users away from protected routes
   if (!user && isProtectedRoute) {

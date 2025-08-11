@@ -40,7 +40,7 @@ export default function AuthPage() {
           throw signInError;
         }
         
-        router.push("/editor");
+        router.push("/workspace-selector");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

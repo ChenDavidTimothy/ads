@@ -16,7 +16,7 @@ export function AnimationNode({ data, selected }: AnimationNodeProps) {
     // Navigate to dedicated timeline editor page with workspace preserved via query param
     const params = new URLSearchParams(window.location.search);
     const workspaceId = params.get('workspace');
-    const target = `/editor/timeline/${data.identifier.id}${workspaceId ? `?workspace=${workspaceId}` : ''}`;
+    const target = `/workspace/timeline/${data.identifier.id}${workspaceId ? `?workspace=${workspaceId}` : ''}`;
     window.location.href = target;
   };
 

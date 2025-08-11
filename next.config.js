@@ -5,6 +5,32 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  async redirects() {
+    return [
+      {
+        source: '/editor',
+        has: [
+          {
+            type: 'query',
+            key: 'workspace',
+          },
+        ],
+        destination: '/workspace',
+        permanent: false,
+      },
+      {
+        source: '/editor',
+        destination: '/workspace-selector',
+        permanent: false,
+      },
+      {
+        source: '/editor/timeline/:nodeId',
+        destination: '/workspace/timeline/:nodeId',
+        permanent: false,
+      },
+    ];
+  },
+};
 
 export default config;

@@ -17,7 +17,7 @@ export default async function Home() {
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20 transition-colors"
               href="/workspace-selector"
             >
-              <h3 className="text-2xl font-bold">Visual Editor →</h3>
+              <h3 className="text-2xl font-bold">Open Workspace →</h3>
               <div className="text-lg">
                 Create animations using timeline-based animation nodes with sequential logic flow.
               </div>
@@ -38,7 +38,7 @@ export default async function Home() {
             
             <Link href="/workspace-selector">
               <div className="inline-flex items-center justify-center rounded-md bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 text-lg font-semibold text-white transition-colors">
-                Start Creating →
+                Open Workspace →
               </div>
             </Link>
           </div>
