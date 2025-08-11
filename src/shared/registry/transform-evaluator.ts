@@ -59,7 +59,7 @@ export class TransformEvaluator {
   public getEndValue(transform: SceneTransform): AnimationValue {
     // Prefer explicit 'to' if present
     if (Object.prototype.hasOwnProperty.call(transform.properties, 'to')) {
-      return transform.properties['to'] as AnimationValue;
+      return transform.properties.to as AnimationValue;
     }
 
     // Fallback: try property schema from definition
