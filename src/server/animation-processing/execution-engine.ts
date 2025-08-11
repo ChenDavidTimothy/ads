@@ -185,6 +185,12 @@ export class ExecutionEngine {
       animations: context.sceneAnimations.length,
       scenesWithObjects: context.sceneObjectsByScene.size
     });
+
+    // Basic resource guardrails
+    const maxAnimations = Number(process.env.MAX_ANIMATIONS_PER_EXECUTION ?? '100000');
+    if (context.sceneAnimations.length > maxAnimations) {
+      throw new Error(`Too many animations generated in a single execution: ${context.sceneAnimations.length} > ${maxAnimations}`);
+    }
     
     return context;
   }

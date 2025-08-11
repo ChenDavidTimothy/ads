@@ -30,6 +30,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const passThoughObjects: unknown[] = [];
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
+    const perObjectAnimations: Record<string, SceneAnimationTrack[]> = {};
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -51,18 +52,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
           baseline,
           priorForObject
         );
-        
-        // Attach animations to the object and PRESERVE any previously attached animations
-        const previouslyAttached = Array.isArray((timedObject as Record<string, unknown>)._attachedAnimations)
-          ? ((timedObject as Record<string, unknown>)._attachedAnimations as unknown[])
-          : [];
-        const animatedObject = {
-          ...(timedObject as Record<string, unknown>),
-          _attachedAnimations: [...previouslyAttached, ...animations]
-        };
-        
+
+        if (objectId) {
+          perObjectAnimations[objectId] = [...(perObjectAnimations[objectId] ?? []), ...animations];
+        }
+
         allAnimations.push(...animations);
-        passThoughObjects.push(animatedObject);
+        passThoughObjects.push(timedObject);
 
         if (objectId) {
           const localEnd = animations.length > 0
@@ -75,14 +71,11 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     context.sceneAnimations.push(...allAnimations);
-    
+
     // Track which Animation node created these animations
-    // This allows proper assignment to only downstream scenes
     const animationNodeId = node.data.identifier.id;
     for (const animation of allAnimations) {
-      const animationId = `${animation.objectId}-${animation.type}-${animation.startTime}`;
-      // Store which animation node created this animation
-      context.animationSceneMap.set(`${animationId}_source`, animationNodeId);
+      context.animationSceneMap.set(`${animation.id}_source`, animationNodeId);
     }
     const maxDuration = allAnimations.length > 0 ?
       Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) :
@@ -95,7 +88,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations }
     );
   }
 

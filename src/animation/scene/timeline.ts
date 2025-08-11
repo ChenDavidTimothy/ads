@@ -93,10 +93,8 @@ export function getObjectStateAtTime(
     }
   };
   
-  const objectAnimations = animations
-    .filter(anim => anim.objectId === object.id)
-    // Ensure chronological application so later transforms override earlier ones
-    .sort((a, b) => a.startTime - b.startTime);
+  // animations is expected to contain only tracks for this object and be pre-sorted by startTime
+  const objectAnimations = animations;
   
   // Track the accumulated state from completed animations
   const accumulatedState: ObjectState = {
@@ -124,10 +122,8 @@ export function getObjectStateAtTime(
     // Apply the current animation value (if active) or use accumulated state
     const value = evaluateAnimation(animation, time);
     if (value !== null) {
-      // For active animations, use the current value
       updateStateFromAnimation(state, animation, value);
     } else if (time >= animationEndTime) {
-      // For completed animations, use the accumulated state
       updateStateFromAnimation(state, animation, accumulatedState, animation.type);
     }
   }
@@ -255,9 +251,23 @@ function updateStateFromAnimation(
 // Get states of all objects at a specific time
 export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<string, ObjectState> {
   const sceneState = new Map<string, ObjectState>();
+
+  // Build per-object animation index once
+  const animationsByObject = new Map<string, SceneAnimationTrack[]>();
+  for (const anim of scene.animations) {
+    const list = animationsByObject.get(anim.objectId) ?? [];
+    list.push(anim);
+    animationsByObject.set(anim.objectId, list);
+  }
+  // Sort per-object animations by start time once
+  for (const [key, list] of animationsByObject) {
+    list.sort((a, b) => a.startTime - b.startTime);
+    animationsByObject.set(key, list);
+  }
   
   for (const object of scene.objects) {
-    const objectState = getObjectStateAtTime(object, scene.animations, time);
+    const objectAnimations = animationsByObject.get(object.id) ?? [];
+    const objectState = getObjectStateAtTime(object, objectAnimations, time);
     sceneState.set(object.id, objectState);
   }
   
@@ -279,6 +289,7 @@ export function createMoveAnimation(
   
   // Convert SceneTransform to SceneAnimationTrack
   return {
+    id: `${objectId}::move::${startTime}`,
     objectId: sceneTransform.objectId,
     type: 'move' as const,
     startTime: sceneTransform.startTime,
@@ -305,6 +316,7 @@ export function createRotateAnimation(
   
   // Convert SceneTransform to SceneAnimationTrack
   return {
+    id: `${objectId}::rotate::${startTime}`,
     objectId: sceneTransform.objectId,
     type: 'rotate' as const,
     startTime: sceneTransform.startTime,
@@ -331,6 +343,7 @@ export function createScaleAnimation(
   
   // Convert SceneTransform to SceneAnimationTrack
   return {
+    id: `${objectId}::scale::${startTime}`,
     objectId: sceneTransform.objectId,
     type: 'scale' as const,
     startTime: sceneTransform.startTime,

@@ -169,7 +169,7 @@ export function convertTracksToSceneAnimations(
       
       if (inherited !== undefined) {
         // The inherited value shape aligns with the track type due to targetProperty narrowing
-        (properties as Record<string, unknown>).from = inherited as unknown;
+        (properties as unknown as Record<string, unknown>).from = inherited as unknown;
       }
     }
 
@@ -181,14 +181,15 @@ export function convertTracksToSceneAnimations(
         startTime: track.startTime,
         duration: track.duration,
         easing: track.easing,
-        properties,
+        properties: properties as unknown as Record<string, unknown>,
       },
       objectId,
       baselineTime
     );
 
-    // Push typed scene animation track
+    // Push typed scene animation track with a stable, collision-safe id
     sceneTracks.push({
+      id: `${objectId}::${track.id}::${effectiveStart}`,
       ...sceneTransform,
       properties: properties as SceneAnimationTrack['properties'],
     } as SceneAnimationTrack);
