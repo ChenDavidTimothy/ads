@@ -9,18 +9,41 @@ import {
   lerpPoint 
 } from '../../animation/core/interpolation';
 
-// Color interpolation helper
+// Color interpolation helper with hex, rgb(), and rgba() support
 function lerpColor(startColor: string, endColor: string, t: number): string {
-  const start = hexToRgb(startColor);
-  const end = hexToRgb(endColor);
-  
+  const start = parseAnyColor(startColor);
+  const end = parseAnyColor(endColor);
   if (!start || !end) return startColor;
-  
   const r = Math.round(lerp(start.r, end.r, t));
   const g = Math.round(lerp(start.g, end.g, t));
   const b = Math.round(lerp(start.b, end.b, t));
-  
-  return `rgb(${r}, ${g}, ${b})`;
+  const a = lerp(start.a, end.a, t);
+  return formatColor({ r, g, b, a });
+}
+
+function parseAnyColor(input: string): { r: number; g: number; b: number; a: number } | null {
+  if (input.startsWith('#')) {
+    const rgb = hexToRgb(input);
+    return rgb ? { ...rgb, a: 1 } : null;
+  }
+  if (input.startsWith('rgb')) {
+    const m = input.match(/^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
+    if (!m) return null;
+    const r = clamp255(parseInt(m[1]!, 10));
+    const g = clamp255(parseInt(m[2]!, 10));
+    const b = clamp255(parseInt(m[3]!, 10));
+    const a = m[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(m[4]!))) : 1;
+    return { r, g, b, a };
+  }
+  return null;
+}
+
+function clamp255(n: number): number { return Math.max(0, Math.min(255, n)); }
+
+function formatColor(c: { r: number; g: number; b: number; a: number }): string {
+  if (c.a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
+  const a = Math.round(c.a * 1000) / 1000; // stable concise alpha
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -66,7 +89,8 @@ const colorInterpolator: InterpolatorEntry<string> = {
     return lerpColor(from, to, progress);
   },
   validate: (value: unknown): value is string => {
-    return typeof value === 'string' && (value.startsWith('#') || value.startsWith('rgb'));
+    if (typeof value !== 'string') return false;
+    return value.startsWith('#') || /^rgba?\s*\(/i.test(value);
   },
   getEndValue: (from: string, to: string): string => {
     return to;

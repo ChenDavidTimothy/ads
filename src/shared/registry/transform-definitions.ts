@@ -258,7 +258,3 @@ export function getTransformMetadata(transformType: string) {
   return definition?.metadata;
 }
 
-// Get default properties (alias for getTransformDefaults for backward compatibility)
-export function getDefaultProperties(type: string): Record<string, unknown> | undefined {
-  return getTransformDefaults(type);
-}
