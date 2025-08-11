@@ -60,6 +60,7 @@ export interface ObjectState {
 // Scene-specific animation track types (with objectId for execution)
 // Now using the registry system for extensibility
 export interface BaseSceneAnimationTrack {
+  id: string;
   objectId: string;
   startTime: number;
   duration: number;

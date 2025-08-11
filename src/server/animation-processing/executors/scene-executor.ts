@@ -38,31 +38,28 @@ export class SceneNodeExecutor extends BaseExecutor {
       for (const item of inputData) {
         if (typeof item === 'object' && item !== null && 'id' in item && 'appearanceTime' in item) {
           const objectId = (item as { id: string }).id;
-          
+
           // CRITICAL FIX: Always store path-specific properties for this scene
-          // Each scene gets exactly what flows to it - no more "first scene wins"
           sceneObjects.push(item as never);
           objectsAddedToThisScene++;
-          
+
           logger.debug(`Object ${objectId} with path-specific properties stored in scene ${sceneNodeId}`, {
             objectId,
             sceneId: sceneNodeId,
-            hasAnimations: !!(item as { _attachedAnimations?: unknown })._attachedAnimations,
             properties: (item as { properties?: unknown }).properties
           });
-          
+
           // Track scene membership for validation compatibility (but properties are per-scene now)
           const existingSceneId = context.objectSceneMap.get(objectId);
           if (!existingSceneId) {
             context.objectSceneMap.set(objectId, sceneNodeId);
           } else if (existingSceneId !== sceneNodeId) {
-            // Object branching to multiple scenes - track additional scenes
             const existingMappings = context.objectSceneMap.get(`${objectId}_scenes`);
             const sceneMappings = existingMappings 
               ? `${existingMappings},${sceneNodeId}` 
               : `${existingSceneId},${sceneNodeId}`;
             context.objectSceneMap.set(`${objectId}_scenes`, sceneMappings);
-            
+
             logger.debug(`Object ${objectId} branching with different properties`, {
               previousScene: existingSceneId,
               currentScene: sceneNodeId,
@@ -79,25 +76,15 @@ export class SceneNodeExecutor extends BaseExecutor {
     if (objectsAddedToThisScene === 0) {
       throw new MissingInsertConnectionError(node.data.identifier.displayName, node.data.identifier.id);
     }
-    
-    // Extract animations that are attached to objects flowing through this scene
-    // This ensures animations only go to scenes that receive them through the correct path
+
+    // Assign animations to this scene using per-object metadata from inputs
     for (const input of inputs) {
-      const inputData = Array.isArray(input.data) ? input.data : [input.data];
-      
-      for (const item of inputData) {
-        if (typeof item === 'object' && item !== null && 'id' in item) {
-          const objectId = (item as { id: string }).id;
-          
-          // Check if this object has attached animations
-          const attachedAnimations = (item as { _attachedAnimations?: unknown })._attachedAnimations;
-          if (Array.isArray(attachedAnimations)) {
-            for (const animation of attachedAnimations) {
-              const animationId = `${(animation as { objectId?: string }).objectId ?? 'unknown'}-${(animation as { type?: string }).type ?? 'unknown'}-${(animation as { startTime?: number }).startTime ?? 0}`;
-              context.animationSceneMap.set(animationId, sceneNodeId);
-              logger.debug(`Animation ${animationId} assigned to scene ${sceneNodeId} (attached to object ${objectId})`);
-            }
-          }
+      const perObjectAnimations = (input.metadata as { perObjectAnimations?: Record<string, import("@/shared/types/scene").SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      if (!perObjectAnimations) continue;
+      for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
+        for (const animation of animations) {
+          context.animationSceneMap.set(animation.id, sceneNodeId);
+          logger.debug(`Animation ${animation.id} assigned to scene ${sceneNodeId} (object ${objectId})`);
         }
       }
     }

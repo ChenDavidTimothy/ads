@@ -39,9 +39,7 @@ export function partitionObjectsByScenes(
     
     // Animations for this scene (based on explicit scene assignments)
     const sceneAnimations = context.sceneAnimations.filter(anim => {
-      const animationId = `${anim.objectId}-${anim.type}-${anim.startTime}`;
-      const assignedSceneId = context.animationSceneMap.get(animationId);
-      
+      const assignedSceneId = context.animationSceneMap.get(anim.id);
       // Only include animations explicitly assigned to this scene
       return assignedSceneId === sceneId;
     });
