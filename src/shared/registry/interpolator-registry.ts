@@ -1,15 +1,10 @@
 // src/shared/registry/interpolator-registry.ts - Interpolator registry system
 import type { 
   InterpolatorEntry, 
-  InterpolatorFunction, 
   PropertyType
 } from '../types/transforms';
 import type { Point2D } from '../types/core';
 import { 
-  linear, 
-  easeInOutCubic, 
-  easeInCubic, 
-  easeOutCubic,
   lerp,
   lerpPoint 
 } from '../../animation/core/interpolation';
@@ -124,7 +119,7 @@ export function getInterpolator(propertyType: PropertyType): InterpolatorEntry {
 
 // Get interpolator for a value (auto-detect type)
 export function getInterpolatorForValue(value: unknown): InterpolatorEntry | null {
-  for (const [type, interpolator] of Object.entries(INTERPOLATOR_REGISTRY)) {
+  for (const interpolator of Object.values(INTERPOLATOR_REGISTRY)) {
     if (interpolator.validate(value)) {
       return interpolator;
     }

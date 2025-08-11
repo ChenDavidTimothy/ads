@@ -1,5 +1,7 @@
 // src/server/animation-processing/scene/scene-assembler.ts
-import type { AnimationTrack, SceneAnimationTrack } from "@/shared/types";
+import type { AnimationTrack } from "@/shared/types";
+import type { SceneAnimationTrack } from "@/shared/types/scene";
+import type { SceneTransform } from "@/shared/types/transforms";
 import { transformFactory } from "@/shared/registry/transforms";
 import { transformEvaluator } from "@/shared/registry/transform-evaluator";
 import type { Point2D } from "@/shared/types/core";
@@ -44,21 +46,32 @@ export function convertTracksToSceneAnimations(
 ): SceneAnimationTrack[] {
   // Helper: deep-ish equality for 'from' defaults
   const isDefaultFrom = (type: string, value: unknown): boolean => {
-    const defaults = transformFactory.getDefaultProperties(type) as any | undefined;
+    const defaults = transformFactory.getDefaultProperties(type);
     if (!defaults) return false;
-    const def = (defaults as any).from;
-    if (typeof def === 'number') return value === def;
-    if (typeof def === 'string') return value === def;
-    if (typeof def === 'object' && def && typeof (def as any).x === 'number' && typeof (def as any).y === 'number') {
-      const v = value as Point2D | undefined;
-      return !!v && v.x === (def as any).x && v.y === (def as any).y;
+    const def = defaults.from;
+    switch (type) {
+      case 'move': {
+        if (typeof def === 'object' && def !== null && 'x' in def && 'y' in def) {
+          const v = value as Point2D | undefined;
+          const d = def as { x: number; y: number };
+          return !!v && v.x === d.x && v.y === d.y;
+        }
+        return false;
+      }
+      case 'rotate':
+      case 'scale':
+      case 'fade':
+        return typeof def === 'number' && value === def;
+      case 'color':
+        return typeof def === 'string' && value === def;
+      default:
+        return false;
     }
-    return false;
   };
 
   // Helper: get target property for a transform type
   const getTargetProperty = (type: string): string | undefined => {
-    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty as string | undefined;
+    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty;
   };
 
   // Helper: compute last value at a given absolute time from prior animations for the same target property
@@ -73,8 +86,8 @@ export function convertTracksToSceneAnimations(
 
     // Special-case color: restrict to same fill/stroke property
     if (currentTrack?.type === 'color') {
-      const prop = (currentTrack.properties as any)?.property;
-      relevant = relevant.filter(a => a.type === 'color' && (a.properties as any)?.property === prop);
+      const prop = currentTrack.properties.property;
+      relevant = relevant.filter(a => a.type === 'color' && a.properties.property === prop);
     }
     if (relevant.length === 0) return undefined;
 
@@ -84,13 +97,13 @@ export function convertTracksToSceneAnimations(
       .sort((a, b) => (a.startTime + a.duration) - (b.startTime + b.duration));
     if (completed.length > 0) {
       const last = completed[completed.length - 1]!;
-      return transformEvaluator.getEndValue(last as any);
+      return transformEvaluator.getEndValue(sceneTrackToTransform(last));
     }
 
     // Otherwise, if an animation is active at 'atTime', sample it
     const active = relevant.find(a => atTime >= a.startTime && atTime < a.startTime + a.duration);
     if (active) {
-      return transformEvaluator.evaluateTransform(active as any, atTime);
+      return transformEvaluator.evaluateTransform(sceneTrackToTransform(active), atTime);
     }
 
     return undefined;
@@ -113,7 +126,20 @@ export function convertTracksToSceneAnimations(
     
     // Get the end value of the most recent track of the same type
     const mostRecent = sameTypeTracks[0]!;
-    return (mostRecent.properties as any).to;
+    switch (mostRecent.type) {
+      case 'move':
+        return mostRecent.properties.to;
+      case 'rotate':
+        return mostRecent.properties.to;
+      case 'scale':
+        return mostRecent.properties.to;
+      case 'fade':
+        return mostRecent.properties.to;
+      case 'color':
+        return mostRecent.properties.to;
+      default:
+        return undefined;
+    }
   };
 
   const sortedTracks = [...tracks].sort((a, b) => a.startTime - b.startTime);
@@ -124,7 +150,7 @@ export function convertTracksToSceneAnimations(
     const targetProperty = getTargetProperty(track.type);
 
     // Clone properties so we can adjust 'from' if chaining applies
-    const properties = { ...(track.properties as any) } as any;
+    const properties = { ...track.properties } as typeof track.properties;
 
     // Priority order for 'from' value:
     // 1. Explicit 'from' value in track properties (must NEVER be overridden)
@@ -142,7 +168,8 @@ export function convertTracksToSceneAnimations(
       }
       
       if (inherited !== undefined) {
-        properties.from = inherited as any;
+        // The inherited value shape aligns with the track type due to targetProperty narrowing
+        (properties as Record<string, unknown>).from = inherited as unknown;
       }
     }
 
@@ -160,13 +187,25 @@ export function convertTracksToSceneAnimations(
       baselineTime
     );
 
+    // Push typed scene animation track
     sceneTracks.push({
       ...sceneTransform,
-      properties,
+      properties: properties as SceneAnimationTrack['properties'],
     } as SceneAnimationTrack);
   }
 
   return sceneTracks;
+}
+
+function sceneTrackToTransform(track: SceneAnimationTrack): SceneTransform {
+  return {
+    objectId: track.objectId,
+    type: track.type,
+    startTime: track.startTime,
+    duration: track.duration,
+    easing: track.easing,
+    properties: track.properties,
+  };
 }
 
 export function extractObjectIdsFromInputs(inputs: Array<{ data: unknown }>): string[] {

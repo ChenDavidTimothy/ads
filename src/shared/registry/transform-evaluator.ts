@@ -1,9 +1,7 @@
 // src/shared/registry/transform-evaluator.ts - Transform evaluator system
 import type { 
   SceneTransform, 
-  TransformEvaluationContext, 
-  AnimationValue,
-  PropertyType
+  AnimationValue
 } from '../types/transforms';
 import type { Point2D } from '../types/core';
 import { transformFactory } from './transform-factory';
@@ -70,7 +68,6 @@ export class TransformEvaluator {
         return transform.properties.to as Point2D;
       case 'rotate':
         // For rotate, we need to calculate the final rotation
-        const fromRotation = transform.properties.from as number;
         const toRotation = transform.properties.to as number;
         return toRotation;
       case 'scale':
@@ -159,7 +156,7 @@ export class TransformEvaluator {
     // Try to find properties that can be interpolated
     for (const propDef of definition.properties) {
       const from = transform.properties[propDef.key];
-      const to = transform.properties[`to_${propDef.key}`] || transform.properties[propDef.key];
+      const to = transform.properties[`to_${propDef.key}`] ?? transform.properties[propDef.key];
       
       if (from !== undefined && to !== undefined && from !== to) {
         const interpolator = getInterpolator(propDef.type);
@@ -201,11 +198,11 @@ export class TransformEvaluator {
     const sortedTransforms = [...transforms].sort((a, b) => a.startTime - b.startTime);
     
     // Track accumulated values
-    const accumulated: { [key: string]: AnimationValue } = {
-      position: initialState.position || { x: 0, y: 0 },
-      rotation: initialState.rotation || 0,
-      scale: initialState.scale || { x: 1, y: 1 },
-      opacity: initialState.opacity || 1
+  const accumulated: Record<string, AnimationValue> = {
+      position: initialState.position ?? { x: 0, y: 0 },
+      rotation: initialState.rotation ?? 0,
+      scale: initialState.scale ?? { x: 1, y: 1 },
+      opacity: initialState.opacity ?? 1
     };
     
     for (const transform of sortedTransforms) {
@@ -239,7 +236,7 @@ export class TransformEvaluator {
 
   // Helper method to accumulate transform values
   private accumulateTransformValue(
-    accumulated: { [key: string]: AnimationValue },
+    accumulated: Record<string, AnimationValue>,
     transform: SceneTransform,
     value: AnimationValue
   ): void {
@@ -251,7 +248,8 @@ export class TransformEvaluator {
     switch (targetProperty) {
       case 'position':
         if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
-          accumulated.position = value as Point2D;
+          const point = value as { x: number; y: number };
+          accumulated.position = point;
         }
         break;
       case 'rotation':
@@ -263,7 +261,8 @@ export class TransformEvaluator {
         if (typeof value === 'number') {
           accumulated.scale = { x: value, y: value };
         } else if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
-          accumulated.scale = value as Point2D;
+          const point = value as { x: number; y: number };
+          accumulated.scale = point;
         }
         break;
       case 'opacity':
@@ -290,11 +289,17 @@ export class TransformEvaluator {
 // Export singleton instance
 export const transformEvaluator = new TransformEvaluator();
 
-// Export convenience functions
-export const {
-  evaluateTransform,
-  evaluateObjectTransforms,
-  getAccumulatedObjectState,
-  getActiveTransforms,
-  hasActiveTransforms,
-} = transformEvaluator;
+// Export convenience wrappers to avoid unbound method references
+export const evaluateTransform = (transform: SceneTransform, time: number) =>
+  transformEvaluator.evaluateTransform(transform, time);
+export const evaluateObjectTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.evaluateObjectTransforms(transforms, time);
+export const getAccumulatedObjectState = (
+  transforms: SceneTransform[],
+  time: number,
+  initialState: { position?: Point2D; rotation?: number; scale?: Point2D; opacity?: number }
+) => transformEvaluator.getAccumulatedObjectState(transforms, time, initialState);
+export const getActiveTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.getActiveTransforms(transforms, time);
+export const hasActiveTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.hasActiveTransforms(transforms, time);

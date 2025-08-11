@@ -24,23 +24,31 @@ import {
 // Create an instance of the transform evaluator
 const transformEvaluator = new TransformEvaluator();
 
-import { 
-  lerp
-} from '../core/interpolation';
+// Removed legacy interpolation helpers; modern evaluator handles interpolation
 type AnimationValue = Point2D | number | string | boolean | null;
 
 // (Legacy easing and color helpers removed; modern evaluator handles interpolation)
 
 // Evaluate a single animation track at a specific time
+import type { SceneTransform } from '@/shared/types/transforms';
+
+function sceneTrackToSceneTransform(track: SceneAnimationTrack): SceneTransform {
+  return {
+    objectId: track.objectId,
+    type: track.type,
+    startTime: track.startTime,
+    duration: track.duration,
+    easing: track.easing,
+    properties: track.properties,
+  };
+}
+
 function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
-  // Delegate to the evaluator with absolute time so it can correctly
-  // handle start/end boundaries and easing.
-  return transformEvaluator.evaluateTransform(animation as any, time);
+  return transformEvaluator.evaluateTransform(sceneTrackToSceneTransform(animation), time);
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
-  // Use the new transform evaluator for consistent end value calculation
-  return transformEvaluator.getEndValue(animation);
+  return transformEvaluator.getEndValue(sceneTrackToSceneTransform(animation));
 }
 
 // (Legacy interpolateAnimation removed)
@@ -156,11 +164,13 @@ function updateAccumulatedState(
       accumulatedState.opacity = endValue as number;
       break;
     case 'color':
-      const colorProperty = (animation.properties as any).property;
-      if (colorProperty === 'fill') {
-        accumulatedState.colors.fill = endValue as string;
-      } else if (colorProperty === 'stroke') {
-        accumulatedState.colors.stroke = endValue as string;
+      if (animation.type === 'color') {
+        const colorProperty = animation.properties.property;
+        if (colorProperty === 'fill') {
+          accumulatedState.colors.fill = endValue as string;
+        } else if (colorProperty === 'stroke') {
+          accumulatedState.colors.stroke = endValue as string;
+        }
       }
       break;
   }
@@ -174,30 +184,36 @@ function updateStateFromAnimation(
   targetProperty?: string
 ): void {
   const definition = getTransformDefinition(animation.type);
-  const property = targetProperty || definition?.metadata?.targetProperty;
+  const property = targetProperty ?? definition?.metadata?.targetProperty;
   if (!property) return;
   
-  if (typeof value === 'object' && value !== null && 'position' in value) {
+  function isObjectState(v: unknown): v is ObjectState {
+    return typeof v === 'object' && v !== null && 'position' in v && 'rotation' in v && 'scale' in v && 'opacity' in v;
+  }
+
+  if (isObjectState(value)) {
     // Value is an ObjectState, extract the specific property
     switch (property) {
       case 'position':
-        state.position = (value as ObjectState).position;
+        state.position = value.position;
         break;
       case 'rotation':
-        state.rotation = (value as ObjectState).rotation;
+        state.rotation = value.rotation;
         break;
       case 'scale':
-        state.scale = (value as ObjectState).scale;
+        state.scale = value.scale;
         break;
       case 'opacity':
-        state.opacity = (value as ObjectState).opacity;
+        state.opacity = value.opacity;
         break;
       case 'color':
-        const colorProperty = (animation.properties as any).property;
-        if (colorProperty === 'fill') {
-          state.colors.fill = (value as ObjectState).colors.fill;
-        } else if (colorProperty === 'stroke') {
-          state.colors.stroke = (value as ObjectState).colors.stroke;
+        if (animation.type === 'color') {
+          const colorProperty = animation.properties.property;
+          if (colorProperty === 'fill') {
+            state.colors.fill = value.colors.fill;
+          } else if (colorProperty === 'stroke') {
+            state.colors.stroke = value.colors.stroke;
+          }
         }
         break;
     }
@@ -223,11 +239,13 @@ function updateStateFromAnimation(
         state.opacity = value as number;
         break;
       case 'color':
-        const colorProperty = (animation.properties as any).property;
-        if (colorProperty === 'fill') {
-          state.colors.fill = value as string;
-        } else if (colorProperty === 'stroke') {
-          state.colors.stroke = value as string;
+        if (animation.type === 'color') {
+          const colorProperty = animation.properties.property;
+          if (colorProperty === 'fill') {
+            state.colors.fill = value as string;
+          } else if (colorProperty === 'stroke') {
+            state.colors.stroke = value as string;
+          }
         }
         break;
     }
@@ -253,9 +271,10 @@ export function createMoveAnimation(
   to: Point2D,
   startTime: number,
   duration: number,
-  easing = 'easeInOut'
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
   const transform = transformFactory.createTransform('move', { from, to });
+  transform.easing = easing;
   const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
   
   // Convert SceneTransform to SceneAnimationTrack
@@ -278,9 +297,10 @@ export function createRotateAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing = 'linear'
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
 ): SceneAnimationTrack {
   const transform = transformFactory.createTransform('rotate', { from, to });
+  transform.easing = easing;
   const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
   
   // Convert SceneTransform to SceneAnimationTrack
@@ -303,9 +323,10 @@ export function createScaleAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing = 'easeInOut'
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
   const transform = transformFactory.createTransform('scale', { from, to });
+  transform.easing = easing;
   const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
   
   // Convert SceneTransform to SceneAnimationTrack

@@ -7,9 +7,6 @@ import { cn } from "@/lib/utils";
 import { transformFactory } from '@/shared/registry/transforms';
 import type {
   AnimationTrack,
-  MoveTrack,
-  RotateTrack,
-  ScaleTrack,
   MoveTrackProperties,
   RotateTrackProperties,
   ScaleTrackProperties,
@@ -40,6 +37,38 @@ interface DragState {
 }
 
 const TIMELINE_WIDTH = 800;
+
+function isPoint2D(value: unknown): value is { x: number; y: number } {
+  return typeof value === 'object' && value !== null &&
+    typeof (value as Record<string, unknown>).x === 'number' &&
+    typeof (value as Record<string, unknown>).y === 'number';
+}
+
+function isMoveDefaults(value: unknown): value is MoveTrackProperties {
+  const v = value as Partial<MoveTrackProperties>;
+  return !!v && isPoint2D(v.from) && isPoint2D(v.to);
+}
+
+function isRotateDefaults(value: unknown): value is RotateTrackProperties {
+  const v = value as Partial<RotateTrackProperties>;
+  return !!v && typeof v.from === 'number' && typeof v.to === 'number';
+}
+
+function isScaleDefaults(value: unknown): value is ScaleTrackProperties {
+  const v = value as Partial<ScaleTrackProperties>;
+  return !!v && typeof v.from === 'number' && typeof v.to === 'number';
+}
+
+function isFadeDefaults(value: unknown): value is FadeTrackProperties {
+  const v = value as Partial<FadeTrackProperties>;
+  return !!v && typeof v.from === 'number' && typeof v.to === 'number';
+}
+
+function isColorDefaults(value: unknown): value is ColorTrackProperties {
+  const v = value as Partial<ColorTrackProperties>;
+  return !!v && typeof v.from === 'string' && typeof v.to === 'string' &&
+    (v.property === 'fill' || v.property === 'stroke');
+}
 
 function getDefaultTrackProperties(
   trackType: AnimationTrack["type"],
@@ -75,11 +104,51 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
         id,
         startTime: 0,
         duration: Math.min(2, duration),
-        easing: (definition?.metadata?.defaultEasing || "easeInOut") as 'linear' | 'easeInOut' | 'easeIn' | 'easeOut',
+        easing: definition?.metadata?.defaultEasing ?? 'easeInOut',
         properties: getDefaultTrackProperties(type),
       };
 
-      const newTrack: AnimationTrack = { ...baseTrack, type } as any;
+      let newTrack: AnimationTrack;
+      switch (type) {
+        case 'move': {
+          const props = isMoveDefaults(baseTrack.properties)
+            ? baseTrack.properties
+            : { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
+          newTrack = { ...baseTrack, type: 'move', properties: props };
+          break;
+        }
+        case 'rotate': {
+          const props = isRotateDefaults(baseTrack.properties)
+            ? baseTrack.properties
+            : { from: 0, to: 1 };
+          newTrack = { ...baseTrack, type: 'rotate', properties: props };
+          break;
+        }
+        case 'scale': {
+          const props = isScaleDefaults(baseTrack.properties)
+            ? baseTrack.properties
+            : { from: 1, to: 1.5 };
+          newTrack = { ...baseTrack, type: 'scale', properties: props };
+          break;
+        }
+        case 'fade': {
+          const props = isFadeDefaults(baseTrack.properties)
+            ? baseTrack.properties
+            : { from: 1, to: 0.5 };
+          newTrack = { ...baseTrack, type: 'fade', properties: props };
+          break;
+        }
+        case 'color': {
+          let props: ColorTrackProperties;
+          if (isColorDefaults(baseTrack.properties)) {
+            props = baseTrack.properties;
+          } else {
+            props = { from: '#ff0000', to: '#00ff00', property: 'fill' };
+          }
+          newTrack = { ...baseTrack, type: 'color', properties: props };
+          break;
+        }
+      }
       setTracks((prev) => [...prev, newTrack]);
     },
     [duration],
@@ -194,10 +263,10 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
                 <Button 
                   key={type} 
                   onClick={() => addTrack(type as AnimationTrack["type"])} 
-                  className={cn("text-xs", trackColors[type] || "bg-gray-600")} 
+                  className={cn("text-xs", trackColors[type] ?? "bg-gray-600")} 
                   size="sm"
                 >
-                  {trackIcons[type] || "●"} {type}
+                  {trackIcons[type] ?? "●"} {type}
                 </Button>
               );
             })}
@@ -222,7 +291,7 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
                     <span className="text-sm font-medium text-white w-16">
                       {(() => {
                         const trackIcons = transformFactory.getTrackIcons();
-                        return trackIcons[track.type] || "●";
+                        return trackIcons[track.type] ?? "●";
                       })()} {track.type}
                     </span>
                     {selectedTrackId === track.id && (
@@ -240,7 +309,7 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
                       "absolute h-6 rounded cursor-move transition-all text-white",
                       (() => {
                         const trackColors = transformFactory.getTrackColors();
-                        return trackColors[track.type] || "bg-gray-600";
+                        return trackColors[track.type] ?? "bg-gray-600";
                       })(),
                       selectedTrackId === track.id ? "ring-2 ring-blue-400 shadow-lg" : "hover:brightness-110",
                       dragState?.trackId === track.id ? "opacity-80" : "",
@@ -398,14 +467,14 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Rotation"
-              value={(track.properties as any).from}
+              value={track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
             />
             <NumberField
               label="To Rotation"
-              value={(track.properties as any).to}
+              value={track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
@@ -420,7 +489,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From"
-              value={(track.properties as any).from}
+              value={track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -428,7 +497,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             />
             <NumberField
               label="To"
-              value={(track.properties as any).to}
+              value={track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -444,7 +513,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Opacity"
-              value={(track.properties as any).from}
+              value={track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -453,7 +522,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             />
             <NumberField
               label="To Opacity"
-              value={(track.properties as any).to}
+              value={track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -469,7 +538,7 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
           <div className="text-sm font-medium text-white">Color Properties</div>
           <SelectField
             label="Property"
-            value={(track.properties as any).property}
+            value={track.properties.property}
             onChange={(property) => updateProperties({ property: property as "fill" | "stroke" })}
             options={[
               { value: "fill", label: "Fill" },
@@ -477,8 +546,8 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
             ]}
           />
           <div className="grid grid-cols-2 gap-2">
-            <ColorField label="From Color" value={(track.properties as any).from} onChange={(from) => updateProperties({ from })} />
-            <ColorField label="To Color" value={(track.properties as any).to} onChange={(to) => updateProperties({ to })} />
+            <ColorField label="From Color" value={track.properties.from} onChange={(from) => updateProperties({ from })} />
+            <ColorField label="To Color" value={track.properties.to} onChange={(to) => updateProperties({ to })} />
           </div>
         </div>
       )}

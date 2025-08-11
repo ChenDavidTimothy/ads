@@ -1,7 +1,7 @@
 // src/animation/core/animation-chain-test.ts
 // This file demonstrates the expected behavior of chained animations
 
-import type { AnimationTrack, MoveTrack, RotateTrack } from '@/shared/types/nodes';
+import type { AnimationTrack, MoveTrack, RotateTrack, ScaleTrack } from '@/shared/types/nodes';
 import type { Point2D } from '@/shared/types/core';
 
 // Example: Chaining move and rotate animations
@@ -110,7 +110,7 @@ Key Points:
 // Example: Mixed transform types
 export function createMixedTransformExample(): {
   moveTrack: MoveTrack;
-  scaleTrack: any; // Scale track
+  scaleTrack: ScaleTrack; // Scale track
   expectedBehavior: string;
 } {
   // Move animation
@@ -127,7 +127,7 @@ export function createMixedTransformExample(): {
   };
 
   // Scale animation (simplified for example)
-  const scaleTrack = {
+  const scaleTrack: ScaleTrack = {
     id: 'scale-1',
     type: 'scale',
     startTime: 1000, // Start when move ends
@@ -171,32 +171,61 @@ export function simulateAnimationState(
   let scale = 1;
 
   for (const track of tracks) {
-    if (time >= track.startTime && time < track.startTime + track.duration) {
-      // Animation is active
+    const isActive = time >= track.startTime && time < track.startTime + track.duration;
+    const isCompleted = time >= track.startTime + track.duration;
+
+    if (isActive) {
       const progress = (time - track.startTime) / track.duration;
-      
-      if (track.type === 'move') {
-        const props = track.properties as any;
-        position.x = props.from.x + (props.to.x - props.from.x) * progress;
-        position.y = props.from.y + (props.to.y - props.from.y) * progress;
-      } else if (track.type === 'rotate') {
-        const props = track.properties as any;
-        rotation = props.from + (props.to - props.from) * progress;
-      } else if (track.type === 'scale') {
-        const props = track.properties as any;
-        scale = props.from + (props.to - props.from) * progress;
+
+      switch (track.type) {
+        case 'move': {
+          const { from, to } = track.properties;
+          position = {
+            x: from.x + (to.x - from.x) * progress,
+            y: from.y + (to.y - from.y) * progress,
+          };
+          break;
+        }
+        case 'rotate': {
+          const { from, to } = track.properties;
+          rotation = from + (to - from) * progress;
+          break;
+        }
+        case 'scale': {
+          const { from, to } = track.properties;
+          scale = from + (to - from) * progress;
+          break;
+        }
+        case 'fade': {
+          const { from, to } = track.properties;
+          // In this simplified simulation, treat fade like scale for scalar interpolation
+          scale = from + (to - from) * progress;
+          break;
+        }
+        case 'color':
+          // Color has no effect on position/rotation/scale in this helper
+          break;
       }
-    } else if (time >= track.startTime + track.duration) {
-      // Animation has completed, use end values
-      if (track.type === 'move') {
-        const props = track.properties as any;
-        position = props.to;
-      } else if (track.type === 'rotate') {
-        const props = track.properties as any;
-        rotation = props.to;
-      } else if (track.type === 'scale') {
-        const props = track.properties as any;
-        scale = props.to;
+    } else if (isCompleted) {
+      switch (track.type) {
+        case 'move': {
+          position = track.properties.to;
+          break;
+        }
+        case 'rotate': {
+          rotation = track.properties.to;
+          break;
+        }
+        case 'scale': {
+          scale = track.properties.to;
+          break;
+        }
+        case 'fade':
+          // ignore in this simplified state representation
+          break;
+        case 'color':
+          // ignore in this simplified state representation
+          break;
       }
     }
   }
