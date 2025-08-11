@@ -44,10 +44,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
         } else {
           baseline = appearanceTime ?? 0;
         }
+        // Include prior animations already present in the overall context for this object
+        const priorForObject = context.sceneAnimations.filter(a => a.objectId === (objectId ?? ''));
         const animations = convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],
           objectId ?? '',
-          baseline
+          baseline,
+          priorForObject
         );
         
         // Attach animations directly to the object instead of global pool

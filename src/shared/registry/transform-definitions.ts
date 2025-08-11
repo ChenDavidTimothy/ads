@@ -125,6 +125,7 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      targetProperty: 'scale',
       trackColor: 'bg-pink-600',
       trackIcon: '⚹',
     },
@@ -170,6 +171,7 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      targetProperty: 'opacity',
       trackColor: 'bg-yellow-600',
       trackIcon: '◐',
     },
@@ -217,6 +219,7 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     metadata: {
       supportsEasing: true,
       defaultEasing: 'easeInOut',
+      targetProperty: 'color',
       trackColor: 'bg-orange-600',
       trackIcon: '🎨',
     },

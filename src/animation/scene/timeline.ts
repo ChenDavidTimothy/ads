@@ -25,76 +25,17 @@ import {
 const transformEvaluator = new TransformEvaluator();
 
 import { 
-  linear, 
-  easeInOutCubic, 
-  easeInCubic, 
-  easeOutCubic,
-  lerp,
-  lerpPoint 
+  lerp
 } from '../core/interpolation';
-
-type EasingType = 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 type AnimationValue = Point2D | number | string | boolean | null;
 
-// Get easing function by name - now using the registry system
-function getEasingFunction(easing: string) {
-  const easingRegistry = {
-    linear,
-    easeInOut: easeInOutCubic,
-    easeIn: easeInCubic,
-    easeOut: easeOutCubic,
-  };
-  return easingRegistry[easing as keyof typeof easingRegistry] || linear;
-}
-
-// Color interpolation helper
-function lerpColor(startColor: string, endColor: string, t: number): string {
-  const start = hexToRgb(startColor);
-  const end = hexToRgb(endColor);
-  
-  if (!start || !end) return startColor;
-  
-  const r = Math.round(lerp(start.r, end.r, t));
-  const g = Math.round(lerp(start.g, end.g, t));
-  const b = Math.round(lerp(start.b, end.b, t));
-  
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1]!, 16),
-    g: parseInt(result[2]!, 16),
-    b: parseInt(result[3]!, 16)
-  } : null;
-}
+// (Legacy easing and color helpers removed; modern evaluator handles interpolation)
 
 // Evaluate a single animation track at a specific time
 function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
-  const animationEndTime = animation.startTime + animation.duration;
-  
-  if (time < animation.startTime) {
-    return null;
-  }
-  
-  if (time >= animationEndTime) {
-    return getAnimationEndValue(animation);
-  }
-  
-  const localTime = time - animation.startTime;
-  const progress = localTime / animation.duration;
-  
-  // Use the new transform evaluator for consistent evaluation
-  try {
-    return transformEvaluator.evaluateTransform(animation, progress);
-  } catch (error) {
-    // Fallback to legacy evaluation if needed
-    console.warn('Transform evaluation failed, falling back to legacy:', error);
-    const easingFunction = getEasingFunction(animation.easing);
-    const easedProgress = easingFunction(progress);
-    return interpolateAnimation(animation, easedProgress);
-  }
+  // Delegate to the evaluator with absolute time so it can correctly
+  // handle start/end boundaries and easing.
+  return transformEvaluator.evaluateTransform(animation as any, time);
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
@@ -102,10 +43,7 @@ function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
   return transformEvaluator.getEndValue(animation);
 }
 
-function interpolateAnimation(animation: SceneAnimationTrack, progress: number): AnimationValue {
-  // Use the new transform evaluator for consistent interpolation
-  return transformEvaluator.evaluateTransform(animation, progress);
-}
+// (Legacy interpolateAnimation removed)
 
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
   switch (objectType) {
@@ -147,7 +85,10 @@ export function getObjectStateAtTime(
     }
   };
   
-  const objectAnimations = animations.filter(anim => anim.objectId === object.id);
+  const objectAnimations = animations
+    .filter(anim => anim.objectId === object.id)
+    // Ensure chronological application so later transforms override earlier ones
+    .sort((a, b) => a.startTime - b.startTime);
   
   for (const animation of objectAnimations) {
     const value = evaluateAnimation(animation, time);
@@ -164,9 +105,15 @@ export function getObjectStateAtTime(
         case 'rotation':
           state.rotation = value as number;
           break;
-        case 'scale':
-          state.scale = value as Point2D;
+        case 'scale': {
+          const v = value as number | Point2D;
+          if (typeof v === 'number') {
+            state.scale = { x: v, y: v };
+          } else {
+            state.scale = v;
+          }
           break;
+        }
         case 'opacity':
           state.opacity = value as number;
           break;

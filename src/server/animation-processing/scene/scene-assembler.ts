@@ -1,6 +1,8 @@
 // src/server/animation-processing/scene/scene-assembler.ts
 import type { AnimationTrack, SceneAnimationTrack } from "@/shared/types";
 import { transformFactory } from "@/shared/registry/transforms";
+import { transformEvaluator } from "@/shared/registry/transform-evaluator";
+import type { Point2D } from "@/shared/types/core";
 
 export type PerObjectCursorMap = Record<string, number>;
 
@@ -34,8 +36,83 @@ export function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]):
   return picked;
 }
 
-export function convertTracksToSceneAnimations(tracks: AnimationTrack[], objectId: string, baselineTime: number): SceneAnimationTrack[] {
-  return tracks.map((track): SceneAnimationTrack => {
+export function convertTracksToSceneAnimations(
+  tracks: AnimationTrack[],
+  objectId: string,
+  baselineTime: number,
+  priorAnimations: SceneAnimationTrack[] = []
+): SceneAnimationTrack[] {
+  // Helper: deep-ish equality for 'from' defaults
+  const isDefaultFrom = (type: string, value: unknown): boolean => {
+    const defaults = transformFactory.getDefaultProperties(type) as any | undefined;
+    if (!defaults) return false;
+    const def = (defaults as any).from;
+    if (typeof def === 'number') return value === def;
+    if (typeof def === 'string') return value === def;
+    if (typeof def === 'object' && def && typeof (def as any).x === 'number' && typeof (def as any).y === 'number') {
+      const v = value as Point2D | undefined;
+      return !!v && v.x === (def as any).x && v.y === (def as any).y;
+    }
+    return false;
+  };
+
+  // Helper: get target property for a transform type
+  const getTargetProperty = (type: string): string | undefined => {
+    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty as string | undefined;
+  };
+
+  // Helper: compute last value at a given absolute time from prior animations for the same target property
+  const getPriorValue = (
+    targetProperty: string | undefined,
+    atTime: number,
+    currentTrack?: AnimationTrack
+  ): unknown => {
+    if (!targetProperty) return undefined;
+    // Filter animations for this object and same target property
+    let relevant = priorAnimations.filter(a => a.objectId === objectId && getTargetProperty(a.type) === targetProperty);
+
+    // Special-case color: restrict to same fill/stroke property
+    if (currentTrack?.type === 'color') {
+      const prop = (currentTrack.properties as any)?.property;
+      relevant = relevant.filter(a => a.type === 'color' && (a.properties as any)?.property === prop);
+    }
+    if (relevant.length === 0) return undefined;
+
+    // Prefer animations that have fully completed by 'atTime'
+    const completed = relevant
+      .filter(a => atTime >= a.startTime + a.duration)
+      .sort((a, b) => (a.startTime + a.duration) - (b.startTime + b.duration));
+    if (completed.length > 0) {
+      const last = completed[completed.length - 1]!;
+      return transformEvaluator.getEndValue(last as any);
+    }
+
+    // Otherwise, if an animation is active at 'atTime', sample it
+    const active = relevant.find(a => atTime >= a.startTime && atTime < a.startTime + a.duration);
+    if (active) {
+      return transformEvaluator.evaluateTransform(active as any, atTime);
+    }
+
+    return undefined;
+  };
+
+  const sortedTracks = [...tracks].sort((a, b) => a.startTime - b.startTime);
+  const sceneTracks: SceneAnimationTrack[] = [];
+
+  for (const track of sortedTracks) {
+    const effectiveStart = baselineTime + track.startTime;
+    const targetProperty = getTargetProperty(track.type);
+
+    // Clone properties so we can adjust 'from' if chaining applies
+    const properties = { ...(track.properties as any) } as any;
+
+    if (properties.from === undefined || isDefaultFrom(track.type, properties.from)) {
+      const inherited = getPriorValue(targetProperty, effectiveStart, track);
+      if (inherited !== undefined) {
+        properties.from = inherited as any;
+      }
+    }
+
     // Use the registry system to create scene transforms
     const sceneTransform = transformFactory.createSceneTransform(
       {
@@ -44,18 +121,19 @@ export function convertTracksToSceneAnimations(tracks: AnimationTrack[], objectI
         startTime: track.startTime,
         duration: track.duration,
         easing: track.easing,
-        properties: track.properties as any,
+        properties,
       },
       objectId,
       baselineTime
     );
-    
-    // Convert SceneTransform to SceneAnimationTrack
-    return {
+
+    sceneTracks.push({
       ...sceneTransform,
-      properties: track.properties as any,
-    } as SceneAnimationTrack;
-  });
+      properties,
+    } as SceneAnimationTrack);
+  }
+
+  return sceneTracks;
 }
 
 export function extractObjectIdsFromInputs(inputs: Array<{ data: unknown }>): string[] {
