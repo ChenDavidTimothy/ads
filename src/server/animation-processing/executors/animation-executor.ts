@@ -53,10 +53,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
           priorForObject
         );
         
-        // Attach animations directly to the object instead of global pool
+        // Attach animations to the object and PRESERVE any previously attached animations
+        const previouslyAttached = Array.isArray((timedObject as Record<string, unknown>)._attachedAnimations)
+          ? ((timedObject as Record<string, unknown>)._attachedAnimations as unknown[])
+          : [];
         const animatedObject = {
           ...(timedObject as Record<string, unknown>),
-          _attachedAnimations: animations // Attach animations to this specific object
+          _attachedAnimations: [...previouslyAttached, ...animations]
         };
         
         allAnimations.push(...animations);

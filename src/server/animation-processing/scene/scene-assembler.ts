@@ -127,11 +127,12 @@ export function convertTracksToSceneAnimations(
     const properties = { ...(track.properties as any) } as any;
 
     // Priority order for 'from' value:
-    // 1. Explicit 'from' value in track properties
+    // 1. Explicit 'from' value in track properties (must NEVER be overridden)
     // 2. End value from previous track of same type in this sequence
     // 3. End value from prior animations for this object
     // 4. Default 'from' value
-    if (properties.from === undefined || isDefaultFrom(track.type, properties.from)) {
+    const hasExplicitFrom = Object.prototype.hasOwnProperty.call(track.properties ?? {}, 'from');
+    if (!hasExplicitFrom && (properties.from === undefined || isDefaultFrom(track.type, properties.from))) {
       // Try to get from the same sequence first
       let inherited = getEndValueFromSameSequence(track, sortedTracks, targetProperty);
       
