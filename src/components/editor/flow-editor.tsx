@@ -6,13 +6,15 @@ import type { NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
 
 import { NodePalette } from "./node-palette";
-import { TimelineEditorModal } from "./timeline-editor-modal";
+// Removed modal in favor of dedicated page
 import { ResultLogModal } from "./result-log-modal";
-import type { NodeData, AnimationTrack } from "@/shared/types";
+import type { NodeData } from "@/shared/types";
 import { createNodeTypes } from "./flow/node-types";
 import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
-import { useTimelineEditor } from "./flow/hooks/use-timeline-editor";
+import { useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { api } from "@/trpc/react";
 import { useResultLogViewer } from "./flow/hooks/use-result-log-viewer";
 import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
 import { useDebugExecution } from "./flow/hooks/use-debug-execution";
@@ -26,6 +28,7 @@ export function FlowEditor() {
   const {
     nodes,
     edges,
+    setNodes,
     setEdges,
     onNodesChange,
     onEdgesChange,
@@ -41,12 +44,42 @@ export function FlowEditor() {
     flowTracker,
   } = useFlowGraph();
 
-  const {
-    timelineModalState,
-    handleOpenTimelineEditor,
-    handleCloseTimelineEditor,
-    getTimelineNodeData,
-  } = useTimelineEditor(nodes);
+  const search = useSearchParams();
+  const router = useRouter();
+  const workspaceId = search.get('workspace');
+  const utils = api.useUtils();
+  const { data: workspace, isLoading: isWsLoading } = api.workspace.get.useQuery(
+    workspaceId ? { id: workspaceId } : (undefined as any),
+    { enabled: Boolean(workspaceId), staleTime: 30000, refetchOnWindowFocus: false }
+  );
+  // Removed auto-create; workspace is selected via workspace-selector page
+  const lastSavedSnapshotRef = useRef<string>("");
+  const lastQueuedSnapshotRef = useRef<string>("");
+  const saveWorkspace = api.workspace.save.useMutation({
+    onSuccess: () => {
+      // Mark the last successfully saved snapshot
+      lastSavedSnapshotRef.current = lastQueuedSnapshotRef.current;
+    },
+  });
+  const currentVersionRef = useRef<number | null>(null);
+  // No auto-create
+  const triedCreateRef = useRef<boolean>(false);
+  const hydratedOnceRef = useRef<boolean>(false);
+  // Stable snapshot of the current flow to avoid saving when nothing changed
+  const flowSnapshot = useMemo(() => {
+    try {
+      const normNodes = [...nodes]
+        .map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const normEdges = [...edges]
+        .map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      return JSON.stringify({ n: normNodes, e: normEdges });
+    } catch {
+      return Math.random().toString();
+    }
+  }, [nodes, edges]);
+
 
   const {
     resultLogModalState,
@@ -58,11 +91,55 @@ export function FlowEditor() {
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
   const nodeTypes: NodeTypes = useMemo(
-    () => createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer),
-    [handleOpenTimelineEditor, handleOpenResultLogViewer]
+    () => createNodeTypes(() => {}, handleOpenResultLogViewer),
+    [handleOpenResultLogViewer]
   );
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
+
+  // Hydrate from workspace on load
+  useEffect(() => {
+    if (!workspaceId) return;
+    if (workspace && Array.isArray(workspace.flow_data?.nodes) && Array.isArray(workspace.flow_data?.edges)) {
+      // Initial hydration: only if we haven't hydrated and the canvas is empty
+      if (!hydratedOnceRef.current && nodes.length === 0 && edges.length === 0) {
+        setNodes(workspace.flow_data.nodes as any);
+        setEdges(workspace.flow_data.edges as any);
+        currentVersionRef.current = workspace.version;
+        hydratedOnceRef.current = true;
+        return;
+      }
+      // Subsequent hydration only when server version is newer than our local
+      if (currentVersionRef.current !== null && workspace.version > currentVersionRef.current) {
+        setNodes(workspace.flow_data.nodes as any);
+        setEdges(workspace.flow_data.edges as any);
+        currentVersionRef.current = workspace.version;
+        return;
+      }
+      // If we skipped initial hydration due to local edits, still record version for saves
+      if (currentVersionRef.current === null) {
+        currentVersionRef.current = workspace.version;
+      }
+    }
+  }, [workspaceId, workspace, nodes.length, edges.length, setNodes, setEdges]);
+
+  // Debounced autosave when nodes/edges change
+  useEffect(() => {
+    if (!workspaceId) return;
+    // If nothing changed since last successful save (or last queued), don't schedule a new save
+    if (flowSnapshot === lastSavedSnapshotRef.current || flowSnapshot === lastQueuedSnapshotRef.current) {
+      return;
+    }
+    const version = currentVersionRef.current ?? workspace?.version ?? 0;
+    const timer = setTimeout(() => {
+      if (saveWorkspace.isPending) return;
+      lastQueuedSnapshotRef.current = flowSnapshot;
+      saveWorkspace.mutate({ id: workspaceId, flowData: { nodes, edges }, version });
+      // optimistic increment
+      currentVersionRef.current = version + 1;
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [flowSnapshot, nodes, edges, workspaceId, saveWorkspace, workspace?.version]);
 
   const { 
     videoUrl, 
@@ -79,14 +156,7 @@ export function FlowEditor() {
     getValidationSummary,
   } = useSceneGeneration(nodes, edges);
 
-  const handleSaveTimeline = useCallback((duration: number, tracks: AnimationTrack[]) => {
-    if (timelineModalState.nodeId) {
-      updateNodeData(timelineModalState.nodeId, { duration, tracks });
-    }
-    handleCloseTimelineEditor();
-  }, [timelineModalState.nodeId, updateNodeData, handleCloseTimelineEditor]);
-
-  const timelineNodeData = getTimelineNodeData();
+  // Timeline editor moved to dedicated page; no modal save handler
 
   // Generate user-friendly hints for different scenarios
   const getGenerationHint = useCallback(() => {
@@ -135,7 +205,7 @@ export function FlowEditor() {
             onPaneClick={onPaneClick}
             onNodesDelete={onNodesDelete}
             onEdgesDelete={onEdgesDelete}
-            disableDeletion={timelineModalState.isOpen || resultLogModalState.isOpen}
+             disableDeletion={resultLogModalState.isOpen}
           />
 
           <ResultLogModal
@@ -179,13 +249,7 @@ export function FlowEditor() {
         flowTracker={flowTracker}
       />
 
-      <TimelineEditorModal
-        isOpen={timelineModalState.isOpen}
-        onClose={handleCloseTimelineEditor}
-        duration={timelineNodeData.duration}
-        tracks={timelineNodeData.tracks}
-        onSave={handleSaveTimeline}
-      />
+      {/* TimelineEditorModal removed in favor of dedicated page */}
 
     </div>
   );

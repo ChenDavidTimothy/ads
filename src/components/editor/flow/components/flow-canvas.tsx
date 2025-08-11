@@ -32,6 +32,9 @@ export function FlowCanvas(props: Props) {
       onEdgesDelete={onEdgesDelete}
       nodeTypes={nodeTypes}
       fitView
+      panOnDrag
+      selectionOnDrag
+      zoomOnScroll
       className="bg-gray-900"
       deleteKeyCode={disableDeletion ? null : ['Backspace', 'Delete']}
       multiSelectionKeyCode={disableDeletion ? null : 'Meta'}

@@ -7,17 +7,17 @@ import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 
-interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
-  onOpenEditor?: (nodeId: string) => void;
-}
+interface AnimationNodeProps extends NodeProps<AnimationNodeData> {}
 
-export function AnimationNode({ data, selected, onOpenEditor }: AnimationNodeProps) {
+export function AnimationNode({ data, selected }: AnimationNodeProps) {
   const nodeDefinition = getNodeDefinition('animation');
   
   const handleDoubleClick = () => {
-    if (onOpenEditor) {
-      onOpenEditor(data.identifier.id);
-    }
+    // Navigate to dedicated timeline editor page with workspace preserved via query param
+    const params = new URLSearchParams(window.location.search);
+    const workspaceId = params.get('workspace');
+    const target = `/editor/timeline/${data.identifier.id}${workspaceId ? `?workspace=${workspaceId}` : ''}`;
+    window.location.href = target;
   };
 
   const trackCount = data.tracks?.length || 0;

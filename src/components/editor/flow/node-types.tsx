@@ -4,7 +4,7 @@ import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
 import { AnimationNode, ResultNode } from "../nodes";
 
 export function createNodeTypes(
-  handleOpenTimelineEditor: (nodeId: string) => void,
+  _handleOpenTimelineEditor: (nodeId: string) => void,
   handleOpenResultLogViewer: (nodeId: string) => void
 ): NodeTypes {
   const componentMapping = getNodeComponentMapping();
@@ -13,9 +13,9 @@ export function createNodeTypes(
   // Create mapping from build-time generated components
   for (const [nodeType, Component] of Object.entries(componentMapping)) {
     if (nodeType === 'animation') {
-      // Special handling for animation node with timeline editor callback
+      // Animation node handles navigation internally on double-click
       nodeTypes[nodeType] = (props: Parameters<typeof AnimationNode>[0]) => (
-        <AnimationNode {...props} onOpenEditor={() => handleOpenTimelineEditor(props.data.identifier.id)} />
+        <AnimationNode {...props} />
       );
     } else if (nodeType === 'result') {
       // Special handling for result node with log viewer callback

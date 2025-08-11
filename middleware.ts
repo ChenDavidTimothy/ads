@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   
   const url = request.nextUrl.clone()
   const isAuthPage = url.pathname === '/auth'
-  const isProtectedRoute = url.pathname.startsWith('/editor')
+  const isProtectedRoute = url.pathname.startsWith('/editor') || url.pathname.startsWith('/workspace-selector')
   
   // Redirect unauthenticated users away from protected routes
   if (!user && isProtectedRoute) {
@@ -42,9 +42,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
   
-  // Redirect authenticated users away from auth page to editor
+  // Redirect authenticated users away from auth page to workspace selector
   if (user && isAuthPage) {
-    url.pathname = '/editor'
+    url.pathname = '/workspace-selector'
     return NextResponse.redirect(url)
   }
 
