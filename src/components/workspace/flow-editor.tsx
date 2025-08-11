@@ -13,7 +13,7 @@ import { createNodeTypes } from "./flow/node-types";
 import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
 import { useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { useResultLogViewer } from "./flow/hooks/use-result-log-viewer";
 import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
@@ -23,6 +23,8 @@ import { FlowCanvas } from "./flow/components/flow-canvas";
 import { ActionsToolbar } from "./flow/components/actions-toolbar";
 import { RightSidebar } from "./flow/components/right-sidebar";
 import { VideoPreview } from "./flow/components/video-preview";
+import type { Node, Edge } from "reactflow";
+// Removed unused RouterOutputs import and WorkspaceData alias
 
 export function FlowEditor() {
   const {
@@ -45,11 +47,9 @@ export function FlowEditor() {
   } = useFlowGraph();
 
   const search = useSearchParams();
-  const router = useRouter();
   const workspaceId = search.get('workspace');
-  const utils = api.useUtils();
-  const { data: workspace, isLoading: isWsLoading } = api.workspace.get.useQuery(
-    workspaceId ? { id: workspaceId } : (undefined as any),
+  const { data: workspace } = api.workspace.get.useQuery(
+    { id: workspaceId! },
     { enabled: Boolean(workspaceId), staleTime: 30000, refetchOnWindowFocus: false }
   );
   // Removed auto-create; workspace is selected via workspace-selector page
@@ -63,7 +63,6 @@ export function FlowEditor() {
   });
   const currentVersionRef = useRef<number | null>(null);
   // No auto-create
-  const triedCreateRef = useRef<boolean>(false);
   const hydratedOnceRef = useRef<boolean>(false);
   // Stable snapshot of the current flow to avoid saving when nothing changed
   const flowSnapshot = useMemo(() => {
@@ -91,7 +90,13 @@ export function FlowEditor() {
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
   const nodeTypes: NodeTypes = useMemo(
-    () => createNodeTypes(() => {}, handleOpenResultLogViewer),
+    () => createNodeTypes((nodeId: string) => {
+      // Navigate to timeline editor page
+      const params = new URLSearchParams(window.location.search);
+      const wsId = params.get('workspace');
+      const target = `/workspace/timeline/${nodeId}${wsId ? `?workspace=${wsId}` : ''}`;
+      window.location.href = target;
+    }, handleOpenResultLogViewer),
     [handleOpenResultLogViewer]
   );
 
@@ -103,23 +108,31 @@ export function FlowEditor() {
     if (workspace && Array.isArray(workspace.flow_data?.nodes) && Array.isArray(workspace.flow_data?.edges)) {
       // Initial hydration: only if we haven't hydrated and the canvas is empty
       if (!hydratedOnceRef.current && nodes.length === 0 && edges.length === 0) {
-        setNodes(workspace.flow_data.nodes as any);
-        setEdges(workspace.flow_data.edges as any);
+        if (workspace?.flow_data) {
+          const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
+          if (Array.isArray(flowData.nodes) && Array.isArray(flowData.edges)) {
+            setNodes(flowData.nodes as Node<NodeData>[]);
+            setEdges(flowData.edges as Edge[]);
+          }
+        }
         currentVersionRef.current = workspace.version;
         hydratedOnceRef.current = true;
         return;
       }
       // Subsequent hydration only when server version is newer than our local
       if (currentVersionRef.current !== null && workspace.version > currentVersionRef.current) {
-        setNodes(workspace.flow_data.nodes as any);
-        setEdges(workspace.flow_data.edges as any);
+        if (workspace?.flow_data) {
+          const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
+          if (Array.isArray(flowData.nodes) && Array.isArray(flowData.edges)) {
+            setNodes(flowData.nodes as Node<NodeData>[]);
+            setEdges(flowData.edges as Edge[]);
+          }
+        }
         currentVersionRef.current = workspace.version;
         return;
       }
       // If we skipped initial hydration due to local edits, still record version for saves
-      if (currentVersionRef.current === null) {
-        currentVersionRef.current = workspace.version;
-      }
+      currentVersionRef.current ??= workspace.version;
     }
   }, [workspaceId, workspace, nodes.length, edges.length, setNodes, setEdges]);
 
@@ -130,11 +143,12 @@ export function FlowEditor() {
     if (flowSnapshot === lastSavedSnapshotRef.current || flowSnapshot === lastQueuedSnapshotRef.current) {
       return;
     }
-    const version = currentVersionRef.current ?? workspace?.version ?? 0;
+    const version = currentVersionRef.current ?? (workspace?.version ?? 0);
     const timer = setTimeout(() => {
       if (saveWorkspace.isPending) return;
       lastQueuedSnapshotRef.current = flowSnapshot;
-      saveWorkspace.mutate({ id: workspaceId, flowData: { nodes, edges }, version });
+      const flowData = { nodes, edges };
+      saveWorkspace.mutate({ id: workspaceId, flowData, version });
       // optimistic increment
       currentVersionRef.current = version + 1;
     }, 1200);

@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
+import type { RouterOutputs } from "@/trpc/react";
+
+type Workspace = RouterOutputs["workspace"]["list"][number];
 
 export function WorkspaceSelector() {
   const router = useRouter();
@@ -20,7 +23,11 @@ export function WorkspaceSelector() {
   const [name, setName] = useState("");
 
   const sorted = useMemo(() => {
-    return (workspaces ?? []).slice().sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    return (workspaces ?? []).slice().sort((a: Workspace, b: Workspace) => {
+      const dateA = new Date(String(a.updated_at));
+      const dateB = new Date(String(b.updated_at));
+      return dateB.getTime() - dateA.getTime();
+    });
   }, [workspaces]);
 
   return (
@@ -58,11 +65,11 @@ export function WorkspaceSelector() {
       )}
 
       <ul className="divide-y divide-gray-800 rounded border border-gray-800 overflow-hidden">
-        {sorted.map((ws) => (
+        {sorted.map((ws: Workspace) => (
           <li key={ws.id} className="flex items-center justify-between p-4 hover:bg-gray-850">
             <div>
               <div className="text-white font-medium">{ws.name}</div>
-              <div className="text-xs text-gray-400">Last updated {new Date(ws.updated_at).toLocaleString()}</div>
+              <div className="text-xs text-gray-400">Last updated {new Date(String(ws.updated_at)).toLocaleString()}</div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => router.push(`/workspace?workspace=${ws.id}`)}>Open</Button>

@@ -7,9 +7,7 @@ import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 
-interface AnimationNodeProps extends NodeProps<AnimationNodeData> {}
-
-export function AnimationNode({ data, selected }: AnimationNodeProps) {
+export function AnimationNode({ data, selected }: NodeProps<AnimationNodeData>) {
   const nodeDefinition = getNodeDefinition('animation');
   
   const handleDoubleClick = () => {

@@ -5,14 +5,15 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: { nodeId: string };
+  params: Promise<{ nodeId: string }>;
   searchParams: Promise<{ workspace?: string }>;
 }) {
   const { workspace: workspaceId } = (await searchParams) ?? {};
+  const { nodeId } = await params;
   if (!workspaceId) {
     redirect("/workspace-selector");
   }
-  return <TimelinePageClient workspaceId={workspaceId} nodeId={params.nodeId} />;
+  return <TimelinePageClient workspaceId={workspaceId} nodeId={nodeId} />;
 }
 
 
