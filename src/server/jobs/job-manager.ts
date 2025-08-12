@@ -6,6 +6,9 @@ import type { Database } from '@/types/supabase';
 
 // Production-ready job manager with comprehensive error handling and observability
 export class JobManager {
+  private static instance: JobManager | null = null;
+  private static startupPromise: Promise<void> | null = null;
+  
   private boss: PgBoss | null = null;
   private isStarted = false;
   private isShuttingDown = false;
@@ -58,9 +61,27 @@ export class JobManager {
     this.setupGracefulShutdown();
   }
 
+  // Singleton pattern to prevent multiple instances
+  static getInstance(): JobManager {
+    if (!JobManager.instance) {
+      JobManager.instance = new JobManager();
+    }
+    return JobManager.instance;
+  }
+
   async start(): Promise<void> {
     if (this.isStarted) return;
     
+    // Prevent multiple simultaneous startups
+    if (JobManager.startupPromise) {
+      return JobManager.startupPromise;
+    }
+    
+    JobManager.startupPromise = this.performStartup();
+    return JobManager.startupPromise;
+  }
+
+  private async performStartup(): Promise<void> {
     try {
       logger.info('🚀 Starting production job manager...');
       
@@ -94,6 +115,8 @@ export class JobManager {
       this.metrics.recordStartupFailure();
       logger.errorWithStack('❌ Failed to start job manager', error);
       throw error;
+    } finally {
+      JobManager.startupPromise = null;
     }
   }
 
@@ -657,4 +680,4 @@ export interface HealthStatus {
 }
 
 // Singleton instance for the application
-export const jobManager = new JobManager();
+export const jobManager = JobManager.getInstance();
