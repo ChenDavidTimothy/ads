@@ -1,4 +1,4 @@
-// src/components/workspace/flow/hooks/useFlowGraph.ts - Fixed React render errors and integrated with save system
+// src/components/workspace/flow/hooks/useFlowGraph.ts - Fixed React render errors
 import { useCallback, useMemo, useState } from 'react';
 import { useEdgesState, useNodesState, type Edge, type Node } from 'reactflow';
 import { getDefaultNodeData } from '@/lib/defaults/nodes';
@@ -7,7 +7,7 @@ import type { NodeData, NodeType } from '@/shared/types';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { useNotifications } from '@/hooks/use-notifications';
 
-export function useFlowGraph(markDirty?: () => void) {
+export function useFlowGraph() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -59,7 +59,6 @@ export function useFlowGraph(markDirty?: () => void) {
               : node
           )
         );
-        markDirty?.();
         
         // Clean up edges synchronously without toast notification
         setEdges((eds) => {
@@ -108,7 +107,6 @@ export function useFlowGraph(markDirty?: () => void) {
               : node
           )
         );
-        markDirty?.();
         
         if (involvesNot) {
           // Cut ALL connections when switching to/from NOT - clean slate
@@ -154,7 +152,6 @@ export function useFlowGraph(markDirty?: () => void) {
               : node
           )
         );
-        markDirty?.();
         
         if (involvesPortChange) {
           // Cut ALL connections when switching between unary/binary operations
@@ -188,8 +185,7 @@ export function useFlowGraph(markDirty?: () => void) {
           : node
       )
     );
-    markDirty?.();
-  }, [setNodes, setEdges, nodes, flowTracker, markDirty]);
+  }, [setNodes, setEdges, nodes, flowTracker]);
 
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
@@ -217,9 +213,8 @@ export function useFlowGraph(markDirty?: () => void) {
           : node
       )
     );
-    markDirty?.();
     return true;
-  }, [validateDisplayName, setNodes, toast, markDirty]);
+  }, [validateDisplayName, setNodes, toast]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNodeId(node.data.identifier.id);
@@ -233,19 +228,13 @@ export function useFlowGraph(markDirty?: () => void) {
     deletedNodes.forEach((node: Node<NodeData>) => {
       flowTracker.removeNode(node.data.identifier.id);
     });
-    if (deletedNodes.length > 0) {
-      markDirty?.();
-    }
-  }, [flowTracker, markDirty]);
+  }, [flowTracker]);
 
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
     deletedEdges.forEach((edge: Edge) => {
       flowTracker.removeConnection(edge.id);
     });
-    if (deletedEdges.length > 0) {
-      markDirty?.();
-    }
-  }, [flowTracker, markDirty]);
+  }, [flowTracker]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
     if (nodeType === 'scene') {
@@ -273,8 +262,7 @@ export function useFlowGraph(markDirty?: () => void) {
 
     flowTracker.trackNodeCreation(nodeData.identifier.id);
     setNodes((nds) => [...nds, newNode]);
-    markDirty?.();
-  }, [nodes, setNodes, flowTracker, toast, markDirty]);
+  }, [nodes, setNodes, flowTracker, toast]);
 
   return {
     nodes,
