@@ -542,10 +542,12 @@ class HealthChecker {
     // Initial health check
     await this.performHealthCheck();
     
-    // Schedule periodic health checks
-    this.interval = setInterval(() => {
-      void this.performHealthCheck();
-    }, 30000); // Every 30 seconds
+    // Schedule periodic health checks (disabled in development to reduce database calls)
+    if (process.env.NODE_ENV === 'production') {
+      this.interval = setInterval(() => {
+        void this.performHealthCheck();
+      }, 30000); // Every 30 seconds
+    }
   }
 
   async stop(): Promise<void> {

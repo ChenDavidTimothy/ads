@@ -222,8 +222,10 @@ class WorkerRunner {
     // Initial health check
     setTimeout(healthCheck, 5000);
     
-    // Periodic health checks
-    setInterval(healthCheck, healthCheckInterval);
+    // Periodic health checks (disabled in development to reduce database calls)
+    if (process.env.NODE_ENV === 'production') {
+      setInterval(healthCheck, healthCheckInterval);
+    }
   }
 
   private keepAlive(): void {
