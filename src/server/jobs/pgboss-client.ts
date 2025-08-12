@@ -21,6 +21,13 @@ export async function getBoss(): Promise<PgBoss> {
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
     // Enable internal state monitoring to make operational health observable
     monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '300'), // Changed from 60 to 300 (5 minutes)
+    
+    // MOST EFFICIENT: Minimize polling to absolute minimum
+    newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL_SECONDS ?? '60'), // 60 seconds - polling as fallback only
+    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '600'), // 10 minutes for maintenance
+    
+    // TODO: Consider implementing LISTEN/NOTIFY pattern for real-time job notifications
+    // This would eliminate polling entirely and provide instant job processing
   };
 
   const boss = new PgBoss(bossOptions);
