@@ -7,7 +7,7 @@ import type { Job } from 'pg-boss';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
-const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '2');
+const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '1'); // Changed from '2' to '1' for single-user setup
 
 let workerRegistered = false;
 
@@ -46,7 +46,8 @@ export async function registerRenderWorker() {
   }
 
   const workOptions = {
-    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2,
+    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 1, // Changed default from 2 to 1
+    teamConcurrency: 1, // Limit to 1 concurrent job per worker to reduce database load
     includeMetadata: true as const,
   };
 
