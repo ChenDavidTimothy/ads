@@ -1,115 +1,234 @@
 import { Client } from 'pg';
-import type { ClientConfig } from 'pg';
+import { logger } from '@/lib/logger';
 
-// Define proper types for the payload
-interface RenderJobEventPayload {
+// Event types for different notification channels
+export interface RenderJobEventPayload {
   jobId: string;
   status: 'completed' | 'failed';
   publicUrl?: string;
   error?: string;
 }
 
-let listenerClient: Client | null = null;
-let listenerConnected: Promise<void> | null = null;
-const handlers: Array<(payload: RenderJobEventPayload) => void> = [];
-const CHANNEL = 'render_jobs_events';
-
-function createPgClient(): Client {
-  const connectionString = process.env.PG_BOSS_DATABASE_URL;
-  if (!connectionString) throw new Error('PG_BOSS_DATABASE_URL is not set');
-
-  // Configurable SSL without disabling verification by default
-  const sslMode = process.env.PG_SSL; // e.g. 'require'
-  const rejectUnauthorizedEnv = process.env.PG_SSL_REJECT_UNAUTHORIZED; // 'true' | 'false'
-  const shouldUseSsl = sslMode === 'require' || /sslmode=require/i.test(connectionString);
-  const rejectUnauthorized = rejectUnauthorizedEnv
-    ? rejectUnauthorizedEnv.toLowerCase() !== 'false'
-    : true;
-
-  const clientConfig: ClientConfig = {
-    connectionString,
-    ssl: shouldUseSsl ? { rejectUnauthorized } : undefined,
-  };
-  return new Client(clientConfig);
+export interface NewJobEventPayload {
+  jobId: string;
+  queueName: string;
+  singletonKey?: string;
+  priority: number;
+  retryCount: number;
 }
 
-let reconnectDelayMs = 1000;
-const maxReconnectDelayMs = 30000;
+export interface RetryJobEventPayload {
+  jobId: string;
+  queueName: string;
+  retryCount: number;
+  startAfter: string;
+}
 
+// Notification channels
+const RENDER_COMPLETION_CHANNEL = 'render_job_events';
+const NEW_JOB_CHANNEL = 'pgboss_new_job';
+const RETRY_JOB_CHANNEL = 'pgboss_retry_job';
+
+// Handler types
+type RenderJobEventHandler = (payload: RenderJobEventPayload) => void;
+type NewJobEventHandler = (payload: NewJobEventPayload) => void;
+type RetryJobEventHandler = (payload: RetryJobEventPayload) => void;
+
+// Global state for event system
+let listenerClient: Client | null = null;
+let listenerConnected: Promise<void> | null = null;
+let reconnectTimer: NodeJS.Timeout | null = null;
+let isShuttingDown = false;
+
+// Event handlers
+const renderJobHandlers: RenderJobEventHandler[] = [];
+const newJobHandlers: NewJobEventHandler[] = [];
+const retryJobHandlers: RetryJobEventHandler[] = [];
+
+// Connection management
+function createPgClient(): Client {
+  const connectionString = process.env.PG_BOSS_DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('PG_BOSS_DATABASE_URL is not set');
+  }
+  return new Client({ connectionString });
+}
+
+// Robust connection with automatic reconnection
 async function connectListener(): Promise<void> {
   if (listenerConnected) return listenerConnected;
-  listenerClient = createPgClient();
-  listenerConnected = listenerClient
-    .connect()
-    .then(async () => {
-      reconnectDelayMs = 1000;
-      listenerClient!.on('error', () => {
-        // reconnect with simple exponential backoff
-        listenerConnected = null;
+  if (isShuttingDown) throw new Error('Event system is shutting down');
+
+  listenerConnected = (async () => {
+    try {
+      if (listenerClient) {
         try {
-          listenerClient?.removeAllListeners('notification');
-          listenerClient?.removeAllListeners('error');
+          await listenerClient.end();
         } catch {
           // ignore cleanup errors
         }
-        listenerClient = null;
-        setTimeout(() => {
-          reconnectDelayMs = Math.min(reconnectDelayMs * 2, maxReconnectDelayMs);
-          void connectListener().then(() => listen());
-        }, reconnectDelayMs);
-      });
-      await listen();
-    })
-    .catch((err) => {
-      listenerConnected = null;
-      try {
-        listenerClient?.end().catch(() => undefined);
-      } catch {
-        // ignore cleanup errors
       }
-      listenerClient = null;
-      throw err;
-    });
+
+      listenerClient = createPgClient();
+      
+      // Enhanced error handling for production reliability
+      listenerClient.on('error', (err) => {
+        logger.errorWithStack('PostgreSQL listener connection error', err);
+        scheduleReconnect();
+      });
+
+      listenerClient.on('end', () => {
+        if (!isShuttingDown) {
+          logger.warn('PostgreSQL listener connection ended unexpectedly');
+          scheduleReconnect();
+        }
+      });
+
+      listenerClient.on('notice', (notice) => {
+        if (process.env.PG_EVENTS_DEBUG === '1') {
+          logger.info('PostgreSQL notice', { notice: notice.message });
+        }
+      });
+
+      await listenerClient.connect();
+      
+      // Set up all notification channels
+      await Promise.all([
+        listenerClient.query(`LISTEN ${RENDER_COMPLETION_CHANNEL}`),
+        listenerClient.query(`LISTEN ${NEW_JOB_CHANNEL}`),
+        listenerClient.query(`LISTEN ${RETRY_JOB_CHANNEL}`)
+      ]);
+
+      // Set up notification handler
+      listenerClient.on('notification', (msg) => {
+        try {
+          if (!msg.payload) return;
+          
+          const payload = JSON.parse(msg.payload);
+          
+          switch (msg.channel) {
+            case RENDER_COMPLETION_CHANNEL:
+              handleRenderJobEvent(payload as RenderJobEventPayload);
+              break;
+            case NEW_JOB_CHANNEL:
+              handleNewJobEvent(payload as NewJobEventPayload);
+              break;
+            case RETRY_JOB_CHANNEL:
+              handleRetryJobEvent(payload as RetryJobEventPayload);
+              break;
+            default:
+              if (process.env.PG_EVENTS_DEBUG === '1') {
+                logger.info('Unknown notification channel', { channel: msg.channel });
+              }
+          }
+        } catch (error) {
+          logger.errorWithStack('Error processing notification', error, {
+            channel: msg.channel,
+            payload: msg.payload
+          });
+        }
+      });
+
+      logger.info('PostgreSQL event listener connected and subscribed', {
+        channels: [RENDER_COMPLETION_CHANNEL, NEW_JOB_CHANNEL, RETRY_JOB_CHANNEL]
+      });
+
+    } catch (error) {
+      listenerConnected = null;
+      logger.errorWithStack('Failed to connect PostgreSQL listener', error);
+      scheduleReconnect();
+      throw error;
+    }
+  })();
+
   return listenerConnected;
 }
 
-async function listen(): Promise<void> {
-  if (!listenerClient) return;
-  await listenerClient.query(`LISTEN ${CHANNEL}`);
-  listenerClient.on('notification', (msg) => {
-    if (msg.channel !== CHANNEL || !msg.payload) return;
-    try {
-      const payload = JSON.parse(msg.payload) as unknown;
-      // Type guard to ensure payload is valid
-      if (isValidRenderJobEventPayload(payload)) {
-        for (const h of handlers) h(payload);
-      }
-    } catch {
-      // ignore malformed payloads
+// Exponential backoff reconnection with jitter
+function scheduleReconnect(): void {
+  if (isShuttingDown || reconnectTimer) return;
+  
+  listenerConnected = null;
+  
+  // Exponential backoff: 1s, 2s, 4s, 8s, max 30s with jitter
+  const baseDelay = Math.min(1000 * Math.pow(2, Math.floor(Math.random() * 5)), 30000);
+  const jitter = Math.random() * 1000; // Add up to 1s jitter
+  const delay = baseDelay + jitter;
+  
+  logger.info('Scheduling PostgreSQL listener reconnection', { delayMs: Math.round(delay) });
+  
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!isShuttingDown) {
+      connectListener().catch((error) => {
+        logger.errorWithStack('Reconnection failed', error);
+      });
     }
-  });
+  }, delay);
 }
 
-// Type guard function to validate payload
-function isValidRenderJobEventPayload(payload: unknown): payload is RenderJobEventPayload {
-  if (!payload || typeof payload !== 'object') return false;
-  const obj = payload as Record<string, unknown>;
+// Event handlers
+function handleRenderJobEvent(payload: RenderJobEventPayload): void {
+  if (process.env.PG_EVENTS_DEBUG === '1') {
+    logger.info('Render job event received', payload);
+  }
   
-  if (typeof obj.jobId !== 'string') return false;
-  if (obj.status !== 'completed' && obj.status !== 'failed') return false;
-  if (obj.publicUrl !== undefined && typeof obj.publicUrl !== 'string') return false;
-  if (obj.error !== undefined && typeof obj.error !== 'string') return false;
-  
-  return true;
+  for (const handler of renderJobHandlers) {
+    try {
+      handler(payload);
+    } catch (error) {
+      logger.errorWithStack('Error in render job event handler', error, { payload });
+    }
+  }
 }
 
-export async function listenRenderJobEvents(
-  handler: (payload: RenderJobEventPayload) => void
-): Promise<void> {
+function handleNewJobEvent(payload: NewJobEventPayload): void {
+  if (process.env.PG_EVENTS_DEBUG === '1') {
+    logger.info('New job event received', payload);
+  }
+  
+  for (const handler of newJobHandlers) {
+    try {
+      handler(payload);
+    } catch (error) {
+      logger.errorWithStack('Error in new job event handler', error, { payload });
+    }
+  }
+}
+
+function handleRetryJobEvent(payload: RetryJobEventPayload): void {
+  if (process.env.PG_EVENTS_DEBUG === '1') {
+    logger.info('Retry job event received', payload);
+  }
+  
+  for (const handler of retryJobHandlers) {
+    try {
+      handler(payload);
+    } catch (error) {
+      logger.errorWithStack('Error in retry job event handler', error, { payload });
+    }
+  }
+}
+
+// Public API for subscribing to render job completion events
+export async function listenRenderJobEvents(handler: RenderJobEventHandler): Promise<void> {
   await connectListener();
-  handlers.push(handler);
+  renderJobHandlers.push(handler);
 }
 
+// Public API for subscribing to new job events (for workers)
+export async function listenNewJobEvents(handler: NewJobEventHandler): Promise<void> {
+  await connectListener();
+  newJobHandlers.push(handler);
+}
+
+// Public API for subscribing to retry job events (for workers)
+export async function listenRetryJobEvents(handler: RetryJobEventHandler): Promise<void> {
+  await connectListener();
+  retryJobHandlers.push(handler);
+}
+
+// Wait for specific render job completion with timeout
 export async function waitForRenderJobEvent(params: {
   jobId: string;
   timeoutMs?: number;
@@ -119,40 +238,51 @@ export async function waitForRenderJobEvent(params: {
 
   return await new Promise((resolve) => {
     let settled = false;
+    
     const handler = (payload: RenderJobEventPayload) => {
-      if (settled) return;
-      if (!payload || payload.jobId !== jobId) return;
+      if (settled || payload.jobId !== jobId) return;
       settled = true;
-      // remove handler
-      const idx = handlers.indexOf(handler);
-      if (idx >= 0) handlers.splice(idx, 1);
-      resolve({ jobId: payload.jobId, status: payload.status, publicUrl: payload.publicUrl, error: payload.error });
+      
+      // Remove handler
+      const idx = renderJobHandlers.indexOf(handler);
+      if (idx >= 0) renderJobHandlers.splice(idx, 1);
+      
+      resolve(payload);
     };
-    handlers.push(handler);
-    const t = setTimeout(() => {
+
+    renderJobHandlers.push(handler);
+
+    const timeout = setTimeout(() => {
       if (settled) return;
-      // remove handler on timeout
-      const idx = handlers.indexOf(handler);
-      if (idx >= 0) handlers.splice(idx, 1);
       settled = true;
+      
+      // Remove handler on timeout
+      const idx = renderJobHandlers.indexOf(handler);
+      if (idx >= 0) renderJobHandlers.splice(idx, 1);
+      
       resolve(null);
     }, timeoutMs);
-    // In case process is terminating, resolve early
+
+    // Handle process termination
     if (typeof process !== 'undefined') {
       const onExit = () => {
         if (settled) return;
-        const idx = handlers.indexOf(handler);
-        if (idx >= 0) handlers.splice(idx, 1);
         settled = true;
-        clearTimeout(t);
+        
+        const idx = renderJobHandlers.indexOf(handler);
+        if (idx >= 0) renderJobHandlers.splice(idx, 1);
+        
+        clearTimeout(timeout);
         resolve(null);
       };
+      
       process.once('SIGINT', onExit);
       process.once('SIGTERM', onExit);
     }
   });
 }
 
+// Publisher client for sending notifications
 let publisherClient: Client | null = null;
 let publisherConnecting: Promise<void> | null = null;
 
@@ -162,45 +292,106 @@ async function getPublisher(): Promise<Client> {
     await publisherConnecting;
     return publisherClient!;
   }
+  
   publisherClient = createPgClient();
   publisherConnecting = publisherClient.connect().then(() => {
-    return;
+    logger.info('PostgreSQL event publisher connected');
   });
+  
   await publisherConnecting;
   publisherConnecting = null;
   return publisherClient;
 }
 
+// Publish render job completion events
 export async function notifyRenderJobEvent(payload: RenderJobEventPayload): Promise<void> {
-  const client = await getPublisher();
-  const text = JSON.stringify(payload);
-  // Use parameterized pg_notify to avoid manual string escaping
-  await client.query('SELECT pg_notify($1, $2)', [CHANNEL, text]);
+  try {
+    const client = await getPublisher();
+    const text = JSON.stringify(payload);
+    await client.query('SELECT pg_notify($1, $2)', [RENDER_COMPLETION_CHANNEL, text]);
+    
+    if (process.env.PG_EVENTS_DEBUG === '1') {
+      logger.info('Render job event published', payload);
+    }
+  } catch (error) {
+    logger.errorWithStack('Failed to publish render job event', error, { payload });
+    throw error;
+  }
 }
 
-export async function shutdownPgEvents(): Promise<void> {
+// Health check - verify listener connection
+export async function checkEventSystemHealth(): Promise<{
+  listenerConnected: boolean;
+  publisherConnected: boolean;
+  subscribedChannels: string[];
+}> {
+  const health = {
+    listenerConnected: false,
+    publisherConnected: false,
+    subscribedChannels: [] as string[]
+  };
+
   try {
-    if (listenerClient) {
-      listenerClient.removeAllListeners('notification');
-      listenerClient.removeAllListeners('error');
-      await listenerClient.end().catch(() => undefined);
+    if (listenerClient && listenerConnected) {
+      // Test listener with a simple query
+      await listenerClient.query('SELECT 1');
+      health.listenerConnected = true;
+      health.subscribedChannels = [RENDER_COMPLETION_CHANNEL, NEW_JOB_CHANNEL, RETRY_JOB_CHANNEL];
     }
   } catch {
-    // ignore
+    health.listenerConnected = false;
+  }
+
+  try {
+    if (publisherClient) {
+      await publisherClient.query('SELECT 1');
+      health.publisherConnected = true;
+    }
+  } catch {
+    health.publisherConnected = false;
+  }
+
+  return health;
+}
+
+// Graceful shutdown
+export async function shutdownPgEvents(): Promise<void> {
+  isShuttingDown = true;
+  
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  // Clear all handlers
+  renderJobHandlers.length = 0;
+  newJobHandlers.length = 0;
+  retryJobHandlers.length = 0;
+
+  // Close listener
+  try {
+    if (listenerClient) {
+      listenerClient.removeAllListeners();
+      await listenerClient.end();
+    }
+  } catch (error) {
+    logger.errorWithStack('Error closing listener client', error);
   } finally {
     listenerClient = null;
     listenerConnected = null;
   }
+
+  // Close publisher
   try {
     if (publisherClient) {
-      await publisherClient.end().catch(() => undefined);
+      await publisherClient.end();
     }
-  } catch {
-    // ignore
+  } catch (error) {
+    logger.errorWithStack('Error closing publisher client', error);
   } finally {
     publisherClient = null;
     publisherConnecting = null;
   }
+
+  logger.info('PostgreSQL event system shutdown complete');
 }
-
-
