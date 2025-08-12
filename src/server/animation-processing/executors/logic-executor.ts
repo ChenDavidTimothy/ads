@@ -464,8 +464,8 @@ export class LogicNodeExecutor extends BaseExecutor {
         for (const [objectId, animations] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
           
-          // CRITICAL FIX: Deep clone animations to prevent shared reference mutations
-          // This ensures that merge node priority changes don't affect other execution paths
+          // CRITICAL FIX: Clone animations to prevent shared reference mutations
+          // Ensures merge processing doesn't affect the original animation data
           const clonedAnimations = animations.map(anim => ({
             ...anim,
             properties: { ...anim.properties }
@@ -500,7 +500,9 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
           }
           
-          // Apply the new animations, ensuring conflicts are properly resolved
+          // CRITICAL FIX: Properly resolve animation conflicts by type
+          // Problem: Both conflicting animations could end up in final result
+          // Solution: Remove existing animations of same type before adding new ones
           const currentAnimations = merged[objectId] ?? [];
           const nonConflictingExisting = currentAnimations.filter(existingAnim => 
             !newAnimations.some(newAnim => newAnim.type === existingAnim.type)

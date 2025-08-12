@@ -41,8 +41,9 @@ export function partitionObjectsByScenes(
     // FIXED: Get animations for this scene with hybrid approach
     let sceneAnimations: SceneAnimationTrack[] = [];
     
-    // CRITICAL FIX: For direct animation->scene connections, prioritize metadata over global context
-    // This prevents interference from merge nodes that modify the global animation array
+    // CRITICAL FIX: Prioritize metadata over global context for animation retrieval
+    // Problem: Global context animations were being modified by merge nodes, affecting direct connections
+    // Solution: Check input metadata first, fallback to global context only for merge node outputs
     if (edges) {
       // Fallback: For scenes with no assigned animations, try to get them from input metadata
       // This handles direct animation->scene connections that bypass merge nodes
@@ -55,25 +56,6 @@ export function partitionObjectsByScenes(
           if (perObjectAnimations) {
             for (const animations of Object.values(perObjectAnimations)) {
               sceneAnimations.push(...animations);
-            }
-            
-            // DEBUG: Log what Scene 1 is getting
-            if (sceneNode.data.identifier.displayName === "Scene 1") {
-              logger.info(`[DEBUG] Scene 1 receiving animations from ${edge.source}:`, {
-                sourceNode: edge.source,
-                allObjectAnimations: Object.entries(perObjectAnimations).map(([objId, anims]) => ({
-                  objectId: objId,
-                  animationTypes: anims.map(a => a.type),
-                  animations: anims.map(a => ({
-                    type: a.type,
-                    properties: a.properties
-                  }))
-                })),
-                animationTypes: Object.values(perObjectAnimations)[0]?.map(a => a.type) || [],
-                animationCount: Object.values(perObjectAnimations)[0]?.length || 0,
-                hasColor: Object.values(perObjectAnimations)[0]?.some(a => a.type === 'color') || false,
-                hasMove: Object.values(perObjectAnimations)[0]?.some(a => a.type === 'move') || false
-              });
             }
           }
         }
