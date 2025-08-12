@@ -1,11 +1,12 @@
+// Load environment configuration FIRST, before any other imports
 import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
+
+// Now import other modules that may use environment variables
 import { logger } from '@/lib/logger';
 import { jobManager } from './job-manager';
 import { renderWorker } from './render-worker';
-
-// Load environment configuration
-dotenv.config();
-dotenv.config({ path: '.env.local', override: true });
 
 // Production-ready worker entry point with comprehensive error handling
 class WorkerRunner {

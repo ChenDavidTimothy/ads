@@ -13,33 +13,35 @@ export class JobManager {
   private metrics: JobMetrics;
   private healthCheck: HealthChecker;
   
-  // Configuration with production defaults
-  private readonly config = {
-    connectionString: process.env.PG_BOSS_DATABASE_URL!,
-    // Optimized for production scalability
-    newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL ?? '30'),
-    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL ?? '600'),
-    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_INTERVAL ?? '300'),
-    
-    // Robust error handling
-    deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
-    archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_AFTER ?? '3600'),
-    
-    // Connection optimization
-    max: Number(process.env.PG_BOSS_MAX_CONNECTIONS ?? '10'),
-    connectionTimeoutMillis: Number(process.env.PG_BOSS_CONNECTION_TIMEOUT ?? '30000'),
-    idleTimeoutMillis: Number(process.env.PG_BOSS_IDLE_TIMEOUT ?? '300000'),
-    
-    // Retry and reliability
-    retryLimit: Number(process.env.PG_BOSS_RETRY_LIMIT ?? '5'),
-    retryDelay: Number(process.env.PG_BOSS_RETRY_DELAY ?? '30'),
-    retryBackoff: true,
-    
-    // Monitoring and observability
-    noSupervisor: false,
-    noScheduling: false,
-    schema: process.env.PG_BOSS_SCHEMA ?? 'pgboss',
-  };
+  // Configuration with production defaults - using getter to read at runtime
+  private get config() {
+    return {
+      connectionString: process.env.PG_BOSS_DATABASE_URL!,
+      // Optimized for production scalability
+      newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL ?? '30'),
+      maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL ?? '600'),
+      monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_INTERVAL ?? '300'),
+      
+      // Robust error handling
+      deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
+      archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_AFTER ?? '3600'),
+      
+      // Connection optimization
+      max: Number(process.env.PG_BOSS_MAX_CONNECTIONS ?? '10'),
+      connectionTimeoutMillis: Number(process.env.PG_BOSS_CONNECTION_TIMEOUT ?? '30000'),
+      idleTimeoutMillis: Number(process.env.PG_BOSS_IDLE_TIMEOUT ?? '300000'),
+      
+      // Retry and reliability
+      retryLimit: Number(process.env.PG_BOSS_RETRY_LIMIT ?? '5'),
+      retryDelay: Number(process.env.PG_BOSS_RETRY_DELAY ?? '30'),
+      retryBackoff: true,
+      
+      // Monitoring and observability
+      noSupervisor: false,
+      noScheduling: false,
+      schema: process.env.PG_BOSS_SCHEMA ?? 'pgboss',
+    };
+  }
 
   constructor() {
     this.circuitBreaker = new CircuitBreaker({
