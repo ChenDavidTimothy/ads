@@ -89,16 +89,18 @@ export function FlowEditor() {
 
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
-  const nodeTypes: NodeTypes = useMemo(
-    () => createNodeTypes((nodeId: string) => {
+  // Create stable nodeTypes to prevent React Flow warnings
+  const nodeTypes: NodeTypes = useMemo(() => {
+    const handleOpenTimelineEditor = (nodeId: string) => {
       // Navigate to timeline editor page
       const params = new URLSearchParams(window.location.search);
       const wsId = params.get('workspace');
       const target = `/workspace/timeline/${nodeId}${wsId ? `?workspace=${wsId}` : ''}`;
       window.location.href = target;
-    }, handleOpenResultLogViewer),
-    [handleOpenResultLogViewer]
-  );
+    };
+    
+    return createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer);
+  }, [handleOpenResultLogViewer]);
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
 

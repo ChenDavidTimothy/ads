@@ -1,12 +1,10 @@
 // src/server/jobs/graphile-worker-entry.ts
-import dotenv from 'dotenv';
-dotenv.config();
-dotenv.config({ path: '.env.local', override: true });
+import { workerEnv } from './env';
 
 import { run, type Runner, type TaskList } from 'graphile-worker';
-import { createServiceClient } from '@/utils/supabase/service';
+import { createServiceClient } from '@/utils/supabase/service-worker';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
-import { SupabaseStorageProvider } from '@/server/storage/supabase';
+import { SupabaseStorageProvider } from '@/server/storage/supabase-worker';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 import { notifyRenderJobEvent } from './pg-events';
@@ -22,17 +20,17 @@ interface RenderJobPayload {
 let runner: Runner | null = null;
 
 async function main() {
-  const concurrency = Number(process.env.RENDER_CONCURRENCY ?? '2');
-  const connectionString = process.env.DATABASE_URL;
+  const concurrency = Number(workerEnv.RENDER_CONCURRENCY);
+  const connectionString = workerEnv.DATABASE_URL;
   if (!connectionString) {
     throw new Error('DATABASE_URL is not set');
   }
 
   const tasks: TaskList = {
-    'render-video': async (payload: RenderJobPayload, helpers) => {
+    'render-video': async (payload: unknown, helpers) => {
       const { job } = helpers;
       const supabase = createServiceClient();
-      const { jobId, userId, scene, config } = payload;
+      const { jobId, userId, scene, config } = payload as RenderJobPayload;
 
       try {
         await supabase.from('render_jobs')
@@ -69,9 +67,6 @@ async function main() {
   runner = await run({
     connectionString,
     concurrency,
-    // Ensures schema exists; you should still run migrations explicitly in production
-    // but this helps local/dev environments
-    skipMigrations: false,
     // Task handlers
     taskList: tasks,
     // Polling interval is handled internally by Graphile Worker with LISTEN/NOTIFY

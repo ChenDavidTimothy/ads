@@ -1,6 +1,6 @@
 // src/server/jobs/graphile-queue.ts
 import type { JobQueue } from './queue';
-import { withPgClient } from 'graphile-worker';
+import { Client } from 'pg';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
@@ -26,13 +26,17 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error('DATABASE_URL is not set');
 
-    await withPgClient(async (client) => {
+    const client = new Client({ connectionString });
+    try {
+      await client.connect();
       await client.query('select graphile_worker.add_job($1, $2, $3)', [
         this.taskIdentifier,
         job,
         { job_key: job.jobId, max_attempts: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5') },
       ]);
-    }, { connectionString });
+    } finally {
+      await client.end();
+    }
 
     return { jobId: job.jobId };
   }
@@ -47,7 +51,9 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error('DATABASE_URL is not set');
 
-    return await withPgClient(async (client) => {
+    const client = new Client({ connectionString });
+    try {
+      await client.connect();
       const { rows } = await client.query(
         `select
            count(*) filter (where r.status in ('created','retry')) as pending,
@@ -67,6 +73,8 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
         completed: Number(row.completed ?? 0),
         failed: Number(row.failed ?? 0),
       };
-    }, { connectionString });
+    } finally {
+      await client.end();
+    }
   }
 }
