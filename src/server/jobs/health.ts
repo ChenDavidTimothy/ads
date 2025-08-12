@@ -1,6 +1,4 @@
-import { getBossHealth, runMaintenance } from './pgboss-client';
 import { checkEventSystemHealth } from './pg-events';
-import { getWorkerStatus } from './render-worker';
 import { renderQueue } from './render-queue';
 import { logger } from '@/lib/logger';
 
@@ -8,24 +6,11 @@ export interface JobSystemHealth {
   overall: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   components: {
-    pgboss: {
-      status: 'healthy' | 'unhealthy';
-      connected: boolean;
-      queueCount?: number;
-      error?: string;
-    };
     events: {
       status: 'healthy' | 'degraded' | 'unhealthy';
       listenerConnected: boolean;
       publisherConnected: boolean;
       subscribedChannels: string[];
-    };
-    worker: {
-      status: 'healthy' | 'degraded' | 'not_running';
-      registered: boolean;
-      activeJobs: number;
-      concurrency: number;
-      shutdownRequested: boolean;
     };
     queue: {
       status: 'healthy' | 'degraded' | 'unhealthy';
@@ -46,30 +31,17 @@ export async function checkJobSystemHealth(): Promise<JobSystemHealth> {
   const timestamp = new Date().toISOString();
   const recommendations: string[] = [];
 
-  // Check PgBoss health
-  const bossHealth = await getBossHealth();
-  const pgbossComponent = {
-    status: bossHealth.connected ? 'healthy' as const : 'unhealthy' as const,
-    connected: bossHealth.connected,
-    queueCount: bossHealth.queueCount,
-    error: bossHealth.error
-  };
-
-  if (!bossHealth.connected) {
-    recommendations.push('PgBoss connection is down - check database connectivity');
-  }
-
   // Check event system health
   const eventHealth = await checkEventSystemHealth();
   let eventStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
   
   if (!eventHealth.listenerConnected && !eventHealth.publisherConnected) {
     eventStatus = 'unhealthy';
-    recommendations.push('Event system is completely down - jobs will not be processed');
+    recommendations.push('Event system is completely down - job completion notifications will fail');
   } else if (!eventHealth.listenerConnected || !eventHealth.publisherConnected) {
     eventStatus = 'degraded';
     if (!eventHealth.listenerConnected) {
-      recommendations.push('Event listener is down - workers may miss new jobs');
+      recommendations.push('Event listener is down - clients may not receive completion events');
     }
     if (!eventHealth.publisherConnected) {
       recommendations.push('Event publisher is down - job completion notifications may fail');
@@ -83,64 +55,25 @@ export async function checkJobSystemHealth(): Promise<JobSystemHealth> {
     subscribedChannels: eventHealth.subscribedChannels
   };
 
-  // Check worker health (may not be running in all processes)
-  let workerComponent;
-  try {
-    const workerStatus = getWorkerStatus();
-    let workerHealthStatus: 'healthy' | 'degraded' | 'not_running' = 'not_running';
-    
-    if (workerStatus.registered) {
-      if (workerStatus.shutdownRequested) {
-        workerHealthStatus = 'degraded';
-        recommendations.push('Worker is shutting down');
-      } else {
-        workerHealthStatus = 'healthy';
-      }
-      
-      if (workerStatus.activeJobs >= workerStatus.concurrency) {
-        recommendations.push('Worker is at capacity - consider increasing concurrency');
-      }
-    } else {
-      recommendations.push('Worker is not registered - jobs will not be processed');
-    }
-
-    workerComponent = {
-      status: workerHealthStatus,
-      registered: workerStatus.registered,
-      activeJobs: workerStatus.activeJobs,
-      concurrency: workerStatus.concurrency,
-      shutdownRequested: workerStatus.shutdownRequested
-    };
-  } catch {
-    // Worker functions not available (not in worker process)
-    workerComponent = {
-      status: 'not_running' as const,
-      registered: false,
-      activeJobs: 0,
-      concurrency: 0,
-      shutdownRequested: false
-    };
-  }
-
-  // Check queue health
+  // Check queue health (placeholder: will be implemented with Graphile Worker)
   let queueComponent;
   try {
-    const queueStats = await renderQueue.getQueueStats();
+    const queueStats = await (renderQueue as any).getQueueStats?.();
     let queueStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     
-    // Check for concerning queue conditions
-    if (queueStats.pending > 100) {
-      queueStatus = 'degraded';
-      recommendations.push(`High number of pending jobs (${queueStats.pending}) - consider scaling workers`);
-    }
-    
-    if (queueStats.failed > queueStats.completed && queueStats.failed > 10) {
-      queueStatus = 'degraded';
-      recommendations.push(`High failure rate (${queueStats.failed} failed vs ${queueStats.completed} completed)`);
+    if (queueStats) {
+      if (queueStats.pending > 100) {
+        queueStatus = 'degraded';
+        recommendations.push(`High number of pending jobs (${queueStats.pending}) - consider scaling workers`);
+      }
+      if (queueStats.failed > queueStats.completed && queueStats.failed > 10) {
+        queueStatus = 'degraded';
+        recommendations.push(`High failure rate (${queueStats.failed} failed vs ${queueStats.completed} completed)`);
+      }
     }
 
     queueComponent = {
-      status: queueStatus,
+      status: queueStats ? queueStatus : 'healthy',
       stats: queueStats
     };
   } catch (error) {
@@ -155,18 +88,12 @@ export async function checkJobSystemHealth(): Promise<JobSystemHealth> {
   // Determine overall health
   let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
   
-  if (pgbossComponent.status === 'unhealthy' || 
-      eventsComponent.status === 'unhealthy' || 
-      queueComponent.status === 'unhealthy') {
+  if (eventsComponent.status === 'unhealthy' || queueComponent.status === 'unhealthy') {
     overall = 'unhealthy';
-  } else if (pgbossComponent.status === 'degraded' || 
-             eventsComponent.status === 'degraded' || 
-             queueComponent.status === 'degraded' ||
-             workerComponent.status === 'degraded') {
+  } else if (eventsComponent.status === 'degraded' || queueComponent.status === 'degraded') {
     overall = 'degraded';
   }
 
-  // Add general recommendations
   if (overall === 'unhealthy') {
     recommendations.unshift('Job system is unhealthy - immediate attention required');
   } else if (overall === 'degraded') {
@@ -177,9 +104,7 @@ export async function checkJobSystemHealth(): Promise<JobSystemHealth> {
     overall,
     timestamp,
     components: {
-      pgboss: pgbossComponent,
       events: eventsComponent,
-      worker: workerComponent,
       queue: queueComponent
     },
     recommendations
@@ -208,7 +133,7 @@ export async function checkJobSystemStatus(): Promise<{
   }
 }
 
-// Auto-maintenance based on health status
+// Auto-maintenance placeholder (to be implemented with Graphile Worker if needed)
 export async function performHealthBasedMaintenance(): Promise<{
   maintenancePerformed: boolean;
   actions: string[];
@@ -220,21 +145,14 @@ export async function performHealthBasedMaintenance(): Promise<{
 
   try {
     const health = await checkJobSystemHealth();
-    
-    // Run maintenance if queue has too many completed/failed jobs
-    const queueStats = health.components.queue.stats;
+
+    const queueStats = (health.components.queue as any).stats;
     if (queueStats && (queueStats.completed > 1000 || queueStats.failed > 100)) {
-      try {
-        await runMaintenance();
-        actions.push('Executed database maintenance (archive/cleanup)');
-        maintenancePerformed = true;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        errors.push(`Maintenance failed: ${errorMessage}`);
-      }
+      // Placeholder: implement cleanup suitable for Graphile Worker if required
+      actions.push('Queue appears large; consider manual cleanup or retention tuning');
+      maintenancePerformed = false;
     }
 
-    // Log health status if not healthy
     if (health.overall !== 'healthy') {
       logger.warn('Job system health check', {
         status: health.overall,
@@ -256,7 +174,6 @@ export async function performHealthBasedMaintenance(): Promise<{
   };
 }
 
-// Monitor job system continuously
 export function startHealthMonitor(intervalMs: number = 300000): () => void {
   let isRunning = true;
   
@@ -278,16 +195,13 @@ export function startHealthMonitor(intervalMs: number = 300000): () => void {
       logger.errorWithStack('Health monitor failed', error);
     }
     
-    // Schedule next check
     if (isRunning) {
       setTimeout(monitor, intervalMs);
     }
   };
 
-  // Start monitoring
   setTimeout(monitor, intervalMs);
   
-  // Return stop function
   return () => {
     isRunning = false;
   };
