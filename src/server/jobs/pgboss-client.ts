@@ -20,7 +20,7 @@ export async function getBoss(): Promise<PgBoss> {
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
     // Enable internal state monitoring to make operational health observable
-    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '60'),
+    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '300'), // Changed from 60 to 300 (5 minutes)
   };
 
   const boss = new PgBoss(bossOptions);

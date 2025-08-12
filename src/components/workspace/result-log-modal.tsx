@@ -120,7 +120,7 @@ export function ResultLogModal({
 
         setLogs(formattedLogs);
       }
-    }, 1000); // Poll every second
+    }, 3000); // Changed from 1000 to 3000 (3 seconds instead of 1)
 
     return () => clearInterval(interval);
   }, [isOpen, nodeId, debugContext, debugContext?.getAllDebugResults, logs.length, formatValue]);

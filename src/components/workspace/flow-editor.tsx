@@ -145,6 +145,18 @@ export function FlowEditor() {
     if (flowSnapshot === lastSavedSnapshotRef.current || flowSnapshot === lastQueuedSnapshotRef.current) {
       return;
     }
+    
+    // Skip saving if changes are too minor (e.g., just cursor position changes)
+    const hasSignificantChanges = nodes.some(node => 
+      node.data && Object.keys(node.data).some(key => 
+        !['position', 'selected', 'dragging'].includes(key)
+      )
+    ) || edges.length > 0;
+    
+    if (!hasSignificantChanges) {
+      return;
+    }
+    
     const version = currentVersionRef.current ?? (workspace?.version ?? 0);
     const timer = setTimeout(() => {
       if (saveWorkspace.isPending) return;
@@ -153,7 +165,7 @@ export function FlowEditor() {
       saveWorkspace.mutate({ id: workspaceId, flowData, version });
       // optimistic increment
       currentVersionRef.current = version + 1;
-    }, 1200);
+    }, 3000); // Increased from 1200 to 3000 (3 seconds instead of 1.2 seconds)
     return () => clearTimeout(timer);
   }, [flowSnapshot, nodes, edges, workspaceId, saveWorkspace, workspace?.version, workspace]);
 

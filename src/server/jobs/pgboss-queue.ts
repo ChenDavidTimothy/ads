@@ -124,7 +124,7 @@ export class PgBossQueue<
       });
 
       // sparse fallback polling of render_jobs if event missed
-      let delay = 5_000; // start at 5s
+      let delay = 10_000; // Changed from 5_000 to 10_000 (10 seconds instead of 5)
       const poll = async () => {
         const waiter = waiters.get(businessJobId);
         if (!waiter) return; // already resolved

@@ -430,7 +430,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     };
     
-    pollTimeoutRef.current = setTimeout(() => void poll(), 500);
+    pollTimeoutRef.current = setTimeout(() => void poll(), 2000); // Increased from 500ms to 2 seconds
   }, [utils.animation.getRenderJobStatus, toast, router]);
 
   const isSceneConnected = useMemo(() => {

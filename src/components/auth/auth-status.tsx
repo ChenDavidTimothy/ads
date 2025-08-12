@@ -207,12 +207,12 @@ export function AuthStatus() {
       }
     });
 
-    // Periodic session health check (every 30 seconds)
+    // Periodic session health check (every 5 minutes instead of 30 seconds)
     sessionCheckIntervalRef.current = setInterval(() => {
       if (isMounted) {
         void checkAuthState();
       }
-    }, 30 * 1000);
+    }, 5 * 60 * 1000); // Changed from 30 * 1000 to 5 * 60 * 1000
 
     return () => {
       isMounted = false;

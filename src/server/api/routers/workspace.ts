@@ -82,6 +82,25 @@ export const workspaceRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
+      
+      // Check if the flow data has actually changed to avoid unnecessary updates
+      const { data: currentWorkspace } = await supabase
+        .from("workspaces")
+        .select("flow_data, version")
+        .eq("id", input.id)
+        .eq("user_id", user.id)
+        .single();
+        
+      if (currentWorkspace && 
+          currentWorkspace.version === input.version && 
+          JSON.stringify(currentWorkspace.flow_data) === JSON.stringify(input.flowData)) {
+        // No changes detected, return current data without updating
+        return saveResultSchema.parse({
+          version: currentWorkspace.version,
+          updated_at: new Date().toISOString()
+        });
+      }
+      
       // Optimistic concurrency: version must match
       const { data, error } = await supabase
         .from("workspaces")
