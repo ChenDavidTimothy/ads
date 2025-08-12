@@ -258,17 +258,20 @@ function inferEffectiveLogicalType(
       const incoming = edges.filter(e => e.target === sourceNodeId && e.targetHandle === 'data');
       if (incoming.length !== 1) return 'unknown';
       const from = incoming[0];
-      return inferEffectiveLogicalType(from.source, from.sourceHandle!, nodes, edges, visited);
+      if (!from?.source || !from?.sourceHandle) return 'unknown';
+      return inferEffectiveLogicalType(from.source, from.sourceHandle, nodes, edges, visited);
     }
     case 'merge': {
       // Homogeneous type pass-through: all inputs must resolve to the same non-unknown type
       const incoming = edges.filter(e => e.target === sourceNodeId && !!e.targetHandle);
       if (incoming.length === 0) return 'unknown';
-      const types = incoming.map(e => inferEffectiveLogicalType(e.source, e.sourceHandle!, nodes, edges, visited))
-        .filter(t => t !== 'unknown');
-      if (types.length === 0) return 'unknown';
-      const unique = Array.from(new Set(types));
-      return unique.length === 1 ? unique[0] : 'unknown';
+      const types = incoming.map(e => (e.source && e.sourceHandle) ? inferEffectiveLogicalType(e.source, e.sourceHandle, nodes, edges, visited) : 'unknown');
+      const narrowed = types.filter((t): t is Exclude<LogicalType, 'unknown'> => (
+        t === 'number' || t === 'boolean' || t === 'string' || t === 'color'
+      ));
+      if (narrowed.length === 0) return 'unknown';
+      const unique = Array.from(new Set(narrowed));
+      return unique.length === 1 ? (unique[0] as LogicalType) : 'unknown';
     }
     default:
       return 'unknown';

@@ -7,6 +7,9 @@ import type {
   PropertyDefinition,
   PropertyType 
 } from '../types/transforms';
+import type { TransformIdentifier } from '../types/transforms';
+import type { AnimationTrack } from '../types/nodes';
+import { generateTransformIdentifier, validateTransformDisplayName } from '@/lib/defaults/transforms';
 import { 
   TRANSFORM_DEFINITIONS
 } from './transform-definitions';
@@ -70,6 +73,8 @@ export class TransformFactoryImpl implements TransformFactory {
     // Validate and merge properties with defaults
     const validatedProperties = this.validateAndMergeProperties(definition, properties);
     
+    // This factory method is used for scene-time transforms, not editor tracks.
+    // ID remains a simple ephemeral value as it is not used as canonical track ID.
     return {
       id: `${type}-${Date.now()}`,
       type,
@@ -258,6 +263,16 @@ export class TransformFactoryImpl implements TransformFactory {
   // Get all property types that support interpolation
   getInterpolatablePropertyTypes(): PropertyType[] {
     return Object.keys(INTERPOLATOR_REGISTRY) as PropertyType[];
+  }
+
+  // ----- Enhancements for identifier & naming (non-breaking) -----
+
+  generateIdentifier(type: string, existingTracks: AnimationTrack[]): TransformIdentifier {
+    return generateTransformIdentifier(type, existingTracks);
+  }
+
+  validateTransformDisplayName(newName: string, currentTrackId: string, allTracks: AnimationTrack[]): string | null {
+    return validateTransformDisplayName(newName, currentTrackId, allTracks);
   }
 }
 

@@ -245,14 +245,12 @@ export const animationRouter = createTRPCRouter({
 
         // Convert React Flow edges to backend format with identifier ID mapping
         const nodeIdMap = new Map<string, string>();
-        input.nodes.forEach(n => {
-          if (n.data && typeof n.data === 'object' && n.data !== null) {
-            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
-            if (identifier?.id) {
-              nodeIdMap.set(n.id, identifier.id);
-            }
-          }
-        });
+         input.nodes.forEach(n => {
+           if (n.data && typeof n.data === 'object' && n.data !== null) {
+             const identifier = (n.data as { identifier: { id: string } }).identifier;
+             nodeIdMap.set(n.id, identifier.id);
+           }
+         });
 
         const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
@@ -335,14 +333,12 @@ export const animationRouter = createTRPCRouter({
 
         // Convert React Flow edges to backend format with identifier ID mapping
         const nodeIdMap = new Map<string, string>();
-        input.nodes.forEach(n => {
-          if (n.data && typeof n.data === 'object' && n.data !== null) {
-            const identifier = (n.data as { identifier?: { id?: string } }).identifier;
-            if (identifier?.id) {
-              nodeIdMap.set(n.id, identifier.id);
-            }
-          }
-        });
+         input.nodes.forEach(n => {
+           if (n.data && typeof n.data === 'object' && n.data !== null) {
+             const identifier = (n.data as { identifier: { id: string } }).identifier;
+             nodeIdMap.set(n.id, identifier.id);
+           }
+         });
 
         const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
@@ -578,14 +574,12 @@ export const animationRouter = createTRPCRouter({
       }));
 
       const nodeIdMap = new Map<string, string>();
-      input.nodes.forEach(n => {
-        if (n.data && typeof n.data === 'object' && n.data !== null) {
-          const identifier = (n.data as { identifier?: { id?: string } }).identifier;
-          if (identifier?.id) {
-            nodeIdMap.set(n.id, identifier.id);
-          }
-        }
-      });
+       input.nodes.forEach(n => {
+         if (n.data && typeof n.data === 'object' && n.data !== null) {
+           const identifier = (n.data as { identifier: { id: string } }).identifier;
+           nodeIdMap.set(n.id, identifier.id);
+         }
+       });
 
       const backendEdges = input.edges.map((e) => ({
         id: e.id,

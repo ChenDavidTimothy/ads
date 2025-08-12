@@ -176,7 +176,7 @@ export function convertTracksToSceneAnimations(
     // Use the registry system to create scene transforms
     const sceneTransform = transformFactory.createSceneTransform(
       {
-        id: track.id,
+        id: track.identifier.id,
         type: track.type,
         startTime: track.startTime,
         duration: track.duration,
@@ -188,8 +188,9 @@ export function convertTracksToSceneAnimations(
     );
 
     // Push typed scene animation track with a stable, collision-safe id
+    const canonicalTrackId = track.identifier.id;
     sceneTracks.push({
-      id: `${objectId}::${track.id}::${effectiveStart}`,
+      id: `${objectId}::${canonicalTrackId}::${effectiveStart}`,
       ...sceneTransform,
       properties: properties as SceneAnimationTrack['properties'],
     } as SceneAnimationTrack);

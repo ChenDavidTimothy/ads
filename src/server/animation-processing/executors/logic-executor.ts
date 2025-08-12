@@ -77,7 +77,7 @@ export class LogicNodeExecutor extends BaseExecutor {
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const label = typeof data.label === 'string' ? data.label : 'Debug';
-    const nodeDisplayName = node.data.identifier?.displayName || 'Result Node';
+  const nodeDisplayName = node.data.identifier.displayName;
     
     const inputs = getConnectedInputs(
       context,

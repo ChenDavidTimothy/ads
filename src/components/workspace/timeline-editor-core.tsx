@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
 import { transformFactory } from '@/shared/registry/transforms';
+import { generateTransformIdentifier, getTransformDisplayLabel, validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
+import { TransformTracker } from '@/lib/flow/transform-tracking';
 import type {
   AnimationTrack,
   MoveTrackProperties,
@@ -22,6 +24,7 @@ import {
 } from "@/shared/types/nodes";
 
 interface TimelineEditorCoreProps {
+  animationNodeId: string;
   initialDuration: number;
   initialTracks: AnimationTrack[];
   onSave: (duration: number, tracks: AnimationTrack[]) => void;
@@ -81,31 +84,46 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
-export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onCancel }: TimelineEditorCoreProps) {
+export function TimelineEditorCore({ animationNodeId, initialDuration, initialTracks, onSave, onCancel }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(initialDuration);
   const [tracks, setTracks] = useState<AnimationTrack[]>(initialTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
+  const trackerRef = useRef<TransformTracker>(new TransformTracker());
 
   useEffect(() => {
     setDuration(initialDuration);
     setTracks(initialTracks);
     setSelectedTrackId(null);
     setDragState(null);
-  }, [initialDuration, initialTracks]);
+    // Initialize lineage tracking for incoming tracks
+    const tracker = trackerRef.current;
+    initialTracks.forEach((t, index) => {
+      tracker.trackTransformCreation(t.identifier.id, animationNodeId, index);
+    });
+  }, [initialDuration, initialTracks, animationNodeId]);
+
+  // Keep tracker indices in sync whenever tracks array changes
+  useEffect(() => {
+    const tracker = trackerRef.current;
+    tracks.forEach((t, index) => {
+      tracker.updateTrackIndex(t.identifier.id, index);
+    });
+  }, [tracks]);
 
   const addTrack = useCallback(
     (type: AnimationTrack["type"]) => {
-      const id = `${type}-${Date.now()}`;
       const definition = transformFactory.getTransformDefinition(type);
+      const identifier = generateTransformIdentifier(type, tracks);
       const baseTrack = {
-        id,
+        id: identifier.id,
         startTime: 0,
         duration: Math.min(2, duration),
         easing: definition?.metadata?.defaultEasing ?? 'easeInOut',
         properties: getDefaultTrackProperties(type),
+        identifier,
       };
 
       let newTrack: AnimationTrack;
@@ -149,10 +167,27 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
           break;
         }
       }
+      // Track lineage for new transform
+      trackerRef.current.trackTransformCreation(identifier.id, animationNodeId, tracks.length);
       setTracks((prev) => [...prev, newTrack]);
     },
-    [duration],
+    [duration, tracks.length, animationNodeId],
   );
+
+  const updateTransformDisplayName = useCallback((trackId: string, newDisplayName: string) => {
+    const error = validateNameHelper(newDisplayName, trackId, tracks);
+    if (error) return false;
+    setTracks((prev) => prev.map((t) => (
+      t.id === trackId && t.identifier
+        ? ({ ...t, identifier: { ...t.identifier, displayName: newDisplayName } })
+        : t
+    )));
+    return true;
+  }, [tracks]);
+
+  const validateTransformDisplayName = useCallback((name: string, trackId: string) => {
+    return validateNameHelper(name, trackId, tracks);
+  }, [tracks]);
 
   const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
     setTracks((prev) =>
@@ -170,6 +205,7 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
       if (selectedTrackId === trackId) {
         setSelectedTrackId(null);
       }
+      trackerRef.current.removeTransform(trackId);
     },
     [selectedTrackId],
   );
@@ -228,6 +264,9 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
 
+  // Disable save if any display name invalid
+  const hasInvalidNames = tracks.some((t) => !!validateNameHelper(t.identifier.displayName, t.id, tracks));
+
   return (
     <div className="flex h-full">
       <div className="flex-1 p-4 overflow-auto">
@@ -244,7 +283,7 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => onSave(duration, tracks)} variant="success" size="sm">
+            <Button onClick={() => onSave(duration, tracks)} variant="success" size="sm" disabled={hasInvalidNames}>
               Save
             </Button>
             <Button onClick={onCancel} variant="secondary" size="sm">
@@ -318,8 +357,8 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
                     onMouseDown={(e) => handleMouseDown(e, track.id, "move")}
                     onClick={() => setSelectedTrackId(track.id)}
                   >
-                    <div className="flex items-center justify-between h-full px-2">
-                      <span className="text-xs font-medium truncate">{track.type}</span>
+                   <div className="flex items-center justify-between h-full px-2">
+                      <span className="text-xs font-medium truncate">{track.identifier.displayName}</span>
                       <span className="text-xs text-white/80">{track.duration.toFixed(1)}s</span>
                     </div>
                   </div>
@@ -355,7 +394,13 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
       <div className="w-80 border-l border-gray-600 p-4 bg-gray-850">
         <h3 className="text-lg font-semibold text-white mb-4">Properties</h3>
         {selectedTrack ? (
-          <TrackProperties track={selectedTrack} onChange={(updates) => updateTrack(selectedTrack.id, updates)} />
+          <TrackProperties 
+            track={selectedTrack} 
+            onChange={(updates) => updateTrack(selectedTrack.id, updates)} 
+            allTracks={tracks}
+            onDisplayNameChange={updateTransformDisplayName}
+            validateDisplayName={validateTransformDisplayName}
+          />
         ) : (
           <div className="text-gray-400 text-sm">Click a track to select and edit its properties</div>
         )}
@@ -367,9 +412,12 @@ export function TimelineEditorCore({ initialDuration, initialTracks, onSave, onC
 interface TrackPropertiesProps {
   track: AnimationTrack;
   onChange: (updates: Partial<AnimationTrack>) => void;
+  allTracks: AnimationTrack[];
+  onDisplayNameChange: (trackId: string, newName: string) => boolean;
+  validateDisplayName: (name: string, trackId: string) => string | null;
 }
 
-function TrackProperties({ track, onChange }: TrackPropertiesProps) {
+function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -422,6 +470,36 @@ function TrackProperties({ track, onChange }: TrackPropertiesProps) {
 
   return (
     <div className="space-y-4">
+      {/* Name editing (non-breaking): if identifier exists, allow editing */}
+      {track.identifier && (
+        <div className="space-y-2 pb-3 border-b border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-300">Transform Name</div>
+            <div className="text-xs text-gray-400">{getTransformDisplayLabel(track.type)} • #{track.identifier.sequence}</div>
+          </div>
+          <div className="flex flex-col gap-1 items-stretch">
+            <input
+              className="bg-gray-800 text-white text-sm px-2 py-1 rounded w-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={track.identifier.displayName}
+              onChange={(e) => {
+                const proposed = e.target.value;
+                onChange({ identifier: { ...track.identifier!, displayName: proposed } as unknown as AnimationTrack['identifier'] });
+              }}
+              onBlur={(e) => {
+                const proposed = e.target.value;
+                const error = validateDisplayName(proposed, track.id);
+                if (!error) {
+                  onDisplayNameChange(track.id, proposed);
+                }
+              }}
+            />
+            {(() => {
+              const err = validateDisplayName(track.identifier.displayName, track.id);
+              return err ? <span className="text-xs text-red-400">{err}</span> : null;
+            })()}
+          </div>
+        </div>
+      )}
       <SelectField
         label="Easing"
         value={track.easing}

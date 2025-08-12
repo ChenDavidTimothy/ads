@@ -190,8 +190,7 @@ export function FlowEditor() {
     const sceneNode = nodes.find((n) => n.type === 'scene');
     if (sceneNode) {
       const sceneTargetId = (sceneNode as unknown as { id: string }).id;
-      const legacyId: string | undefined = (sceneNode.data?.identifier?.id as string | undefined);
-      const isConnected = edges.some((edge) => edge.target === sceneTargetId || (legacyId ? edge.target === legacyId : false));
+      const isConnected = edges.some((edge) => edge.target === sceneTargetId);
       
       if (!isConnected) {
         return 'Connect your nodes to the Scene node to generate video';

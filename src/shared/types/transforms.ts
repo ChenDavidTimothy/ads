@@ -1,5 +1,20 @@
 // src/shared/types/transforms.ts - Robust transform registry system
 import type { Point2D } from './core';
+ 
+// Identifier and lineage for transforms (mirrors NodeIdentifier/NodeLineage)
+export interface TransformIdentifier {
+  readonly id: string;           // e.g., "mov_2024_001_ab12cd34"
+  readonly type: string;         // transform type, e.g., "move"
+  readonly createdAt: number;    // timestamp (ms)
+  readonly sequence: number;     // per-type sequence within the hosting animation node
+  displayName: string;           // user-editable name
+}
+
+export interface TransformLineage {
+  animationNodeId: string;       // which animation node contains this transform
+  trackIndex: number;            // position within animation tracks array
+  dependencies: string[];        // transform ids this depends on (optional usage)
+}
 
 // Property type definitions for validation and UI generation
 export type PropertyType = 'number' | 'point2d' | 'color' | 'string' | 'boolean';
@@ -86,6 +101,10 @@ export interface TransformFactory {
   getTransformDefinition(type: string): TransformDefinition | undefined;
   getAllTransformTypes(): string[];
   getTransformsByCategory(category: TransformDefinition['category']): TransformDefinition[];
+  // Helpers for identifier and UI
+  getDefaultProperties(type: string): Record<string, unknown> | undefined;
+  getTrackColors(): Record<string, string>;
+  getTrackIcons(): Record<string, string>;
 }
 
 // Easing function type

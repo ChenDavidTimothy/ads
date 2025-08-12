@@ -132,11 +132,12 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         // Create video job entries for tracking
         const sceneNodes = nodes.filter(n => n.type === 'scene');
         const videoJobs: VideoJob[] = jobIds.map((jobId, index) => {
-          const sceneNode = sceneNodes[index];
+          const sceneNode = sceneNodes[index] as RFNode<NodeData>;
+          const idData = (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier;
           return {
             jobId,
-            sceneName: sceneNode?.data?.identifier?.displayName ?? `Scene ${index + 1}`,
-            sceneId: sceneNode?.data?.identifier?.id ?? `scene-${index}`,
+            sceneName: idData.displayName,
+            sceneId: idData.id,
             status: 'pending' as const
           };
         });
@@ -436,8 +437,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     const sceneNode = nodes.find((n) => n.type === 'scene');
     if (!sceneNode) return false;
     const sceneTargetId = (sceneNode as unknown as { id: string }).id;
-    const legacyId: string | undefined = (sceneNode.data?.identifier?.id as string | undefined);
-    return edges.some((edge) => edge.target === sceneTargetId || (legacyId ? edge.target === legacyId : false));
+    return edges.some((edge) => edge.target === sceneTargetId);
   }, [nodes, edges]);
 
   const canGenerate = useMemo(() => {

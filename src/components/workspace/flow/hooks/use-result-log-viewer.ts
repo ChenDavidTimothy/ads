@@ -41,7 +41,7 @@ export function useResultLogViewer(nodes: Node<NodeData>[]) {
     }>;
     
     return {
-      name: data.identifier?.displayName ?? 'Result Node',
+      name: (data as { identifier: { displayName: string } }).identifier.displayName,
       label: (typeof data.label === 'string' ? data.label : 'Debug Output'),
     };
   }, [resultNode]);

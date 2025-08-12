@@ -3,6 +3,7 @@
 import { TimelineEditorCore } from "@/components/workspace/timeline-editor-core";
 import { api } from "@/trpc/react";
 import type { AnimationTrack } from "@/shared/types/nodes";
+import { generateTransformIdentifier } from "@/lib/defaults/transforms";
 
 interface WorkspaceNode {
   data?: {
@@ -54,7 +55,13 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
   }
 
   const duration: number = typeof node.data?.duration === "number" ? node.data.duration : 3;
-  const tracks: AnimationTrack[] = Array.isArray(node.data?.tracks) ? node.data.tracks : [];
+  const rawTracks: AnimationTrack[] = Array.isArray(node.data?.tracks) ? node.data.tracks : [];
+  // Client-side migration: attach identifier if missing
+  const tracks: AnimationTrack[] = rawTracks.map((t, idx, arr) => {
+    if ((t as unknown as { identifier?: unknown }).identifier) return t;
+    const identifier = generateTransformIdentifier(t.type, arr);
+    return { ...t, id: identifier.id, identifier } as AnimationTrack;
+  });
 
   const handleSave = async (newDuration: number, newTracks: AnimationTrack[]) => {
     const nextNodes = flowData.nodes.slice();
@@ -90,7 +97,13 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
 
   return (
     <div className="h-screen w-full bg-gray-900">
-      <TimelineEditorCore initialDuration={duration} initialTracks={tracks} onSave={handleSave} onCancel={handleCancel} />
+      <TimelineEditorCore 
+        animationNodeId={nodeId}
+        initialDuration={duration} 
+        initialTracks={tracks} 
+        onSave={handleSave} 
+        onCancel={handleCancel} 
+      />
     </div>
   );
 }

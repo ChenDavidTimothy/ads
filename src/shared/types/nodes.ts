@@ -1,5 +1,6 @@
 // src/shared/types/nodes.ts
 import type { Point2D } from './core';
+import type { TransformIdentifier, TransformLineage } from './transforms';
 import type { NodeType } from './definitions';
 
 // Node identifier system
@@ -114,6 +115,9 @@ export interface BaseAnimationTrack {
   startTime: number;
   duration: number;
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+  // Required after migration
+  identifier: TransformIdentifier;
+  lineage?: TransformLineage;
 }
 
 // Individual track types - now generated from registry
