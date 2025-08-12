@@ -1,3 +1,4 @@
+// src/server/jobs/render-worker.ts
 import { getWorkerBoss, getWorkerBossHealth } from './worker-pgboss-client';
 import { ensureQueues } from './pgboss-client'; // Keep this for queue creation only
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
@@ -22,6 +23,7 @@ const QUEUE_NAME = 'render-video';
 let workerRegistered = false;
 let shutdownRequested = false;
 let activeJobs = 0; // Track active jobs for concurrency control
+let pollingTimer: NodeJS.Timeout | null = null;
 
 export async function registerRenderWorker(): Promise<void> {
   if (workerRegistered) return;
@@ -35,62 +37,30 @@ export async function registerRenderWorker(): Promise<void> {
     const boss = await getWorkerBoss();
     await ensureQueues(); // Use shared client just for queue creation
 
-    // Use boss.work() but only process when events notify us
-    let shouldProcessJobs = false;
-    
     // Subscribe to new job notifications
     await listenNewJobEvents(async (payload: NewJobEventPayload) => {
       if (payload.queueName === QUEUE_NAME && !shutdownRequested) {
         if (process.env.JOB_DEBUG === '1') {
           logger.info('New job notification received', payload);
         }
-        shouldProcessJobs = true;
+        // Trigger immediate job processing when notified
+        void triggerJobProcessing();
       }
     });
 
-    // Subscribe to retry job notifications
+    // Subscribe to retry job notifications  
     await listenRetryJobEvents(async (payload: RetryJobEventPayload) => {
       if (payload.queueName === QUEUE_NAME && !shutdownRequested) {
         if (process.env.JOB_DEBUG === '1') {
           logger.info('Retry job notification received', payload);
         }
-        shouldProcessJobs = true;
+        // Trigger immediate job processing when notified
+        void triggerJobProcessing();
       }
     });
 
-    // Set up boss.work() with event-driven control
-    const workOptions = {
-      teamSize: CONCURRENCY,
-      includeMetadata: true as const,
-    };
-
-    await boss.work<RenderJobPayload>(
-      QUEUE_NAME,
-      workOptions,
-      async (job: Job<RenderJobPayload> | Job<RenderJobPayload>[]) => {
-        // Only process if we've been notified of jobs OR on startup
-        if (!shouldProcessJobs && workerRegistered) {
-          if (process.env.JOB_DEBUG === '1') {
-            logger.info('Skipping job processing - no notification received');
-          }
-          return; // Skip processing this job
-        }
-        
-        // Reset the flag after processing
-        shouldProcessJobs = false;
-        
-        const j = Array.isArray(job) ? job[0] : job;
-        if (!j) {
-          logger.warn('Received empty job array');
-          return;
-        }
-        
-        await processJobWithBossWork(j);
-      }
-    );
-
-    // Allow initial job processing on startup
-    shouldProcessJobs = true;
+    // Start periodic job processing (fallback for missed notifications)
+    startJobPolling();
 
     logger.info('Event-driven render worker registered successfully', {
       concurrency: CONCURRENCY,
@@ -104,17 +74,73 @@ export async function registerRenderWorker(): Promise<void> {
   }
 }
 
-// Process individual job using boss.work() pattern
-async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void> {
+// Trigger immediate job processing
+async function triggerJobProcessing(): Promise<void> {
+  if (shutdownRequested || activeJobs >= CONCURRENCY) {
+    return; // Skip if shutting down or at capacity
+  }
+
+  try {
+    const boss = await getWorkerBoss();
+    
+    // Fetch and process jobs directly
+    const jobs = await boss.fetch(QUEUE_NAME, { batchSize: CONCURRENCY - activeJobs });
+    
+    if (jobs && jobs.length > 0) {
+      if (process.env.JOB_DEBUG === '1') {
+        logger.info('Fetched jobs for processing', { 
+          jobCount: jobs.length,
+          activeJobs,
+          capacity: CONCURRENCY 
+        });
+      }
+      
+      // Process jobs concurrently
+      const promises = jobs.map(job => processAndCompleteJob(job));
+      await Promise.allSettled(promises);
+    }
+  } catch (error) {
+    logger.errorWithStack('Error in triggerJobProcessing', error);
+  }
+}
+
+// Start periodic polling as fallback
+function startJobPolling(): void {
+  if (pollingTimer || shutdownRequested) return;
+  
+  const pollInterval = Number(process.env.WORKER_POLL_INTERVAL_MS ?? '5000'); // 5 seconds default
+  
+  pollingTimer = setInterval(() => {
+    if (!shutdownRequested) {
+      void triggerJobProcessing();
+    }
+  }, pollInterval);
+  
+  logger.info('Started job polling', { intervalMs: pollInterval });
+}
+
+// Stop polling
+function stopJobPolling(): void {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+    logger.info('Stopped job polling');
+  }
+}
+
+// Process job and complete it in pg-boss
+async function processAndCompleteJob(job: Job<RenderJobPayload>): Promise<void> {
   let businessJobId: string | undefined;
   let userId: string | undefined;
   
   try {
+    activeJobs++;
+    
     // Extract payload from various possible locations
     const payloadCandidate: unknown = job.data ?? (job as unknown as { body?: unknown }).body;
     
     if (process.env.JOB_DEBUG === '1') {
-      logger.info('Processing job with boss.work pattern', { 
+      logger.info('Processing job with fetch pattern', { 
         jobId: job.id,
         hasData: !!job.data,
         payloadType: typeof payloadCandidate
@@ -187,6 +213,10 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
       .eq('id', businessJobId)
       .eq('user_id', userId);
 
+    // Complete the job in pg-boss
+    const boss = await getWorkerBoss();
+    await boss.complete(job.id);
+
     // Notify completion via NOTIFY/LISTEN
     await notifyRenderJobEvent({ 
       jobId: businessJobId, 
@@ -210,6 +240,8 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
     });
 
     try {
+      const boss = await getWorkerBoss();
+      
       if (businessJobId && userId) {
         const supabase = createServiceClient();
         
@@ -232,6 +264,9 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
             .eq('id', businessJobId)
             .eq('user_id', userId);
 
+          // Fail the job in pg-boss
+          await boss.fail(job.id, new Error(errorMessage));
+
           await notifyRenderJobEvent({ 
             jobId: businessJobId, 
             status: 'failed', 
@@ -242,7 +277,6 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
           const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
           if (deadLetterQueue) {
             try {
-              const boss = await getWorkerBoss();
               await boss.send(deadLetterQueue, { 
                 jobId: businessJobId, 
                 userId, 
@@ -258,7 +292,7 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
             }
           }
         } else {
-          // Not final attempt - mark back to queued for UI consistency
+          // Not final attempt - mark back to queued for UI consistency and fail for retry
           await supabase
             .from('render_jobs')
             .update({ 
@@ -268,7 +302,13 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
             })
             .eq('id', businessJobId)
             .eq('user_id', userId);
+
+          // Fail the job in pg-boss for automatic retry
+          await boss.fail(job.id, new Error(errorMessage));
         }
+      } else {
+        // No business job info - just fail the pg-boss job
+        await boss.fail(job.id, new Error(errorMessage));
       }
     } catch (cleanupError) {
       logger.errorWithStack('Error during job failure cleanup', cleanupError, {
@@ -277,9 +317,8 @@ async function processJobWithBossWork(job: Job<RenderJobPayload>): Promise<void>
         businessJobId
       });
     }
-    
-    // Re-throw the error so boss.work() handles the retry
-    throw error;
+  } finally {
+    activeJobs--;
   }
 }
 
@@ -327,6 +366,9 @@ export async function shutdownRenderWorker(): Promise<void> {
   shutdownRequested = true;
   
   logger.info('Shutting down render worker', { activeJobs });
+
+  // Stop polling first
+  stopJobPolling();
 
   // Wait for active jobs to complete (with timeout)
   const shutdownTimeout = Number(process.env.WORKER_SHUTDOWN_TIMEOUT_MS ?? '30000');
