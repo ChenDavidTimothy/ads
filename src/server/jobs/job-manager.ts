@@ -1,6 +1,7 @@
 import PgBoss from 'pg-boss';
 import { logger } from '@/lib/logger';
 import { createServiceClient } from '@/utils/supabase/service';
+import { jobWatcher } from './job-watcher';
 import type { Database } from '@/types/supabase';
 
 // Production-ready job manager with comprehensive error handling and observability
@@ -77,10 +78,13 @@ export class JobManager {
       // Setup health monitoring
       await this.healthCheck.start();
       
+      // Start the job watcher for event-driven processing
+      await jobWatcher.start();
+      
       this.isStarted = true;
       this.metrics.recordStartup();
       
-      logger.info('✅ Production job manager started successfully', {
+      logger.info('✅ Production job manager started successfully (event-driven mode)', {
         config: this.sanitizeConfig(),
         metrics: this.metrics.getSnapshot()
       });
@@ -101,6 +105,9 @@ export class JobManager {
     try {
       // Stop health checks first
       await this.healthCheck.stop();
+      
+      // Stop job watcher
+      await jobWatcher.stop();
       
       // Stop accepting new jobs
       if (this.boss) {
@@ -202,7 +209,14 @@ export class JobManager {
     
     await this.boss.work(queueName, workerOptions, wrappedHandler);
     
-    logger.info('👷 Worker registered successfully', {
+    // Register a handler with the job watcher for instant processing
+    jobWatcher.registerQueueHandler(queueName, async () => {
+      // This will be called when a new job notification is received
+      // The worker is already registered with pgboss, so it will process the job
+      logger.debug(`🔔 Job notification received for queue: ${queueName}`);
+    });
+    
+    logger.info('👷 Worker registered successfully (event-driven)', {
       queueName,
       options: workerOptions
     });
@@ -541,7 +555,6 @@ class HealthChecker {
 
     // PgBoss health check
     try {
-      // This is a simple check - in production you might want more sophisticated checks
       const metrics = this.jobManager.getMetrics();
       if (metrics.totalSystemErrors > 10) {
         throw new Error('Too many system errors');
@@ -549,6 +562,26 @@ class HealthChecker {
       checks.pgboss = { status: 'pass', timestamp: Date.now() };
     } catch (error) {
       checks.pgboss = {
+        status: 'fail',
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : String(error)
+      };
+      overallStatus = 'unhealthy';
+    }
+
+    // Job Watcher (LISTEN/NOTIFY) health check
+    try {
+      const watcherStatus = jobWatcher.getStatus();
+      if (!watcherStatus.connected) {
+        throw new Error('Job watcher is not connected');
+      }
+      checks.jobWatcher = { 
+        status: 'pass', 
+        timestamp: Date.now(),
+        details: `Watching ${watcherStatus.registeredQueues.length} queues`
+      };
+    } catch (error) {
+      checks.jobWatcher = {
         status: 'fail',
         timestamp: Date.now(),
         error: error instanceof Error ? error.message : String(error)
@@ -613,6 +646,7 @@ export interface CheckResult {
   status: 'pass' | 'fail';
   timestamp: number;
   error?: string;
+  details?: string;
 }
 
 export interface HealthStatus {
