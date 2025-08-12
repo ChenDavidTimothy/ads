@@ -19,18 +19,8 @@ export async function getBoss(): Promise<PgBoss> {
     // retention and maintenance defaults; can be tuned via env
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
-    
-    // PURE EVENT-DRIVEN: Disable polling entirely by setting maximum allowed intervals
-    // Job processing is now driven by PostgreSQL LISTEN/NOTIFY events
-    newJobCheckIntervalSeconds: 86400, // 24 hours - effectively disabled
-    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '82800'), // 23 hours (safe maximum)
-    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '82800'), // 23 hours (safe maximum)
-    
-    // Event-driven system provides instant job processing via LISTEN/NOTIFY
-    // This eliminates the ~185k polling database calls we were seeing
-    
-    // Disable scheduling to prevent polling
-    noScheduling: true,
+    // Enable internal state monitoring to make operational health observable
+    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '300'), // Changed from 60 to 300 (5 minutes)
   };
 
   const boss = new PgBoss(bossOptions);
@@ -41,7 +31,7 @@ export async function getBoss(): Promise<PgBoss> {
 
   bossStarting = boss.start().then(() => {
     bossSingleton = boss;
-    logger.info('PgBoss started in event-driven mode (polling disabled)');
+    logger.info('PgBoss started');
 
     // graceful shutdown - only add listeners once
     if (typeof process !== 'undefined' && !shutdownListenersAdded) {

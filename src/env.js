@@ -1,6 +1,3 @@
-// Import environment loader first to ensure env vars are loaded
-import './env-loader.js';
-
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 

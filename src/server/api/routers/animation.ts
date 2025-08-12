@@ -653,13 +653,7 @@ export const animationRouter = createTRPCRouter({
         throw new Error(error.message);
       }
       
-      // If job is already completed, return immediately
-      if (data?.status === 'completed' && data?.output_url) {
-        return { status: 'completed', videoUrl: data.output_url, error: null } as const;
-      }
-      
-      // Only wait for pgBoss event if job is still processing
-      if (data?.status === 'queued' || data?.status === 'processing') {
+      if (data?.status !== 'completed' || !data?.output_url) {
         const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;

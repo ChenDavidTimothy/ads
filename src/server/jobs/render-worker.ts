@@ -1,531 +1,160 @@
-import { jobManager, type JobHandler } from './job-manager';
+import { getBoss } from './pgboss-client';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
 import { SupabaseStorageProvider } from '@/server/storage/supabase';
 import { createServiceClient } from '@/utils/supabase/service';
 import { notifyRenderJobEvent, shutdownPgEvents } from './pg-events';
-import { logger } from '@/lib/logger';
+import type { Job } from 'pg-boss';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
-const QUEUE_NAME = 'render-video';
+const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '2');
 
-// Production-ready render worker with comprehensive error handling
-export class RenderWorker {
-  private isRegistered = false;
-  private isShuttingDown = false;
-  private activeJobs = new Set<string>();
-  private readonly config = {
-    concurrency: Number(process.env.RENDER_CONCURRENCY ?? '1'),
-    teamConcurrency: Number(process.env.RENDER_TEAM_CONCURRENCY ?? '1'),
-    maxRetries: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5'),
-    retryDelaySeconds: Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '15'),
-    jobTimeoutMinutes: Number(process.env.RENDER_JOB_TIMEOUT_MINUTES ?? '60'),
+let workerRegistered = false;
+
+export async function registerRenderWorker() {
+  if (workerRegistered) return;
+  const boss = await getBoss();
+  // Ensure queue exists
+  if (process.env.JOB_DEBUG === '1') {
+    try {
+      await boss.createQueue('render-video');
+      console.log('[worker] queue ensured: render-video');
+    } catch {
+      // ignore if not supported / already exists
+    }
+  }
+  type RenderJobPayload = {
+    scene: AnimationScene;
+    config: SceneAnimationConfig;
+    userId: string;
+    jobId: string;
   };
 
-  async start(): Promise<void> {
-    if (this.isRegistered) {
-      logger.warn('🔄 Render worker already registered');
-      return;
-    }
-
-    try {
-      logger.info('🎬 Starting production render worker...', {
-        config: this.config
-      });
-
-      // Ensure job manager is started
-      await jobManager.start();
-
-      // Register the worker with production-ready handler
-      await jobManager.registerWorker(
-        QUEUE_NAME,
-        this.createProductionJobHandler(),
-        {
-          teamSize: this.config.concurrency,
-          teamConcurrency: this.config.teamConcurrency,
-        }
-      );
-
-      this.isRegistered = true;
-      
-      logger.info('✅ Production render worker started successfully', {
-        queueName: QUEUE_NAME,
-        config: this.config
-      });
-
-    } catch (error) {
-      logger.errorWithStack('❌ Failed to start render worker', error);
-      throw error;
-    }
+  function isRenderJobPayload(value: unknown): value is RenderJobPayload {
+    if (!value || typeof value !== 'object') return false;
+    const v = value as Record<string, unknown>;
+    const cfg = v.config as Record<string, unknown> | undefined;
+    return (
+      typeof v.userId === 'string' &&
+      typeof v.jobId === 'string' &&
+      typeof v.scene === 'object' && v.scene !== null &&
+      cfg !== undefined &&
+      typeof cfg.width === 'number' &&
+      typeof cfg.height === 'number' &&
+      typeof cfg.fps === 'number'
+    );
   }
 
-  async stop(): Promise<void> {
-    if (!this.isRegistered || this.isShuttingDown) return;
-    
-    this.isShuttingDown = true;
-    logger.info('🛑 Gracefully shutting down render worker...');
+  const workOptions = {
+    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2,
+    includeMetadata: true as const,
+  };
 
-    try {
-      // Wait for active jobs to complete (with timeout)
-      await this.waitForActiveJobsToComplete(30000); // 30 second timeout
-      
-      // Shutdown pg events
-      await shutdownPgEvents();
-      
-      this.isRegistered = false;
-      logger.info('✅ Render worker shut down gracefully');
-      
-    } catch (error) {
-      logger.errorWithStack('❌ Error during render worker shutdown', error);
-      throw error;
-    } finally {
-      this.isShuttingDown = false;
-    }
-  }
+  await boss.work<RenderJobPayload>(
+    'render-video',
+    workOptions,
+    async (job: Job<RenderJobPayload> | Job<RenderJobPayload>[]) => {
+      const j = Array.isArray(job) ? job[0] : job;
+      const payloadCandidate: unknown = j
+        ? (j.data as RenderJobPayload | undefined) ?? (j as unknown as { body?: unknown }).body
+        : undefined;
 
-  getStatus(): RenderWorkerStatus {
-    return {
-      isRegistered: this.isRegistered,
-      isShuttingDown: this.isShuttingDown,
-      activeJobCount: this.activeJobs.size,
-      activeJobIds: Array.from(this.activeJobs),
-      config: this.config
-    };
-  }
-
-  private createProductionJobHandler(): JobHandler<RenderJobPayload> {
-    return async (job) => {
-      const startTime = Date.now();
-      
-      // Handle case where job might be an array (pgBoss sometimes returns arrays)
-      const actualJob = Array.isArray(job) ? job[0] : job;
-      
-      // Debug: Log the full job structure to understand the issue
-      logger.info('🔍 DEBUG: Received job structure', {
-        jobExists: !!actualJob,
-        jobKeys: actualJob ? Object.keys(actualJob) : [],
-        dataExists: !!actualJob?.data,
-        dataKeys: actualJob?.data ? Object.keys(actualJob.data) : [],
-        jobId: actualJob?.id,
-        isArray: Array.isArray(job),
-        arrayLength: Array.isArray(job) ? job.length : 0,
-        fullJob: JSON.stringify(actualJob, null, 2)
-      });
-      
-      // Handle different possible job structures that pgBoss might use
-      let jobData: RenderJobPayload;
-      
-      if (actualJob?.data) {
-        // Standard case: data is in job.data
-        jobData = actualJob.data;
-      } else if (actualJob && typeof actualJob === 'object' && 'jobId' in actualJob && 'userId' in actualJob && 'scene' in actualJob && 'config' in actualJob) {
-        // Alternative case: job itself contains the payload data
-        jobData = actualJob as unknown as RenderJobPayload;
-      } else {
-        // Fallback: check if job properties match our expected structure
-        const possibleJobId = actualJob?.id || (actualJob as any)?.jobId;
-        const possibleUserId = (actualJob as any)?.userId;
-        const possibleScene = (actualJob as any)?.scene;
-        const possibleConfig = (actualJob as any)?.config;
-        
-        if (possibleJobId && possibleUserId && possibleScene && possibleConfig) {
-          jobData = {
-            jobId: possibleJobId,
-            userId: possibleUserId,
-            scene: possibleScene,
-            config: possibleConfig
-          };
-        } else {
-          throw new Error(`Job data is malformed or undefined. Job structure: ${JSON.stringify(actualJob, null, 2)}`);
-        }
+      if (!isRenderJobPayload(payloadCandidate)) {
+        throw new Error('Invalid job payload');
       }
-      
-      // Validate the job data structure
-      if (!jobData.jobId || !jobData.userId || !jobData.scene || !jobData.config) {
-        throw new Error(`Invalid job data structure: ${JSON.stringify(jobData, null, 2)}`);
-      }
-      
-      const { jobId, userId, scene, config } = jobData;
-      const pgJobId = actualJob?.id;
+      const { scene, config, userId, jobId } = payloadCandidate;
 
-      // Track active job
-      this.activeJobs.add(jobId);
-
+      console.log(`[worker] received job ${jobId} for user ${userId}`);
+      const supabase = createServiceClient();
       try {
-        logger.info('🎬 Starting render job', {
-          jobId,
-          userId,
-          pgJobId,
-          attemptNumber: (actualJob as any).retrycount || 0,
-          scene: {
-            objects: scene?.objects?.length || 0,
-            duration: scene?.metadata?.duration || 'unknown'
-          },
-          config: {
-            width: config?.width,
-            height: config?.height,
-            fps: config?.fps
-          }
-        });
-
-        // Validate job payload
-        this.validateJobPayload(jobData);
-
-        // Check if we're shutting down
-        if (this.isShuttingDown) {
-          throw new Error('Worker is shutting down, rejecting new work');
+        // Idempotency guard: if job already completed or failed, ack and return stored result
+        const { data: existing } = await supabase
+          .from('render_jobs')
+          .select('status, output_url, error')
+          .eq('id', jobId)
+          .eq('user_id', userId)
+          .single();
+        if (existing?.status === 'completed' && typeof existing.output_url === 'string') {
+          console.log(`[worker] job ${jobId} already completed, skipping`);
+          await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl: existing.output_url });
+          return { publicUrl: existing.output_url };
         }
-
-        // Execute the render job with comprehensive error handling
-        const result = await this.executeRenderJob(jobData);
-
-        const duration = Date.now() - startTime;
-        logger.info('✅ Render job completed successfully', {
-          jobId,
-          userId,
-          duration,
-          result: {
-            publicUrl: result.publicUrl
-          }
-        });
-
-        return result;
-
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        
-        logger.errorWithStack('❌ Render job failed', error, {
-          jobId,
-          userId,
-          pgJobId,
-          duration,
-          attemptNumber: (actualJob as any).retrycount || 0
-        });
-
-        // Handle final attempt failure
-        await this.handleJobFailure(actualJob, errorMessage);
-        
-        throw error;
-        
-      } finally {
-        // Remove from active jobs tracking
-        this.activeJobs.delete(jobId);
-      }
-    };
-  }
-
-  private async executeRenderJob(payload: RenderJobPayload): Promise<RenderJobResult> {
-    const { jobId, userId, scene, config } = payload;
-    const supabase = createServiceClient();
-
-    // Idempotency check: verify job hasn't already been completed
-    const { data: existingJob } = await supabase
-      .from('render_jobs')
-      .select('status, output_url, error')
-      .eq('id', jobId)
-      .eq('user_id', userId)
-      .single();
-
-    if (existingJob?.status === 'completed' && existingJob.output_url) {
-      logger.info('🔄 Job already completed, returning cached result', {
-        jobId,
-        userId,
-        outputUrl: existingJob.output_url
-      });
-      
-      await notifyRenderJobEvent({
-        jobId,
-        status: 'completed',
-        publicUrl: existingJob.output_url
-      });
-      
-      return { publicUrl: existingJob.output_url };
-    }
-
-    if (existingJob?.status === 'failed') {
-      throw new Error(existingJob.error || 'Job previously failed');
-    }
-
-    // Update job status to processing
-    await supabase
-      .from('render_jobs')
-      .update({
-        status: 'processing',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', jobId)
-      .eq('user_id', userId);
-
-    // Execute the actual rendering with timeout protection
-    const renderPromise = this.performRendering(userId, scene, config);
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Render job timed out after ${this.config.jobTimeoutMinutes} minutes`));
-      }, this.config.jobTimeoutMinutes * 60 * 1000);
-    });
-
-    const { publicUrl } = await Promise.race([renderPromise, timeoutPromise]);
-
-    // Update job status to completed
-    await supabase
-      .from('render_jobs')
-      .update({
-        status: 'completed',
-        output_url: publicUrl,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', jobId)
-      .eq('user_id', userId);
-
-    // Notify completion
-    await notifyRenderJobEvent({
-      jobId,
-      status: 'completed',
-      publicUrl
-    });
-
-    return { publicUrl };
-  }
-
-  private async performRendering(
-    userId: string,
-    scene: AnimationScene,
-    config: SceneAnimationConfig
-  ): Promise<{ publicUrl: string }> {
-    // Initialize storage and renderer with error handling
-    const storage = new SupabaseStorageProvider(userId);
-    const renderer = new CanvasRenderer(storage);
-
-    // Add rendering validation
-    this.validateRenderingInputs(scene, config);
-
-    // Perform the actual rendering
-    return await renderer.render(scene, config);
-  }
-
-  private validateJobPayload(payload: RenderJobPayload): void {
-    if (!payload) {
-      throw new Error('Job payload is required');
-    }
-
-    const { jobId, userId, scene, config } = payload;
-
-    if (!jobId || typeof jobId !== 'string') {
-      throw new Error('Valid jobId is required');
-    }
-
-    if (!userId || typeof userId !== 'string') {
-      throw new Error('Valid userId is required');
-    }
-
-    if (!scene || typeof scene !== 'object') {
-      throw new Error('Valid scene object is required');
-    }
-
-    if (!config || typeof config !== 'object') {
-      throw new Error('Valid config object is required');
-    }
-
-    // Validate scene structure
-    if (!Array.isArray(scene.objects)) {
-      throw new Error('Scene must contain objects array');
-    }
-
-    // Validate config structure
-    const requiredConfigFields = ['width', 'height', 'fps'];
-    for (const field of requiredConfigFields) {
-      if (typeof (config as any)[field] !== 'number') {
-        throw new Error(`Config field '${field}' must be a number`);
-      }
-    }
-  }
-
-  private validateRenderingInputs(scene: AnimationScene, config: SceneAnimationConfig): void {
-    // Validate scene dimensions
-    if (scene.objects.length === 0) {
-      throw new Error('Scene must contain at least one object');
-    }
-
-    // Validate config constraints
-    if (config.width <= 0 || config.width > 3840) {
-      throw new Error('Width must be between 1 and 3840 pixels');
-    }
-
-    if (config.height <= 0 || config.height > 2160) {
-      throw new Error('Height must be between 1 and 2160 pixels');
-    }
-
-    if (config.fps <= 0 || config.fps > 120) {
-      throw new Error('FPS must be between 1 and 120');
-    }
-  }
-
-  private async handleJobFailure(job: any, errorMessage: string): Promise<void> {
-    // Handle case where job might be an array (pgBoss sometimes returns arrays)
-    const actualJob = Array.isArray(job) ? job[0] : job;
-    
-    // Handle different possible job structures that pgBoss might use
-    let jobData: RenderJobPayload;
-    
-    if (actualJob?.data) {
-      // Standard case: data is in job.data
-      jobData = actualJob.data;
-    } else if (actualJob && typeof actualJob === 'object' && 'jobId' in actualJob && 'userId' in actualJob && 'scene' in actualJob && 'config' in actualJob) {
-      // Alternative case: job itself contains the payload data
-      jobData = actualJob as unknown as RenderJobPayload;
-    } else {
-      // Fallback: check if job properties match our expected structure
-      const possibleJobId = actualJob?.id || (actualJob as any)?.jobId;
-      const possibleUserId = (actualJob as any)?.userId;
-      const possibleScene = (actualJob as any)?.scene;
-      const possibleConfig = (actualJob as any)?.config;
-      
-      if (possibleJobId && possibleUserId && possibleScene && possibleConfig) {
-        jobData = {
-          jobId: possibleJobId,
-          userId: possibleUserId,
-          scene: possibleScene,
-          config: possibleConfig
-        };
-      } else {
-        logger.error('❌ Cannot extract job data for failure handling', {
-          jobExists: !!actualJob,
-          jobKeys: actualJob ? Object.keys(actualJob) : [],
-          dataExists: !!actualJob?.data,
-          dataKeys: actualJob?.data ? Object.keys(actualJob.data) : [],
-          jobId: actualJob?.id,
-          isArray: Array.isArray(job),
-          arrayLength: Array.isArray(job) ? job.length : 0,
-          fullJob: JSON.stringify(actualJob, null, 2)
-        });
-        return; // Cannot handle failure without job data
-      }
-    }
-    
-    const { jobId, userId } = jobData;
-    const attemptNumber = (actualJob as any).retrycount || 0;
-    const isFinalAttempt = attemptNumber + 1 >= this.config.maxRetries;
-
-    const supabase = createServiceClient();
-
-    if (isFinalAttempt) {
-      // Mark job as permanently failed
-      await supabase
-        .from('render_jobs')
-        .update({
-          status: 'failed',
-          error: errorMessage,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId)
-        .eq('user_id', userId);
-
-      // Notify failure
-      await notifyRenderJobEvent({
-        jobId,
-        status: 'failed',
-        error: errorMessage
-      });
-
-      // Send to dead letter queue if configured
-      const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
-      if (deadLetterQueue) {
-        try {
-          await jobManager.enqueueJob(deadLetterQueue, {
-            originalJobId: jobId,
-            userId,
-            error: errorMessage,
-            failedAt: new Date().toISOString()
-          });
-          
-          logger.warn('💀 Job sent to dead letter queue', {
-            jobId,
-            deadLetterQueue,
-            error: errorMessage
-          });
-          
-        } catch (dlqError) {
-          logger.errorWithStack('❌ Failed to send job to dead letter queue', dlqError);
+        if (existing?.status === 'failed') {
+          console.log(`[worker] job ${jobId} already failed, skipping`);
+          const previousError = typeof existing.error === 'string' ? existing.error : undefined;
+          await notifyRenderJobEvent({ jobId, status: 'failed', error: previousError });
+          throw new Error(previousError ?? 'Job previously failed');
         }
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        const storage = new SupabaseStorageProvider(userId);
+        const renderer = new CanvasRenderer(storage);
+        const { publicUrl } = await renderer.render(scene, config);
+
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'completed', output_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        console.log(`[worker] completed job ${jobId} -> ${publicUrl}`);
+        await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl });
+
+        return { publicUrl };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[worker] failed job ${jobId}: ${message}`);
+        if (jobId && userId) {
+          const configuredRetryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+          const meta = j as unknown as { retrycount?: unknown; retryCount?: unknown };
+          const attempt = typeof meta.retrycount === 'number' ? meta.retrycount : typeof meta.retryCount === 'number' ? meta.retryCount : 0;
+          const isFinalAttempt = attempt + 1 >= (Number.isFinite(configuredRetryLimit) ? configuredRetryLimit : 5);
+          if (isFinalAttempt) {
+            await supabase
+              .from('render_jobs')
+              .update({ status: 'failed', error: message, updated_at: new Date().toISOString() })
+              .eq('id', jobId)
+              .eq('user_id', userId);
+            await notifyRenderJobEvent({ jobId, status: 'failed', error: message });
+            // DLQ pattern: mirror failed job into dedicated table/queue if configured
+            const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
+            if (deadLetterQueue) {
+              try {
+                await (await getBoss()).send(deadLetterQueue, { jobId, userId, error: message });
+                console.warn(`[worker] sent job ${jobId} to DLQ ${deadLetterQueue}`);
+              } catch {
+                // ignore DLQ failures
+              }
+            }
+          } else {
+            // mark back to queued to reflect retry in UI
+            await supabase
+              .from('render_jobs')
+              .update({ status: 'queued', error: message, updated_at: new Date().toISOString() })
+              .eq('id', jobId)
+              .eq('user_id', userId);
+          }
+        }
+        throw err;
       }
-    } else {
-      // Mark for retry
-      await supabase
-        .from('render_jobs')
-        .update({
-          status: 'queued',
-          error: errorMessage,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId)
-        .eq('user_id', userId);
-
-      logger.info('🔄 Job marked for retry', {
-        jobId,
-        attemptNumber: attemptNumber + 1,
-        maxRetries: this.config.maxRetries
-      });
     }
+  );
+  if (process.env.JOB_DEBUG === '1') {
+    console.log('[worker] registered for queue: render-video');
   }
-
-  private async waitForActiveJobsToComplete(timeoutMs: number): Promise<void> {
-    const startTime = Date.now();
-    
-    while (this.activeJobs.size > 0 && (Date.now() - startTime) < timeoutMs) {
-      logger.info('⏳ Waiting for active jobs to complete', {
-        activeJobCount: this.activeJobs.size,
-        activeJobIds: Array.from(this.activeJobs)
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    if (this.activeJobs.size > 0) {
-      logger.warn('⚠️ Some jobs still active after timeout', {
-        activeJobCount: this.activeJobs.size,
-        activeJobIds: Array.from(this.activeJobs)
-      });
-    }
-  }
-}
-
-// Type definitions
-interface RenderJobPayload {
-  jobId: string;
-  userId: string;
-  scene: AnimationScene;
-  config: SceneAnimationConfig;
-}
-
-interface RenderJobResult {
-  publicUrl: string;
-}
-
-interface RenderWorkerStatus {
-  isRegistered: boolean;
-  isShuttingDown: boolean;
-  activeJobCount: number;
-  activeJobIds: string[];
-  config: {
-    concurrency: number;
-    teamConcurrency: number;
-    maxRetries: number;
-    retryDelaySeconds: number;
-    jobTimeoutMinutes: number;
-  };
-}
-
-// Global instance for the application
-export const renderWorker = new RenderWorker();
-
-// Legacy functions for backward compatibility
-export async function registerRenderWorker(): Promise<void> {
-  return renderWorker.start();
+  workerRegistered = true;
 }
 
 export async function shutdownRenderWorker(): Promise<void> {
-  return renderWorker.stop();
+  try {
+    await shutdownPgEvents();
+  } catch {
+    // ignore
+  }
 }
 
 
