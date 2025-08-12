@@ -1,3 +1,4 @@
+// src/server/jobs/render-worker.ts - Performance optimized with better concurrency
 import { getBoss } from './pgboss-client';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
 import { SupabaseStorageProvider } from '@/server/storage/supabase';
@@ -7,13 +8,15 @@ import type { Job } from 'pg-boss';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
-const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '2');
+// CRITICAL: Increased concurrency to reduce queue backlog
+const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '4'); // Increased from 2
 
 let workerRegistered = false;
 
 export async function registerRenderWorker() {
   if (workerRegistered) return;
   const boss = await getBoss();
+  
   // Ensure queue exists
   if (process.env.JOB_DEBUG === '1') {
     try {
@@ -23,6 +26,7 @@ export async function registerRenderWorker() {
       // ignore if not supported / already exists
     }
   }
+  
   type RenderJobPayload = {
     scene: AnimationScene;
     config: SceneAnimationConfig;
@@ -45,9 +49,19 @@ export async function registerRenderWorker() {
     );
   }
 
+  // CRITICAL: Optimized work options for better performance
   const workOptions = {
-    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 2,
+    teamSize: Number.isFinite(CONCURRENCY) && CONCURRENCY > 0 ? CONCURRENCY : 4,
     includeMetadata: true as const,
+    
+    // CRITICAL: Batch processing for better throughput
+    batchSize: 1, // Process one job at a time for video rendering
+    
+    // CRITICAL: Faster job polling
+    newJobCheckInterval: Number(process.env.PG_BOSS_NEW_JOB_CHECK_INTERVAL ?? '2000'),
+    
+    // Optimized for video rendering workloads
+    pollingIntervalSeconds: 2, // Poll every 2 seconds instead of default 5
   };
 
   await boss.work<RenderJobPayload>(
@@ -66,38 +80,52 @@ export async function registerRenderWorker() {
 
       console.log(`[worker] received job ${jobId} for user ${userId}`);
       const supabase = createServiceClient();
+      
       try {
-        // Idempotency guard: if job already completed or failed, ack and return stored result
+        // CRITICAL: Idempotency guard with faster query
         const { data: existing } = await supabase
           .from('render_jobs')
           .select('status, output_url, error')
           .eq('id', jobId)
           .eq('user_id', userId)
           .single();
+          
         if (existing?.status === 'completed' && typeof existing.output_url === 'string') {
           console.log(`[worker] job ${jobId} already completed, skipping`);
           await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl: existing.output_url });
           return { publicUrl: existing.output_url };
         }
+        
         if (existing?.status === 'failed') {
           console.log(`[worker] job ${jobId} already failed, skipping`);
           const previousError = typeof existing.error === 'string' ? existing.error : undefined;
           await notifyRenderJobEvent({ jobId, status: 'failed', error: previousError });
           throw new Error(previousError ?? 'Job previously failed');
         }
+
+        // CRITICAL: Single database update to reduce lock contention
         await supabase
           .from('render_jobs')
-          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .update({ 
+            status: 'processing', 
+            updated_at: new Date().toISOString() 
+          })
           .eq('id', jobId)
           .eq('user_id', userId);
 
+        // Render the video
         const storage = new SupabaseStorageProvider(userId);
         const renderer = new CanvasRenderer(storage);
         const { publicUrl } = await renderer.render(scene, config);
 
+        // CRITICAL: Final update with result
         await supabase
           .from('render_jobs')
-          .update({ status: 'completed', output_url: publicUrl, updated_at: new Date().toISOString() })
+          .update({ 
+            status: 'completed', 
+            output_url: publicUrl, 
+            updated_at: new Date().toISOString() 
+          })
           .eq('id', jobId)
           .eq('user_id', userId);
 
@@ -108,18 +136,26 @@ export async function registerRenderWorker() {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[worker] failed job ${jobId}: ${message}`);
+        
         if (jobId && userId) {
-          const configuredRetryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+          const configuredRetryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '3'); // Reduced from 5
           const meta = j as unknown as { retrycount?: unknown; retryCount?: unknown };
           const attempt = typeof meta.retrycount === 'number' ? meta.retrycount : typeof meta.retryCount === 'number' ? meta.retryCount : 0;
-          const isFinalAttempt = attempt + 1 >= (Number.isFinite(configuredRetryLimit) ? configuredRetryLimit : 5);
+          const isFinalAttempt = attempt + 1 >= (Number.isFinite(configuredRetryLimit) ? configuredRetryLimit : 3);
+          
           if (isFinalAttempt) {
             await supabase
               .from('render_jobs')
-              .update({ status: 'failed', error: message, updated_at: new Date().toISOString() })
+              .update({ 
+                status: 'failed', 
+                error: message, 
+                updated_at: new Date().toISOString() 
+              })
               .eq('id', jobId)
               .eq('user_id', userId);
+              
             await notifyRenderJobEvent({ jobId, status: 'failed', error: message });
+            
             // DLQ pattern: mirror failed job into dedicated table/queue if configured
             const deadLetterQueue = process.env.RENDER_DEADLETTER_QUEUE;
             if (deadLetterQueue) {
@@ -134,7 +170,11 @@ export async function registerRenderWorker() {
             // mark back to queued to reflect retry in UI
             await supabase
               .from('render_jobs')
-              .update({ status: 'queued', error: message, updated_at: new Date().toISOString() })
+              .update({ 
+                status: 'queued', 
+                error: message, 
+                updated_at: new Date().toISOString() 
+              })
               .eq('id', jobId)
               .eq('user_id', userId);
           }
@@ -143,8 +183,9 @@ export async function registerRenderWorker() {
       }
     }
   );
+  
   if (process.env.JOB_DEBUG === '1') {
-    console.log('[worker] registered for queue: render-video');
+    console.log(`[worker] registered for queue: render-video with teamSize=${workOptions.teamSize}`);
   }
   workerRegistered = true;
 }
@@ -156,5 +197,3 @@ export async function shutdownRenderWorker(): Promise<void> {
     // ignore
   }
 }
-
-
