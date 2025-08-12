@@ -208,11 +208,12 @@ export function AuthStatus() {
     });
 
     // Periodic session health check (every 30 seconds)
-    sessionCheckIntervalRef.current = setInterval(() => {
-      if (isMounted) {
-        void checkAuthState();
-      }
-    }, 30 * 1000);
+    // REMOVED: This was causing unnecessary database calls
+    // sessionCheckIntervalRef.current = setInterval(() => {
+    //   if (isMounted) {
+    //     void checkAuthState();
+    //   }
+    // }, 30 * 1000);
 
     return () => {
       isMounted = false;

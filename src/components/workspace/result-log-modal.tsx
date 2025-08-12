@@ -100,30 +100,12 @@ export function ResultLogModal({
     setIsAutoScroll(true);
   }, [isOpen, nodeId, debugContext, debugContext?.getAllDebugResults, formatValue]);
 
-  // Poll for new logs while modal is open - always poll to catch new results
+  // Manual refresh instead of polling
   useEffect(() => {
-    if (!isOpen || !debugContext?.getAllDebugResults) return;
-
-    const interval = setInterval(() => {
-      const allResults = debugContext.getAllDebugResults(nodeId);
-      if (allResults.length > logs.length) {
-        const formattedLogs = allResults.map(result => ({
-          value: result.value,
-          type: result.type,
-          timestamp: result.timestamp,
-          formattedValue: formatValue(result.value),
-          executionId: result.executionId ?? `exec-${result.timestamp}`,
-          flowState: result.flowState,
-          hasConnections: result.hasConnections,
-          inputCount: result.inputCount
-        }));
-
-        setLogs(formattedLogs);
-      }
-    }, 1000); // Poll every second
-
-    return () => clearInterval(interval);
-  }, [isOpen, nodeId, debugContext, debugContext?.getAllDebugResults, logs.length, formatValue]);
+    if (isOpen && debugContext?.getAllDebugResults) {
+      refreshLogs();
+    }
+  }, [isOpen, nodeId, debugContext]);
 
   // Get color for value type
   const getValueTypeColor = (type: string): string => {
