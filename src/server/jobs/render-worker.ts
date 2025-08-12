@@ -7,7 +7,7 @@ import type { Job } from 'pg-boss';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
-const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '1'); // Changed from '2' to '1' for single-user setup
+const CONCURRENCY = Number(process.env.RENDER_CONCURRENCY ?? '1');
 
 let workerRegistered = false;
 
