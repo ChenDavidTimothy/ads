@@ -1,11 +1,17 @@
 import dotenv from 'dotenv';
+
+// CRITICAL: Load environment first before any other imports
+// This ensures .env.local is loaded before env validation happens
+dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
+
+// Skip environment validation during worker startup to allow proper loading
+process.env.SKIP_ENV_VALIDATION = 'true';
+
+// Now import modules that validate environment variables
 import { logger } from '@/lib/logger';
 import { jobManager } from './job-manager';
 import { renderWorker } from './render-worker';
-
-// Load environment configuration
-dotenv.config();
-dotenv.config({ path: '.env.local', override: true });
 
 // Production-ready worker entry point with comprehensive error handling
 class WorkerRunner {
