@@ -83,6 +83,17 @@ export class JobManager {
 
   private async performStartup(): Promise<void> {
     try {
+      // Check if we're in a Next.js dev server process and skip startup
+      const isNextDevServer = process.argv.includes('next') || 
+                             process.argv.includes('dev') ||
+                             process.env.NEXT_PHASE === 'phase-production-build';
+      
+      if (isNextDevServer && process.env.NODE_ENV !== 'production') {
+        logger.info('🔄 Skipping job manager startup in Next.js dev server (use dedicated worker process)');
+        this.isStarted = true; // Mark as started to prevent retries
+        return;
+      }
+
       logger.info('🚀 Starting production job manager...');
       
       // Validate configuration
