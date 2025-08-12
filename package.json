@@ -15,7 +15,8 @@
     "lint:fix": "next lint --fix",
     "preview": "pnpm run generate && next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:fix-performance": "node scripts/apply-supabase-fixes.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

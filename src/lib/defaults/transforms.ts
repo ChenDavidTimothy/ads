@@ -63,9 +63,8 @@ export function validateTransformDisplayName(
   const trimmed = newName.trim();
   if (!trimmed) return 'Transform name cannot be empty';
   const conflict = allTracks.find((t) => {
-    const identifier = (t as unknown as { identifier?: TransformIdentifier }).identifier;
-    if (!identifier) return false;
-    if (t.id === currentTrackId) return false;
+    const identifier = (t as unknown as { identifier: TransformIdentifier }).identifier;
+    if (identifier.id === currentTrackId) return false;
     return identifier.displayName.toLowerCase() === trimmed.toLowerCase();
   });
   return conflict ? 'A transform with this name already exists' : null;

@@ -111,11 +111,10 @@ export interface ColorTrackProperties {
 
 // Animation track types - now using the registry system
 export interface BaseAnimationTrack {
-  id: string;
   startTime: number;
   duration: number;
   easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
-  // Required after migration
+  // Required identifier
   identifier: TransformIdentifier;
   lineage?: TransformLineage;
 }

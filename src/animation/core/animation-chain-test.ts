@@ -13,7 +13,6 @@ export function createChainedAnimationExample(): {
 } {
   // Animation 1: Move from (0,0) to (900,900)
   const moveTrack: MoveTrack = {
-    id: generateTransformIdentifier('move', []).id,
     identifier: generateTransformIdentifier('move', []),
     type: 'move',
     startTime: 0,
@@ -27,7 +26,6 @@ export function createChainedAnimationExample(): {
 
   // Animation 2: Rotate from 0 to 90 degrees, starting after move completes
   const rotateTrack: RotateTrack = {
-    id: generateTransformIdentifier('rotate', [moveTrack]).id,
     identifier: generateTransformIdentifier('rotate', [moveTrack]),
     type: 'rotate',
     startTime: 1000, // Start exactly when move ends
@@ -67,7 +65,6 @@ export function createSequentialMoveExample(): {
 } {
   // First move: (0,0) to (100,100)
   const move1: MoveTrack = {
-    id: generateTransformIdentifier('move', []).id,
     identifier: generateTransformIdentifier('move', []),
     type: 'move',
     startTime: 0,
@@ -81,7 +78,6 @@ export function createSequentialMoveExample(): {
 
   // Second move: Should start from (100,100) and go to (200,200)
   const move2: MoveTrack = {
-    id: generateTransformIdentifier('move', [move1]).id,
     identifier: generateTransformIdentifier('move', [move1]),
     type: 'move',
     startTime: 500, // Start when first move ends
@@ -120,7 +116,6 @@ export function createMixedTransformExample(): {
 } {
   // Move animation
   const moveTrack: MoveTrack = {
-    id: generateTransformIdentifier('move', []).id,
     identifier: generateTransformIdentifier('move', []),
     type: 'move',
     startTime: 0,
@@ -134,7 +129,6 @@ export function createMixedTransformExample(): {
 
   // Scale animation (simplified for example)
   const scaleTrack: ScaleTrack = {
-    id: generateTransformIdentifier('scale', [moveTrack]).id,
     identifier: generateTransformIdentifier('scale', [moveTrack]),
     type: 'scale',
     startTime: 1000, // Start when move ends

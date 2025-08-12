@@ -58,9 +58,10 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
   const rawTracks: AnimationTrack[] = Array.isArray(node.data?.tracks) ? node.data.tracks : [];
   // Client-side migration: attach identifier if missing
   const tracks: AnimationTrack[] = rawTracks.map((t, idx, arr) => {
-    if ((t as unknown as { identifier?: unknown }).identifier) return t;
-    const identifier = generateTransformIdentifier(t.type, arr);
-    return { ...t, id: identifier.id, identifier } as AnimationTrack;
+    if ((t as unknown as { identifier?: unknown }).identifier) return t as AnimationTrack;
+    const identifier = generateTransformIdentifier(t.type, arr as AnimationTrack[]);
+    const { /* id, */ ...rest } = t as unknown as Omit<AnimationTrack, 'identifier'> & { id?: string };
+    return { ...rest, identifier } as AnimationTrack;
   });
 
   const handleSave = async (newDuration: number, newTracks: AnimationTrack[]) => {

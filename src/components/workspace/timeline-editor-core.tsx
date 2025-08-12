@@ -178,7 +178,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
     const error = validateNameHelper(newDisplayName, trackId, tracks);
     if (error) return false;
     setTracks((prev) => prev.map((t) => (
-      t.id === trackId && t.identifier
+      t.identifier.id === trackId
         ? ({ ...t, identifier: { ...t.identifier, displayName: newDisplayName } })
         : t
     )));
@@ -192,7 +192,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
   const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
     setTracks((prev) =>
       prev.map((track) => {
-        if (track.id !== trackId) return track;
+        if (track.identifier.id !== trackId) return track;
         if (track.type !== (updates.type ?? track.type)) return track;
         return { ...track, ...updates } as AnimationTrack;
       }),
@@ -201,7 +201,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
 
   const deleteTrack = useCallback(
     (trackId: string) => {
-      setTracks((prev) => prev.filter((track) => track.id !== trackId));
+      setTracks((prev) => prev.filter((track) => track.identifier.id !== trackId));
       if (selectedTrackId === trackId) {
         setSelectedTrackId(null);
       }
@@ -213,7 +213,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, trackId: string, type: DragState["type"]) => {
       e.preventDefault();
-      const track = tracks.find((t) => t.id === trackId);
+      const track = tracks.find((t) => t.identifier.id === trackId);
       if (!track) return;
       setDragState({ trackId, type, startX: e.clientX, startTime: track.startTime, startDuration: track.duration });
     },
@@ -223,7 +223,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!dragState) return;
-      const track = tracks.find((t) => t.id === dragState.trackId);
+      const track = tracks.find((t) => t.identifier.id === dragState.trackId);
       if (!track) return;
       const deltaX = e.clientX - dragState.startX;
       const deltaTime = (deltaX / TIMELINE_WIDTH) * duration;
@@ -262,10 +262,10 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
     }
   }, [dragState, handleMouseMove, handleMouseUp]);
 
-  const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
+  const selectedTrack = tracks.find((t) => t.identifier.id === selectedTrackId);
 
   // Disable save if any display name invalid
-  const hasInvalidNames = tracks.some((t) => !!validateNameHelper(t.identifier.displayName, t.id, tracks));
+  const hasInvalidNames = tracks.some((t) => !!validateNameHelper(t.identifier.displayName, t.identifier.id, tracks));
 
   return (
     <div className="flex h-full">
@@ -324,7 +324,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
 
           <div className="space-y-3">
             {tracks.map((track) => (
-              <div key={track.id} className="relative">
+              <div key={track.identifier.id} className="relative">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-white w-16">
@@ -333,11 +333,11 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
                         return trackIcons[track.type] ?? "●";
                       })()} {track.type}
                     </span>
-                    {selectedTrackId === track.id && (
+                    {selectedTrackId === track.identifier.id && (
                       <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">SELECTED</span>
                     )}
                   </div>
-                  <Button onClick={() => deleteTrack(track.id)} variant="danger" size="sm" className="text-xs">
+                  <Button onClick={() => deleteTrack(track.identifier.id)} variant="danger" size="sm" className="text-xs">
                     Delete
                   </Button>
                 </div>
@@ -350,12 +350,12 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
                         const trackColors = transformFactory.getTrackColors();
                         return trackColors[track.type] ?? "bg-gray-600";
                       })(),
-                      selectedTrackId === track.id ? "ring-2 ring-blue-400 shadow-lg" : "hover:brightness-110",
-                      dragState?.trackId === track.id ? "opacity-80" : "",
+                       selectedTrackId === track.identifier.id ? "ring-2 ring-blue-400 shadow-lg" : "hover:brightness-110",
+                       dragState?.trackId === track.identifier.id ? "opacity-80" : "",
                     )}
                     style={{ left: `${(track.startTime / duration) * 100}%`, width: `${(track.duration / duration) * 100}%`, top: "1px" }}
-                    onMouseDown={(e) => handleMouseDown(e, track.id, "move")}
-                    onClick={() => setSelectedTrackId(track.id)}
+                    onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "move")}
+                    onClick={() => setSelectedTrackId(track.identifier.id)}
                   >
                    <div className="flex items-center justify-between h-full px-2">
                       <span className="text-xs font-medium truncate">{track.identifier.displayName}</span>
@@ -366,12 +366,12 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
                   <div
                     className="absolute w-3 h-6 cursor-w-resize bg-white/30 hover:bg-white/50 rounded-l z-10"
                     style={{ left: `${(track.startTime / duration) * 100}%`, top: "1px" }}
-                    onMouseDown={(e) => handleMouseDown(e, track.id, "resize-start")}
+                    onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-start")}
                   />
                   <div
                     className="absolute w-3 h-6 cursor-e-resize bg-white/30 hover:bg-white/50 rounded-r z-10"
                     style={{ left: `${((track.startTime + track.duration) / duration) * 100 - (12 / TIMELINE_WIDTH) * 100}%`, top: "1px" }}
-                    onMouseDown={(e) => handleMouseDown(e, track.id, "resize-end")}
+                    onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-end")}
                   />
                 </div>
 
@@ -396,7 +396,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
         {selectedTrack ? (
           <TrackProperties 
             track={selectedTrack} 
-            onChange={(updates) => updateTrack(selectedTrack.id, updates)} 
+            onChange={(updates) => updateTrack(selectedTrack.identifier.id, updates)} 
             allTracks={tracks}
             onDisplayNameChange={updateTransformDisplayName}
             validateDisplayName={validateTransformDisplayName}
@@ -487,14 +487,14 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               }}
               onBlur={(e) => {
                 const proposed = e.target.value;
-                const error = validateDisplayName(proposed, track.id);
+                const error = validateDisplayName(proposed, track.identifier.id);
                 if (!error) {
-                  onDisplayNameChange(track.id, proposed);
+                  onDisplayNameChange(track.identifier.id, proposed);
                 }
               }}
             />
             {(() => {
-              const err = validateDisplayName(track.identifier.displayName, track.id);
+              const err = validateDisplayName(track.identifier.displayName, track.identifier.id);
               return err ? <span className="text-xs text-red-400">{err}</span> : null;
             })()}
           </div>
