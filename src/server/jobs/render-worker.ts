@@ -179,28 +179,12 @@ async function processAndCompleteJob(job: Job<RenderJobPayload>): Promise<void> 
       .eq('user_id', userId);
 
     // Set up storage and renderer
-    const storageProvider = new SupabaseStorageProvider({
-      supabaseServiceClient: supabase,
-      bucket: 'videos'
-    });
+    const storageProvider = new SupabaseStorageProvider(userId);
 
-    const renderer = new CanvasRenderer({
-      storageProvider,
-      tempDir: process.env.TEMP_DIR ?? '/tmp'
-    });
+    const renderer = new CanvasRenderer(storageProvider);
 
-    // Render the animation
-    const result = await renderer.render(payload.scene, payload.config);
-
-    if (!result.outputPath) {
-      throw new Error('Renderer did not produce output path');
-    }
-
-    // Upload to storage
-    const publicUrl = await storageProvider.uploadVideo(
-      result.outputPath,
-      `renders/${userId}/${businessJobId}.mp4`
-    );
+    // Render the animation and obtain public URL
+    const { publicUrl } = await renderer.render(payload.scene, payload.config);
 
     // Mark as completed in database
     await supabase
