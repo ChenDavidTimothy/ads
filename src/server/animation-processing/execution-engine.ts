@@ -15,12 +15,12 @@ import {
   validateConnections, 
   validateProperFlow, 
   validateNoMultipleInsertNodesInSeries,
-  validateNoDuplicateObjectIds,
   validateLogicNodePortConnections,
   validateBooleanTypeConnections,
   validateNumberTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
+import { DuplicateObjectIdsError } from "@/shared/errors/domain";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 
@@ -131,14 +131,42 @@ export class ExecutionEngine {
     logger.info('Validating no multiple insert nodes in series');
     validateNoMultipleInsertNodesInSeries(nodes, edges);
     
-    // 7. Duplicate object IDs validation (merge-aware)
-    logger.info('Validating no duplicate object IDs');
-    validateNoDuplicateObjectIds(nodes, edges);
-    
     // Mark as validated
     validationState.universalValidated = true;
     
     logger.info('Universal validation passed');
+  }
+
+  private validateNoDuplicateObjectsAtRuntime(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    edges: ReactFlowEdge[]
+  ): void {
+    const incomingEdges = edges.filter((e) => e.target === node.data.identifier.id);
+    if (incomingEdges.length === 0) return;
+
+    const objectIds: string[] = [];
+    for (const edge of incomingEdges) {
+      const output = getNodeOutput(context, edge.source, edge.sourceHandle ?? "");
+      if (!output) continue;
+
+      const values = Array.isArray(output.data) ? output.data : [output.data];
+      for (const value of values) {
+        if (typeof value === 'object' && value !== null && 'id' in value) {
+          objectIds.push((value as { id: string }).id);
+        }
+      }
+    }
+
+    if (objectIds.length <= 1) return;
+    const duplicates = objectIds.filter((id, index) => objectIds.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+      throw new DuplicateObjectIdsError(
+        node.data.identifier.displayName,
+        node.data.identifier.id,
+        duplicates
+      );
+    }
   }
 
   async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
@@ -166,6 +194,11 @@ export class ExecutionEngine {
         if (shouldSkipDueToConditionalRouting(node, context, nodes, dataEdges)) {
           logger.info(`Skipping node due to conditional routing: ${node.data.identifier.displayName}`);
           continue;
+        }
+
+        // Runtime duplicate validation for non-merge nodes based on actual produced values
+        if (node.type !== 'merge') {
+          this.validateNoDuplicateObjectsAtRuntime(node, context, dataEdges);
         }
 
         const executor = this.registry.find(node.type ?? '');
@@ -242,6 +275,11 @@ export class ExecutionEngine {
         if (shouldSkipDueToConditionalRouting(node, context, nodes, dataEdges)) {
           logger.debug(`Skipping node due to conditional routing: ${node.data.identifier.displayName}`);
           continue;
+        }
+
+        // Runtime duplicate validation for non-merge nodes based on actual produced values
+        if (node.type !== 'merge') {
+          this.validateNoDuplicateObjectsAtRuntime(node, context, dataEdges);
         }
 
         const executor = this.registry.find(node.type ?? '');
@@ -327,6 +365,12 @@ function shouldSkipDueToConditionalRouting(
 
     if (allSourcesAreIfElseBranches) {
       // This input port is unsatisfied solely because the connected if_else branch(es) did not emit → skip node
+      return true;
+    }
+
+    // Additional gating: if none of the direct source nodes have executed (likely skipped due to upstream branch), skip this node
+    const allSourcesUnexecuted = incomingEdges.every((edge) => !isNodeExecuted(context, edge.source));
+    if (allSourcesUnexecuted) {
       return true;
     }
   }
