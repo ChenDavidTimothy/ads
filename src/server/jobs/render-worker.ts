@@ -97,31 +97,36 @@ export class RenderWorker {
     return async (job) => {
       const startTime = Date.now();
       
+      // Handle case where job might be an array (pgBoss sometimes returns arrays)
+      const actualJob = Array.isArray(job) ? job[0] : job;
+      
       // Debug: Log the full job structure to understand the issue
       logger.info('🔍 DEBUG: Received job structure', {
-        jobExists: !!job,
-        jobKeys: job ? Object.keys(job) : [],
-        dataExists: !!job?.data,
-        dataKeys: job?.data ? Object.keys(job.data) : [],
-        jobId: job?.id,
-        fullJob: JSON.stringify(job, null, 2)
+        jobExists: !!actualJob,
+        jobKeys: actualJob ? Object.keys(actualJob) : [],
+        dataExists: !!actualJob?.data,
+        dataKeys: actualJob?.data ? Object.keys(actualJob.data) : [],
+        jobId: actualJob?.id,
+        isArray: Array.isArray(job),
+        arrayLength: Array.isArray(job) ? job.length : 0,
+        fullJob: JSON.stringify(actualJob, null, 2)
       });
       
       // Handle different possible job structures that pgBoss might use
       let jobData: RenderJobPayload;
       
-      if (job?.data) {
+      if (actualJob?.data) {
         // Standard case: data is in job.data
-        jobData = job.data;
-      } else if (job && typeof job === 'object' && 'jobId' in job && 'userId' in job && 'scene' in job && 'config' in job) {
+        jobData = actualJob.data;
+      } else if (actualJob && typeof actualJob === 'object' && 'jobId' in actualJob && 'userId' in actualJob && 'scene' in actualJob && 'config' in actualJob) {
         // Alternative case: job itself contains the payload data
-        jobData = job as unknown as RenderJobPayload;
+        jobData = actualJob as unknown as RenderJobPayload;
       } else {
         // Fallback: check if job properties match our expected structure
-        const possibleJobId = job?.id || (job as any)?.jobId;
-        const possibleUserId = (job as any)?.userId;
-        const possibleScene = (job as any)?.scene;
-        const possibleConfig = (job as any)?.config;
+        const possibleJobId = actualJob?.id || (actualJob as any)?.jobId;
+        const possibleUserId = (actualJob as any)?.userId;
+        const possibleScene = (actualJob as any)?.scene;
+        const possibleConfig = (actualJob as any)?.config;
         
         if (possibleJobId && possibleUserId && possibleScene && possibleConfig) {
           jobData = {
@@ -131,7 +136,7 @@ export class RenderWorker {
             config: possibleConfig
           };
         } else {
-          throw new Error(`Job data is malformed or undefined. Job structure: ${JSON.stringify(job, null, 2)}`);
+          throw new Error(`Job data is malformed or undefined. Job structure: ${JSON.stringify(actualJob, null, 2)}`);
         }
       }
       
@@ -141,7 +146,7 @@ export class RenderWorker {
       }
       
       const { jobId, userId, scene, config } = jobData;
-      const pgJobId = job?.id;
+      const pgJobId = actualJob?.id;
 
       // Track active job
       this.activeJobs.add(jobId);
@@ -151,7 +156,7 @@ export class RenderWorker {
           jobId,
           userId,
           pgJobId,
-          attemptNumber: (job as any).retrycount || 0,
+          attemptNumber: (actualJob as any).retrycount || 0,
           scene: {
             objects: scene?.objects?.length || 0,
             duration: scene?.metadata?.duration || 'unknown'
@@ -195,11 +200,11 @@ export class RenderWorker {
           userId,
           pgJobId,
           duration,
-          attemptNumber: (job as any).retrycount || 0
+          attemptNumber: (actualJob as any).retrycount || 0
         });
 
         // Handle final attempt failure
-        await this.handleJobFailure(job, errorMessage);
+        await this.handleJobFailure(actualJob, errorMessage);
         
         throw error;
         
@@ -357,8 +362,49 @@ export class RenderWorker {
   }
 
   private async handleJobFailure(job: any, errorMessage: string): Promise<void> {
-    const { jobId, userId } = job.data;
-    const attemptNumber = (job as any).retrycount || 0;
+    // Handle case where job might be an array (pgBoss sometimes returns arrays)
+    const actualJob = Array.isArray(job) ? job[0] : job;
+    
+    // Handle different possible job structures that pgBoss might use
+    let jobData: RenderJobPayload;
+    
+    if (actualJob?.data) {
+      // Standard case: data is in job.data
+      jobData = actualJob.data;
+    } else if (actualJob && typeof actualJob === 'object' && 'jobId' in actualJob && 'userId' in actualJob && 'scene' in actualJob && 'config' in actualJob) {
+      // Alternative case: job itself contains the payload data
+      jobData = actualJob as unknown as RenderJobPayload;
+    } else {
+      // Fallback: check if job properties match our expected structure
+      const possibleJobId = actualJob?.id || (actualJob as any)?.jobId;
+      const possibleUserId = (actualJob as any)?.userId;
+      const possibleScene = (actualJob as any)?.scene;
+      const possibleConfig = (actualJob as any)?.config;
+      
+      if (possibleJobId && possibleUserId && possibleScene && possibleConfig) {
+        jobData = {
+          jobId: possibleJobId,
+          userId: possibleUserId,
+          scene: possibleScene,
+          config: possibleConfig
+        };
+      } else {
+        logger.error('❌ Cannot extract job data for failure handling', {
+          jobExists: !!actualJob,
+          jobKeys: actualJob ? Object.keys(actualJob) : [],
+          dataExists: !!actualJob?.data,
+          dataKeys: actualJob?.data ? Object.keys(actualJob.data) : [],
+          jobId: actualJob?.id,
+          isArray: Array.isArray(job),
+          arrayLength: Array.isArray(job) ? job.length : 0,
+          fullJob: JSON.stringify(actualJob, null, 2)
+        });
+        return; // Cannot handle failure without job data
+      }
+    }
+    
+    const { jobId, userId } = jobData;
+    const attemptNumber = (actualJob as any).retrycount || 0;
     const isFinalAttempt = attemptNumber + 1 >= this.config.maxRetries;
 
     const supabase = createServiceClient();
