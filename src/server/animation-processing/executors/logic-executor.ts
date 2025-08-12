@@ -385,7 +385,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     const mergedIds = mergedResult
       .map(obj => (typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null))
       .filter(Boolean) as string[];
-    const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(portInputs.flat() as unknown as ExecutionValue[], mergedIds);
+    const propagatedAnimations = this.extractPerObjectAnimationsFromInputsWithPriority(portInputs as unknown as ExecutionValue[][], mergedIds);
 
     const inputObjectCount = portInputs.flat().reduce((acc, input) => {
       const data = Array.isArray(input.data) ? input.data : [input.data];
@@ -446,6 +446,71 @@ export class LogicNodeExecutor extends BaseExecutor {
       }
     }
     return merged;
+  }
+
+  private extractPerObjectAnimationsFromInputsWithPriority(portInputs: ExecutionValue[][], allowIds: string[]): Record<string, SceneAnimationTrack[]> {
+    const merged: Record<string, SceneAnimationTrack[]> = {};
+    
+    // Process ports in reverse order so Port 1 (index 0) has highest priority
+    // Same logic as object merging in executeMerge
+    for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
+      const inputs = portInputs[portIndex];
+      if (!inputs) continue;
+      
+      for (const input of inputs) {
+        const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+        if (!fromMeta) continue;
+        
+        for (const [objectId, animations] of Object.entries(fromMeta)) {
+          if (!allowIds.includes(objectId)) continue;
+          
+          // For each animation, check for conflicts with existing animations
+          const existingAnimations = merged[objectId] ?? [];
+          const newAnimations: SceneAnimationTrack[] = [];
+          
+          for (const newAnim of animations) {
+            // Check if there's a conflicting animation (same type)
+            // For merge node priority rules, identical animation types should prioritize Port 1
+            const conflictingAnimations = existingAnimations.filter(existingAnim => 
+              existingAnim.type === newAnim.type
+            );
+            
+            if (conflictingAnimations.length === 0) {
+              // No conflict, add the animation
+              newAnimations.push(newAnim);
+            } else {
+              // Conflict detected - port priority decides
+              // Since we process in reverse order, later iteration (lower port index) wins
+              // Remove all conflicting animations of the same type and add new one
+              const filteredExisting = existingAnimations.filter(existingAnim => 
+                existingAnim.type !== newAnim.type
+              );
+              merged[objectId] = filteredExisting;
+              newAnimations.push(newAnim);
+              
+              logger.debug(`Animation conflict resolved: Port ${portIndex + 1} ${newAnim.type} animation overrides previous`, {
+                objectId,
+                animationType: newAnim.type,
+                winningPort: portIndex + 1,
+                conflictsRemoved: conflictingAnimations.length
+              });
+            }
+          }
+          
+          merged[objectId] = [...(merged[objectId] ?? []), ...newAnimations];
+        }
+      }
+    }
+    
+    return merged;
+  }
+
+  private animationsOverlap(anim1: SceneAnimationTrack, anim2: SceneAnimationTrack): boolean {
+    const end1 = anim1.startTime + anim1.duration;
+    const end2 = anim2.startTime + anim2.duration;
+    
+    // Check if time ranges overlap
+    return !(end1 <= anim2.startTime || end2 <= anim1.startTime);
   }
 
   private async executeCompare(

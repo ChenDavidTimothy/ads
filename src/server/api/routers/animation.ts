@@ -437,7 +437,7 @@ export const animationRouter = createTRPCRouter({
         }
 
         // Partition objects by scenes
-        const scenePartitions = partitionObjectsByScenes(executionContext, sceneNodes);
+        const scenePartitions = partitionObjectsByScenes(executionContext, sceneNodes, backendEdges);
         
         if (scenePartitions.length === 0) {
           throw new NoValidScenesError();

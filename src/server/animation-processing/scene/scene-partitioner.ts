@@ -17,7 +17,8 @@ export interface ScenePartition {
  */
 export function partitionObjectsByScenes(
   context: ExecutionContext, 
-  sceneNodes: ReactFlowNode<NodeData>[]
+  sceneNodes: ReactFlowNode<NodeData>[],
+  edges?: Array<{ source: string; target: string; sourceHandle?: string; targetHandle?: string }>
 ): ScenePartition[] {
   logger.info('Partitioning objects by scenes', { 
     totalScenes: sceneNodes.length,
@@ -37,12 +38,35 @@ export function partitionObjectsByScenes(
     
     // Object IDs are available directly from sceneObjects if needed
     
-    // Animations for this scene (based on explicit scene assignments)
-    const sceneAnimations = context.sceneAnimations.filter(anim => {
+    // FIXED: Get animations for this scene with hybrid approach
+    let sceneAnimations: SceneAnimationTrack[] = [];
+    
+    // First, try the old method (which works for merge nodes and scenes with assigned animations)
+    const assignedAnimations = context.sceneAnimations.filter(anim => {
       const assignedSceneId = context.animationSceneMap.get(anim.id);
-      // Only include animations explicitly assigned to this scene
       return assignedSceneId === sceneId;
     });
+    
+    if (assignedAnimations.length > 0) {
+      // Use assigned animations (this handles merge node outputs correctly)
+      sceneAnimations = assignedAnimations;
+    } else if (edges) {
+      // Fallback: For scenes with no assigned animations, try to get them from input metadata
+      // This handles direct animation->scene connections that bypass merge nodes
+      const incomingEdges = edges.filter(edge => edge.target === sceneId);
+      
+      for (const edge of incomingEdges) {
+        const sourceOutput = context.nodeOutputs.get(`${edge.source}.${edge.sourceHandle ?? 'output'}`);
+        if (sourceOutput?.metadata) {
+          const perObjectAnimations = (sourceOutput.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> })?.perObjectAnimations;
+          if (perObjectAnimations) {
+            for (const animations of Object.values(perObjectAnimations)) {
+              sceneAnimations.push(...animations);
+            }
+          }
+        }
+      }
+    }
     
     logger.debug(`Scene ${sceneNode.data.identifier.displayName}`, {
       sceneId,
