@@ -640,27 +640,32 @@ export const animationRouter = createTRPCRouter({
   }),
 
   getRenderJobStatus: protectedProcedure
-      .input(z.object({ jobId: z.string() }))
-      .query(async ({ input, ctx }: { input: { jobId: string }; ctx: TRPCContext }) => {
-        const supabase = createServiceClient();
-        const { data, error } = await supabase
-          .from('render_jobs')
-          .select('status, output_url, error')
-          .eq('id', input.jobId)
-          .eq('user_id', ctx.user!.id)
-          .single();
-        if (error) {
-          throw new Error(error.message);
+    .input(z.object({ jobId: z.string() }))
+    .query(async ({ input, ctx }: { input: { jobId: string }; ctx: TRPCContext }) => {
+      const supabase = createServiceClient();
+      const { data, error } = await supabase
+        .from('render_jobs')
+        .select('status, output_url, error')
+        .eq('id', input.jobId)
+        .eq('user_id', ctx.user!.id)
+        .single();
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (data?.status !== 'completed' || !data?.output_url) {
+        const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;
         }
-        
-        // FIXED: Just return current status immediately - no waiting!
-        return { 
-          status: (data?.status as string) ?? 'unknown', 
-          videoUrl: (data?.output_url as string) ?? null, 
-          error: (data?.error as string) ?? null 
-        } as const;
-      }),
-    
+      }
+      return { 
+        status: (data?.status as string) ?? 'unknown', 
+        videoUrl: (data?.output_url as string) ?? null, 
+        error: (data?.error as string) ?? null 
+      } as const;
+    }),
+
   getNodeDefinition: publicProcedure
     .input(z.object({ nodeType: z.string() }))
     .query(({ input }: { input: { nodeType: string } }) => {

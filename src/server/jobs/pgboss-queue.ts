@@ -54,10 +54,10 @@ export class PgBossQueue<
       throw new Error('jobId is required to enqueue render job');
     }
 
-    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '3');
-    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '10');
-    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '90');
-    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 90) * 60;
+    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '15');
+    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '120');
+    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 120) * 60;
 
     const payload = {
       scene: job.scene,
@@ -67,10 +67,10 @@ export class PgBossQueue<
     };
     const options: SendOptions = {
       singletonKey: businessJobId,
-      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 3,
-      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 10,
+      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 5,
+      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 15,
       retryBackoff: true,
-      expireInSeconds: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 5400,
+      expireInSeconds: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 7200,
     };
 
     await boss.send(this.queueName, payload, options);
@@ -90,10 +90,10 @@ export class PgBossQueue<
     if (process.env.JOB_DEBUG === '1') {
       console.log(`[queue] enqueue ${this.queueName} businessJobId=${businessJobId}`);
     }
-    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '3');
-    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '10');
-    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '90');
-    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 90) * 60;
+    const retryLimit = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
+    const retryDelaySeconds = Number(process.env.RENDER_JOB_RETRY_DELAY_SECONDS ?? '15');
+    const expireMinutes = Number(process.env.RENDER_JOB_EXPIRE_MINUTES ?? '120');
+    const expireInSeconds = (Number.isFinite(expireMinutes) && expireMinutes > 0 ? expireMinutes : 120) * 60;
 
     const payload = {
       scene: job.scene,
@@ -103,12 +103,11 @@ export class PgBossQueue<
     };
     const options: SendOptions = {
       singletonKey: businessJobId,
-      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 3,
-      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 10,
+      retryLimit: Number.isFinite(retryLimit) && retryLimit >= 0 ? retryLimit : 5,
+      retryDelay: Number.isFinite(retryDelaySeconds) && retryDelaySeconds >= 0 ? retryDelaySeconds : 15,
       retryBackoff: true,
-      expireInSeconds: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 5400,
+      expireInSeconds: Number.isFinite(expireInSeconds) && expireInSeconds > 0 ? expireInSeconds : 7200,
     };
-
     await boss.send(this.queueName, payload, options);
 
     return await new Promise<TResult>((resolve, reject) => {
@@ -124,10 +123,8 @@ export class PgBossQueue<
         timeout,
       });
 
-      // CRITICAL FIX: Much faster fallback polling - reduces 6-11s delays to 2-3s
-      let delay = Number(process.env.PGBOSS_FALLBACK_POLL_INITIAL_DELAY ?? '2000'); // Changed from 10_000 to 2_000
-      const maxDelay = Number(process.env.PGBOSS_FALLBACK_POLL_MAX_DELAY ?? '10000'); // Changed from 60_000 to 10_000
-      
+      // sparse fallback polling of render_jobs if event missed
+      let delay = 10_000; // Changed from 5_000 to 10_000 (10 seconds instead of 5)
       const poll = async () => {
         const waiter = waiters.get(businessJobId);
         if (!waiter) return; // already resolved
@@ -141,7 +138,7 @@ export class PgBossQueue<
             .single();
           if (!error && data) {
             if (process.env.JOB_DEBUG === '1') {
-              console.log(`[queue] poll status jobId=${businessJobId} status=${data.status} delay=${delay}ms`);
+              console.log(`[queue] poll status jobId=${businessJobId} status=${data.status}`);
             }
             const row = data as RenderJobRow;
             if (row.status === 'completed' && row.output_url) {
@@ -160,17 +157,18 @@ export class PgBossQueue<
         } catch {
           // ignore and continue backoff
         }
-        // CRITICAL FIX: Gentler exponential backoff with lower limits
-        delay = Math.min(delay * 1.5, maxDelay); // Changed from delay * 2 to delay * 1.5
+        delay = Math.min(delay * 2, 60_000);
         const w = waiters.get(businessJobId);
         if (!w) return;
         w.fallbackTimer = setTimeout(() => { void poll(); }, delay);
       };
-      // CRITICAL FIX: Start polling much sooner
+      // schedule first fallback check
       const w = waiters.get(businessJobId);
       if (w) {
-        w.fallbackTimer = setTimeout(() => { void poll(); }, 1000); // Changed from delay to 1000 (1 second)
+        w.fallbackTimer = setTimeout(() => { void poll(); }, delay);
       }
     });
   }
 }
+
+

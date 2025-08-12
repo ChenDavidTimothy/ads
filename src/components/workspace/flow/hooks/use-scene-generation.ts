@@ -211,11 +211,11 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     retry: false,
   });
 
-  // DEFINITIVE FIX: Fast polling that guarantees video appears within 1 second of completion
+  // Multi-job polling for multiple videos
   const startMultiJobPolling = useCallback((jobIds: string[], currentAttempt: number) => {
     const pendingJobs = new Set(jobIds);
     let pollAttempts = 0;
-    const maxPollAttempts = 120; // Increased to handle longer timeouts
+    const maxPollAttempts = 60;
     
     const pollAllJobs = async () => {
       if (currentAttempt !== generationAttemptRef.current) {
@@ -224,8 +224,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       pollAttempts++;
-      const timestamp = new Date().toISOString().split('T')[1]?.substring(0, 8) || '';
-      console.log(`[GENERATION] 🕐 Poll #${pollAttempts} at ${timestamp} (${pendingJobs.size} pending)`);
+      console.log(`[GENERATION] Multi-poll attempt ${pollAttempts}/${maxPollAttempts} for ${pendingJobs.size} jobs`);
       
       try {
         const supabase = createBrowserClient();
@@ -251,9 +250,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         });
         
         const results = await Promise.all(jobPromises);
+        // hasUpdates tracking removed as it was unused
         let completedCount = 0;
         let failedCount = 0;
-        let statusUpdated = false;
         
         // Update video states
         setVideos(prevVideos => {
@@ -266,15 +265,13 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                              result.status === 'processing' ? 'processing' : 'pending';
             
             if (newStatus !== video.status) {
-              statusUpdated = true;
-              console.log(`[GENERATION] ✅ Status change: ${video.jobId} ${video.status} → ${newStatus}`);
+              // Status change detected
               
               if (newStatus === 'completed') {
                 completedCount++;
                 // Set primary video URL for backward compatibility
                 if (!videoUrl && 'videoUrl' in result && result.videoUrl) {
                   setVideoUrl(result.videoUrl);
-                  console.log(`[GENERATION] 🎥 Video URL set: ${result.videoUrl.substring(0, 50)}...`);
                 }
               } else if (newStatus === 'failed') {
                 failedCount++;
@@ -293,16 +290,12 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         // Remove completed/failed jobs from pending set
         results.forEach(result => {
           if (result.status === 'completed' || result.status === 'failed') {
-            if (pendingJobs.has(result.jobId)) {
-              console.log(`[GENERATION] 🏁 Job finished: ${result.jobId} (${result.status})`);
-              pendingJobs.delete(result.jobId);
-            }
+            pendingJobs.delete(result.jobId);
           }
         });
         
         // Check if all jobs are done
         if (pendingJobs.size === 0) {
-          console.log(`[GENERATION] 🎉 All jobs complete! (${completedCount} completed, ${failedCount} failed)`);
           setIsGenerating(false);
           if (completedCount > 0 && failedCount === 0) {
             toast.success(`All ${completedCount} videos generated successfully!`);
@@ -314,21 +307,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           return;
         }
         
-        // Continue polling with VERY FAST intervals initially
+        // Continue polling if there are pending jobs
         if (pollAttempts < maxPollAttempts) {
-          let delay: number;
-          if (pollAttempts <= 20) {
-            // First 20 polls: every 500ms (10 seconds total) - VERY FAST
-            delay = 500;
-          } else if (pollAttempts <= 40) {
-            // Next 20 polls: every 1000ms (20 seconds more) - FAST
-            delay = 1000;
-          } else {
-            // Later polls: every 2000ms - NORMAL
-            delay = 2000;
-          }
-          
-          console.log(`[GENERATION] ⏰ Next poll in ${delay}ms`);
+          const delay = Math.min(1000 + (pollAttempts * 100), 4000);
           pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           setIsGenerating(false);
@@ -351,9 +332,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
         
         if (pollAttempts < maxPollAttempts) {
-          // Fast retry on errors too
-          const delay = pollAttempts <= 20 ? 1000 : 2000;
-          console.log(`[GENERATION] 🔄 Retrying in ${delay}ms after error`);
+          const delay = Math.min(2000 + (pollAttempts * 200), 8000);
           pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -365,12 +344,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     };
     
-    // CRITICAL: Start polling IMMEDIATELY
-    console.log(`[GENERATION] 🚀 Starting immediate polling for ${jobIds.length} jobs`);
-    pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 50); // Start in 50ms
+    pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 500);
   }, [utils.animation.getRenderJobStatus, toast, router, videoUrl]);
 
-  // Extract polling logic into a separate function (legacy single job) - ALSO FIXED
+  // Extract polling logic into a separate function (legacy single job)
   const startJobPolling = useCallback((jobId: string, currentAttempt: number) => {
     let pollAttempts = 0;
     const maxPollAttempts = 60;
@@ -417,8 +394,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
         
         if (pollAttempts < maxPollAttempts) {
-          // CRITICAL FIX: Same fast initial polling for single jobs
-          const delay = pollAttempts <= 10 ? 500 : pollAttempts <= 20 ? 1000 : 2000;
+          const delay = Math.min(1000 + (pollAttempts * 100), 4000);
           pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -442,7 +418,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
         
         if (pollAttempts < maxPollAttempts) {
-          const delay = pollAttempts <= 10 ? 1000 : pollAttempts <= 20 ? 2000 : 4000;
+          const delay = Math.min(2000 + (pollAttempts * 200), 8000);
           pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -454,8 +430,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
     };
     
-    // CRITICAL FIX: Start single job polling immediately too
-    pollTimeoutRef.current = setTimeout(() => void poll(), 100); // Start in 100ms instead of 2000ms
+    pollTimeoutRef.current = setTimeout(() => void poll(), 2000); // Increased from 500ms to 2 seconds
   }, [utils.animation.getRenderJobStatus, toast, router]);
 
   const isSceneConnected = useMemo(() => {
