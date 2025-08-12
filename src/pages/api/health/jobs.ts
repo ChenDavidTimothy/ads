@@ -7,20 +7,10 @@ interface HealthResponse {
   timestamp: string;
   message?: string;
   details?: {
-    pgboss: {
-      connected: boolean;
-      queueCount?: number;
-      error?: string;
-    };
     events: {
       listenerConnected: boolean;
       publisherConnected: boolean;
       subscribedChannels: string[];
-    };
-    worker: {
-      registered: boolean;
-      activeJobs: number;
-      concurrency: number;
     };
     queue: {
       pending: number;
@@ -54,20 +44,10 @@ export default async function handler(
         status: health.overall,
         timestamp: health.timestamp,
         details: {
-          pgboss: {
-            connected: health.components.pgboss.connected,
-            queueCount: health.components.pgboss.queueCount,
-            error: health.components.pgboss.error
-          },
           events: {
             listenerConnected: health.components.events.listenerConnected,
             publisherConnected: health.components.events.publisherConnected,
             subscribedChannels: health.components.events.subscribedChannels
-          },
-          worker: {
-            registered: health.components.worker.registered,
-            activeJobs: health.components.worker.activeJobs,
-            concurrency: health.components.worker.concurrency
           },
           queue: health.components.queue.stats ?? {
             pending: 0,

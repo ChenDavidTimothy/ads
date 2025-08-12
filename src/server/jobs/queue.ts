@@ -1,6 +1,13 @@
 // src/server/jobs/queue.ts
 export interface JobQueue<TJob, TResult> {
   enqueue(job: TJob): Promise<TResult>;
+  enqueueOnly?(job: TJob): Promise<{ jobId: string }>;
+  getQueueStats?(): Promise<{
+    pending: number;
+    active: number;
+    completed: number;
+    failed: number;
+  }>;
 }
 
 interface PendingJob<TJob, TResult> {

@@ -1,0 +1,105 @@
+// src/server/jobs/graphile-worker-entry.ts
+import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
+
+import { run, type Runner, type TaskList } from 'graphile-worker';
+import { createServiceClient } from '@/utils/supabase/service';
+import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
+import { SupabaseStorageProvider } from '@/server/storage/supabase';
+import type { AnimationScene } from '@/shared/types/scene';
+import type { SceneAnimationConfig } from '@/server/rendering/renderer';
+import { notifyRenderJobEvent } from './pg-events';
+import { logger } from '@/lib/logger';
+
+interface RenderJobPayload {
+  scene: AnimationScene;
+  config: SceneAnimationConfig;
+  userId: string;
+  jobId: string;
+}
+
+let runner: Runner | null = null;
+
+async function main() {
+  const concurrency = Number(process.env.RENDER_CONCURRENCY ?? '2');
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not set');
+  }
+
+  const tasks: TaskList = {
+    'render-video': async (payload: RenderJobPayload, helpers) => {
+      const { job } = helpers;
+      const supabase = createServiceClient();
+      const { jobId, userId, scene, config } = payload;
+
+      try {
+        await supabase.from('render_jobs')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        const storageProvider = new SupabaseStorageProvider(userId);
+        const renderer = new CanvasRenderer(storageProvider);
+        const { publicUrl } = await renderer.render(scene, config);
+
+        await supabase.from('render_jobs')
+          .update({ status: 'completed', output_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl });
+        logger.info('Render job completed successfully', { jobId, gwJobId: job.id, publicUrl });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.errorWithStack('Render job failed', error, { jobId, gwJobId: job.id, userId });
+
+        // Update DB status and rethrow to let Graphile handle retries
+        await createServiceClient().from('render_jobs')
+          .update({ status: 'failed', error: errorMessage, updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        throw error;
+      }
+    },
+  };
+
+  runner = await run({
+    connectionString,
+    concurrency,
+    // Ensures schema exists; you should still run migrations explicitly in production
+    // but this helps local/dev environments
+    skipMigrations: false,
+    // Task handlers
+    taskList: tasks,
+    // Polling interval is handled internally by Graphile Worker with LISTEN/NOTIFY
+  });
+
+  logger.info('Graphile Worker started', { concurrency });
+
+  const shutdown = async () => {
+    if (!runner) return;
+    try {
+      logger.info('Shutting down Graphile Worker...');
+      await runner.stop();
+      logger.info('Graphile Worker shutdown complete');
+    } catch (err) {
+      logger.errorWithStack('Error during Graphile Worker shutdown', err);
+    } finally {
+      process.exit(0);
+    }
+  };
+
+  process.once('SIGINT', () => void shutdown());
+  process.once('SIGTERM', () => void shutdown());
+
+  // keep process alive
+  process.stdin.resume();
+}
+
+main().catch((err) => {
+  console.error('Failed to start Graphile Worker:', err);
+  process.exit(1);
+});
