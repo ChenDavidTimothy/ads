@@ -96,8 +96,52 @@ export class RenderWorker {
   private createProductionJobHandler(): JobHandler<RenderJobPayload> {
     return async (job) => {
       const startTime = Date.now();
-      const { jobId, userId, scene, config } = job.data;
-      const pgJobId = job.id;
+      
+      // Debug: Log the full job structure to understand the issue
+      logger.info('🔍 DEBUG: Received job structure', {
+        jobExists: !!job,
+        jobKeys: job ? Object.keys(job) : [],
+        dataExists: !!job?.data,
+        dataKeys: job?.data ? Object.keys(job.data) : [],
+        jobId: job?.id,
+        fullJob: JSON.stringify(job, null, 2)
+      });
+      
+      // Handle different possible job structures that pgBoss might use
+      let jobData: RenderJobPayload;
+      
+      if (job?.data) {
+        // Standard case: data is in job.data
+        jobData = job.data;
+      } else if (job && typeof job === 'object' && 'jobId' in job && 'userId' in job && 'scene' in job && 'config' in job) {
+        // Alternative case: job itself contains the payload data
+        jobData = job as unknown as RenderJobPayload;
+      } else {
+        // Fallback: check if job properties match our expected structure
+        const possibleJobId = job?.id || (job as any)?.jobId;
+        const possibleUserId = (job as any)?.userId;
+        const possibleScene = (job as any)?.scene;
+        const possibleConfig = (job as any)?.config;
+        
+        if (possibleJobId && possibleUserId && possibleScene && possibleConfig) {
+          jobData = {
+            jobId: possibleJobId,
+            userId: possibleUserId,
+            scene: possibleScene,
+            config: possibleConfig
+          };
+        } else {
+          throw new Error(`Job data is malformed or undefined. Job structure: ${JSON.stringify(job, null, 2)}`);
+        }
+      }
+      
+      // Validate the job data structure
+      if (!jobData.jobId || !jobData.userId || !jobData.scene || !jobData.config) {
+        throw new Error(`Invalid job data structure: ${JSON.stringify(jobData, null, 2)}`);
+      }
+      
+      const { jobId, userId, scene, config } = jobData;
+      const pgJobId = job?.id;
 
       // Track active job
       this.activeJobs.add(jobId);
@@ -120,7 +164,7 @@ export class RenderWorker {
         });
 
         // Validate job payload
-        this.validateJobPayload(job.data);
+        this.validateJobPayload(jobData);
 
         // Check if we're shutting down
         if (this.isShuttingDown) {
@@ -128,7 +172,7 @@ export class RenderWorker {
         }
 
         // Execute the render job with comprehensive error handling
-        const result = await this.executeRenderJob(job.data);
+        const result = await this.executeRenderJob(jobData);
 
         const duration = Date.now() - startTime;
         logger.info('✅ Render job completed successfully', {

@@ -150,6 +150,16 @@ export class JobManager {
           priority: options.priority ?? 0,
         };
 
+        // Debug: Log what we're sending to pgBoss
+        logger.info('🔍 DEBUG: Sending job to pgBoss', {
+          queueName,
+          jobId,
+          payloadExists: !!payload,
+          payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+          payload: JSON.stringify(payload, null, 2),
+          jobOptions
+        });
+
         await this.boss.send(queueName, payload, jobOptions);
       });
       
