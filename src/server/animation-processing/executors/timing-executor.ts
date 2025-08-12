@@ -45,6 +45,19 @@ export class TimingNodeExecutor extends BaseExecutor {
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
+    // CRITICAL FIX: Clone perObjectAnimations to prevent shared reference mutations
+    const sourceAnimations = (inputs[0]?.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+    const clonedAnimations = sourceAnimations ? 
+      Object.fromEntries(
+        Object.entries(sourceAnimations).map(([objectId, animations]) => [
+          objectId,
+          animations.map(anim => ({
+            ...anim,
+            properties: { ...anim.properties }
+          }))
+        ])
+      ) : undefined;
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -53,7 +66,7 @@ export class TimingNodeExecutor extends BaseExecutor {
       timedObjects,
       {
         perObjectTimeCursor: upstreamCursorMap,
-        perObjectAnimations: (inputs[0]?.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations
+        perObjectAnimations: clonedAnimations
       }
     );
   }

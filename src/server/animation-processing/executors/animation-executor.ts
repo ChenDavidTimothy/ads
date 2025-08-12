@@ -4,6 +4,7 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
+import { logger } from "@/lib/logger";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -44,8 +45,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
         } else {
           baseline = appearanceTime ?? 0;
         }
-        // Include prior animations already present in the overall context for this object
-        const priorForObject = context.sceneAnimations.filter(a => a.objectId === (objectId ?? ''));
+        // CRITICAL FIX: Only include prior animations from the current execution path
+        // Don't include animations from other paths that happen to be in the global context
+        const priorForObject = perObjectAnimations[objectId] ?? [];
         const animations = convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],
           objectId ?? '',
@@ -82,13 +84,48 @@ export class AnimationNodeExecutor extends BaseExecutor {
       context.currentTime;
     context.currentTime = maxDuration;
 
+    // CRITICAL FIX: Deep clone perObjectAnimations to prevent shared reference mutations
+    // This ensures that when data flows to multiple paths (direct to scene + through merge),
+    // each path gets independent copies of animation data
+    const clonedPerObjectAnimations: Record<string, SceneAnimationTrack[]> = {};
+    for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
+      clonedPerObjectAnimations[objectId] = animations.map(anim => ({
+        ...anim,
+        properties: { ...anim.properties }
+      }));
+    }
+
+    // DEBUG: Log what Animation 3 is creating and outputting
+    if (node.data.identifier.displayName === "Animation 3") {
+      logger.info(`[DEBUG] Animation 3 input tracks:`, {
+        tracks: (data.tracks as AnimationTrack[])?.map(t => ({ 
+          type: t.type, 
+          properties: t.properties 
+        })) || []
+      });
+      logger.info(`[DEBUG] Animation 3 created animations:`, {
+        createdAnimations: allAnimations.map(a => ({
+          type: a.type,
+          objectId: a.objectId,
+          properties: a.properties
+        }))
+      });
+      logger.info(`[DEBUG] Animation 3 output:`, {
+        objectId: Object.keys(clonedPerObjectAnimations)[0],
+        animationTypes: Object.values(clonedPerObjectAnimations)[0]?.map(a => a.type) || [],
+        animationCount: Object.values(clonedPerObjectAnimations)[0]?.length || 0,
+        hasColor: Object.values(clonedPerObjectAnimations)[0]?.some(a => a.type === 'color') || false,
+        hasMove: Object.values(clonedPerObjectAnimations)[0]?.some(a => a.type === 'move') || false
+      });
+    }
+
     setNodeOutput(
       context,
       node.data.identifier.id,
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap, perObjectAnimations }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations }
     );
   }
 

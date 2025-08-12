@@ -464,11 +464,18 @@ export class LogicNodeExecutor extends BaseExecutor {
         for (const [objectId, animations] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
           
+          // CRITICAL FIX: Deep clone animations to prevent shared reference mutations
+          // This ensures that merge node priority changes don't affect other execution paths
+          const clonedAnimations = animations.map(anim => ({
+            ...anim,
+            properties: { ...anim.properties }
+          }));
+          
           // For each animation, check for conflicts with existing animations
           const existingAnimations = merged[objectId] ?? [];
           const newAnimations: SceneAnimationTrack[] = [];
           
-          for (const newAnim of animations) {
+          for (const newAnim of clonedAnimations) {
             // Check if there's a conflicting animation (same type)
             // For merge node priority rules, identical animation types should prioritize Port 1
             const conflictingAnimations = existingAnimations.filter(existingAnim => 
@@ -481,11 +488,7 @@ export class LogicNodeExecutor extends BaseExecutor {
             } else {
               // Conflict detected - port priority decides
               // Since we process in reverse order, later iteration (lower port index) wins
-              // Remove all conflicting animations of the same type and add new one
-              const filteredExisting = existingAnimations.filter(existingAnim => 
-                existingAnim.type !== newAnim.type
-              );
-              merged[objectId] = filteredExisting;
+              // The new animation from higher priority port wins
               newAnimations.push(newAnim);
               
               logger.debug(`Animation conflict resolved: Port ${portIndex + 1} ${newAnim.type} animation overrides previous`, {
@@ -497,7 +500,12 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
           }
           
-          merged[objectId] = [...(merged[objectId] ?? []), ...newAnimations];
+          // Apply the new animations, ensuring conflicts are properly resolved
+          const currentAnimations = merged[objectId] ?? [];
+          const nonConflictingExisting = currentAnimations.filter(existingAnim => 
+            !newAnimations.some(newAnim => newAnim.type === existingAnim.type)
+          );
+          merged[objectId] = [...nonConflictingExisting, ...newAnimations];
         }
       }
     }

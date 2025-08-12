@@ -41,16 +41,9 @@ export function partitionObjectsByScenes(
     // FIXED: Get animations for this scene with hybrid approach
     let sceneAnimations: SceneAnimationTrack[] = [];
     
-    // First, try the old method (which works for merge nodes and scenes with assigned animations)
-    const assignedAnimations = context.sceneAnimations.filter(anim => {
-      const assignedSceneId = context.animationSceneMap.get(anim.id);
-      return assignedSceneId === sceneId;
-    });
-    
-    if (assignedAnimations.length > 0) {
-      // Use assigned animations (this handles merge node outputs correctly)
-      sceneAnimations = assignedAnimations;
-    } else if (edges) {
+    // CRITICAL FIX: For direct animation->scene connections, prioritize metadata over global context
+    // This prevents interference from merge nodes that modify the global animation array
+    if (edges) {
       // Fallback: For scenes with no assigned animations, try to get them from input metadata
       // This handles direct animation->scene connections that bypass merge nodes
       const incomingEdges = edges.filter(edge => edge.target === sceneId);
@@ -63,9 +56,38 @@ export function partitionObjectsByScenes(
             for (const animations of Object.values(perObjectAnimations)) {
               sceneAnimations.push(...animations);
             }
+            
+            // DEBUG: Log what Scene 1 is getting
+            if (sceneNode.data.identifier.displayName === "Scene 1") {
+              logger.info(`[DEBUG] Scene 1 receiving animations from ${edge.source}:`, {
+                sourceNode: edge.source,
+                allObjectAnimations: Object.entries(perObjectAnimations).map(([objId, anims]) => ({
+                  objectId: objId,
+                  animationTypes: anims.map(a => a.type),
+                  animations: anims.map(a => ({
+                    type: a.type,
+                    properties: a.properties
+                  }))
+                })),
+                animationTypes: Object.values(perObjectAnimations)[0]?.map(a => a.type) || [],
+                animationCount: Object.values(perObjectAnimations)[0]?.length || 0,
+                hasColor: Object.values(perObjectAnimations)[0]?.some(a => a.type === 'color') || false,
+                hasMove: Object.values(perObjectAnimations)[0]?.some(a => a.type === 'move') || false
+              });
+            }
           }
         }
       }
+    }
+    
+    // Fallback: If no animations found from metadata, try the global context method
+    // This handles merge node outputs that rely on assigned animations
+    if (sceneAnimations.length === 0) {
+      const assignedAnimations = context.sceneAnimations.filter(anim => {
+        const assignedSceneId = context.animationSceneMap.get(anim.id);
+        return assignedSceneId === sceneId;
+      });
+      sceneAnimations = assignedAnimations;
     }
     
     logger.debug(`Scene ${sceneNode.data.identifier.displayName}`, {
