@@ -76,11 +76,11 @@ export class JobManager {
       // Start the boss
       await this.boss.start();
       
-      // Setup health monitoring
-      await this.healthCheck.start();
-      
       // Start the job watcher for event-driven processing
       await jobWatcher.start();
+      
+      // Setup health monitoring (after job watcher is ready)
+      await this.healthCheck.start();
       
       this.isStarted = true;
       this.metrics.recordStartup();
