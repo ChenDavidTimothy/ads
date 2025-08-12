@@ -21,7 +21,6 @@ import {
   validateNumberTypeConnections
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 
@@ -300,7 +299,7 @@ function shouldSkipDueToConditionalRouting(
   if (incomingByPort.size === 0) return false;
 
   // If ANY connected input port has only if_else branch sources and none produced a value, skip the node
-  for (const [portId, incomingEdges] of incomingByPort.entries()) {
+  for (const incomingEdges of incomingByPort.values()) {
     // If port has no connections, ignore
     if (!incomingEdges.length) continue;
 

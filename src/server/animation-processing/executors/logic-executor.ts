@@ -159,7 +159,7 @@ export class LogicNodeExecutor extends BaseExecutor {
             dataSize: this.getDataSize(value),
             isComplexObject: this.isComplexObject(value),
             hasNestedData: this.hasNestedData(value),
-            sourceMetadata: input!.metadata ?? {}
+            sourceMetadata: input.metadata ?? {}
           }
         }
       });

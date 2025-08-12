@@ -27,12 +27,13 @@ function parseAnyColor(input: string): { r: number; g: number; b: number; a: num
     return rgb ? { ...rgb, a: 1 } : null;
   }
   if (input.startsWith('rgb')) {
-    const m = input.match(/^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
+    const rgbaRegex = /^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i;
+    const m = rgbaRegex.exec(input);
     if (!m) return null;
     const r = clamp255(parseInt(m[1]!, 10));
     const g = clamp255(parseInt(m[2]!, 10));
     const b = clamp255(parseInt(m[3]!, 10));
-    const a = m[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(m[4]!))) : 1;
+    const a = m[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(m[4]))) : 1;
     return { r, g, b, a };
   }
   return null;

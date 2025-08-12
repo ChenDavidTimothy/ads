@@ -416,7 +416,7 @@ function getIncomingObjectIds(targetNodeId: string, edges: ReactFlowEdge[], node
       return [];
     }
     
-    const newPathVisited = new Set(pathVisited);
+    const newPathVisited = new Set<string>(pathVisited);
     newPathVisited.add(currentNodeId);
     
     const currentNode = nodeByIdentifierId.get(currentNodeId);
@@ -553,14 +553,14 @@ function findAllPathsToNode(
     } else {
       const outgoingEdges = edges.filter(e => e.source === currentNodeId);
       for (const edge of outgoingEdges) {
-        dfs(edge.target, new Set(visited));
+        dfs(edge.target, new Set<string>(visited));
       }
     }
     
     currentPath.pop();
   };
   
-  dfs(startNodeId, new Set());
+  dfs(startNodeId, new Set<string>());
   return allPaths;
 }
 
