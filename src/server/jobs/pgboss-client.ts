@@ -28,6 +28,9 @@ export async function getBoss(): Promise<PgBoss> {
     
     // Event-driven system provides instant job processing via LISTEN/NOTIFY
     // This eliminates the ~185k polling database calls we were seeing
+    
+    // Disable scheduling to prevent polling
+    noScheduling: true,
   };
 
   const boss = new PgBoss(bossOptions);

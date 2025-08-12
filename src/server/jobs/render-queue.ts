@@ -133,6 +133,17 @@ export async function ensureWorkerReady(): Promise<void> {
     return workerStartupPromise;
   }
 
+  // Check if we're in a dedicated worker process
+  const isWorkerProcess = process.argv.includes('./src/server/jobs/worker-entry.ts') || 
+                         process.argv.includes('worker-entry.ts') ||
+                         process.env.NODE_ENV === 'production';
+  
+  if (!isWorkerProcess) {
+    logger.info('🔄 Skipping render worker startup in non-worker process (Next.js dev server)');
+    workerStarted = true; // Mark as started to prevent retries
+    return;
+  }
+
   workerStartupPromise = (async () => {
     try {
       logger.info('🚀 Starting render worker for production queue...');

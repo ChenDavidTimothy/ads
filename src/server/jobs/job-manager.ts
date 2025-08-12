@@ -6,6 +6,9 @@ import type { Database } from '@/types/supabase';
 
 // Production-ready job manager with comprehensive error handling and observability
 export class JobManager {
+  private static instance: JobManager | null = null;
+  private static startupPromise: Promise<void> | null = null;
+  
   private boss: PgBoss | null = null;
   private isStarted = false;
   private isShuttingDown = false;
@@ -40,7 +43,7 @@ export class JobManager {
       
       // Monitoring and observability
       noSupervisor: false,
-      noScheduling: false,
+      noScheduling: true, // Disable scheduling to prevent polling
       schema: process.env.PG_BOSS_SCHEMA ?? 'pgboss',
     };
   }
@@ -58,9 +61,27 @@ export class JobManager {
     this.setupGracefulShutdown();
   }
 
+  // Singleton pattern to prevent multiple instances
+  static getInstance(): JobManager {
+    if (!JobManager.instance) {
+      JobManager.instance = new JobManager();
+    }
+    return JobManager.instance;
+  }
+
   async start(): Promise<void> {
     if (this.isStarted) return;
     
+    // Prevent multiple simultaneous startups
+    if (JobManager.startupPromise) {
+      return JobManager.startupPromise;
+    }
+    
+    JobManager.startupPromise = this.performStartup();
+    return JobManager.startupPromise;
+  }
+
+  private async performStartup(): Promise<void> {
     try {
       logger.info('🚀 Starting production job manager...');
       
@@ -94,6 +115,8 @@ export class JobManager {
       this.metrics.recordStartupFailure();
       logger.errorWithStack('❌ Failed to start job manager', error);
       throw error;
+    } finally {
+      JobManager.startupPromise = null;
     }
   }
 
@@ -519,10 +542,12 @@ class HealthChecker {
     // Initial health check
     await this.performHealthCheck();
     
-    // Schedule periodic health checks
-    this.interval = setInterval(() => {
-      void this.performHealthCheck();
-    }, 30000); // Every 30 seconds
+    // Schedule periodic health checks (disabled in development to reduce database calls)
+    if (process.env.NODE_ENV === 'production') {
+      this.interval = setInterval(() => {
+        void this.performHealthCheck();
+      }, 30000); // Every 30 seconds
+    }
   }
 
   async stop(): Promise<void> {
@@ -657,4 +682,4 @@ export interface HealthStatus {
 }
 
 // Singleton instance for the application
-export const jobManager = new JobManager();
+export const jobManager = JobManager.getInstance();

@@ -40,11 +40,13 @@ export class JobQueueMonitor {
       // Initial health check
       await this.performHealthCheck();
       
-      // Start periodic monitoring
-      const intervalMs = Number(process.env.MONITORING_INTERVAL_MS ?? '30000'); // 30 seconds
-      this.monitoringInterval = setInterval(() => {
-        void this.performPeriodicCheck();
-      }, intervalMs);
+      // Start periodic monitoring (disabled in development to reduce database calls)
+      if (process.env.NODE_ENV === 'production') {
+        const intervalMs = Number(process.env.MONITORING_INTERVAL_MS ?? '30000'); // 30 seconds
+        this.monitoringInterval = setInterval(() => {
+          void this.performPeriodicCheck();
+        }, intervalMs);
+      }
       
       this.isMonitoring = true;
       logger.info('✅ Job queue monitoring started', {
