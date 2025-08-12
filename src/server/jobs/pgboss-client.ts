@@ -20,11 +20,11 @@ export async function getBoss(): Promise<PgBoss> {
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
     
-    // PURE EVENT-DRIVEN: Disable polling entirely by setting extremely high intervals
+    // PURE EVENT-DRIVEN: Disable polling entirely by setting maximum allowed intervals
     // Job processing is now driven by PostgreSQL LISTEN/NOTIFY events
     newJobCheckIntervalSeconds: 86400, // 24 hours - effectively disabled
-    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '86400'), // 24 hours - effectively disabled
-    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '86400'), // 24 hours - effectively disabled
+    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '82800'), // 23 hours (safe maximum)
+    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '82800'), // 23 hours (safe maximum)
     
     // Event-driven system provides instant job processing via LISTEN/NOTIFY
     // This eliminates the ~185k polling database calls we were seeing
