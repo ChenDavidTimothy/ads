@@ -43,7 +43,7 @@ export class JobManager {
       
       // Monitoring and observability
       noSupervisor: false,
-      noScheduling: false,
+      noScheduling: true, // Disable scheduling to prevent polling
       schema: process.env.PG_BOSS_SCHEMA ?? 'pgboss',
     };
   }
