@@ -18,10 +18,11 @@ export class JobManager {
   private get config() {
     return {
       connectionString: process.env.PG_BOSS_DATABASE_URL!,
-      // Optimized for production scalability
-      newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL ?? '30'),
-      maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL ?? '600'),
-      monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_INTERVAL ?? '300'),
+      // PURE EVENT-DRIVEN: Disable polling entirely by setting extremely high intervals
+      // Job processing is now driven by PostgreSQL LISTEN/NOTIFY events
+      newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL ?? '86400'), // 24 hours - effectively disabled
+      maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL ?? '86400'), // 24 hours - effectively disabled
+      monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_INTERVAL ?? '86400'), // 24 hours - effectively disabled
       
       // Robust error handling
       deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
