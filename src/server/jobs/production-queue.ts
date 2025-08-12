@@ -22,8 +22,7 @@ export class ProductionJobQueue<TJob extends JobPayload, TResult extends JobResu
       maxRetries: 5,
       retryDelaySeconds: 30,
       enableEventDriven: true,
-      fallbackPollingIntervalMs: 10000, // 10 seconds
-      maxFallbackAttempts: 6, // 1 minute total with exponential backoff
+      // Polling completely removed - pure event-driven
       jobTimeoutSeconds: 3600, // 1 hour
       ...config
     };
@@ -218,29 +217,11 @@ export class ProductionJobQueue<TJob extends JobPayload, TResult extends JobResu
 
     await jobManager.enqueueJob(this.queueName, job, jobOptions);
 
-    // Use event-driven approach if available, with fallback to polling
-    if (this.config.enableEventDriven) {
-      return await this.waitForJobWithEventAndFallback(jobId);
-    } else {
-      return await this.waitForJobWithPolling(jobId);
-    }
+    // Pure event-driven approach - no polling fallback
+    return await this.waitForJobEvent(jobId);
   }
 
-  private async waitForJobWithEventAndFallback(jobId: string): Promise<TResult> {
-    const eventPromise = this.waitForJobEvent(jobId);
-    const fallbackPromise = this.fallbackPolling(jobId);
-    const timeoutPromise = this.createTimeoutPromise(jobId);
 
-    try {
-      const result = await Promise.race([eventPromise, fallbackPromise, timeoutPromise]);
-      return result;
-    } catch (error) {
-      logger.errorWithStack('❌ Job processing failed with both event and fallback', error, {
-        jobId
-      });
-      throw error;
-    }
-  }
 
   private async waitForJobEvent(jobId: string): Promise<TResult> {
     return new Promise((resolve, reject) => {
@@ -276,70 +257,7 @@ export class ProductionJobQueue<TJob extends JobPayload, TResult extends JobResu
     });
   }
 
-  private async fallbackPolling(jobId: string): Promise<TResult> {
-    let attempt = 0;
-    let delay = this.config.fallbackPollingIntervalMs;
 
-    while (attempt < this.config.maxFallbackAttempts) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      try {
-        const result = await this.checkJobStatus(jobId);
-        if (result) {
-          logger.info('✅ Job completed via fallback polling', {
-            jobId,
-            attempt: attempt + 1
-          });
-          return result;
-        }
-      } catch (error) {
-        logger.warn('⚠️ Fallback polling attempt failed', {
-          jobId,
-          attempt: attempt + 1,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-
-      attempt++;
-      delay = Math.min(delay * 1.5, 60000); // Exponential backoff, max 1 minute
-    }
-
-    throw new Error(`Job polling failed after ${this.config.maxFallbackAttempts} attempts`);
-  }
-
-  private async waitForJobWithPolling(jobId: string): Promise<TResult> {
-    return await this.fallbackPolling(jobId);
-  }
-
-  private createTimeoutPromise(jobId: string): Promise<never> {
-    return new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Job timed out after ${this.config.fallbackTimeoutMs}ms`));
-      }, this.config.fallbackTimeoutMs);
-    });
-  }
-
-  private async checkJobStatus(jobId: string): Promise<TResult | null> {
-    const supabase = createServiceClient();
-    
-    const { data, error } = await supabase
-      .from('render_jobs')
-      .select('status, output_url, error')
-      .eq('id', jobId)
-      .single();
-
-    if (error || !data) return null;
-
-    if (data.status === 'completed' && data.output_url) {
-      return { publicUrl: data.output_url } as TResult;
-    }
-
-    if (data.status === 'failed') {
-      throw new Error(data.error || 'Job failed');
-    }
-
-    return null; // Job still processing
-  }
 
   private async setupEventListener(): Promise<void> {
     if (this.eventListenerRegistered) return;
@@ -591,8 +509,6 @@ interface QueueConfig {
   maxRetries: number;
   retryDelaySeconds: number;
   enableEventDriven: boolean;
-  fallbackPollingIntervalMs: number;
-  maxFallbackAttempts: number;
   jobTimeoutSeconds: number;
 }
 

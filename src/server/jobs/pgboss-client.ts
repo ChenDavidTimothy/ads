@@ -19,15 +19,15 @@ export async function getBoss(): Promise<PgBoss> {
     // retention and maintenance defaults; can be tuned via env
     deleteAfterDays: Number(process.env.PG_BOSS_DELETE_AFTER_DAYS ?? '7'),
     archiveCompletedAfterSeconds: Number(process.env.PG_BOSS_ARCHIVE_COMPLETED_AFTER_SECONDS ?? '3600'),
-    // Enable internal state monitoring to make operational health observable
-    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '300'), // Changed from 60 to 300 (5 minutes)
     
-    // MOST EFFICIENT: Minimize polling to absolute minimum
-    newJobCheckIntervalSeconds: Number(process.env.PG_BOSS_POLLING_INTERVAL_SECONDS ?? '60'), // 60 seconds - polling as fallback only
-    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '600'), // 10 minutes for maintenance
+    // PURE EVENT-DRIVEN: Disable polling entirely by setting extremely high intervals
+    // Job processing is now driven by PostgreSQL LISTEN/NOTIFY events
+    newJobCheckIntervalSeconds: 86400, // 24 hours - effectively disabled
+    maintenanceIntervalSeconds: Number(process.env.PG_BOSS_MAINTENANCE_INTERVAL_SECONDS ?? '3600'), // 1 hour for cleanup
+    monitorStateIntervalSeconds: Number(process.env.PG_BOSS_MONITOR_STATE_INTERVAL_SECONDS ?? '3600'), // 1 hour for monitoring
     
-    // TODO: Consider implementing LISTEN/NOTIFY pattern for real-time job notifications
-    // This would eliminate polling entirely and provide instant job processing
+    // Event-driven system provides instant job processing via LISTEN/NOTIFY
+    // This eliminates the ~185k polling database calls we were seeing
   };
 
   const boss = new PgBoss(bossOptions);
@@ -38,7 +38,7 @@ export async function getBoss(): Promise<PgBoss> {
 
   bossStarting = boss.start().then(() => {
     bossSingleton = boss;
-    logger.info('PgBoss started');
+    logger.info('PgBoss started in event-driven mode (polling disabled)');
 
     // graceful shutdown - only add listeners once
     if (typeof process !== 'undefined' && !shutdownListenersAdded) {
