@@ -1,7 +1,7 @@
 // src/components/workspace/flow/components/FlowCanvas.tsx
 import React from 'react';
 import 'reactflow/dist/style.css';
-import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node, type NodeTypes, type NodeChange, type EdgeChange, type Connection } from 'reactflow';
+import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node, type NodeTypes, type NodeChange, type EdgeChange, type Connection, type NodeDragHandler } from 'reactflow';
 import type { NodeData } from '@/shared/types';
 
 interface Props {
@@ -16,10 +16,11 @@ interface Props {
   onNodesDelete: (nodes: Node[]) => void;
   onEdgesDelete: (edges: Edge[]) => void;
   disableDeletion: boolean;
+  onNodeDragStop?: NodeDragHandler;
 }
 
 export function FlowCanvas(props: Props) {
-  const { nodes, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, onNodeClick, onPaneClick, onNodesDelete, onEdgesDelete, disableDeletion } = props;
+  const { nodes, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, onNodeClick, onPaneClick, onNodesDelete, onEdgesDelete, disableDeletion, onNodeDragStop } = props;
   return (
     <ReactFlow
       nodes={nodes}
@@ -31,6 +32,7 @@ export function FlowCanvas(props: Props) {
       onPaneClick={onPaneClick}
       onNodesDelete={onNodesDelete}
       onEdgesDelete={onEdgesDelete}
+      onNodeDragStop={onNodeDragStop}
       nodeTypes={nodeTypes}
       fitView
       panOnDrag
