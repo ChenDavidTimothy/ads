@@ -349,13 +349,25 @@ export function FlowEditorTab() {
         allEdges={edges}
         onChange={(newData: Partial<NodeData>) => {
           if (!selectedNode) return;
-          pendingPropertySyncRef.current = true;
-          updateNodeData(selectedNode.data.identifier.id, newData);
+          const nextNodes = updateNodeData(selectedNode.data.identifier.id, newData);
+          // Keep latest refs in sync and persist to context immediately to avoid reversion
+          latestLocalNodesRef.current = nextNodes as unknown as Node<NodeData>[];
+          pendingPropertySyncRef.current = false;
+          updateFlow({
+            nodes: nextNodes as unknown as Node<NodeData>[],
+            edges: (latestLocalEdgesRef.current as Edge[]),
+          });
         }}
         onDisplayNameChange={(nodeId: string, newDisplayName: string) => {
-          const ok = updateDisplayName(nodeId, newDisplayName);
-          if (ok) pendingPropertySyncRef.current = true;
-          return ok;
+          const nextNodes = updateDisplayName(nodeId, newDisplayName);
+          if (!nextNodes) return false;
+          latestLocalNodesRef.current = nextNodes as unknown as Node<NodeData>[];
+          pendingPropertySyncRef.current = false;
+          updateFlow({
+            nodes: nextNodes as unknown as Node<NodeData>[],
+            edges: (latestLocalEdgesRef.current as Edge[]),
+          });
+          return true;
         }}
         validateDisplayName={validateDisplayName}
         flowTracker={flowTracker}

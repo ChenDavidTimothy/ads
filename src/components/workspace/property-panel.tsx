@@ -277,8 +277,12 @@ function SchemaBasedProperties({
           <SelectField
             key={schema.key}
             label={schema.label}
-            value={value as string}
-            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+            value={String(value as string | number)}
+            onChange={(newValue) => {
+              const shouldBeNumber = typeof (data as unknown as Record<string, unknown>)[schema.key] === 'number' || typeof (schema as { defaultValue?: unknown }).defaultValue === 'number';
+              const casted = shouldBeNumber ? Number(newValue) : newValue;
+              onChange({ [schema.key]: casted } as Partial<NodeData>);
+            }}
             options={schema.options}
           />
         );
