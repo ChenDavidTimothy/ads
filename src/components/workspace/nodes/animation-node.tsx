@@ -7,11 +7,16 @@ import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 
-export function AnimationNode({ data, selected }: NodeProps<AnimationNodeData>) {
+interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
+  onOpenTimeline?: () => void;
+}
+
+export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeProps) {
   const nodeDefinition = getNodeDefinition('animation');
   
   const handleDoubleClick = () => {
-    // Navigate to dedicated timeline editor page with workspace preserved via query param
+    if (onOpenTimeline) return onOpenTimeline();
+    // Fallback: navigate to dedicated timeline editor page preserving workspace
     const params = new URLSearchParams(window.location.search);
     const workspaceId = params.get('workspace');
     const target = `/workspace/timeline/${data.identifier.id}${workspaceId ? `?workspace=${workspaceId}` : ''}`;

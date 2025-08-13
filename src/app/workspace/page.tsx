@@ -1,20 +1,16 @@
 import { redirect } from "next/navigation";
-import { FlowEditor } from "@/components/workspace/flow-editor";
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 
 export default async function WorkspaceEditorPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ workspace?: string }>;
+  searchParams?: Promise<{ workspace?: string; tab?: string; node?: string }>;
 }) {
   const { workspace: workspaceId } = (await searchParams) ?? {};
   if (!workspaceId) {
     redirect("/workspace-selector");
   }
-  return (
-    <div className="h-screen w-full bg-gray-900">
-      <FlowEditor />
-    </div>
-  );
+  return <WorkspaceLayout workspaceId={workspaceId} />;
 }
 
 

@@ -25,10 +25,9 @@ import {
 
 interface TimelineEditorCoreProps {
   animationNodeId: string;
-  initialDuration: number;
-  initialTracks: AnimationTrack[];
-  onSave: (duration: number, tracks: AnimationTrack[]) => void;
-  onCancel: () => void;
+  duration: number;
+  tracks: AnimationTrack[];
+  onChange: (updates: Partial<{ duration: number; tracks: AnimationTrack[] }>) => void;
 }
 
 interface DragState {
@@ -84,9 +83,9 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
-export function TimelineEditorCore({ animationNodeId, initialDuration, initialTracks, onSave, onCancel }: TimelineEditorCoreProps) {
-  const [duration, setDuration] = useState(initialDuration);
-  const [tracks, setTracks] = useState<AnimationTrack[]>(initialTracks);
+export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange }: TimelineEditorCoreProps) {
+  const [duration, setDuration] = useState(controlledDuration);
+  const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
 
@@ -94,18 +93,16 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
 
   useEffect(() => {
-    setDuration(initialDuration);
-    setTracks(initialTracks);
+    setDuration(controlledDuration);
+    setTracks(controlledTracks);
     setSelectedTrackId(null);
     setDragState(null);
-    // Initialize lineage tracking for incoming tracks
     const tracker = trackerRef.current;
-    initialTracks.forEach((t, index) => {
+    controlledTracks.forEach((t, index) => {
       tracker.trackTransformCreation(t.identifier.id, animationNodeId, index);
     });
-  }, [initialDuration, initialTracks, animationNodeId]);
+  }, [controlledDuration, controlledTracks, animationNodeId]);
 
-  // Keep tracker indices in sync whenever tracks array changes
   useEffect(() => {
     const tracker = trackerRef.current;
     tracks.forEach((t, index) => {
@@ -125,53 +122,43 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
         properties: getDefaultTrackProperties(type),
         identifier,
       };
-
       let newTrack: AnimationTrack;
       switch (type) {
         case 'move': {
-          const props = isMoveDefaults(baseTrack.properties)
-            ? baseTrack.properties
-            : { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
+          const props = isMoveDefaults(baseTrack.properties) ? baseTrack.properties : { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
           newTrack = { ...baseTrack, type: 'move', properties: props };
           break;
         }
         case 'rotate': {
-          const props = isRotateDefaults(baseTrack.properties)
-            ? baseTrack.properties
-            : { from: 0, to: 1 };
+          const props = isRotateDefaults(baseTrack.properties) ? baseTrack.properties : { from: 0, to: 1 };
           newTrack = { ...baseTrack, type: 'rotate', properties: props };
           break;
         }
         case 'scale': {
-          const props = isScaleDefaults(baseTrack.properties)
-            ? baseTrack.properties
-            : { from: 1, to: 1.5 };
+          const props = isScaleDefaults(baseTrack.properties) ? baseTrack.properties : { from: 1, to: 1.5 };
           newTrack = { ...baseTrack, type: 'scale', properties: props };
           break;
         }
         case 'fade': {
-          const props = isFadeDefaults(baseTrack.properties)
-            ? baseTrack.properties
-            : { from: 1, to: 0.5 };
+          const props = isFadeDefaults(baseTrack.properties) ? baseTrack.properties : { from: 1, to: 0.5 };
           newTrack = { ...baseTrack, type: 'fade', properties: props };
           break;
         }
         case 'color': {
           let props: ColorTrackProperties;
-          if (isColorDefaults(baseTrack.properties)) {
-            props = baseTrack.properties;
-          } else {
-            props = { from: '#ff0000', to: '#00ff00', property: 'fill' };
-          }
+          if (isColorDefaults(baseTrack.properties)) props = baseTrack.properties;
+          else props = { from: '#ff0000', to: '#00ff00', property: 'fill' };
           newTrack = { ...baseTrack, type: 'color', properties: props };
           break;
         }
       }
-      // Track lineage for new transform
-      trackerRef.current.trackTransformCreation(identifier.id, animationNodeId, tracks.length);
-      setTracks((prev) => [...prev, newTrack]);
+      setTracks((prev) => {
+        const next = [...prev, newTrack];
+        onChange({ tracks: next });
+        return next;
+      });
     },
-    [duration, tracks.length, animationNodeId],
+    [duration, tracks, onChange]
   );
 
   const updateTransformDisplayName = useCallback((trackId: string, newDisplayName: string) => {
@@ -190,25 +177,31 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
   }, [tracks]);
 
   const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
-    setTracks((prev) =>
-      prev.map((track) => {
+    setTracks((prev) => {
+      const next = prev.map((track) => {
         if (track.identifier.id !== trackId) return track;
         if (track.type !== (updates.type ?? track.type)) return track;
         return { ...track, ...updates } as AnimationTrack;
-      }),
-    );
-  }, []);
+      });
+      onChange({ tracks: next });
+      return next;
+    });
+  }, [onChange]);
 
-  const deleteTrack = useCallback(
-    (trackId: string) => {
-      setTracks((prev) => prev.filter((track) => track.identifier.id !== trackId));
-      if (selectedTrackId === trackId) {
-        setSelectedTrackId(null);
-      }
+  const deleteTrack = useCallback((trackId: string) => {
+    setTracks((prev) => {
+      const next = prev.filter((track) => track.identifier.id !== trackId);
+      if (selectedTrackId === trackId) setSelectedTrackId(null);
       trackerRef.current.removeTransform(trackId);
-    },
-    [selectedTrackId],
-  );
+      onChange({ tracks: next });
+      return next;
+    });
+  }, [selectedTrackId, onChange]);
+
+  const handleDurationImmediate = useCallback((newDuration: number) => {
+    setDuration(newDuration);
+    onChange({ duration: newDuration });
+  }, [onChange]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, trackId: string, type: DragState["type"]) => {
@@ -275,7 +268,7 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
             <NumberField
               label="Duration (seconds)"
               value={duration}
-              onChange={setDuration}
+              onChange={handleDurationImmediate}
               min={0.1}
               step={0.1}
               defaultValue={3}
@@ -283,10 +276,10 @@ export function TimelineEditorCore({ animationNodeId, initialDuration, initialTr
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => onSave(duration, tracks)} variant="success" size="sm" disabled={hasInvalidNames}>
+            <Button onClick={() => onChange({ duration, tracks })} variant="success" size="sm" disabled={hasInvalidNames}>
               Save
             </Button>
-            <Button onClick={onCancel} variant="secondary" size="sm">
+            <Button onClick={() => onChange({ duration, tracks })} variant="secondary" size="sm">
               Cancel
             </Button>
           </div>
