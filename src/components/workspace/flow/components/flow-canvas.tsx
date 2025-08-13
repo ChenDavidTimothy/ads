@@ -1,5 +1,6 @@
 // src/components/workspace/flow/components/FlowCanvas.tsx
 import React from 'react';
+import 'reactflow/dist/style.css';
 import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node, type NodeTypes, type NodeChange, type EdgeChange, type Connection } from 'reactflow';
 import type { NodeData } from '@/shared/types';
 
@@ -36,8 +37,8 @@ export function FlowCanvas(props: Props) {
       selectionOnDrag
       zoomOnScroll
       className="bg-gray-900"
-      deleteKeyCode={disableDeletion ? null : ['Backspace', 'Delete']}
-      multiSelectionKeyCode={disableDeletion ? null : 'Meta'}
+      deleteKeyCode={disableDeletion ? (null as unknown as string | string[]) : ['Backspace', 'Delete']}
+      multiSelectionKeyCode={disableDeletion ? (null as unknown as string) : 'Meta'}
     >
       <Background color="#374151" />
       <Controls className="bg-gray-800 border-gray-600" />
