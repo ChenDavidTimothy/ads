@@ -40,7 +40,7 @@ export function useFlowGraph() {
     [nodes, selectedNodeId]
   );
 
-  const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
+  const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>): Node<NodeData>[] => {
     // Handle edge cleanup synchronously for merge nodes to prevent race conditions
     if ('inputPortCount' in newData) {
       const updatedNode = nodes.find(n => n.data.identifier.id === nodeId);
@@ -51,14 +51,13 @@ export function useFlowGraph() {
         const dynamicDefinition = getNodeDefinitionWithDynamicPorts('merge', updatedNodeData);
         const validPortIds = new Set(dynamicDefinition?.ports.inputs.map(p => p.id) ?? []);
         
-        // Update both nodes and edges in a single synchronous operation
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.data.identifier.id === nodeId
-              ? { ...node, data: { ...node.data, ...newData } }
-              : node
-          )
+        // Compute next nodes array
+        const nextNodes = nodes.map((node) =>
+          node.data.identifier.id === nodeId
+            ? { ...node, data: { ...node.data, ...newData } }
+            : node
         );
+        setNodes(nextNodes as unknown as Node<NodeData>[]);
         
         // Clean up edges synchronously without toast notification
         setEdges((eds) => {
@@ -69,12 +68,9 @@ export function useFlowGraph() {
           );
           
           if (invalidEdges.length > 0) {
-            // Clean up tracking for removed edges silently
             invalidEdges.forEach(edge => {
               flowTracker.removeConnection(edge.id);
             });
-            
-            // Console log for debugging, but no user toast for frequent operations
             console.log(`[CLEANUP] Removed ${invalidEdges.length} invalid connection(s) during port reconfiguration`);
           }
           
@@ -85,7 +81,7 @@ export function useFlowGraph() {
           );
         });
         
-        return; // Early return to avoid duplicate node update
+        return nextNodes as unknown as Node<NodeData>[];
       }
     }
 
@@ -99,14 +95,13 @@ export function useFlowGraph() {
         // Check if this change involves NOT operation (layout change)
         const involvesNot = oldOperator === 'not' || newOperator === 'not';
         
-        // Update node data
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.data.identifier.id === nodeId
-              ? { ...node, data: { ...node.data, ...newData } }
-              : node
-          )
+        // Compute next nodes array
+        const nextNodes = nodes.map((node) =>
+          node.data.identifier.id === nodeId
+            ? { ...node, data: { ...node.data, ...newData } }
+            : node
         );
+        setNodes(nextNodes as unknown as Node<NodeData>[]);
         
         if (involvesNot) {
           // Cut ALL connections when switching to/from NOT - clean slate
@@ -114,21 +109,17 @@ export function useFlowGraph() {
             const removedEdges = eds.filter(edge => edge.target === updatedNode.id);
             
             if (removedEdges.length > 0) {
-              // Clean up tracking for removed edges
               removedEdges.forEach(edge => {
                 flowTracker.removeConnection(edge.id);
               });
-              
               console.log(`[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to NOT operation change - user can reconnect`);
             }
             
-            // Keep only edges that don't target this boolean node
             return eds.filter(edge => edge.target !== updatedNode.id);
           });
         }
-        // If not involving NOT (AND↔OR↔XOR), do nothing - connections stay
         
-        return; // Early return to avoid duplicate node update
+        return nextNodes as unknown as Node<NodeData>[];
       }
       
       // Handle edge cleanup for math operation nodes - cut ties when changing port count
@@ -144,14 +135,13 @@ export function useFlowGraph() {
         // Check if this change involves port count change
         const involvesPortChange = oldIsUnary !== newIsUnary;
         
-        // Update node data
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.data.identifier.id === nodeId
-              ? { ...node, data: { ...node.data, ...newData } }
-              : node
-          )
+        // Compute next nodes array
+        const nextNodes = nodes.map((node) =>
+          node.data.identifier.id === nodeId
+            ? { ...node, data: { ...node.data, ...newData } }
+            : node
         );
+        setNodes(nextNodes as unknown as Node<NodeData>[]);
         
         if (involvesPortChange) {
           // Cut ALL connections when switching between unary/binary operations
@@ -159,62 +149,57 @@ export function useFlowGraph() {
             const removedEdges = eds.filter(edge => edge.target === updatedNode.id);
             
             if (removedEdges.length > 0) {
-              // Clean up tracking for removed edges
               removedEdges.forEach(edge => {
                 flowTracker.removeConnection(edge.id);
               });
-              
               console.log(`[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to math operation port change - user can reconnect`);
             }
             
-            // Keep only edges that don't target this math node
             return eds.filter(edge => edge.target !== updatedNode.id);
           });
         }
-        // If no port change (binary↔binary or unary↔unary), do nothing - connections stay
         
-        return; // Early return to avoid duplicate node update
+        return nextNodes as unknown as Node<NodeData>[];
       }
     }
     
     // Regular node data update for non-merge nodes or non-port-count changes
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.data.identifier.id === nodeId
-          ? { ...node, data: { ...node.data, ...newData } }
-          : node
-      )
+    const nextNodes = nodes.map((node) =>
+      node.data.identifier.id === nodeId
+        ? { ...node, data: { ...node.data, ...newData } }
+        : node
     );
+    setNodes(nextNodes as unknown as Node<NodeData>[]);
+    return nextNodes as unknown as Node<NodeData>[];
   }, [setNodes, setEdges, nodes, flowTracker]);
 
   const validateDisplayName = useCallback((newName: string, nodeId: string): string | null => {
     return flowTracker.validateDisplayName(newName, nodeId, nodes);
   }, [flowTracker, nodes]);
 
-  const updateDisplayName = useCallback((nodeId: string, newDisplayName: string): boolean => {
+  const updateDisplayName = useCallback((nodeId: string, newDisplayName: string): Node<NodeData>[] | null => {
     const error = validateDisplayName(newDisplayName, nodeId);
     if (error) {
       toast.error('Name validation failed', error);
-      return false;
+      return null;
     }
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.data.identifier.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                identifier: {
-                  ...node.data.identifier,
-                  displayName: newDisplayName,
-                },
+    const nextNodes = nodes.map((node) =>
+      node.data.identifier.id === nodeId
+        ? {
+            ...node,
+            data: {
+              ...node.data,
+              identifier: {
+                ...node.data.identifier,
+                displayName: newDisplayName,
               },
-            }
-          : node
-      )
+            },
+          }
+        : node
     );
-    return true;
-  }, [validateDisplayName, setNodes, toast]);
+    setNodes(nextNodes as unknown as Node<NodeData>[]);
+    return nextNodes as unknown as Node<NodeData>[];
+  }, [validateDisplayName, setNodes, toast, nodes]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<NodeData>) => {
     setSelectedNodeId(node.data.identifier.id);
