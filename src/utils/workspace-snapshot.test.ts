@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Node, Edge } from 'reactflow';
 import type { NodeData } from '@/shared/types/nodes';
 import { createStableFlowSnapshot } from './workspace-snapshot';
-import { extractWorkspaceState, mergeEditorsIntoFlow, getTimelineDataFromNodes } from './workspace-state';
+import { extractWorkspaceState, mergeEditorsIntoFlow } from './workspace-state';
 
 function makeNode(id: string, type: string, data: Partial<NodeData> = {}): Node<NodeData> {
   return {
@@ -10,7 +10,7 @@ function makeNode(id: string, type: string, data: Partial<NodeData> = {}): Node<
     type,
     position: { x: 0, y: 0 },
     data: {
-      identifier: { id, type: type as any, createdAt: Date.now(), sequence: 1, displayName: id },
+      identifier: { id, type: type as any, createdAt: 0, sequence: 1, displayName: id },
       lineage: { parentNodes: [], childNodes: [], flowPath: [] },
       ...(data as any),
     } as NodeData,

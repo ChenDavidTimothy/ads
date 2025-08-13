@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { TimelinePageClient } from "@/components/workspace/timeline-page-client";
 
 export default async function Page({
   params,
@@ -13,7 +12,7 @@ export default async function Page({
   if (!workspaceId) {
     redirect("/workspace-selector");
   }
-  return <TimelinePageClient workspaceId={workspaceId} nodeId={nodeId} />;
+  redirect(`/workspace?workspace=${workspaceId}&tab=timeline&node=${nodeId}`);
 }
 
 

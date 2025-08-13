@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCrashBackup } from './use-crash-backup';
+import type { WorkspaceState } from '@/types/workspace-state';
 
-const makeState = () => ({
+const makeState = (): WorkspaceState => ({
   flow: { nodes: [], edges: [] },
   editors: { timeline: {} },
   ui: { activeTab: 'flow' },
