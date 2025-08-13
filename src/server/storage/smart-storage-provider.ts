@@ -12,6 +12,7 @@ export class SmartStorageProvider implements StorageProvider {
 
   constructor(userId?: string) {
     this.userId = userId;
+    // Support both main and worker environments
     this.imagesBucket = process.env.SUPABASE_IMAGES_BUCKET || 'images';
     this.videosBucket = process.env.SUPABASE_VIDEOS_BUCKET || 'videos';
   }

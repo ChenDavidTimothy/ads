@@ -49,21 +49,19 @@ Also ensure existing Supabase env vars are set:
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
-SUPABASE_STORAGE_BUCKET=videos
+SUPABASE_IMAGES_BUCKET=images
+SUPABASE_VIDEOS_BUCKET=videos
 ```
 
 ## Storage Architecture
 
-This project now uses **separate Supabase storage buckets** for different content types:
+This project uses **separate Supabase storage buckets** for different content types with automatic routing:
 
 ### Bucket Configuration
 ```bash
 # Separate buckets for different content types
 SUPABASE_IMAGES_BUCKET=images
 SUPABASE_VIDEOS_BUCKET=videos
-
-# Legacy support (optional)
-SUPABASE_STORAGE_BUCKET=videos
 ```
 
 ### Automatic Content Routing
@@ -72,98 +70,6 @@ The storage system automatically routes files to the appropriate bucket based on
 - **Images**: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg` → `images` bucket
 - **Videos**: `mp4`, `avi`, `mov`, `wmv`, `flv`, `webm`, `mkv` → `videos` bucket
 - **Unknown types**: Default to `images` bucket
-
-### Bucket Policies
-Each bucket should have appropriate RLS policies:
-
-#### Images Bucket Policies
-```sql
-create policy "images_select_own"
-on storage.objects for select to authenticated
-using (
-  bucket_id = 'images'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "images_write_own"
-on storage.objects for insert to authenticated
-with check (
-  bucket_id = 'images'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "images_update_own"
-on storage.objects for update to authenticated
-using (
-  bucket_id = 'images'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "images_delete_own"
-on storage.objects for delete to authenticated
-using (
-  bucket_id = 'images'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-```
-
-#### Videos Bucket Policies
-```sql
-create policy "videos_select_own"
-on storage.objects for select to authenticated
-using (
-  bucket_id = 'videos'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "videos_write_own"
-on storage.objects for insert to authenticated
-with check (
-  bucket_id = 'videos'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "videos_update_own"
-on storage.objects for update to authenticated
-using (
-  bucket_id = 'videos'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-
-create policy "videos_delete_own"
-on storage.objects for delete to authenticated
-using (
-  bucket_id = 'videos'
-  and split_part(name, '/', 1) = auth.uid()::text
-);
-```
-
-### Benefits of Bucket Separation
-- **Security**: Different access controls for different content types
-- **Performance**: Optimized CDN and caching strategies per content type
-- **Cost Management**: Better storage tiering and lifecycle management
-- **Compliance**: Easier to implement content-specific retention policies
-- **Scalability**: Independent scaling and monitoring per bucket
-
-## Database schema (Supabase)
-
-Run Graphile Worker migrations in your database (safe to run on Supabase):
-
-- Option A (automatic on worker start, dev only): the worker runner starts with `skipMigrations: false`.
-- Option B (recommended for production): run Graphile Worker’s SQL migrations once via a migration tool or psql.
-
-Additionally, for client notifications, ensure the custom channel exists (no schema changes required):
-- We publish job completion events to `render_job_events` using `pg_notify`.
-
-## Commands
-
-- Start worker: `pnpm run worker`
-- Start app: `pnpm run dev`
-
-## Notes
-
-- Enqueue via `renderQueue.enqueueOnly({ scene, config, userId, jobId })`.
-- Clients can wait for completion with the existing `waitForRenderJobEvent` helper.
 
 ### File Organization
 
@@ -178,3 +84,33 @@ videos bucket:
 ```
 
 **Note**: The intermediate "animations" folder has been removed for cleaner organization.
+
+### Bucket Policies
+Each bucket should have appropriate RLS policies. Run the SQL script in `scripts/setup-storage-buckets.sql` in your Supabase SQL editor.
+
+### Benefits of Bucket Separation
+- **Security**: Different access controls for different content types
+- **Performance**: Optimized CDN and caching strategies per content type
+- **Cost Management**: Better storage tiering and lifecycle management
+- **Compliance**: Easier to implement content-specific retention policies
+- **Scalability**: Independent scaling and monitoring per bucket
+
+## Database schema (Supabase)
+
+Run Graphile Worker migrations in your database (safe to run on Supabase):
+
+- Option A (automatic on worker start, dev only): the worker runner starts with `skipMigrations: false`.
+- Option B (recommended for production): run Graphile Worker's SQL migrations once via a migration tool or psql.
+
+Additionally, for client notifications, ensure the custom channel exists (no schema changes required):
+- We publish job completion events to `render_job_events` using `pg_notify`.
+
+## Commands
+
+- Start worker: `pnpm run worker`
+- Start app: `pnpm run dev`
+
+## Notes
+
+- Enqueue via `renderQueue.enqueueOnly({ scene, config, userId, jobId })`.
+- Clients can wait for completion with the existing `waitForRenderJobEvent` helper.

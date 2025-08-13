@@ -6,7 +6,6 @@ dotenv.config({ path: '.env.local', override: true });
 // Simple environment variable access without validation
 export const workerEnv = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET || 'videos', // Keep for backward compatibility
   SUPABASE_IMAGES_BUCKET: process.env.SUPABASE_IMAGES_BUCKET || 'images',
   SUPABASE_VIDEOS_BUCKET: process.env.SUPABASE_VIDEOS_BUCKET || 'videos',
   NODE_ENV: process.env.NODE_ENV || 'development',

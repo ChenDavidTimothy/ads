@@ -4,7 +4,7 @@ import { workerEnv } from './env';
 import { run, type Runner, type TaskList } from 'graphile-worker';
 import { createServiceClient } from '@/utils/supabase/service-worker';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
-import { SmartStorageProvider } from '@/server/storage/smart-storage-provider-worker';
+import { SmartStorageProvider } from '@/server/storage/smart-storage-provider';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 import { notifyRenderJobEvent } from './pg-events';

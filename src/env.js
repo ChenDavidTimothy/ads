@@ -9,7 +9,6 @@ export const env = createEnv({
   server: {
     // Supabase server-only keys
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
-    SUPABASE_STORAGE_BUCKET: z.string().default('videos'), // Keep for backward compatibility
     SUPABASE_IMAGES_BUCKET: z.string().default('images'),
     SUPABASE_VIDEOS_BUCKET: z.string().default('videos'),
     NODE_ENV: z
@@ -36,7 +35,6 @@ export const env = createEnv({
    */
   runtimeEnv: {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET,
     SUPABASE_IMAGES_BUCKET: process.env.SUPABASE_IMAGES_BUCKET,
     SUPABASE_VIDEOS_BUCKET: process.env.SUPABASE_VIDEOS_BUCKET,
     NODE_ENV: process.env.NODE_ENV,
