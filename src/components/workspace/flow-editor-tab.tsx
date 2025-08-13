@@ -56,24 +56,26 @@ export function FlowEditorTab() {
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const updatedNodes = applyNodeChanges(changes, nodes);
-      setNodes(updatedNodes as unknown as Node<NodeData>[]);
-      // Do NOT push to context here to avoid heavy snapshotting during drag
+      // Let React Flow's onNodesChange handle applying changes to local state
       onNodesChange(changes);
+      // Do NOT push to context here to avoid heavy snapshotting during drag
     },
-    [nodes, setNodes, onNodesChange]
+    [onNodesChange]
   );
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      const updatedEdges = applyEdgeChanges(changes, edges);
-      setEdges(updatedEdges);
-      // Edges can affect validity; keep context in sync immediately
-      updateFlow({ edges: updatedEdges });
+      // Let React Flow's onEdgesChange handle applying changes to local state
       onEdgesChange(changes);
+      // Context edges are synced via effect below
     },
-    [edges, setEdges, updateFlow, onEdgesChange]
+    [onEdgesChange]
   );
+
+  // Keep context edges in sync immediately when they change (low-frequency compared to drag)
+  useEffect(() => {
+    updateFlow({ edges });
+  }, [edges, updateFlow]);
 
   const {
     resultLogModalState,
@@ -209,7 +211,7 @@ export function FlowEditorTab() {
           onDownloadAll={completedVideos.length > 1 ? handleDownloadAll : undefined}
           lastError={lastError}
           onResetGeneration={resetGeneration}
-          validationSummary={validationSummary}
+          validationSummary={validationSummary as any}
         />
 
         <VideoPreview

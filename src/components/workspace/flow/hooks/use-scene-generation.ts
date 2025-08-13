@@ -9,7 +9,6 @@ import type { NodeData } from '@/shared/types';
 import { createBrowserClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 
-// Backend graceful error response type
 interface ValidationError {
   type: 'error' | 'warning';
   code: string;
@@ -18,14 +17,6 @@ interface ValidationError {
   nodeId?: string;
   nodeName?: string;
 }
-
-// GracefulErrorResponse type removed as unused
-
-
-
-// SuccessResponse type removed as unused
-
-// GenerationResponse type removed as it was unused
 
 interface VideoJob {
   jobId: string;
@@ -37,8 +28,8 @@ interface VideoJob {
 }
 
 export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null); // Legacy: primary video URL
-  const [videos, setVideos] = useState<VideoJob[]>([]); // New: all videos
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videos, setVideos] = useState<VideoJob[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -48,7 +39,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generationAttemptRef = useRef(0);
 
-  // Clear any pending timeouts on unmount
   useEffect(() => {
     return () => {
       if (pollTimeoutRef.current) {
@@ -58,7 +48,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     };
   }, []);
 
-  // Reset errors when nodes/edges change (user is actively working)
   useEffect(() => {
     if (lastError || validationErrors.length > 0) {
       setLastError(null);
@@ -74,52 +63,26 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       setVideoUrl(null);
       setVideos([]);
       generationAttemptRef.current += 1;
-      console.log(`[GENERATION] Starting attempt #${generationAttemptRef.current}`);
     },
     onSuccess: (data) => {
       const currentAttempt = generationAttemptRef.current;
-      console.log(`[GENERATION] Success response for attempt #${currentAttempt}:`, data);
-      console.log(`[GENERATION] Response type analysis:`, {
-        hasVideoUrl: 'videoUrl' in data,
-        hasJobId: 'jobId' in data,
-        hasJobIds: 'jobIds' in data,
-        success: data.success
-      });
-      
-      // Handle graceful validation errors
       if (!data.success) {
-        console.log(`[GENERATION] Validation errors detected:`, data.errors);
         setIsGenerating(false);
         setValidationErrors(data.errors);
-        
-        // Show user-friendly error notifications
-        const errorMessages = data.errors.filter(e => e.type === 'error');
-        const warningMessages = data.errors.filter(e => e.type === 'warning');
-        
-        if (errorMessages.length > 0) {
-          const primaryError = errorMessages[0];
-          toast.error('Cannot generate video', primaryError!.message);
-          setLastError(primaryError!.message);
+        const primaryError = data.errors.find(e => e.type === 'error');
+        if (primaryError) {
+          toast.error('Cannot generate video', primaryError.message);
+          setLastError(primaryError.message);
         }
-        
-        if (warningMessages.length > 0) {
-          warningMessages.forEach(warning => {
-            toast.warning('Warning', warning.message);
-          });
-        }
-        
+        data.errors.filter(e => e.type === 'warning').forEach(w => toast.warning('Warning', w.message));
         return;
       }
-      
-      // Handle successful generation
       if ('videoUrl' in data && data.videoUrl) {
         setVideoUrl(data.videoUrl);
         setIsGenerating(false);
         toast.success('Video generated successfully!');
         return;
       }
-      
-      // Handle multi-scene response (jobIds array)
       if ('jobIds' in data) {
         const { jobIds, totalScenes } = data;
         if (!jobIds || jobIds.length === 0) {
@@ -128,32 +91,17 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           toast.error('Generation failed', 'No render jobs were created');
           return;
         }
-        
-        // Create video job entries for tracking
         const sceneNodes = nodes.filter(n => n.type === 'scene');
         const videoJobs: VideoJob[] = jobIds.map((jobId, index) => {
           const sceneNode = sceneNodes[index] as RFNode<NodeData>;
           const idData = (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier;
-          return {
-            jobId,
-            sceneName: idData.displayName,
-            sceneId: idData.id,
-            status: 'pending' as const
-          };
+          return { jobId, sceneName: idData.displayName, sceneId: idData.id, status: 'pending' };
         });
-        
         setVideos(videoJobs);
-        
-        if (totalScenes && totalScenes > 1) {
-          toast.success(`Processing ${totalScenes} scenes`, 'Multiple videos will be generated');
-        }
-        
-        // Start polling all jobs
+        if (totalScenes && totalScenes > 1) toast.success(`Processing ${totalScenes} scenes`, 'Multiple videos will be generated');
         startMultiJobPolling(jobIds, currentAttempt);
         return;
       }
-      
-      // Handle single scene response (legacy jobId format)
       if ('jobId' in data) {
         const jobId = data.jobId;
         if (!jobId) {
@@ -162,23 +110,15 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           toast.error('Generation failed', 'Invalid response from server');
           return;
         }
-        
         startJobPolling(jobId, currentAttempt);
         return;
       }
-      
-      // No valid response format found
       setIsGenerating(false);
       setLastError('Invalid response format from server');
       toast.error('Generation failed', 'Server returned unexpected response format');
-      console.error('[GENERATION] Unknown response format:', data);
     },
     onError: (error: unknown) => {
-      console.error('[GENERATION] Mutation error:', error);
-      
       setIsGenerating(false);
-      
-      // Handle domain errors with user-friendly messages
       const domain = extractDomainError(error);
       if (domain?.code) {
         const userFriendlyMessage = getUserFriendlyErrorMessage(domain.code, domain.message);
@@ -186,8 +126,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         toast.error('Cannot generate video', userFriendlyMessage);
         return;
       }
-      
-      // Handle auth errors
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('401')) {
         setLastError('Authentication required');
@@ -195,15 +133,11 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         router.push('/auth');
         return;
       }
-      
-      // Handle network/server errors
       if (errorMessage.includes('fetch')) {
         setLastError('Network error - please check your connection');
         toast.error('Network error', 'Please check your internet connection and try again');
         return;
       }
-      
-      // Generic error fallback
       const genericMessage = 'Generation failed - please try again';
       setLastError(genericMessage);
       toast.error('Generation failed', errorMessage ?? genericMessage);
@@ -211,115 +145,58 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     retry: false,
   });
 
-  // Multi-job polling for multiple videos
   const startMultiJobPolling = useCallback((jobIds: string[], currentAttempt: number) => {
     const pendingJobs = new Set(jobIds);
     let pollAttempts = 0;
-    const maxPollAttempts = 60;
-    
+    const maxPollAttempts = 120;
+
+    const mapStatus = (s: string): VideoJob['status'] => {
+      if (s === 'completed') return 'completed';
+      if (s === 'failed') return 'failed';
+      if (s === 'processing' || s === 'active' || s === 'created' || s === 'retry') return 'processing';
+      return 'pending';
+    };
+
     const pollAllJobs = async () => {
-      if (currentAttempt !== generationAttemptRef.current) {
-        console.log(`[GENERATION] Cancelling multi-poll for old attempt #${currentAttempt}`);
-        return;
-      }
-      
+      if (currentAttempt !== generationAttemptRef.current) return;
       pollAttempts++;
-      console.log(`[GENERATION] Multi-poll attempt ${pollAttempts}/${maxPollAttempts} for ${pendingJobs.size} jobs`);
-      
       try {
-        const supabase = createBrowserClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.warn('[GENERATION] User logged out during polling');
-          setIsGenerating(false);
-          setLastError('Authentication expired during generation');
-          toast.warning('Session expired', 'Please log in and try again');
-          router.push('/auth');
-          return;
-        }
-        
-        // Poll all pending jobs
-        const jobPromises = Array.from(pendingJobs).map(async (jobId) => {
-          try {
-            const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
-            return { jobId, ...res };
-          } catch (error) {
-            console.error(`[GENERATION] Failed to poll job ${jobId}:`, error);
-            return { jobId, status: 'failed', error: 'Failed to check status' };
-          }
-        });
-        
-        const results = await Promise.all(jobPromises);
-        // hasUpdates tracking removed as it was unused
+        const results = await Promise.all(jobIds.map(async (jobId) => {
+          const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
+          return { jobId, ...res } as { jobId: string; status: string; videoUrl: string | null; error: string | null };
+        }));
         let completedCount = 0;
         let failedCount = 0;
-        
-        // Update video states
-        setVideos(prevVideos => {
-          return prevVideos.map(video => {
-            const result = results.find(r => r.jobId === video.jobId);
-            if (!result) return video;
-            
-            const newStatus = result.status === 'completed' ? 'completed' : 
-                             result.status === 'failed' ? 'failed' : 
-                             result.status === 'processing' ? 'processing' : 'pending';
-            
-            if (newStatus !== video.status) {
-              // Status change detected
-              
-              if (newStatus === 'completed') {
-                completedCount++;
-                // Set primary video URL for backward compatibility
-                if (!videoUrl && 'videoUrl' in result && result.videoUrl) {
-                  setVideoUrl(result.videoUrl);
-                }
-              } else if (newStatus === 'failed') {
-                failedCount++;
-              }
-            }
-            
-            return {
-              ...video,
-              status: newStatus,
-              videoUrl: ('videoUrl' in result ? result.videoUrl : undefined) ?? video.videoUrl,
-              error: result.error ?? video.error
-            };
-          });
-        });
-        
-        // Remove completed/failed jobs from pending set
+        setVideos(prev => prev.map(video => {
+          const result = results.find(r => r.jobId === video.jobId);
+          if (!result) return video;
+          const newStatus = mapStatus(result.status);
+          if (newStatus === 'completed') completedCount++;
+          if (newStatus === 'failed') failedCount++;
+          // Also set primary videoUrl as soon as the first completes (legacy UI support)
+          if (!videoUrl && newStatus === 'completed' && result.videoUrl) setVideoUrl(result.videoUrl);
+          return { ...video, status: newStatus, videoUrl: result.videoUrl ?? video.videoUrl, error: result.error ?? video.error };
+        }));
         results.forEach(result => {
-          if (result.status === 'completed' || result.status === 'failed') {
-            pendingJobs.delete(result.jobId);
-          }
+          const s = mapStatus(result.status);
+          if (s === 'completed' || s === 'failed') pendingJobs.delete(result.jobId);
         });
-        
-        // Check if all jobs are done
         if (pendingJobs.size === 0) {
           setIsGenerating(false);
-          if (completedCount > 0 && failedCount === 0) {
-            toast.success(`All ${completedCount} videos generated successfully!`);
-          } else if (completedCount > 0 && failedCount > 0) {
-            toast.warning(`${completedCount} videos completed, ${failedCount} failed`);
-          } else if (failedCount > 0) {
-            toast.error(`All ${failedCount} videos failed to generate`);
-          }
+          if (completedCount > 0 && failedCount === 0) toast.success(`All ${completedCount} videos generated successfully!`);
+          else if (completedCount > 0 && failedCount > 0) toast.warning(`${completedCount} videos completed, ${failedCount} failed`);
+          else if (failedCount > 0) toast.error(`All ${failedCount} videos failed to generate`);
           return;
         }
-        
-        // Continue polling if there are pending jobs
         if (pollAttempts < maxPollAttempts) {
-          const delay = Math.min(1000 + (pollAttempts * 100), 4000);
+          const delay = Math.min(500 + pollAttempts * 50, 2000);
           pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           setIsGenerating(false);
           setLastError('Generation timeout - some videos may still be processing');
           toast.error('Generation timeout', `${pendingJobs.size} videos are taking longer than expected`);
         }
-        
       } catch (error) {
-        console.error(`[GENERATION] Multi-poll attempt ${pollAttempts} failed:`, error);
-        
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('401')) {
           if (currentAttempt === generationAttemptRef.current) {
@@ -330,9 +207,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           }
           return;
         }
-        
         if (pollAttempts < maxPollAttempts) {
-          const delay = Math.min(2000 + (pollAttempts * 200), 8000);
+          const delay = Math.min(1000 + pollAttempts * 100, 4000);
           pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -343,38 +219,28 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
       }
     };
-    
-    pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 500);
+
+    pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 250);
   }, [utils.animation.getRenderJobStatus, toast, router, videoUrl]);
 
-  // Extract polling logic into a separate function (legacy single job)
   const startJobPolling = useCallback((jobId: string, currentAttempt: number) => {
     let pollAttempts = 0;
-    const maxPollAttempts = 60;
-      
+    const maxPollAttempts = 120;
+
     const poll = async () => {
-      if (currentAttempt !== generationAttemptRef.current) {
-        console.log(`[GENERATION] Cancelling poll for old attempt #${currentAttempt}`);
-        return;
-      }
-      
+      if (currentAttempt !== generationAttemptRef.current) return;
       pollAttempts++;
-      console.log(`[GENERATION] Polling attempt ${pollAttempts}/${maxPollAttempts} for job ${jobId}`);
-      
       try {
         const supabase = createBrowserClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          console.warn('[GENERATION] User logged out during polling');
           setIsGenerating(false);
           setLastError('Authentication expired during generation');
           toast.warning('Session expired', 'Please log in and try again');
           router.push('/auth');
           return;
         }
-        
         const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
-        
         if (res.status === 'completed' && res.videoUrl) {
           if (currentAttempt === generationAttemptRef.current) {
             setVideoUrl(res.videoUrl);
@@ -383,7 +249,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           }
           return;
         }
-        
         if (res.status === 'failed') {
           if (currentAttempt === generationAttemptRef.current) {
             setIsGenerating(false);
@@ -392,9 +257,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           }
           return;
         }
-        
         if (pollAttempts < maxPollAttempts) {
-          const delay = Math.min(1000 + (pollAttempts * 100), 4000);
+          const delay = Math.min(500 + pollAttempts * 50, 2000);
           pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -404,8 +268,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           }
         }
       } catch (error) {
-        console.error(`[GENERATION] Poll attempt ${pollAttempts} failed:`, error);
-        
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('401')) {
           if (currentAttempt === generationAttemptRef.current) {
@@ -416,9 +278,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           }
           return;
         }
-        
         if (pollAttempts < maxPollAttempts) {
-          const delay = Math.min(2000 + (pollAttempts * 200), 8000);
+          const delay = Math.min(1000 + pollAttempts * 100, 4000);
           pollTimeoutRef.current = setTimeout(() => void poll(), delay);
         } else {
           if (currentAttempt === generationAttemptRef.current) {
@@ -429,8 +290,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         }
       }
     };
-    
-    pollTimeoutRef.current = setTimeout(() => void poll(), 2000); // Increased from 500ms to 2 seconds
+
+    pollTimeoutRef.current = setTimeout(() => void poll(), 250);
   }, [utils.animation.getRenderJobStatus, toast, router]);
 
   const isSceneConnected = useMemo(() => {
@@ -451,77 +312,41 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const handleGenerateScene = useCallback(async () => {
     setLastError(null);
     setValidationErrors([]);
-    
     try {
       const supabase = createBrowserClient();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !user) {
         toast.warning('Please log in', 'Authentication required to generate videos');
         router.push('/auth');
         return;
       }
-
-      // Scene validation is now handled by the backend
-
-      const backendNodes = nodes.map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: node.position,
-        data: node.data,
-      }));
-      const backendEdges = edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? undefined,
-        targetHandle: edge.targetHandle ?? undefined,
-        kind: 'data' as const,
-      }));
-
-      generateScene.mutate({ nodes: backendNodes, edges: backendEdges });
-      
+      const sceneNodes = nodes.filter((n) => n.type === 'scene');
+      if (sceneNodes.length === 0) {
+        toast.warning('No scene node', 'Add a Scene node to generate video');
+        return;
+      }
+      generateScene.mutate({
+        nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+        edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? undefined, targetHandle: e.targetHandle ?? undefined })),
+      });
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : 'Validation failed');
-      toast.error('Validation failed', error instanceof Error ? error.message : 'Unknown validation error');
+      const domain = extractDomainError(error);
+      if (domain?.code) {
+        const userFriendlyMessage = getUserFriendlyErrorMessage(domain.code, domain.message);
+        setLastError(userFriendlyMessage);
+        toast.error('Cannot generate video', userFriendlyMessage);
+        return;
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setLastError(errorMessage);
+      toast.error('Generation failed', errorMessage);
     }
   }, [nodes, edges, generateScene, toast, router]);
 
-  const handleDownload = useCallback(() => {
-    if (!videoUrl) return;
-    try {
-      const link = document.createElement('a');
-      link.href = videoUrl;
-      link.download = `animation_${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success('Download started', 'Your video is being downloaded');
-    } catch {
-      toast.error('Download failed', 'Please try right-clicking the video and selecting "Save video as..."');
-    }
-  }, [videoUrl, toast]);
-
-  const resetGeneration = useCallback(() => {
-    console.log('[GENERATION] Force reset triggered');
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = null;
-    }
-    setIsGenerating(false);
-    setLastError(null);
-    setValidationErrors([]);
-    generationAttemptRef.current = 0;
-    // No toast for reset - it's a frequent user action
-  }, []);
-
-  // Get detailed validation error information for UI
   const getValidationSummary = useCallback(() => {
     if (validationErrors.length === 0) return null;
-    
-    const errors = validationErrors.filter(e => e.type === 'error');
-    const warnings = validationErrors.filter(e => e.type === 'warning');
-    
+    const errors: ValidationError[] = validationErrors.filter(e => e.type === 'error');
+    const warnings: ValidationError[] = validationErrors.filter(e => e.type === 'warning');
     return {
       hasErrors: errors.length > 0,
       hasWarnings: warnings.length > 0,
@@ -529,107 +354,85 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       warningCount: warnings.length,
       errors,
       warnings,
-      primaryError: errors[0] ?? null,
-      allSuggestions: [...errors, ...warnings].flatMap(e => e.suggestions ?? [])
+      primaryError: errors.length > 0 ? errors[0] : null,
+      allSuggestions: [...new Set(validationErrors.flatMap(e => e.suggestions ?? []))]
     };
   }, [validationErrors]);
 
-  // Multi-video download functions
-  const handleDownloadAll = useCallback(async () => {
-    const completedVideos = videos.filter(v => v.status === 'completed' && v.videoUrl);
-    if (completedVideos.length === 0) {
-      toast.warning('No videos to download', 'Wait for videos to complete first');
-      return;
-    }
-
+  const handleDownload = useCallback(async () => {
+    if (!videoUrl) return;
     try {
-      for (const video of completedVideos) {
-        const link = document.createElement('a');
-        link.href = video.videoUrl!;
-        link.download = `${video.sceneName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Small delay between downloads to avoid browser blocking
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.download = 'animation.mp4';
+      a.click();
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  }, [videoUrl]);
+
+  const handleDownloadAll = useCallback(async () => {
+    const completed = videos.filter(v => v.status === 'completed' && v.videoUrl);
+    if (completed.length === 0) return;
+    try {
+      for (const v of completed) {
+        const a = document.createElement('a');
+        a.href = v.videoUrl!;
+        a.download = `${v.sceneName}.mp4`;
+        a.click();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
-      toast.success(`Downloading ${completedVideos.length} videos`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try downloading videos individually');
+    } catch (error) {
+      console.error('Download all failed:', error);
     }
-  }, [videos, toast]);
+  }, [videos]);
 
-  const handleDownloadVideo = useCallback((jobId: string) => {
-    const video = videos.find(v => v.jobId === jobId);
-    if (!video?.videoUrl) {
-      toast.warning('Video not ready', 'Please wait for the video to complete');
-      return;
-    }
-
+  const handleDownloadVideo = useCallback(async (jobId: string) => {
+    const v = videos.find(v => v.jobId === jobId && v.videoUrl);
+    if (!v) return;
     try {
-      const link = document.createElement('a');
-      link.href = video.videoUrl;
-      link.download = `${video.sceneName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`Downloading ${video.sceneName}`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try right-clicking the video and selecting "Save video as..."');
+      const a = document.createElement('a');
+      a.href = v.videoUrl!;
+      a.download = `${v.sceneName}.mp4`;
+      a.click();
+    } catch (error) {
+      console.error('Download failed:', error);
     }
-  }, [videos, toast]);
+  }, [videos]);
 
-  return { 
-    // Legacy single video support
-    videoUrl, 
-    handleDownload,
-    hasVideo: Boolean(videoUrl),
-    
-    // Multi-video support
+  const resetGeneration = useCallback(() => {
+    setVideoUrl(null);
+    setVideos([]);
+    setIsGenerating(false);
+    setLastError(null);
+    setValidationErrors([]);
+  }, []);
+
+  return {
+    videoUrl,
     videos,
-    hasVideos: videos.length > 0,
-    completedVideos: videos.filter(v => v.status === 'completed'),
+    completedVideos: videos.filter(v => v.status === 'completed' && v.videoUrl),
+    canGenerate,
+    handleGenerateScene,
+    handleDownload,
     handleDownloadAll,
     handleDownloadVideo,
-    
-    // Generation state
-    canGenerate, 
-    generateScene: {
-      ...generateScene,
-      isPending: isGenerating,
-    }, 
-    handleGenerateScene, 
-    isSceneConnected,
     lastError,
     resetGeneration,
     isGenerating,
-    validationErrors,
     getValidationSummary,
   } as const;
 }
 
-// User-friendly error messages for domain errors
-function getUserFriendlyErrorMessage(code: string, originalMessage?: string): string {
+function getUserFriendlyErrorMessage(code: string, message?: string): string {
   switch (code) {
-    case 'ERR_SCENE_REQUIRED':
-      return 'Please add a Scene node to generate video';
-    case 'ERR_TOO_MANY_SCENES':
-      return 'Too many Scene nodes - please reduce the number of scenes';
-    case 'ERR_DUPLICATE_OBJECT_IDS':
-      return 'Some objects reach nodes through multiple paths. Use a Merge node to combine them.';
-    case 'ERR_MISSING_INSERT_CONNECTION':
-      return 'Geometry objects must connect to Insert nodes to control when they appear';
-    case 'ERR_CIRCULAR_DEPENDENCY':
-      return 'Circular connections detected - please remove loops in your node graph';
-    case 'ERR_INVALID_CONNECTION':
-      return 'Invalid connection between nodes - check port compatibility';
-    case 'ERR_NODE_VALIDATION_FAILED':
-      return 'Some nodes have invalid properties - check the property panel';
-    case 'ERR_SCENE_VALIDATION_FAILED':
-      return 'Scene validation failed - check your animation setup';
+    case 'NO_SCENE_NODES':
+      return 'Add at least one Scene node to generate video';
+    case 'INVALID_GRAPH':
+      return 'Your graph has invalid connections';
+    case 'NODE_EXECUTION_ERROR':
+      return 'A node failed during generation';
     default:
-      return originalMessage ?? 'An error occurred while generating the video';
+      return message ?? 'An error occurred';
   }
 }
