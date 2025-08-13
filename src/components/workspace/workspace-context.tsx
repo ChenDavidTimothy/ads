@@ -115,14 +115,6 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
     };
   }, [state, updateFlow, updateTimeline, updateUI, saveNow, isSaving, hasUnsavedChanges, lastSaved, backup.hasBackup]);
 
-  // Debounced autosave for robustness
-  useEffect(() => {
-    if (!state) return;
-    if (!hasUnsavedChanges(state)) return;
-    const t = window.setTimeout(() => { void saveToBackend(state); }, 1000);
-    return () => window.clearTimeout(t);
-  }, [state, hasUnsavedChanges, saveToBackend]);
-
   if (isLoading || !contextValue) {
     return <div className="h-screen w-full bg-gray-900 text-gray-300 p-6">Loading workspace…</div>;
   }
