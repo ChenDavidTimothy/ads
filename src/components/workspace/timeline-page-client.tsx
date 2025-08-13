@@ -29,7 +29,8 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
   const { data: ws, isLoading } = api.workspace.get.useQuery({ id: workspaceId });
   const saveMutation = api.workspace.save.useMutation({
     onSuccess: async () => {
-      await utils.workspace.get.invalidate({ id: workspaceId });
+      // Removed cache invalidation to prevent refetch cascade
+      // The workspace data will be updated on next manual refresh
     },
   });
 

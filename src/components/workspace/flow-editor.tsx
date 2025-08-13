@@ -50,7 +50,15 @@ export function FlowEditor() {
   const workspaceId = search.get('workspace');
   const { data: workspace } = api.workspace.get.useQuery(
     { id: workspaceId! },
-    { enabled: Boolean(workspaceId), staleTime: 30000, refetchOnWindowFocus: false }
+    { 
+      enabled: Boolean(workspaceId),
+      refetchInterval: false,          // Stop automatic refetching
+      refetchOnWindowFocus: false,     // Don't refetch on window focus
+      refetchOnMount: false,           // Don't refetch on mount
+      refetchOnReconnect: false,       // Don't refetch on reconnect
+      staleTime: 10 * 60 * 1000,      // Consider data fresh for 10 minutes
+      gcTime: 15 * 60 * 1000,         // Cache for 15 minutes
+    }
   );
   // Removed auto-create; workspace is selected via workspace-selector page
   const lastSavedSnapshotRef = useRef<string>("");

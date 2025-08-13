@@ -17,8 +17,12 @@ if (typeof process !== 'undefined') {
   process.setMaxListeners(20);
 }
 
-// Run node registration validation on server startup
-validateOnStartup();
+// Run node registration validation only once on server startup
+let validationRun = false;
+if (typeof window === 'undefined' && !validationRun) {
+  validationRun = true;
+  validateOnStartup();
+}
 
 /**
  * 1. CONTEXT
