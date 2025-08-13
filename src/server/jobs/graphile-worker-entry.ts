@@ -78,7 +78,7 @@ async function main() {
           .eq('user_id', userId);
 
         const storageProvider = new SupabaseStorageProvider(userId);
-        const { ImageRenderer } = await import('@/server/rendering/image-renderer');
+        const { ImageRenderer } = await import('@/server/rendering/image/image-renderer');
         const renderer = new ImageRenderer(storageProvider);
         const { publicUrl } = await renderer.render(scene, config);
 

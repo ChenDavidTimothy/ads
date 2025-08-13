@@ -1,4 +1,4 @@
-// src/server/rendering/image-renderer.ts
+// src/server/rendering/image/image-renderer.ts
 import { createCanvas } from 'canvas';
 import type { AnimationScene } from '@/shared/types/scene';
 import { SceneRenderer, type SceneRenderConfig } from '@/animation/execution/scene-renderer';
