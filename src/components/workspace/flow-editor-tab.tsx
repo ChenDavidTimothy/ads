@@ -130,13 +130,6 @@ export function FlowEditorTab() {
     selectedEdgesRef.current = (params.edges as Edge[]) ?? [];
   }, []);
 
-  const {
-    resultLogModalState,
-    handleOpenResultLogViewer,
-    handleCloseResultLogViewer,
-    getResultNodeData,
-  } = useResultLogViewer(nodes);
-
   // Robust custom deletion handler: Delete selected nodes (and their edges) or selected edges only
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
