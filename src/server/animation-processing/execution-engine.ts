@@ -21,6 +21,7 @@ import {
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
 import { DuplicateObjectIdsError } from "@/shared/errors/domain";
+import { CanvasNodeExecutor } from "./executors/canvas-executor";
 
 export type { ReactFlowNode, ReactFlowEdge } from "./types/graph";
 
@@ -33,6 +34,7 @@ export class ExecutionEngine {
     this.registry.register(new LogicNodeExecutor());
     this.registry.register(new AnimationNodeExecutor());
     this.registry.register(new SceneNodeExecutor());
+    this.registry.register(new CanvasNodeExecutor());
   }
 
   private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], options?: { requireScene?: boolean }): void {
