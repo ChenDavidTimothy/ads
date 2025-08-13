@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { TabButton } from './tab-button';
 import { useWorkspace } from './workspace-context';
 import { Layers3, Timer } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
 
 interface EditorTabConfig {
   key: string;
@@ -14,6 +15,7 @@ interface EditorTabConfig {
 
 const EDITOR_TABS: EditorTabConfig[] = [
   { key: 'timeline', label: 'Timeline', icon: <Timer size={16} />, requiredNodeType: 'animation' },
+  { key: 'canvas', label: 'Canvas', icon: <ImageIcon size={16} />, requiredNodeType: 'canvas' },
   // future: image, audio
 ];
 

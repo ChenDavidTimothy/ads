@@ -7,7 +7,7 @@ import { WorkspaceTabContent } from './workspace-tab-content';
 
 export function WorkspaceLayout({ workspaceId }: { workspaceId: string }) {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as 'flow' | 'timeline' | 'image' | 'audio') || 'flow';
+  const initialTab = (searchParams.get('tab') as 'flow' | 'timeline' | 'canvas' | 'image' | 'audio') || 'flow';
   const initialNodeId = searchParams.get('node');
 
   return (

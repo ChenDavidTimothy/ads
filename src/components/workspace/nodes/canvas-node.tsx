@@ -6,11 +6,24 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { CanvasNodeData } from "@/shared/types/nodes";
 
-export function CanvasNode({ data, selected }: NodeProps<CanvasNodeData>) {
+type CanvasNodeProps = NodeProps<CanvasNodeData> & { onOpenCanvas?: () => void };
+
+export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
   const nodeDefinition = getNodeDefinition('canvas');
 
+  const handleDoubleClick = () => {
+    if (onOpenCanvas) return onOpenCanvas();
+    const params = new URLSearchParams(window.location.search);
+    const ws = params.get('workspace');
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', 'canvas');
+    url.searchParams.set('node', data.identifier.id);
+    if (ws) url.searchParams.set('workspace', ws);
+    window.history.pushState({}, '', url.toString());
+  };
+
   return (
-    <Card selected={selected} className="p-4 min-w-[220px]">
+    <Card selected={selected} className="p-4 min-w-[220px] cursor-pointer transition-all hover:bg-gray-750" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}

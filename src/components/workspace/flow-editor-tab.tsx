@@ -197,6 +197,7 @@ export function FlowEditorTab() {
 
   // Stable handler refs to avoid recreating nodeTypes
   const openTimelineRef = useRef<(nodeId: string) => void>(() => {});
+  const openCanvasRef = useRef<(nodeId: string) => void>(() => {});
   const openLogViewerRef = useRef<(nodeId: string) => void>(() => {});
 
   useEffect(() => {
@@ -209,6 +210,23 @@ export function FlowEditorTab() {
       window.history.pushState({}, '', url.toString());
     };
   }, [ensureTimelineForNode, updateUI]);
+
+  useEffect(() => {
+    openCanvasRef.current = (nodeId: string) => {
+      updateUI({ activeTab: 'canvas', selectedNodeId: nodeId, selectedNodeType: 'canvas' });
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'canvas');
+      url.searchParams.set('node', nodeId);
+      window.history.pushState({}, '', url.toString());
+    };
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ nodeId: string }>).detail;
+      if (detail?.nodeId) openCanvasRef.current(detail.nodeId);
+    };
+    window.addEventListener('open-canvas-editor', handler as EventListener);
+    return () => window.removeEventListener('open-canvas-editor', handler as EventListener);
+  }, [updateUI]);
 
   useEffect(() => {
     openLogViewerRef.current = (nodeId: string) => {
