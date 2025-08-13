@@ -13,14 +13,25 @@ export interface VideoConfig {
   inputPixelFormat: 'rgb24' | 'rgba' | 'bgra';
 }
 
+import { ENCODER_TIMEOUTS as GLOBAL_ENCODER_TIMEOUTS } from '@/server/rendering/config';
+
+interface EncoderTimeouts {
+  startupMs: number;
+  writeMs: number;
+  finishMs: number;
+}
+
 export class VideoEncoder {
   private ffmpegProcess: ChildProcess | null = null;
   private outputPath: string;
   private config: VideoConfig;
+  private timeouts: EncoderTimeouts;
+  private stderrBuffer: string = '';
 
-  constructor(outputPath: string, config: VideoConfig) {
+  constructor(outputPath: string, config: VideoConfig, timeouts: Partial<EncoderTimeouts> = {}) {
     this.outputPath = outputPath;
     this.config = config;
+    this.timeouts = { ...GLOBAL_ENCODER_TIMEOUTS, ...timeouts } as EncoderTimeouts;
   }
 
   start(): Promise<void> {
@@ -34,7 +45,7 @@ export class VideoEncoder {
         ? process.env.FFMPEG_PATH
         : 'ffmpeg';
 
-      this.ffmpegProcess = spawn(ffmpegPath, [
+      const args = [
         '-f', 'rawvideo',
         '-pix_fmt', this.config.inputPixelFormat,
         '-s', `${this.config.width}x${this.config.height}`,
@@ -45,22 +56,60 @@ export class VideoEncoder {
         '-preset', this.config.preset,
         '-crf', this.config.crf.toString(),
         '-y', this.outputPath
-      ]);
+      ];
 
-      this.ffmpegProcess.on('error', (error) => {
-        reject(new Error(`FFmpeg failed: ${error.message}`));
+      let settled = false;
+      const onError = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`FFmpeg failed to start: ${error.message}`));
+      };
+
+      try {
+        this.ffmpegProcess = spawn(ffmpegPath, args);
+      } catch (err) {
+        return reject(err instanceof Error ? err : new Error(String(err)));
+      }
+
+      const proc = this.ffmpegProcess;
+
+      proc.on('error', onError);
+
+      // If the process exits before we're ready, treat as startup failure
+      const startupCloseHandler = (code: number | null) => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`FFmpeg exited during startup with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+      };
+      proc.once('close', startupCloseHandler);
+
+      // Capture stderr for diagnostics
+      proc.stderr?.setEncoding('utf8');
+      proc.stderr?.on('data', (chunk: string) => {
+        this.stderrBuffer += chunk;
       });
 
-      this.ffmpegProcess.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`FFmpeg exited with code ${code}`));
-        } else {
+      // Consider process "ready" when stdin is available and not destroyed
+      const startupTimer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.kill();
+        reject(new Error(`FFmpeg startup timeout after ${this.timeouts.startupMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+      }, this.timeouts.startupMs);
+
+      const markReady = () => {
+        if (settled) return;
+        if (proc.stdin && !proc.stdin.destroyed) {
+          settled = true;
+          clearTimeout(startupTimer);
+          // Remove startup close handler to avoid consuming the real close event
+          proc.off('close', startupCloseHandler);
           resolve();
         }
-      });
+      };
 
-      // Wait a moment for process to be ready
-      setTimeout(() => resolve(), 100);
+      // In practice, stdin exists immediately after spawn; guard with nextTick
+      process.nextTick(markReady);
     });
   }
 
@@ -69,48 +118,97 @@ export class VideoEncoder {
       throw new Error('FFmpeg process not started');
     }
 
+    const stdin = this.ffmpegProcess.stdin;
+
     return new Promise((resolve, reject) => {
-      if (this.ffmpegProcess!.stdin!.write(frameData)) {
+      let finished = false;
+
+      const timeout = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        this.kill();
+        reject(new Error(`FFmpeg frame write timeout after ${this.timeouts.writeMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+      }, this.timeouts.writeMs);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        stdin.removeListener('drain', onDrain);
+        stdin.removeListener('error', onError);
+      };
+
+      const onDrain = () => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        resolve();
+      };
+
+      const onError = (error: unknown) => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        reject(error instanceof Error ? error : new Error(String(error)));
+      };
+
+      const wrote = stdin.write(frameData);
+      if (wrote) {
+        finished = true;
+        cleanup();
         resolve();
       } else {
-        const onDrain = () => {
-          this.ffmpegProcess!.stdin!.removeListener('error', onError);
-          resolve();
-        };
-        const onError = (error: unknown) => {
-          this.ffmpegProcess!.stdin!.removeListener('drain', onDrain);
-          reject(error instanceof Error ? error : new Error(String(error)));
-        };
-
-        this.ffmpegProcess!.stdin!.once('drain', onDrain);
-        this.ffmpegProcess!.stdin!.once('error', onError);
+        stdin.once('drain', onDrain);
+        stdin.once('error', onError);
       }
     });
   }
 
   async finish(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.ffmpegProcess) {
+      const proc = this.ffmpegProcess;
+      if (!proc) {
         resolve();
         return;
       }
 
-      this.ffmpegProcess.on('close', (code) => {
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.kill();
+        reject(new Error(`FFmpeg finish timeout after ${this.timeouts.finishMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+      }, this.timeouts.finishMs);
+
+      const onClose = (code: number | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        this.ffmpegProcess = null;
         if (code !== 0) {
-          reject(new Error(`FFmpeg exited with code ${code}`));
+          reject(new Error(`FFmpeg exited with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`));
         } else {
           resolve();
         }
-        this.ffmpegProcess = null;
-      });
+      };
 
-      this.ffmpegProcess.stdin?.end();
+      proc.once('close', onClose);
+      // Signal EOF
+      proc.stdin?.end();
     });
   }
 
   kill(): void {
     if (this.ffmpegProcess) {
-      this.ffmpegProcess.kill();
+      try {
+        this.ffmpegProcess.stdin?.destroy();
+      } catch {
+        // ignore
+      }
+      try {
+        this.ffmpegProcess.kill();
+      } catch {
+        // ignore
+      }
       this.ffmpegProcess = null;
     }
   }

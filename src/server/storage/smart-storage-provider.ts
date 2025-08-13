@@ -7,6 +7,7 @@ import type { StoragePreparedTarget, StorageProvider, FinalizeOptions } from "./
 import { createServiceClient } from "@/utils/supabase/service";
 import { STORAGE_CONFIG } from "./config";
 import { StorageHealthMonitor } from "./health-monitor";
+import { Readable } from "stream";
 
 export class SmartStorageProvider implements StorageProvider {
   private readonly userId: string | undefined;
@@ -164,9 +165,9 @@ export class SmartStorageProvider implements StorageProvider {
       // Record upload start
       this.healthMonitor.recordUploadStart();
       
-      // Read file and validate
-      const fileBuffer = await fs.promises.readFile(prepared.filePath);
-      const fileSize = fileBuffer.length;
+      // Stat file (avoid reading into memory)
+      const stat = await fs.promises.stat(prepared.filePath);
+      const fileSize = stat.size;
       
       // Determine bucket and validate file
       const extension = path.extname(prepared.remoteKey).slice(1);
@@ -178,8 +179,8 @@ export class SmartStorageProvider implements StorageProvider {
       // Get content type
       const contentType = opts?.contentType ?? config.mimeTypes[extension] ?? 'application/octet-stream';
       
-      // Upload with retry logic
-      await this.uploadWithRetry(bucket, prepared.remoteKey, fileBuffer, contentType);
+      // Upload with retry logic (using stream created per attempt)
+      await this.uploadStreamWithRetry(bucket, prepared.remoteKey, prepared.filePath, contentType);
       
       // Create signed URL with retry logic
       publicUrl = await this.createSignedUrlWithRetry(bucket, prepared.remoteKey);
@@ -244,6 +245,49 @@ export class SmartStorageProvider implements StorageProvider {
     }
     
     throw new Error(`Upload failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`);
+  }
+
+  private async uploadStreamWithRetry(
+    bucket: string,
+    remoteKey: string,
+    filePath: string,
+    contentType: string
+  ): Promise<void> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= STORAGE_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        // Create a new stream per attempt
+        const nodeStream = fs.createReadStream(filePath);
+        const webStream: ReadableStream<any> = (Readable as any).toWeb
+          ? (Readable as any).toWeb(nodeStream)
+          : (nodeStream as unknown as ReadableStream<any>);
+
+        // Note: @supabase/supabase-js v2 accepts ReadableStream|Blob|ArrayBuffer|File
+        const { error } = await this.supabase.storage
+          .from(bucket)
+          .upload(remoteKey, webStream, {
+            upsert: false,
+            contentType,
+          });
+
+        if (error) throw error;
+        return; // success
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (attempt === STORAGE_CONFIG.MAX_RETRIES) break;
+
+        const delay = Math.min(
+          STORAGE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1),
+          STORAGE_CONFIG.MAX_RETRY_DELAY_MS
+        );
+        this.logger.warn(`Stream upload attempt ${attempt} failed, retrying in ${delay}ms:`, lastError.message);
+        await this.sleep(delay);
+      }
+    }
+
+    throw new Error(`Stream upload failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`);
   }
 
   private async createSignedUrlWithRetry(bucket: string, remoteKey: string): Promise<string> {
@@ -341,7 +385,7 @@ export class SmartStorageProvider implements StorageProvider {
   async getHealthStatus() {
     return await this.healthMonitor.checkHealth();
   }
-
+  
   // Get metrics
   getMetrics() {
     return this.healthMonitor.getMetrics();
