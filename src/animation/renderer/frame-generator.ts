@@ -25,11 +25,23 @@ export type RenderCallback = (
   config: FrameConfig
 ) => void;
 
+interface WatchdogConfig {
+  maxRenderMs: number; // total render time limit
+  maxHeapUsedBytes: number; // heap usage limit
+  sampleIntervalMs: number;
+}
+
+import { RENDER_WATCHDOG as GLOBAL_WATCHDOG } from '@/server/rendering/config';
+
+const DEFAULT_WATCHDOG: WatchdogConfig = GLOBAL_WATCHDOG;
+
 export class FrameGenerator {
   private config: FrameConfig;
   private easingFunction: EasingFunction;
   private canvas: ReturnType<typeof createCanvas>;
   private ctx: NodeCanvasContext;
+  private watchdogTimer: NodeJS.Timeout | null = null;
+  private watchdogError: Error | null = null;
 
   constructor(config: FrameConfig, easingFunction: EasingFunction = linear) {
     this.config = config;
@@ -55,10 +67,30 @@ export class FrameGenerator {
       inputPixelFormat: 'bgra',
     });
 
+    const startedAt = Date.now();
+    const watchdogCfg = DEFAULT_WATCHDOG;
+
     try {
       await encoder.start();
 
+      // Start watchdog for time and memory. Do not throw here; set flag checked in loop
+      this.startWatchdog(() => {
+        const elapsed = Date.now() - startedAt;
+        const mem = process.memoryUsage();
+        if (!this.watchdogError && elapsed > watchdogCfg.maxRenderMs) {
+          this.watchdogError = new Error(`Render exceeded max duration ${watchdogCfg.maxRenderMs}ms`);
+        }
+        if (!this.watchdogError && mem.heapUsed > watchdogCfg.maxHeapUsedBytes) {
+          this.watchdogError = new Error(`Render exceeded heap usage ${(watchdogCfg.maxHeapUsedBytes / (1024 * 1024)).toFixed(0)}MB`);
+        }
+      }, watchdogCfg.sampleIntervalMs);
+
       for (let frameNumber = 0; frameNumber < totalFrames; frameNumber++) {
+        if (this.watchdogError) {
+          encoder.kill();
+          throw this.watchdogError;
+        }
+
         const progress = frameNumber / (totalFrames - 1);
         const easedProgress = this.easingFunction(progress);
         const time = progress * this.config.duration;
@@ -81,11 +113,19 @@ export class FrameGenerator {
         await encoder.writeFrame(rgbaBuffer);
       }
 
+      if (this.watchdogError) {
+        encoder.kill();
+        throw this.watchdogError;
+      }
+
       await encoder.finish();
       return outputPath;
     } catch (error) {
       encoder.kill();
       throw error;
+    } finally {
+      this.stopWatchdog();
+      this.watchdogError = null;
     }
   }
 
@@ -113,6 +153,27 @@ export class FrameGenerator {
     }
 
     return frames;
+  }
+
+  private startWatchdog(check: () => void, intervalMs: number): void {
+    this.stopWatchdog();
+    this.watchdogTimer = setInterval(() => {
+      try {
+        check();
+      } catch (err) {
+        // Do not throw beyond the interval; rely on flag and outer loop checks
+        if (!this.watchdogError) {
+          this.watchdogError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+    }, intervalMs);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
   }
 
   private clearCanvas(): void {

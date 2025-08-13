@@ -53,6 +53,18 @@ SUPABASE_IMAGES_BUCKET=images
 SUPABASE_VIDEOS_BUCKET=videos
 ```
 
+## Rendering configuration
+
+These environment variables tune the rendering pipeline timeouts and watchdog limits (optional; sensible defaults are applied):
+
+- FFMPEG_PATH: Path to ffmpeg binary (default: `ffmpeg` in PATH)
+- FFMPEG_STARTUP_TIMEOUT_MS: Max time to wait for ffmpeg to be ready (default: 10000)
+- FFMPEG_WRITE_TIMEOUT_MS: Max time to wait for a frame write (default: 30000)
+- FFMPEG_FINISH_TIMEOUT_MS: Max time to wait for encode finish (default: 60000)
+- RENDER_MAX_MS: Max total render duration per job (default: 300000)
+- RENDER_MAX_HEAP_BYTES: Max heap usage threshold to abort a job (default: 734003200)
+- RENDER_WATCHDOG_INTERVAL_MS: Watchdog sampling interval (default: 1000)
+
 ## Storage Architecture
 
 This project uses **separate Supabase storage buckets** for different content types with automatic routing:

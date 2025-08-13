@@ -49,6 +49,10 @@ export class CanvasRenderer implements Renderer {
       return { filePath: prepared.filePath, publicUrl };
     } finally {
       frameGenerator.dispose();
+      // Best-effort provider cleanup (removes temp dir on worker shutdowns or if needed)
+      if (typeof (this.storageProvider as any).cleanup === 'function') {
+        await (this.storageProvider as any).cleanup();
+      }
     }
   }
 }
