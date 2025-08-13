@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useWorkspace } from './workspace-context';
 import { TimelineEditorCore } from './timeline-editor-core';
 import type { TimelineEditorData } from '@/types/workspace-state';
@@ -68,10 +68,26 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     });
   }, [nodeId, updateTimeline]);
 
+  // Flush any pending timeline updates on unmount or node change
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      const pending = pendingRef.current;
+      if (pending) {
+        updateTimeline(nodeId, pending);
+        pendingRef.current = null;
+      }
+    };
+  }, [nodeId, updateTimeline]);
+
   const handleChange = useCallback((updates: Partial<TimelineEditorData>) => {
+    const base: TimelineEditorData = pendingRef.current ?? { duration: data.duration, tracks: data.tracks };
     const merged: TimelineEditorData = {
-      duration: updates.duration ?? data.duration,
-      tracks: updates.tracks ?? data.tracks,
+      duration: updates.duration ?? base.duration,
+      tracks: updates.tracks ?? base.tracks,
     };
     pendingRef.current = merged;
     scheduleUpdate();
