@@ -275,14 +275,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
               className="w-32"
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => onChange({ duration, tracks })} variant="success" size="sm" disabled={hasInvalidNames}>
-              Save
-            </Button>
-            <Button onClick={() => onChange({ duration, tracks })} variant="secondary" size="sm">
-              Cancel
-            </Button>
-          </div>
+          {/* Save/Cancel removed: unified manual save handled at workspace level */}
         </div>
 
         <div className="mb-4">

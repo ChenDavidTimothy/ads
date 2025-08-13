@@ -169,6 +169,7 @@ export function FlowEditorTab() {
             onPaneClick={onPaneClick}
             onNodesDelete={onNodesDelete}
             onEdgesDelete={onEdgesDelete}
+            onNodeDragStop={() => { /* optional: could trigger any post-drag sync if needed */ }}
             disableDeletion={resultLogModalState.isOpen}
           />
 
