@@ -154,6 +154,9 @@ export function FlowEditorTab() {
     canGenerateImage,
     handleGenerateImage,
     isGeneratingImage,
+    images,
+    handleDownloadAllImages,
+    handleDownloadImage,
   } = useSceneGeneration(nodes, edges);
 
   const getGenerationHint = useCallback(() => {
@@ -235,6 +238,10 @@ export function FlowEditorTab() {
           videos={videos}
           onDownloadVideo={handleDownloadVideo}
           onDownloadAll={handleDownloadAll}
+          imageUrl={imageUrl}
+          images={images}
+          onDownloadImage={handleDownloadImage}
+          onDownloadAllImages={handleDownloadAllImages}
         />
       </div>
 

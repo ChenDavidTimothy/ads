@@ -703,6 +703,50 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }
   }, [videos, toast]);
 
+  // Image download helpers
+  const handleDownloadAllImages = useCallback(async () => {
+    const completedImages = images.filter(i => i.status === 'completed' && i.imageUrl);
+    if (completedImages.length === 0) {
+      toast.warning('No images to download', 'Wait for images to complete first');
+      return;
+    }
+    try {
+      for (const img of completedImages) {
+        const link = document.createElement('a');
+        link.href = img.imageUrl!;
+        const ext = img.imageUrl!.toLowerCase().includes('jpeg') || img.imageUrl!.toLowerCase().includes('jpg') ? 'jpg' : 'png';
+        link.download = `${img.frameName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      toast.success(`Downloading ${completedImages.length} images`, 'Check your downloads folder');
+    } catch {
+      toast.error('Download failed', 'Please try downloading images individually');
+    }
+  }, [images, toast]);
+
+  const handleDownloadImage = useCallback((jobId: string) => {
+    const img = images.find(i => i.jobId === jobId);
+    if (!img?.imageUrl) {
+      toast.warning('Image not ready', 'Please wait for the image to complete');
+      return;
+    }
+    try {
+      const link = document.createElement('a');
+      link.href = img.imageUrl;
+      const ext = img.imageUrl.toLowerCase().includes('jpeg') || img.imageUrl.toLowerCase().includes('jpg') ? 'jpg' : 'png';
+      link.download = `${img.frameName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(`Downloading ${img.frameName}`, 'Check your downloads folder');
+    } catch {
+      toast.error('Download failed', 'Please try right-clicking the image and selecting "Save image as..."');
+    }
+  }, [images, toast]);
+
   return { 
     // Legacy single video support
     videoUrl, 
@@ -717,6 +761,12 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     completedVideos: videos.filter(v => v.status === 'completed'),
     handleDownloadAll,
     handleDownloadVideo,
+    
+    // Multi-image support
+    images,
+    completedImages: images.filter(i => i.status === 'completed'),
+    handleDownloadAllImages,
+    handleDownloadImage,
     
     // Generation state
     canGenerate, 
