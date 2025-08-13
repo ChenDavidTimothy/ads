@@ -2,6 +2,7 @@
 import type { Node, Edge } from "reactflow";
 import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
+import { canonicalizeEdges, buildIdMap, toCanonicalId } from "@/shared/graph/id";
 
 export class FlowTracker {
   private nodeLineages = new Map<string, NodeLineage>();
@@ -106,65 +107,61 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // CRITICAL FIX: Registry-aware geometry object discovery with consistent ID handling
+  // Registry-aware geometry object discovery using canonical node IDs
   getUpstreamGeometryObjects(
-    nodeId: string, 
-    allNodes: Node<NodeData>[], 
+    nodeId: string,
+    allNodes: Node<NodeData>[],
     allEdges: Edge[]
   ): Node<NodeData>[] {
     const geometryNodes: Node<NodeData>[] = [];
     const visited = new Set<string>();
-    
+
     // Get geometry node types from registry instead of hardcoding
-    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
-    
-    // CRITICAL FIX: Handle ID conversion - edges use React Flow IDs, we need to convert
-    const getNodeByReactFlowId = (reactFlowId: string): Node<NodeData> | undefined => {
-      return allNodes.find(n => n.id === reactFlowId);
-    };
+    const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
+
+    // Canonicalize IDs and edges once, then operate only on identifier.id
+    const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
+    const canonicalEdges = canonicalizeEdges(
+      allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
+      allEdges as unknown as Array<{ source: string; target: string }>
+    );
 
     const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
-      return allNodes.find(n => n.data.identifier.id === identifierId);
+      return allNodes.find((n) => n.data.identifier.id === identifierId);
     };
 
     // Recursive function to traverse upstream from the target node
     const traverseUpstream = (currentNodeId: string): void => {
       if (visited.has(currentNodeId)) return;
       visited.add(currentNodeId);
-      
-      // CRITICAL FIX: Try both ID types to find the current node
-      const currentNode = getNodeByReactFlowId(currentNodeId) ?? getNodeByIdentifierId(currentNodeId);
-      
+
+      const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) {
         console.warn(`Node not found for ID: ${currentNodeId}`);
         return;
       }
-      
+
       // Registry-aware geometry node detection
       if (geometryNodeTypes.includes(currentNode.type!)) {
         geometryNodes.push(currentNode);
-        // Continue traversal to find ALL upstream geometry nodes (don't return early)
       }
-      
-      // CRITICAL FIX: Find edges targeting this node using BOTH ID types
-      const incomingEdges = allEdges.filter(edge => 
-        edge.target === currentNode.id || edge.target === currentNode.data.identifier.id
-      );
-      
+
+      // Find edges targeting this node using canonical (identifier) IDs
+      const incomingEdges = canonicalEdges.filter((edge: { target: string }) => edge.target === currentNode.data.identifier.id);
+
       // Recursively traverse all source nodes
       for (const edge of incomingEdges) {
         traverseUpstream(edge.source);
       }
     };
-    
-    // Start traversal from the target node
-    traverseUpstream(nodeId);
-    
+
+    // Start traversal from the target node, canonicalizing the starting ID
+    const startId = toCanonicalId(nodeId, idMap);
+    traverseUpstream(startId);
+
     // Return all geometry nodes (including duplicates for validation)
     // Sort by display name for consistent UI
-    return geometryNodes.sort((a, b) => 
-      a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)
-    );
+    return geometryNodes.sort((a, b) => a.data.identifier.displayName.localeCompare(b.data.identifier.displayName));
   }
 
   // Registry-aware node category validation
