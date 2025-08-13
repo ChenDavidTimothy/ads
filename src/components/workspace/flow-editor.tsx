@@ -1,7 +1,7 @@
 // src/components/workspace/flow-editor.tsx - Updated to use manual save and local backups
 "use client";
 
-import { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef, useEffect, useState } from "react";
 import type { NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -31,6 +31,7 @@ import { useMultiTabDetection } from "@/hooks/use-multi-tab-detection";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { WorkspaceState } from "@/types/workspace-state";
 import { getTimelineDataFromNodes } from "@/utils/workspace-state";
+import { SaveConflictModal } from "./save-conflict-modal";
 
 export function FlowEditor() {
   const {
@@ -113,6 +114,7 @@ export function FlowEditor() {
     onSaveSuccess: () => {},
     onSaveError: () => {},
   });
+  const [conflictOpen, setConflictOpen] = useState(false);
 
   // Initialize save hook from server data
   useEffect(() => {
@@ -219,12 +221,14 @@ export function FlowEditor() {
             hasMultipleTabs={hasMultipleTabs}
           />
           <SaveButton
-            onSave={() => { const s = buildWorkspaceState(); if (s) return saveNow(s).then(() => { /* noop */ }); }}
+            onSave={() => { const s = buildWorkspaceState(); if (s) void saveNow(s).catch(() => { setConflictOpen(true); }); }}
             isSaving={isSaving}
             hasUnsavedChanges={dirty}
             disabled={!isOnline || !workspaceId}
           />
         </div>
+
+        <SaveConflictModal isOpen={conflictOpen} onReload={() => { window.location.reload(); }} onDismiss={() => setConflictOpen(false)} />
 
         <DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, isDebugging }}>
           <FlowCanvas
