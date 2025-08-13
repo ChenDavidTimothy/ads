@@ -14,8 +14,6 @@ export class SceneNodeExecutor extends BaseExecutor {
     this.registerHandler('frame', (node, context, connections) => this.executeScene(node, context, connections));
   }
 
-
-
   private async executeScene(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
@@ -33,19 +31,30 @@ export class SceneNodeExecutor extends BaseExecutor {
 
     // CRITICAL FIX: Get or create per-scene storage for this scene
     const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) ?? [];
+    const isFrameNode = node.type === 'frame';
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
 
       for (const item of inputData) {
-        if (typeof item === 'object' && item !== null && 'id' in item && 'appearanceTime' in item) {
-          const objectId = (item as { id: string }).id;
+        if (typeof item === 'object' && item !== null && 'id' in item) {
+          // For frame nodes, accept objects without appearanceTime by defaulting to 0
+          const hasAppearance = 'appearanceTime' in item;
+          if (!hasAppearance && !isFrameNode) {
+            // Skip non-timed objects for scene nodes (video) as before
+            continue;
+          }
 
-          // CRITICAL FIX: Always store path-specific properties for this scene
-          sceneObjects.push(item as never);
+          const objectId = (item as { id: string }).id;
+          const normalized = isFrameNode && !hasAppearance
+            ? ({ ...(item as Record<string, unknown>), appearanceTime: 0 } as never)
+            : (item as never);
+
+          // Always store path-specific properties for this scene
+          sceneObjects.push(normalized);
           objectsAddedToThisScene++;
 
-          logger.debug(`Object ${objectId} with path-specific properties stored in scene ${sceneNodeId}`, {
+          logger.debug(`Object ${objectId} stored in ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId}`, {
             objectId,
             sceneId: sceneNodeId,
             properties: (item as { properties?: unknown }).properties
@@ -75,7 +84,8 @@ export class SceneNodeExecutor extends BaseExecutor {
     // CRITICAL: Store the scene-specific objects back to context
     context.sceneObjectsByScene.set(sceneNodeId, sceneObjects);
 
-    if (objectsAddedToThisScene === 0) {
+    // Only throw insert error for video scenes; frame/image accepts untimed objects
+    if (objectsAddedToThisScene === 0 && node.type === 'scene') {
       throw new MissingInsertConnectionError(node.data.identifier.displayName, node.data.identifier.id);
     }
 
@@ -86,13 +96,11 @@ export class SceneNodeExecutor extends BaseExecutor {
       for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
         for (const animation of animations) {
           context.animationSceneMap.set(animation.id, sceneNodeId);
-          logger.debug(`Animation ${animation.id} assigned to scene ${sceneNodeId} (object ${objectId})`);
+          logger.debug(`Animation ${animation.id} assigned to ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId} (object ${objectId})`);
         }
       }
     }
   }
-
-
 }
 
 
