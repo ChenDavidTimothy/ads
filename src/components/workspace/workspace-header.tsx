@@ -8,7 +8,7 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMultiTabDetection } from '@/hooks/use-multi-tab-detection';
 
 export function WorkspaceHeader() {
-  const { state, saveNow, isSaving, hasUnsavedChanges, lastSaved } = useWorkspace();
+  const { state, saveNow, isSaving, hasUnsavedChanges, lastSaved, hasBackup } = useWorkspace();
   const isOnline = useOnlineStatus();
   const { hasMultipleTabs } = useMultiTabDetection(state.meta.workspaceId);
 
@@ -22,6 +22,7 @@ export function WorkspaceHeader() {
           hasUnsavedChanges={hasUnsavedChanges}
           isSaving={isSaving}
           isOnline={isOnline}
+          hasBackup={hasBackup}
           hasMultipleTabs={hasMultipleTabs}
         />
         <SaveButton onSave={() => void saveNow()} isSaving={isSaving} hasUnsavedChanges={hasUnsavedChanges} disabled={!isOnline} />

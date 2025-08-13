@@ -1,12 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '@/trpc/react';
 import type { WorkspaceState, TimelineEditorData } from '@/types/workspace-state';
 import { extractWorkspaceState } from '@/utils/workspace-state';
 import { useWorkspaceSave } from '@/hooks/use-workspace-save';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useCrashBackup } from '@/hooks/use-crash-backup';
+import { useNavigationGuard } from '@/hooks/use-navigation-guard';
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
@@ -17,6 +19,7 @@ interface WorkspaceContextValue {
   isSaving: boolean;
   hasUnsavedChanges: boolean;
   lastSaved: Date | null;
+  hasBackup: boolean;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -27,7 +30,7 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
 
   const [state, setState] = useState<WorkspaceState | null>(null);
 
-  const { saveNow: saveToBackend, isSaving, hasUnsavedChanges, lastSaved, initializeFromWorkspace, currentVersion } = useWorkspaceSave({
+  const { saveNow: saveToBackend, isSaving, hasUnsavedChanges, lastSaved, initializeFromWorkspace } = useWorkspaceSave({
     workspaceId,
     initialVersion: workspace?.version ?? 0,
     onSaveSuccess: () => toast.success('Workspace saved'),
@@ -72,6 +75,10 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
     await saveToBackend(state);
   }, [state, saveToBackend]);
 
+  const getState = useCallback(() => state, [state]);
+  const backup = useCrashBackup(workspaceId, getState, { intervalMs: 15000 });
+  useNavigationGuard(Boolean(state && hasUnsavedChanges(state)), getState);
+
   const contextValue = useMemo<WorkspaceContextValue | null>(() => {
     if (!state) return null;
     return {
@@ -83,8 +90,9 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
       isSaving,
       hasUnsavedChanges: hasUnsavedChanges(state),
       lastSaved,
+      hasBackup: backup.hasBackup,
     };
-  }, [state, updateFlow, updateTimeline, updateUI, saveNow, isSaving, hasUnsavedChanges, lastSaved]);
+  }, [state, updateFlow, updateTimeline, updateUI, saveNow, isSaving, hasUnsavedChanges, lastSaved, backup.hasBackup]);
 
   if (isLoading || !contextValue) {
     return <div className="h-screen w-full bg-gray-900 text-gray-300 p-6">Loading workspace…</div>;
