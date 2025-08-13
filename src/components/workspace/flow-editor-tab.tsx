@@ -49,10 +49,22 @@ export function FlowEditorTab() {
     latestLocalNodesRef.current = nodes as unknown as Node<NodeData>[];
   }, [nodes]);
 
+  // Also keep latest local edges for robust syncing when property changes prune edges
+  const latestLocalEdgesRef = useRef<Edge[]>([]);
+  useEffect(() => {
+    latestLocalEdgesRef.current = edges as Edge[];
+  }, [edges]);
+
+  // Sync local graph from context: split effects so edge updates don't reset local node deletions
   useEffect(() => {
     setNodes(ctxNodes as unknown as Node<NodeData>[]);
+  }, [ctxNodes, setNodes]);
+  useEffect(() => {
     setEdges(ctxEdges as Edge[]);
-  }, [ctxNodes, ctxEdges, setNodes, setEdges]);
+  }, [ctxEdges, setEdges]);
+
+  // Track when a property-panel originated change occurs, so we can persist to context after local state updates
+  const pendingPropertySyncRef = useRef(false);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -60,8 +72,12 @@ export function FlowEditorTab() {
       setNodes(updatedNodes as unknown as Node<NodeData>[]);
       // Do NOT push to context here to avoid heavy snapshotting during drag
       onNodesChange(changes);
+      // But if nodes were removed, immediately sync nodes to context so they don't get rehydrated by edge updates
+      if (changes.some((c) => c.type === 'remove')) {
+        updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
+      }
     },
-    [nodes, setNodes, onNodesChange]
+    [nodes, setNodes, onNodesChange, updateFlow]
   );
 
   const handleEdgesChange = useCallback(
@@ -74,6 +90,73 @@ export function FlowEditorTab() {
     },
     [edges, setEdges, updateFlow, onEdgesChange]
   );
+
+  // After property-panel updates mutate local nodes/edges, push the latest to context once
+  useEffect(() => {
+    if (!pendingPropertySyncRef.current) return;
+    updateFlow({
+      nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[],
+      edges: latestLocalEdgesRef.current as Edge[],
+    });
+    pendingPropertySyncRef.current = false;
+  }, [nodes, edges, updateFlow]);
+
+  // Track current selection
+  const selectedNodesRef = useRef<Node<NodeData>[]>([]);
+  const selectedEdgesRef = useRef<Edge[]>([]);
+
+  const handleSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
+    selectedNodesRef.current = (params.nodes as unknown as Node<NodeData>[]) ?? [];
+    selectedEdgesRef.current = (params.edges as Edge[]) ?? [];
+  }, []);
+
+  // Robust custom deletion handler: Delete selected nodes (and their edges) or selected edges only
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.key === 'Delete' || e.key === 'Backspace')) return;
+      // Avoid when user is typing in inputs or contenteditable
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isFormInput = tag === 'input' || tag === 'textarea' || (target?.getAttribute('contenteditable') === 'true');
+      if (isFormInput) return;
+
+      // Prevent browser navigation on Backspace
+      e.preventDefault();
+
+      // Disable when modal is open
+      if (resultLogModalState.isOpen) return;
+
+      const selectedNodeIds = new Set((selectedNodesRef.current ?? []).map((n) => (n as unknown as { id: string }).id));
+      const selectedEdgeIds = new Set((selectedEdgesRef.current ?? []).map((ed) => ed.id));
+
+      if (selectedNodeIds.size > 0) {
+        // Remove selected nodes
+        const nextNodes = (latestLocalNodesRef.current as unknown as Node<NodeData>[])
+          .filter((n) => !selectedNodeIds.has((n as unknown as { id: string }).id));
+        // Remove edges connected to any removed node
+        const nextEdges = (latestLocalEdgesRef.current as Edge[])
+          .filter((ed) => !selectedNodeIds.has(ed.source) && !selectedNodeIds.has(ed.target));
+
+        // Update local state first for immediate UI feedback
+        setNodes(nextNodes as unknown as Node<NodeData>[]);
+        setEdges(nextEdges as Edge[]);
+        // Update context to persist
+        updateFlow({ nodes: nextNodes as unknown as Node<NodeData>[], edges: nextEdges as Edge[] });
+        // Update tracker
+        selectedNodeIds.forEach((nodeId) => flowTracker.removeNode(nodeId));
+      } else if (selectedEdgeIds.size > 0) {
+        // Remove only selected edges
+        const nextEdges = (latestLocalEdgesRef.current as Edge[])
+          .filter((ed) => !selectedEdgeIds.has(ed.id));
+        setEdges(nextEdges as Edge[]);
+        updateFlow({ edges: nextEdges as Edge[] });
+        selectedEdgeIds.forEach((edgeId) => flowTracker.removeConnection(edgeId));
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [flowTracker, setNodes, setEdges, updateFlow, resultLogModalState.isOpen]);
 
   const {
     resultLogModalState,
@@ -195,6 +278,7 @@ export function FlowEditorTab() {
               // Sync nodes to context once at the end of a drag gesture
               updateFlow({ nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[] });
             }}
+            onSelectionChange={handleSelectionChange}
             disableDeletion={resultLogModalState.isOpen}
           />
 
@@ -249,8 +333,16 @@ export function FlowEditorTab() {
         node={selectedNode}
         allNodes={nodes}
         allEdges={edges}
-        onChange={(newData: Partial<NodeData>) => selectedNode && updateNodeData(selectedNode.data.identifier.id, newData)}
-        onDisplayNameChange={updateDisplayName}
+        onChange={(newData: Partial<NodeData>) => {
+          if (!selectedNode) return;
+          pendingPropertySyncRef.current = true;
+          updateNodeData(selectedNode.data.identifier.id, newData);
+        }}
+        onDisplayNameChange={(nodeId: string, newDisplayName: string) => {
+          const ok = updateDisplayName(nodeId, newDisplayName);
+          if (ok) pendingPropertySyncRef.current = true;
+          return ok;
+        }}
         validateDisplayName={validateDisplayName}
         flowTracker={flowTracker}
       />
