@@ -101,6 +101,13 @@ export function FlowEditorTab() {
     pendingPropertySyncRef.current = false;
   }, [nodes, edges, updateFlow]);
 
+    const {
+    resultLogModalState,
+    handleOpenResultLogViewer,
+    handleCloseResultLogViewer,
+    getResultNodeData,
+  } = useResultLogViewer(nodes);
+
   // Track current selection
   const selectedNodesRef = useRef<Node<NodeData>[]>([]);
   const selectedEdgesRef = useRef<Edge[]>([]);
@@ -131,7 +138,7 @@ export function FlowEditorTab() {
 
       if (selectedNodeIds.size > 0) {
         // Remove selected nodes
-        const nextNodes = (latestLocalNodesRef.current as unknown as Node<NodeData>[])
+        const nextNodes = (latestLocalNodesRef.current as unknown as Node<NodeData>[]) 
           .filter((n) => !selectedNodeIds.has((n as unknown as { id: string }).id));
         // Remove edges connected to any removed node
         const nextEdges = (latestLocalEdgesRef.current as Edge[])
@@ -157,13 +164,6 @@ export function FlowEditorTab() {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [flowTracker, setNodes, setEdges, updateFlow, resultLogModalState.isOpen]);
-
-  const {
-    resultLogModalState,
-    handleOpenResultLogViewer,
-    handleCloseResultLogViewer,
-    getResultNodeData,
-  } = useResultLogViewer(nodes);
 
   const ensureTimelineForNode = useCallback((nodeId: string) => {
     if (state.editors.timeline[nodeId]) return;
