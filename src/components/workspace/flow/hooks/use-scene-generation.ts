@@ -36,10 +36,22 @@ interface VideoJob {
   error?: string;
 }
 
+interface ImageJob {
+  jobId: string;
+  frameName: string;
+  frameId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  imageUrl?: string;
+  error?: string;
+}
+
 export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null); // Legacy: primary video URL
   const [videos, setVideos] = useState<VideoJob[]>([]); // New: all videos
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageJob[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const { toast } = useNotifications();
@@ -211,6 +223,51 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     retry: false,
   });
 
+  const generateImage = api.animation.generateImage.useMutation({
+    onMutate: () => {
+      setIsGeneratingImage(true);
+      setLastError(null);
+      setValidationErrors([]);
+      setImageUrl(null);
+      setImages([]);
+    },
+    onSuccess: async (data) => {
+      if (!data.success) {
+        setIsGeneratingImage(false);
+        setValidationErrors(data.errors);
+        const primary = data.errors.find(e => e.type === 'error');
+        if (primary) setLastError(primary.message);
+        return;
+      }
+      if ('imageUrl' in data && data.imageUrl) {
+        setImageUrl(data.imageUrl);
+        setIsGeneratingImage(false);
+        toast.success('Image generated successfully!');
+        return;
+      }
+      if ('jobIds' in data) {
+        const jobIds = (data as unknown as { jobIds?: string[] }).jobIds ?? [];
+        if (jobIds.length > 0) {
+          setImages(jobIds.map((jobId, index) => {
+            const frameNode = nodes.filter(n => n.type === 'frame')[index] as RFNode<NodeData>;
+            const idData = (frameNode.data as { identifier: { id: string; displayName: string } }).identifier;
+            return { jobId, frameName: idData.displayName, frameId: idData.id, status: 'pending' };
+          }));
+          pollImages(jobIds);
+        } else {
+          setIsGeneratingImage(false);
+          setLastError('No frames could be processed');
+        }
+      }
+    },
+    onError: (error) => {
+      setIsGeneratingImage(false);
+      const msg = error instanceof Error ? error.message : String(error);
+      setLastError(msg);
+      toast.error('Image generation failed', msg);
+    }
+  });
+
   // Multi-job polling for multiple videos
   const startMultiJobPolling = useCallback((jobIds: string[], currentAttempt: number) => {
     const pendingJobs = new Set(jobIds);
@@ -346,6 +403,37 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     
     pollTimeoutRef.current = setTimeout(() => void pollAllJobs(), 500);
   }, [utils.animation.getRenderJobStatus, toast, router, videoUrl]);
+
+  const pollImages = useCallback((jobIds: string[]) => {
+    const pending = new Set(jobIds);
+    const poll = async () => {
+      try {
+        const res = await Promise.all(Array.from(pending).map(async (jobId) => {
+          try {
+            const status = await utils.animation.getRenderJobStatus.fetch({ jobId });
+            return { jobId, ...status };
+          } catch {
+            return { jobId, status: 'failed' as const };
+          }
+        }));
+        setImages(prev => prev.map(img => {
+          const s = res.find(r => r.jobId === img.jobId);
+          if (!s) return img;
+          const newStatus = (s.status === 'completed' ? 'completed' : s.status === 'failed' ? 'failed' : s.status) as ImageJob['status'];
+          if (newStatus === 'completed' && 'videoUrl' in s && (s as any).videoUrl) {
+            // ignore videoUrl for images
+          }
+          return { ...img, status: newStatus, imageUrl: (s as any).videoUrl ?? img.imageUrl, error: (s as any).error ?? img.error };
+        }));
+        res.forEach(s => { if (s.status === 'completed' || s.status === 'failed') pending.delete(s.jobId); });
+        if (pending.size > 0) setTimeout(poll, 1000);
+        else setIsGeneratingImage(false);
+      } catch {
+        setIsGeneratingImage(false);
+      }
+    };
+    setTimeout(poll, 500);
+  }, [utils.animation.getRenderJobStatus]);
 
   // Extract polling logic into a separate function (legacy single job)
   const startJobPolling = useCallback((jobId: string, currentAttempt: number) => {
@@ -515,6 +603,40 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     // No toast for reset - it's a frequent user action
   }, []);
 
+  const isFrameConnected = useMemo(() => {
+    const frameNode = nodes.find((n) => n.type === 'frame');
+    if (!frameNode) return false;
+    const frameTargetId = (frameNode as unknown as { id: string }).id;
+    return edges.some((edge) => edge.target === frameTargetId);
+  }, [nodes, edges]);
+
+  const canGenerateImage = useMemo(() => {
+    const frameNodes = nodes.filter((n) => n.type === 'frame');
+    const hasFrames = frameNodes.length > 0;
+    const withinLimits = frameNodes.length <= 8;
+    return hasFrames && withinLimits && isFrameConnected && !isGeneratingImage;
+  }, [nodes, isFrameConnected, isGeneratingImage]);
+
+  const handleGenerateImage = useCallback(async () => {
+    setLastError(null);
+    setValidationErrors([]);
+    try {
+      const supabase = createBrowserClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        toast.warning('Please log in', 'Authentication required to generate images');
+        router.push('/auth');
+        return;
+      }
+      const backendNodes = nodes.map((node) => ({ id: node.id, type: node.type, position: node.position, data: node.data }));
+      const backendEdges = edges.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle ?? undefined, targetHandle: edge.targetHandle ?? undefined, kind: 'data' as const }));
+      generateImage.mutate({ nodes: backendNodes, edges: backendEdges });
+    } catch (error) {
+      setLastError(error instanceof Error ? error.message : 'Validation failed');
+      toast.error('Validation failed', error instanceof Error ? error.message : 'Unknown validation error');
+    }
+  }, [nodes, edges, generateImage, toast, router]);
+
   // Get detailed validation error information for UI
   const getValidationSummary = useCallback(() => {
     if (validationErrors.length === 0) return null;
@@ -586,7 +708,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     videoUrl, 
     handleDownload,
     hasVideo: Boolean(videoUrl),
-    
+    // Image support
+    imageUrl,
+    hasImage: Boolean(imageUrl),
     // Multi-video support
     videos,
     hasVideos: videos.length > 0,
@@ -602,6 +726,16 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }, 
     handleGenerateScene, 
     isSceneConnected,
+
+    // Image generation
+    canGenerateImage,
+    generateImage: {
+      ...generateImage,
+      isPending: isGeneratingImage,
+    },
+    handleGenerateImage,
+    isGeneratingImage,
+
     lastError,
     resetGeneration,
     isGenerating,

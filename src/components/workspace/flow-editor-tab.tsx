@@ -148,6 +148,12 @@ export function FlowEditorTab() {
     resetGeneration,
     isGenerating,
     getValidationSummary,
+    // image
+    imageUrl,
+    hasImage,
+    canGenerateImage,
+    handleGenerateImage,
+    isGeneratingImage,
   } = useSceneGeneration(nodes, edges);
 
   const getGenerationHint = useCallback(() => {
@@ -202,11 +208,23 @@ export function FlowEditorTab() {
           onGenerate={handleGenerateScene}
           canGenerate={canGenerate}
           isGenerating={isGenerating}
-          hint={getGenerationHint()}
           onDownload={videoUrl ? handleDownload : undefined}
           hasVideo={Boolean(videoUrl)}
           videos={videos}
           onDownloadAll={completedVideos.length > 1 ? handleDownloadAll : undefined}
+          // image
+          onGenerateImage={handleGenerateImage}
+          canGenerateImage={canGenerateImage}
+          isGeneratingImage={isGeneratingImage}
+          onDownloadImage={imageUrl ? () => {
+            const link = document.createElement('a');
+            link.href = imageUrl!;
+            link.download = `frame_${Date.now()}.${imageUrl.includes('.jpeg') || imageUrl.includes('.jpg') ? 'jpg' : 'png'}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } : undefined}
+          hasImage={hasImage}
           lastError={lastError}
           onResetGeneration={resetGeneration}
           validationSummary={validationSummary}
