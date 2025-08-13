@@ -50,20 +50,41 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
   }, []);
 
   const updateTimeline = useCallback((nodeId: string, data: Partial<TimelineEditorData>) => {
-    setState((prev) =>
-      prev
-        ? {
-            ...prev,
-            editors: {
-              ...prev.editors,
-              timeline: {
-                ...prev.editors.timeline,
-                [nodeId]: { ...(prev.editors.timeline[nodeId] ?? { duration: 3, tracks: [] }), ...(data as TimelineEditorData) },
-              },
-            },
-          }
-        : prev
-    );
+    setState((prev) => {
+      if (!prev) return prev;
+
+      const existing = prev.editors.timeline[nodeId] ?? { duration: 3, tracks: [] };
+      const merged: TimelineEditorData = {
+        duration: data.duration ?? existing.duration,
+        tracks: data.tracks ?? existing.tracks,
+      };
+
+      // Mirror changes into the corresponding animation node in flow
+      const updatedNodes = prev.flow.nodes.map((node) => {
+        const isTarget = (node as unknown as { data?: { identifier?: { id?: string } } }).data?.identifier?.id === nodeId;
+        if (!isTarget) return node;
+        return {
+          ...node,
+          data: {
+            ...(node as unknown as { data: Record<string, unknown> }).data,
+            duration: merged.duration,
+            tracks: merged.tracks,
+          } as unknown,
+        } as typeof node;
+      });
+
+      return {
+        ...prev,
+        flow: { ...prev.flow, nodes: updatedNodes },
+        editors: {
+          ...prev.editors,
+          timeline: {
+            ...prev.editors.timeline,
+            [nodeId]: merged,
+          },
+        },
+      } as WorkspaceState;
+    });
   }, []);
 
   const updateUI = useCallback((updates: Partial<WorkspaceState['ui']>) => {
