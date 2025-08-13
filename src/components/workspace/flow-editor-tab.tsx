@@ -70,6 +70,14 @@ export function FlowEditorTab() {
     [onEdgesChange, updateFlow, edges]
   );
 
+  // Result log viewer (must be declared before useMemo that references its handlers)
+  const {
+    resultLogModalState,
+    handleOpenResultLogViewer,
+    handleCloseResultLogViewer,
+    getResultNodeData,
+  } = useResultLogViewer(nodes);
+
   // Double-click open timeline editor
   const nodeTypes: NodeTypes = useMemo(() => {
     const handleOpenTimelineEditor = (nodeId: string) => {
@@ -80,14 +88,7 @@ export function FlowEditorTab() {
       window.history.pushState({}, '', url.toString());
     };
     return createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer);
-  }, [updateUI]);
-
-  const {
-    resultLogModalState,
-    handleOpenResultLogViewer,
-    handleCloseResultLogViewer,
-    getResultNodeData,
-  } = useResultLogViewer(nodes);
+  }, [updateUI, handleOpenResultLogViewer]);
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
