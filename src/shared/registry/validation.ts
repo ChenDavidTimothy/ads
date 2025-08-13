@@ -1,8 +1,11 @@
-// src/shared/registry/validation.ts - Runtime validation for node registration
+// src/shared/registry/validation.ts - Enhanced with cross-worker caching
+
 import { NODE_DEFINITIONS, type NodeType } from '../types/definitions';
 import { getNodeComponentMapping } from './registry-utils';
 import { EXECUTOR_NODE_MAPPINGS} from '../../server/animation-processing/executors/generated-mappings';
 import { logger } from '@/lib/logger';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 
 // Type for component mapping return value
 type ComponentMapping = Record<string, unknown>;
@@ -27,6 +30,172 @@ export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+// Cross-worker validation cache
+interface CrossWorkerValidationCache {
+  isValid: boolean;
+  timestamp: number;
+  errors: string[];
+  warnings: string[];
+  generatedMappingsHash: string;
+  pid: number; // Track which process created the cache for debugging
+}
+
+const VALIDATION_CACHE_FILE = join(process.cwd(), '.next/validation-cache.json');
+const REGISTRY_VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Generate hash from generated mappings to detect code changes
+function getGeneratedMappingsHash(): string {
+  try {
+    const componentMapping = JSON.stringify(getNodeComponentMapping());
+    const executorMapping = JSON.stringify(EXECUTOR_NODE_MAPPINGS);
+    const nodeDefinitions = JSON.stringify(NODE_DEFINITIONS);
+    
+    const combined = componentMapping + executorMapping + nodeDefinitions;
+    return Buffer.from(combined).toString('base64').slice(0, 16);
+  } catch (error) {
+    // If we can't generate hash, force fresh validation
+    logger.warn('Failed to generate mappings hash, forcing fresh validation', error);
+    return `error-${Date.now()}`;
+  }
+}
+
+// Cross-worker validation with file-based caching
+export async function ensureValidationOnce(): Promise<ValidationResult | null> {
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
+  const currentHash = getGeneratedMappingsHash();
+  const now = Date.now();
+  
+  // Try to read existing cache
+  if (existsSync(VALIDATION_CACHE_FILE)) {
+    try {
+      const cached: CrossWorkerValidationCache = JSON.parse(
+        readFileSync(VALIDATION_CACHE_FILE, 'utf8')
+      );
+      const age = now - cached.timestamp;
+      
+      // Check if cache is still valid
+      if (age < REGISTRY_VALIDATION_TTL) {
+        if (cached.generatedMappingsHash === currentHash) {
+          logger.debug(`⚡ Using cached validation result (${Math.round(age/1000)}s old, PID:${cached.pid})`);
+          return { 
+            isValid: cached.isValid, 
+            errors: cached.errors, 
+            warnings: cached.warnings 
+          };
+        } else {
+          logger.debug('🔄 Validation cache invalidated due to mapping changes');
+        }
+      } else {
+        logger.debug(`🕐 Validation cache expired (${Math.round(age/1000)}s old, TTL: ${REGISTRY_VALIDATION_TTL/1000}s)`);
+      }
+    } catch (error) {
+      logger.debug('📁 Validation cache file corrupted, running fresh validation', error);
+    }
+  } else {
+    logger.debug('📝 No validation cache found, running initial validation');
+  }
+  
+  // Run fresh validation
+  logger.debug(`🔍 Running fresh node registration validation (PID:${process.pid})`);
+  const result = validateNodeRegistration();
+  
+  // Save to file cache for other workers
+  const cacheData: CrossWorkerValidationCache = {
+    isValid: result.isValid,
+    timestamp: now,
+    errors: result.errors,
+    warnings: result.warnings,
+    generatedMappingsHash: currentHash,
+    pid: process.pid
+  };
+  
+  try {
+    // Ensure .next directory exists
+    const cacheDir = dirname(VALIDATION_CACHE_FILE);
+    if (!existsSync(cacheDir)) {
+      mkdirSync(cacheDir, { recursive: true });
+    }
+    
+    writeFileSync(VALIDATION_CACHE_FILE, JSON.stringify(cacheData, null, 2), 'utf8');
+    logger.debug(`💾 Saved validation cache for other workers`);
+  } catch (error) {
+    // File write failed, but validation still succeeded
+    logger.warn('Failed to write validation cache file', error);
+  }
+  
+  return result;
+}
+
+// Legacy per-process cache (kept for compatibility but not used in new flow)
+interface RegistryValidationCache {
+  isValid: boolean;
+  timestamp: number;
+  result: ValidationResult;
+}
+
+let registryValidationCache: RegistryValidationCache | null = null;
+
+// Legacy function - deprecated in favor of ensureValidationOnce
+export function validateOnStartup(): ValidationResult | null {
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
+  const now = Date.now();
+  
+  // Return cached result if recently validated
+  if (registryValidationCache && (now - registryValidationCache.timestamp) < REGISTRY_VALIDATION_TTL) {
+    logger.debug('⚡ Skipping node registration validation - recently validated');
+    return registryValidationCache.result;
+  }
+
+  const processInfo = `PID:${process.pid}`;
+  logger.debug(`🔍 Running node registration validation... (${processInfo})`);
+  const result = validateNodeRegistration();
+  
+  // Cache the result with timestamp
+  registryValidationCache = {
+    isValid: result.isValid,
+    timestamp: now,
+    result
+  };
+
+  if (!result.isValid) {
+    logger.error('❌ Node registration validation failed on startup');
+    result.errors.forEach(error => logger.error(`  • ${error}`));
+    result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
+    
+    // In development, we could throw to prevent startup with invalid configuration
+    // throw new Error('Node registration validation failed');
+  } else {
+    // Success message already logged by validateNodeRegistration()
+    // Only log additional warnings if present
+    if (result.warnings.length > 0) {
+      result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
+    }
+  }
+
+  return result;
+}
+
+// Force re-validation (useful for testing or when node definitions change)
+export function resetValidationCache(): void {
+  registryValidationCache = null;
+  
+  // Also remove file cache in development
+  if (process.env.NODE_ENV === 'development' && existsSync(VALIDATION_CACHE_FILE)) {
+    try {
+      require('fs').unlinkSync(VALIDATION_CACHE_FILE);
+      logger.debug('🗑️ Cleared validation cache file');
+    } catch (error) {
+      logger.warn('Failed to remove validation cache file', error);
+    }
+  }
 }
 
 // Validate complete node registration
@@ -229,66 +398,8 @@ export function validateNodeType(nodeType: string): ValidationResult {
       errors.push(`Node type '${nodeType}' not found in executor '${executorType}' mappings`);
     }
   } else {
-    errors.push(`Unknown executor type '${executorType}' for node '${nodeType}'`);
+    errors.push(`Unknown executor type '${executorType}' for node '${executorType}'`);
   }
 
   return { isValid: errors.length === 0, errors, warnings };
-}
-
-// TTL-based registry validation cache
-interface RegistryValidationCache {
-  isValid: boolean;
-  timestamp: number;
-  result: ValidationResult;
-}
-
-let registryValidationCache: RegistryValidationCache | null = null;
-const REGISTRY_VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Development helper: validate on startup with TTL caching
-export function validateOnStartup(): ValidationResult | null {
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
-
-  const now = Date.now();
-  
-  // Return cached result if recently validated
-  if (registryValidationCache && (now - registryValidationCache.timestamp) < REGISTRY_VALIDATION_TTL) {
-    logger.debug('⚡ Skipping node registration validation - recently validated');
-    return registryValidationCache.result;
-  }
-
-  const processInfo = `PID:${process.pid}`;
-  logger.debug(`🔍 Running node registration validation... (${processInfo})`);
-  const result = validateNodeRegistration();
-  
-  // Cache the result with timestamp
-  registryValidationCache = {
-    isValid: result.isValid,
-    timestamp: now,
-    result
-  };
-
-  if (!result.isValid) {
-    logger.error('❌ Node registration validation failed on startup');
-    result.errors.forEach(error => logger.error(`  • ${error}`));
-    result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
-    
-    // In development, we could throw to prevent startup with invalid configuration
-    // throw new Error('Node registration validation failed');
-  } else {
-    // Success message already logged by validateNodeRegistration()
-    // Only log additional warnings if present
-    if (result.warnings.length > 0) {
-      result.warnings.forEach(warning => logger.warn(`  ⚠ ${warning}`));
-    }
-  }
-
-  return result;
-}
-
-// Force re-validation (useful for testing or when node definitions change)
-export function resetValidationCache(): void {
-  registryValidationCache = null;
 }

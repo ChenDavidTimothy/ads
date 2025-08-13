@@ -1,3 +1,5 @@
+// src/server/api/trpc.ts - Updated to use cross-worker validation
+
 /**
  * YOU PROBABLY DON'T NEED TO EDIT THIS FILE, UNLESS:
  * 1. You want to modify request context (see Part 1).
@@ -10,19 +12,20 @@ import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
-import { validateOnStartup } from "@/shared/registry/validation";
+import { ensureValidationOnce } from "@/shared/registry/validation";
 
 // Prevent EventEmitter memory leak warnings from multiple signal handlers
 if (typeof process !== 'undefined') {
   process.setMaxListeners(20);
 }
 
-// Run node registration validation only once on server startup
-let validationRun = false;
-if (typeof window === 'undefined' && !validationRun) {
-  validationRun = true;
-  validateOnStartup();
-}
+// REMOVED: Module-level validation that was running on every worker
+// This was causing the excessive process creation and redundant validation
+// let validationRun = false;
+// if (typeof window === 'undefined' && !validationRun) {
+//   validationRun = true;
+//   validateOnStartup();
+// }
 
 /**
  * 1. CONTEXT
@@ -37,6 +40,10 @@ if (typeof window === 'undefined' && !validationRun) {
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  // Run validation once per dev session across all Turbopack workers
+  // Uses file-based caching to avoid redundant validation on every worker startup
+  await ensureValidationOnce();
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -97,42 +104,19 @@ export const createTRPCRouter = t.router;
  * You can remove this if you don't like it, but it can help catch unwanted waterfalls by simulating
  * network latency that would occur in production but not in local development.
  */
-const timingMiddleware = t.middleware(async ({ next, path }) => {
-  const start = Date.now();
-
-  if (t._config.isDev) {
-    // artificial delay in dev
-    const waitMs = Math.floor(Math.random() * 400) + 100;
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
-  }
-
-  const result = await next();
-
-  const end = Date.now();
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
-
-  return result;
-});
+export const publicProcedure = t.procedure;
 
 /**
- * Public (unauthenticated) procedure
- *
- * This is the base piece you use to build new queries and mutations on your tRPC API. It does not
- * guarantee that a user querying is authorized, but you can still access user session data if they
- * are logged in.
+ * Protected procedure that requires authentication.
  */
-export const publicProcedure = t.procedure.use(timingMiddleware);
-
-const authMiddleware = t.middleware(async ({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) {
-    throw new Error("UNAUTHORIZED");
+    throw new Error('Unauthorized');
   }
   return next({
     ctx: {
+      ...ctx,
       user: ctx.user,
-      supabase: ctx.supabase,
     },
   });
 });
-
-export const protectedProcedure = t.procedure.use(timingMiddleware).use(authMiddleware);
