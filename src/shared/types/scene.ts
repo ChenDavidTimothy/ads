@@ -1,5 +1,6 @@
 // src/shared/types/scene.ts
 import type { Point2D } from './core';
+import type { PropertySourceMap } from '@/shared/properties/precedence';
 
 // Animation Scene
 export interface AnimationScene {
@@ -55,6 +56,8 @@ export interface ObjectState {
     fill: string;
     stroke?: string;
   };
+  // Optional source tracking to support assignment precedence and debugging
+  _sources?: PropertySourceMap;
 }
 
 // Scene-specific animation track types (with objectId for execution)

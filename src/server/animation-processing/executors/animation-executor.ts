@@ -42,7 +42,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         } else {
           baseline = appearanceTime ?? 0;
         }
-        // CRITICAL FIX: Only include prior animations from the current execution path
+        // Only include prior animations from the current execution path
         const priorForObject = objectId ? (perObjectAnimations[objectId] ?? []) : [];
         const animations = convertTracksToSceneAnimations(
           (data.tracks as AnimationTrack[]) || [],

@@ -1,4 +1,4 @@
-// src/server/animation-processing/execution-context.ts - Future-proof execution context with ID consistency fixes
+// src/server/animation-processing/execution-context.ts - Future-proof execution context with ID consistency
 import type { PortType, SceneAnimationTrack, GeometryProperties } from "@/shared/types";
 import type { LogicDataType, TypedValue } from "@/shared/types/validation";
 import { validateAndCoerce } from "@/shared/types/validation";
@@ -52,7 +52,6 @@ export interface ExecutionContext {
   executionStack: string[]; // For nested conditional execution
   
   // Scene building - per-scene storage to preserve path-specific properties
-  // CRITICAL FIX: Replace global sceneObjects with per-scene storage
   sceneObjectsByScene: Map<string, Array<{
     id: string;
     type: 'triangle' | 'circle' | 'rectangle';
@@ -88,7 +87,7 @@ export function createExecutionContext(): ExecutionContext {
     currentTime: 0,
     conditionalPaths: new Map(),
     executionStack: [],
-    sceneObjectsByScene: new Map(), // CRITICAL FIX: Per-scene storage
+    sceneObjectsByScene: new Map(),
     sceneAnimations: [],
     objectSceneMap: new Map(),
     animationSceneMap: new Map(),
@@ -137,24 +136,16 @@ export function getNodeOutput(
   return context.nodeOutputs.get(key);
 }
 
-// CRITICAL FIX: Handle both React Flow IDs and identifier IDs in connection lookups
 export function getConnectedInput(
   context: ExecutionContext,
   connections: Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue | undefined {
-  // CRITICAL: Try to find connection using identifier ID first, then React Flow ID
   const connection = connections.find(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
-  
-  if (!connection) {
-    // No connection found with this target node ID
-    return undefined;
-  }
-  
-  // Get output using the source node identifier ID
+  if (!connection) return undefined;
   return getNodeOutput(context, connection.source, connection.sourceHandle);
 }
 
@@ -164,20 +155,14 @@ export function getConnectedInputs(
   targetNodeId: string,
   targetPortId: string
 ): ExecutionValue[] {
-  // CRITICAL: Find all connections targeting this node/port combination
   const matchingConnections = connections.filter(
     conn => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
-  
   const inputs: ExecutionValue[] = [];
   for (const connection of matchingConnections) {
-    // Get output using the source node identifier ID
     const input = getNodeOutput(context, connection.source, connection.sourceHandle);
-    if (input) {
-      inputs.push(input);
-    }
+    if (input) inputs.push(input);
   }
-  
   return inputs;
 }
 
