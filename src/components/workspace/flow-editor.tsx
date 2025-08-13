@@ -1,18 +1,16 @@
-// src/components/workspace/flow-editor.tsx - Updated to use graceful validation
+// src/components/workspace/flow-editor.tsx - Updated to use manual save and local backups
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useEffect } from "react";
 import type { NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
 
 import { NodePalette } from "./node-palette";
-// Removed modal in favor of dedicated page
 import { ResultLogModal } from "./result-log-modal";
 import type { NodeData } from "@/shared/types";
 import { createNodeTypes } from "./flow/node-types";
 import { useFlowGraph } from "./flow/hooks/use-flow-graph";
 import { useConnections } from "./flow/hooks/use-connections";
-import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { useResultLogViewer } from "./flow/hooks/use-result-log-viewer";
@@ -24,7 +22,15 @@ import { ActionsToolbar } from "./flow/components/actions-toolbar";
 import { RightSidebar } from "./flow/components/right-sidebar";
 import { VideoPreview } from "./flow/components/video-preview";
 import type { Node, Edge } from "reactflow";
-// Removed unused RouterOutputs import and WorkspaceData alias
+import { useWorkspaceSave } from "@/hooks/use-workspace-save";
+import { SaveStatus } from "./save-status";
+import { SaveButton } from "./save-button";
+import { useNavigationGuard } from "@/hooks/use-navigation-guard";
+import { useCrashBackup } from "@/hooks/use-crash-backup";
+import { useMultiTabDetection } from "@/hooks/use-multi-tab-detection";
+import { useOnlineStatus } from "@/hooks/use-online-status";
+import type { WorkspaceState } from "@/types/workspace-state";
+import { getTimelineDataFromNodes } from "@/utils/workspace-state";
 
 export function FlowEditor() {
   const {
@@ -52,42 +58,95 @@ export function FlowEditor() {
     { id: workspaceId! },
     { 
       enabled: Boolean(workspaceId),
-      refetchInterval: false,          // Stop automatic refetching
-      refetchOnWindowFocus: false,     // Don't refetch on window focus
-      refetchOnMount: false,           // Don't refetch on mount
-      refetchOnReconnect: false,       // Don't refetch on reconnect
-      staleTime: 10 * 60 * 1000,      // Consider data fresh for 10 minutes
-      gcTime: 15 * 60 * 1000,         // Cache for 15 minutes
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      staleTime: 10 * 60 * 1000,
+      gcTime: 15 * 60 * 1000,
     }
   );
-  // Removed auto-create; workspace is selected via workspace-selector page
-  const lastSavedSnapshotRef = useRef<string>("");
-  const lastQueuedSnapshotRef = useRef<string>("");
-  const saveWorkspace = api.workspace.save.useMutation({
-    onSuccess: () => {
-      // Mark the last successfully saved snapshot
-      lastSavedSnapshotRef.current = lastQueuedSnapshotRef.current;
-    },
-  });
-  const currentVersionRef = useRef<number | null>(null);
-  // No auto-create
+
   const hydratedOnceRef = useRef<boolean>(false);
-  // Stable snapshot of the current flow to avoid saving when nothing changed
-  const flowSnapshot = useMemo(() => {
-    try {
-      const normNodes = [...nodes]
-        .map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
-        .sort((a, b) => a.id.localeCompare(b.id));
-      const normEdges = [...edges]
-        .map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle }))
-        .sort((a, b) => a.id.localeCompare(b.id));
-      return JSON.stringify({ n: normNodes, e: normEdges });
-    } catch {
-      return Math.random().toString();
+  const currentVersionRef = useRef<number>(0);
+
+  // Hydrate from workspace on load
+  useEffect(() => {
+    if (!workspaceId) return;
+    if (workspace && Array.isArray(workspace.flow_data?.nodes) && Array.isArray(workspace.flow_data?.edges)) {
+      if (!hydratedOnceRef.current && nodes.length === 0 && edges.length === 0) {
+        const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
+        setNodes(flowData.nodes as Node<NodeData>[]);
+        setEdges(flowData.edges as Edge[]);
+        currentVersionRef.current = workspace.version;
+        hydratedOnceRef.current = true;
+      } else if (workspace.version > currentVersionRef.current) {
+        const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
+        setNodes(flowData.nodes as Node<NodeData>[]);
+        setEdges(flowData.edges as Edge[]);
+        currentVersionRef.current = workspace.version;
+      }
     }
-  }, [nodes, edges]);
+  }, [workspaceId, workspace, nodes.length, edges.length, setNodes, setEdges]);
 
+  // Build a WorkspaceState shape from local editor state
+  const buildWorkspaceState = useCallback((): WorkspaceState | null => {
+    if (!workspaceId) return null;
+    const timeline = getTimelineDataFromNodes(nodes as unknown as Node<NodeData>[]);
+    return {
+      flow: { nodes: nodes as unknown as Node<NodeData>[], edges },
+      editors: { timeline },
+      ui: { activeTab: 'flow' },
+      meta: {
+        version: currentVersionRef.current,
+        lastModified: new Date(workspace?.updated_at ?? Date.now()),
+        workspaceId,
+        name: workspace?.name ?? 'Untitled',
+      },
+    };
+  }, [workspaceId, nodes, edges, workspace]);
 
+  // Manual save hook
+  const { saveNow, isSaving, hasUnsavedChanges, initializeFromWorkspace, lastSaved, currentVersion } = useWorkspaceSave({
+    workspaceId: workspaceId ?? '',
+    initialVersion: workspace?.version ?? 0,
+    onSaveSuccess: () => {},
+    onSaveError: () => {},
+  });
+
+  // Initialize save hook from server data
+  useEffect(() => {
+    if (workspace) {
+      initializeFromWorkspace(workspace);
+      currentVersionRef.current = workspace.version;
+    }
+  }, [workspace, initializeFromWorkspace]);
+
+  // Crash backup & nav guard
+  const stateGetter = useCallback(() => buildWorkspaceState(), [buildWorkspaceState]);
+  useCrashBackup(workspaceId ?? '', stateGetter, { intervalMs: 15000 });
+  useNavigationGuard(Boolean(buildWorkspaceState() && hasUnsavedChanges(buildWorkspaceState()!)), stateGetter);
+
+  // Keyboard shortcut for save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const saveCombo = (isMac && e.metaKey && e.key.toLowerCase() === 's') || (!isMac && e.ctrlKey && e.key.toLowerCase() === 's');
+      if (saveCombo) {
+        e.preventDefault();
+        const st = buildWorkspaceState();
+        if (st) void saveNow(st);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [buildWorkspaceState, saveNow]);
+
+  // Multi-tab and online status
+  const { hasMultipleTabs } = useMultiTabDetection(workspaceId ?? '');
+  const isOnline = useOnlineStatus();
+
+  // Create stable nodeTypes to prevent React Flow warnings
   const {
     resultLogModalState,
     handleOpenResultLogViewer,
@@ -97,87 +156,19 @@ export function FlowEditor() {
 
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
-  // Create stable nodeTypes to prevent React Flow warnings
   const nodeTypes: NodeTypes = useMemo(() => {
     const handleOpenTimelineEditor = (nodeId: string) => {
-      // Navigate to timeline editor page
       const params = new URLSearchParams(window.location.search);
       const wsId = params.get('workspace');
       const target = `/workspace/timeline/${nodeId}${wsId ? `?workspace=${wsId}` : ''}`;
       window.location.href = target;
     };
-    
     return createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer);
   }, [handleOpenResultLogViewer]);
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
 
-  // Hydrate from workspace on load
-  useEffect(() => {
-    if (!workspaceId) return;
-    if (workspace && Array.isArray(workspace.flow_data?.nodes) && Array.isArray(workspace.flow_data?.edges)) {
-      // Initial hydration: only if we haven't hydrated and the canvas is empty
-      if (!hydratedOnceRef.current && nodes.length === 0 && edges.length === 0) {
-        if (workspace?.flow_data) {
-          const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
-          if (Array.isArray(flowData.nodes) && Array.isArray(flowData.edges)) {
-            setNodes(flowData.nodes as Node<NodeData>[]);
-            setEdges(flowData.edges as Edge[]);
-          }
-        }
-        currentVersionRef.current = workspace.version;
-        hydratedOnceRef.current = true;
-        return;
-      }
-      // Subsequent hydration only when server version is newer than our local
-      if (currentVersionRef.current !== null && workspace.version > currentVersionRef.current) {
-        if (workspace?.flow_data) {
-          const flowData = workspace.flow_data as { nodes: unknown[]; edges: unknown[] };
-          if (Array.isArray(flowData.nodes) && Array.isArray(flowData.edges)) {
-            setNodes(flowData.nodes as Node<NodeData>[]);
-            setEdges(flowData.edges as Edge[]);
-          }
-        }
-        currentVersionRef.current = workspace.version;
-        return;
-      }
-      // If we skipped initial hydration due to local edits, still record version for saves
-      currentVersionRef.current ??= workspace.version;
-    }
-  }, [workspaceId, workspace, nodes.length, edges.length, setNodes, setEdges]);
-
-  // Debounced autosave when nodes/edges change
-  useEffect(() => {
-    if (!workspaceId) return;
-    // Avoid saving until we've hydrated from the server to prevent initial races
-    if (!hydratedOnceRef.current || !workspace) return;
-    // If nothing changed since last successful save (or last queued), don't schedule a new save
-    if (flowSnapshot === lastSavedSnapshotRef.current || flowSnapshot === lastQueuedSnapshotRef.current) {
-      return;
-    }
-    
-    // Skip saving if changes are too minor (e.g., just cursor position changes)
-    const hasSignificantChanges = nodes.some(node => 
-      node.data && Object.keys(node.data).some(key => 
-        !['position', 'selected', 'dragging'].includes(key)
-      )
-    ) || edges.length > 0;
-    
-    if (!hasSignificantChanges) {
-      return;
-    }
-    
-    const version = currentVersionRef.current ?? (workspace?.version ?? 0);
-    const timer = setTimeout(() => {
-      if (saveWorkspace.isPending) return;
-      lastQueuedSnapshotRef.current = flowSnapshot;
-      const flowData = { nodes, edges };
-      saveWorkspace.mutate({ id: workspaceId, flowData, version });
-      // optimistic increment
-      currentVersionRef.current = version + 1;
-    }, 3000); // Increased from 1200 to 3000 (3 seconds instead of 1.2 seconds)
-    return () => clearTimeout(timer);
-  }, [flowSnapshot, nodes, edges, workspaceId, saveWorkspace, workspace?.version, workspace]);
+  // Remove debounced server autosave: manual save only
 
   const { 
     videoUrl, 
@@ -194,42 +185,47 @@ export function FlowEditor() {
     getValidationSummary,
   } = useSceneGeneration(nodes, edges);
 
-  // Timeline editor moved to dedicated page; no modal save handler
-
-  // Generate user-friendly hints for different scenarios
   const getGenerationHint = useCallback(() => {
     const hasScene = nodes.some((n) => n.type === 'scene');
     const hasGeometry = nodes.some((n) => ['triangle', 'circle', 'rectangle'].includes(n.type!));
-    
-    if (!hasScene) {
-      return 'Add a Scene node to generate video';
-    }
-    
-    if (!hasGeometry) {
-      return 'Add geometry nodes (Triangle, Circle, Rectangle) to create content';
-    }
-    
+    if (!hasScene) return 'Add a Scene node to generate video';
+    if (!hasGeometry) return 'Add geometry nodes (Triangle, Circle, Rectangle) to create content';
     const sceneNode = nodes.find((n) => n.type === 'scene');
     if (sceneNode) {
       const sceneTargetId = (sceneNode as unknown as { id: string }).id;
       const isConnected = edges.some((edge) => edge.target === sceneTargetId);
-      
-      if (!isConnected) {
-        return 'Connect your nodes to the Scene node to generate video';
-      }
+      if (!isConnected) return 'Connect your nodes to the Scene node to generate video';
     }
-    
     return null;
   }, [nodes, edges]);
 
-  // Get validation summary for enhanced error display
   const validationSummary = getValidationSummary();
+
+  const st = buildWorkspaceState();
+  const dirty = Boolean(st && hasUnsavedChanges(st));
 
   return (
     <div className="flex h-full">
       <NodePalette onAddNode={handleAddNode} />
 
       <div className="flex-1 relative">
+        <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between bg-gray-900/60">
+          <SaveStatus
+            lastSaved={lastSaved}
+            hasUnsavedChanges={dirty}
+            isSaving={isSaving}
+            isOnline={isOnline}
+            hasBackup={false}
+            hasMultipleTabs={hasMultipleTabs}
+          />
+          <SaveButton
+            onSave={() => { const s = buildWorkspaceState(); if (s) return saveNow(s).then(() => { /* noop */ }); }}
+            isSaving={isSaving}
+            hasUnsavedChanges={dirty}
+            disabled={!isOnline || !workspaceId}
+          />
+        </div>
+
         <DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, isDebugging }}>
           <FlowCanvas
             nodes={nodes}
@@ -285,9 +281,6 @@ export function FlowEditor() {
         validateDisplayName={validateDisplayName}
         flowTracker={flowTracker}
       />
-
-      {/* TimelineEditorModal removed in favor of dedicated page */}
-
     </div>
   );
 }
