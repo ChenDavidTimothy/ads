@@ -36,6 +36,13 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     scheduleUpdate();
   }, [data.duration, data.tracks, scheduleUpdate]);
 
+  // Keep props stable unless nodeId changes (prevents core from reinitializing on every parent re-render)
+  const coreProps = useMemo(() => ({
+    animationNodeId: nodeId,
+    duration: data.duration,
+    tracks: data.tracks,
+  }), [nodeId, data.duration, data.tracks]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between bg-gray-900/60">
@@ -44,9 +51,9 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       </div>
       <div className="flex-1">
         <TimelineEditorCore
-          animationNodeId={nodeId}
-          duration={data.duration}
-          tracks={data.tracks}
+          animationNodeId={coreProps.animationNodeId}
+          duration={coreProps.duration}
+          tracks={coreProps.tracks}
           onChange={handleChange}
         />
       </div>

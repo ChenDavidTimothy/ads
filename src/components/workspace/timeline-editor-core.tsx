@@ -91,17 +91,22 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
+  const prevNodeIdRef = useRef<string>(animationNodeId);
 
+  // Initialize only when the animation node changes; preserve interaction state otherwise
   useEffect(() => {
-    setDuration(controlledDuration);
-    setTracks(controlledTracks);
-    setSelectedTrackId(null);
-    setDragState(null);
-    const tracker = trackerRef.current;
-    controlledTracks.forEach((t, index) => {
-      tracker.trackTransformCreation(t.identifier.id, animationNodeId, index);
-    });
-  }, [controlledDuration, controlledTracks, animationNodeId]);
+    if (prevNodeIdRef.current !== animationNodeId) {
+      setDuration(controlledDuration);
+      setTracks(controlledTracks);
+      setSelectedTrackId(null);
+      setDragState(null);
+      const tracker = trackerRef.current;
+      controlledTracks.forEach((t, index) => {
+        tracker.trackTransformCreation(t.identifier.id, animationNodeId, index);
+      });
+      prevNodeIdRef.current = animationNodeId;
+    }
+  }, [animationNodeId, controlledDuration, controlledTracks]);
 
   useEffect(() => {
     const tracker = trackerRef.current;
