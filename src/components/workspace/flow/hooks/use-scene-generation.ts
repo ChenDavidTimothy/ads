@@ -242,8 +242,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         if (errorMessages.length > 0) {
           const primaryError = errorMessages[0];
-          toast.error('Cannot generate image', primaryError.message);
-          setLastError(primaryError.message);
+          if (primaryError && primaryError.message) {
+            toast.error('Cannot generate image', primaryError.message);
+            setLastError(primaryError.message);
+          }
         }
         
         if (warningMessages.length > 0) {
