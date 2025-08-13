@@ -235,8 +235,23 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if (!data.success) {
         setIsGeneratingImage(false);
         setValidationErrors(data.errors);
-        const primary = data.errors.find(e => e.type === 'error');
-        if (primary) setLastError(primary.message);
+        
+        // Show user-friendly error notifications
+        const errorMessages = data.errors.filter(e => e.type === 'error');
+        const warningMessages = data.errors.filter(e => e.type === 'warning');
+        
+        if (errorMessages.length > 0) {
+          const primaryError = errorMessages[0];
+          toast.error('Cannot generate image', primaryError.message);
+          setLastError(primaryError.message);
+        }
+        
+        if (warningMessages.length > 0) {
+          warningMessages.forEach(warning => {
+            toast.warning('Warning', warning.message);
+          });
+        }
+        
         return;
       }
       if ('imageUrl' in data && data.imageUrl) {
