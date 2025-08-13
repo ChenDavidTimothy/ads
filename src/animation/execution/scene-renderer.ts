@@ -1,11 +1,51 @@
 // src/animation/execution/scene-renderer.ts
-import type { NodeCanvasContext, Point2D } from '@/shared/types/core';
+import type { NodeCanvasContext, Point2D, Transform } from '@/shared/types/core';
 import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
 import { Timeline } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
-import { saveAndTransform } from '../core/transforms';
+
+function applyTranslation(
+  ctx: NodeCanvasContext | CanvasRenderingContext2D,
+  translation: Point2D
+): void {
+  ctx.translate(Math.round(translation.x), Math.round(translation.y));
+}
+
+function applyRotation(
+  ctx: NodeCanvasContext | CanvasRenderingContext2D,
+  rotation: number
+): void {
+  ctx.rotate(rotation);
+}
+
+function applyScale(
+  ctx: NodeCanvasContext | CanvasRenderingContext2D,
+  scale: Point2D
+): void {
+  ctx.scale(scale.x, scale.y);
+}
+
+function applyTransform(
+  ctx: NodeCanvasContext | CanvasRenderingContext2D,
+  transform: Transform
+): void {
+  applyTranslation(ctx, transform.translate);
+  applyRotation(ctx, transform.rotate);
+  applyScale(ctx, transform.scale);
+}
+
+function saveAndTransform(
+  ctx: NodeCanvasContext | CanvasRenderingContext2D,
+  transform: Transform,
+  drawCallback: () => void
+): void {
+  ctx.save();
+  applyTransform(ctx, transform);
+  drawCallback();
+  ctx.restore();
+}
 
 export interface SceneRenderConfig {
   width: number;

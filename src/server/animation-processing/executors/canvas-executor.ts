@@ -5,6 +5,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
 import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
@@ -36,14 +37,19 @@ export class CanvasNodeExecutor extends BaseExecutor {
       strokeWidth: data.strokeWidth as number | undefined,
     };
 
+    // Read optional per-object assignments metadata
+    const perObjectAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
+
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
         if (typeof obj === 'object' && obj !== null && 'id' in obj) {
           const original = obj as SceneObject as unknown as Record<string, unknown>;
+          const assignmentsForObject = perObjectAssignments?.[(original as { id: string }).id];
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
             original as unknown as SceneObject,
-            canvasOverrides
+            canvasOverrides,
+            assignmentsForObject
           );
 
           const styled: Record<string, unknown> = {
@@ -61,8 +67,8 @@ export class CanvasNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Pass through existing per-object animations/cursors unchanged if present
-    const firstMeta = inputs[0]?.metadata as { perObjectTimeCursor?: Record<string, number>; perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined;
+    // Pass through existing per-object animations/cursors/assignments unchanged if present
+    const firstMeta = inputs[0]?.metadata as { perObjectTimeCursor?: Record<string, number>; perObjectAnimations?: Record<string, SceneAnimationTrack[]>; perObjectAssignments?: PerObjectAssignments } | undefined;
 
     setNodeOutput(
       context,
@@ -73,7 +79,22 @@ export class CanvasNodeExecutor extends BaseExecutor {
       {
         perObjectTimeCursor: firstMeta?.perObjectTimeCursor,
         perObjectAnimations: firstMeta?.perObjectAnimations,
+        perObjectAssignments: firstMeta?.perObjectAssignments,
       }
     );
+  }
+
+  private extractPerObjectAssignments(inputs: Array<{ metadata?: unknown }>): PerObjectAssignments | undefined {
+    const merged: PerObjectAssignments = {};
+    let found = false;
+    for (const input of inputs) {
+      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      if (!fromMeta) continue;
+      for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        found = true;
+        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+      }
+    }
+    return found ? merged : undefined;
   }
 }

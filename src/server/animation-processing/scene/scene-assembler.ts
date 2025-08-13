@@ -5,6 +5,7 @@ import type { SceneTransform } from "@/shared/types/transforms";
 import { transformFactory } from "@/shared/registry/transforms";
 import { transformEvaluator } from "@/shared/registry/transform-evaluator";
 import type { Point2D } from "@/shared/types/core";
+import type { PerObjectAssignments, TrackOverride } from "@/shared/properties/assignments";
 
 export type PerObjectCursorMap = Record<string, number>;
 
@@ -38,11 +39,34 @@ export function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]):
   return picked;
 }
 
+function applyTrackOverride(base: AnimationTrack, override: TrackOverride): AnimationTrack {
+  const mergedProps = {
+    ...(base.properties as unknown as Record<string, unknown>),
+    ...(override.properties ?? {}),
+  } as unknown as typeof base.properties;
+  const merged: AnimationTrack = {
+    ...base,
+    startTime: override.startTime ?? base.startTime,
+    duration: override.duration ?? base.duration,
+    easing: (override.easing ?? base.easing) as AnimationTrack['easing'],
+    properties: mergedProps as never,
+  } as AnimationTrack;
+  return merged;
+}
+
+function pickOverridesForTrack(overrides: TrackOverride[] | undefined, track: AnimationTrack): TrackOverride | undefined {
+  if (!overrides || overrides.length === 0) return undefined;
+  const byId = overrides.find(o => o.trackId && o.trackId === track.identifier.id);
+  if (byId) return byId;
+  return overrides.find(o => !o.trackId && o.type === track.type);
+}
+
 export function convertTracksToSceneAnimations(
   tracks: AnimationTrack[],
   objectId: string,
   baselineTime: number,
-  priorAnimations: SceneAnimationTrack[] = []
+  priorAnimations: SceneAnimationTrack[] = [],
+  perObjectAssignments?: PerObjectAssignments
 ): SceneAnimationTrack[] {
   // Helper: deep-ish equality for 'from' defaults
   const isDefaultFrom = (type: string, value: unknown): boolean => {
@@ -145,26 +169,34 @@ export function convertTracksToSceneAnimations(
   const sortedTracks = [...tracks].sort((a, b) => a.startTime - b.startTime);
   const sceneTracks: SceneAnimationTrack[] = [];
 
+  // Resolve object-specific track overrides once
+  const objectOverrides = perObjectAssignments?.[objectId];
+  const perTrackOverrides = objectOverrides?.tracks ?? [];
+
   for (const track of sortedTracks) {
-    const effectiveStart = baselineTime + track.startTime;
-    const targetProperty = getTargetProperty(track.type);
+    // Apply per-object track override if any; falls back to original track otherwise
+    const matchedOverride = pickOverridesForTrack(perTrackOverrides, track);
+    const baseTrack = matchedOverride ? applyTrackOverride(track, matchedOverride) : track;
+
+    const effectiveStart = baselineTime + baseTrack.startTime;
+    const targetProperty = getTargetProperty(baseTrack.type);
 
     // Clone properties so we can adjust 'from' if chaining applies
-    const properties = { ...track.properties } as typeof track.properties;
+    const properties = { ...baseTrack.properties } as typeof baseTrack.properties;
 
     // Priority order for 'from' value:
     // 1. Explicit 'from' value in track properties (must NEVER be overridden)
-    // 2. End value from previous track of same type in this sequence
+    // 2. End value from previous track of same type in the same sequence
     // 3. End value from prior animations for this object
     // 4. Default 'from' value
-    const hasExplicitFrom = Object.prototype.hasOwnProperty.call(track.properties ?? {}, 'from');
-    if (!hasExplicitFrom && (properties.from === undefined || isDefaultFrom(track.type, properties.from))) {
+    const hasExplicitFrom = Object.prototype.hasOwnProperty.call(baseTrack.properties ?? {}, 'from');
+    if (!hasExplicitFrom && (properties.from === undefined || isDefaultFrom(baseTrack.type, properties.from))) {
       // Try to get from the same sequence first
-      let inherited = getEndValueFromSameSequence(track, sortedTracks, targetProperty);
+      let inherited = getEndValueFromSameSequence(baseTrack, sortedTracks, targetProperty);
       
       // If not found in same sequence, try prior animations
       if (inherited === undefined) {
-        inherited = getPriorValue(targetProperty, effectiveStart, track);
+        inherited = getPriorValue(targetProperty, effectiveStart, baseTrack);
       }
       
       if (inherited !== undefined) {
@@ -176,11 +208,11 @@ export function convertTracksToSceneAnimations(
     // Use the registry system to create scene transforms
     const sceneTransform = transformFactory.createSceneTransform(
       {
-        id: track.identifier.id,
-        type: track.type,
-        startTime: track.startTime,
-        duration: track.duration,
-        easing: track.easing,
+        id: baseTrack.identifier.id,
+        type: baseTrack.type,
+        startTime: baseTrack.startTime,
+        duration: baseTrack.duration,
+        easing: baseTrack.easing,
         properties: properties as unknown as Record<string, unknown>,
       },
       objectId,
@@ -188,7 +220,7 @@ export function convertTracksToSceneAnimations(
     );
 
     // Push typed scene animation track with a stable, collision-safe id
-    const canonicalTrackId = track.identifier.id;
+    const canonicalTrackId = baseTrack.identifier.id;
     sceneTracks.push({
       id: `${objectId}::${canonicalTrackId}::${effectiveStart}`,
       ...sceneTransform,

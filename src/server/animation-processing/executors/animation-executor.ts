@@ -4,6 +4,7 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -29,6 +30,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
     const perObjectAnimations: Record<string, SceneAnimationTrack[]> = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[]);
+    const perObjectAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[]);
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -48,7 +50,8 @@ export class AnimationNodeExecutor extends BaseExecutor {
           (data.tracks as AnimationTrack[]) || [],
           objectId ?? '',
           baseline,
-          priorForObject
+          priorForObject,
+          perObjectAssignments
         );
 
         if (objectId) {
@@ -103,7 +106,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, perObjectAssignments }
     );
   }
 
@@ -128,6 +131,20 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
     return merged;
+  }
+
+  private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[]): PerObjectAssignments | undefined {
+    const merged: PerObjectAssignments = {};
+    let found = false;
+    for (const input of inputs) {
+      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      if (!fromMeta) continue;
+      for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        found = true;
+        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+      }
+    }
+    return found ? merged : undefined;
   }
 }
 
