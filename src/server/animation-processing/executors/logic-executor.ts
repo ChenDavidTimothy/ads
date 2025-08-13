@@ -8,6 +8,7 @@ import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pick
 import { TypeValidationError } from "@/shared/types/validation";
 import { MultipleResultValuesError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
@@ -261,7 +262,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     );
 
     if (inputs.length === 0) {
-      setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], { perObjectTimeCursor: {} });
+      setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], { perObjectTimeCursor: {}, perObjectAssignments: {} });
       return;
     }
 
@@ -286,13 +287,14 @@ export class LogicNodeExecutor extends BaseExecutor {
     const filteredIds = extractObjectIdsFromInputs([{ data: filteredResults }]);
     const propagatedCursors = pickCursorsForIds(upstreamCursorMap, filteredIds);
     const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], filteredIds);
+    const propagatedAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], filteredIds);
     setNodeOutput(
       context,
       node.data.identifier.id,
       'output',
       'object_stream',
       filteredResults,
-      { perObjectTimeCursor: propagatedCursors, perObjectAnimations: propagatedAnimations }
+      { perObjectTimeCursor: propagatedCursors, perObjectAnimations: propagatedAnimations, perObjectAssignments: propagatedAssignments }
     );
   }
 
@@ -386,6 +388,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       .map(obj => (typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null))
       .filter(Boolean) as string[];
     const propagatedAnimations = this.extractPerObjectAnimationsFromInputsWithPriority(portInputs as unknown as ExecutionValue[][], mergedIds);
+    const propagatedAssignments = this.extractPerObjectAssignmentsFromInputsWithPriority(portInputs as unknown as ExecutionValue[][], mergedIds);
 
     const inputObjectCount = portInputs.flat().reduce((acc, input) => {
       const data = Array.isArray(input.data) ? input.data : [input.data];
@@ -418,7 +421,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       mergedResult,
-      { perObjectTimeCursor: mergedCursors, perObjectAnimations: propagatedAnimations }
+      { perObjectTimeCursor: mergedCursors, perObjectAnimations: propagatedAnimations, perObjectAssignments: propagatedAssignments }
     );
     
     logger.debug('Merge execution completed successfully');
@@ -517,6 +520,38 @@ export class LogicNodeExecutor extends BaseExecutor {
       }
     }
     
+    return merged;
+  }
+
+  private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[], allowIds: string[]): PerObjectAssignments {
+    const merged: PerObjectAssignments = {};
+    for (const input of inputs) {
+      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      if (!fromMeta) continue;
+      for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        if (!allowIds.includes(objectId)) continue;
+        // Last-in wins (closer to this node) for simplicity, consistent with cursor/animations precedence
+        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+      }
+    }
+    return merged;
+  }
+
+  private extractPerObjectAssignmentsFromInputsWithPriority(portInputs: ExecutionValue[][], allowIds: string[]): PerObjectAssignments {
+    const merged: PerObjectAssignments = {};
+    for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
+      const inputs = portInputs[portIndex];
+      if (!inputs) continue;
+      for (const input of inputs) {
+        const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+        if (!fromMeta) continue;
+        for (const [objectId, assignment] of Object.entries(fromMeta)) {
+          if (!allowIds.includes(objectId)) continue;
+          // Higher priority port overwrites lower priority
+          merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+        }
+      }
+    }
     return merged;
   }
 

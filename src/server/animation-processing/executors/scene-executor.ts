@@ -6,6 +6,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { MissingInsertConnectionError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 export class SceneNodeExecutor extends BaseExecutor {
   // Register scene node handlers
@@ -98,6 +99,16 @@ export class SceneNodeExecutor extends BaseExecutor {
           context.animationSceneMap.set(animation.id, sceneNodeId);
           logger.debug(`Animation ${animation.id} assigned to ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId} (object ${objectId})`);
         }
+      }
+    }
+
+    // Per-object assignments are not consumed in scene assembly (they are applied earlier), but keep for traceability if needed later
+    for (const input of inputs) {
+      const perObjectAssignments = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      if (perObjectAssignments) {
+        logger.debug(`Per-object assignments propagated to ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId}`, {
+          count: Object.keys(perObjectAssignments).length
+        });
       }
     }
   }
