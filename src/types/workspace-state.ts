@@ -8,7 +8,6 @@ export interface WorkspaceState {
     edges: Edge[];
   };
 
-  // Editor-specific data (keyed by node ID)
   editors: {
     timeline: Record<string, TimelineEditorData>;
     // Future editors can be added here
