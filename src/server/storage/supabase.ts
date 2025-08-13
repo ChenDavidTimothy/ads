@@ -27,7 +27,7 @@ export class SupabaseStorageProvider implements StorageProvider {
     return { filePath, remoteKey };
   }
 
-  async finalize(prepared: StoragePreparedTarget): Promise<{ publicUrl: string }> {
+  async finalize(prepared: StoragePreparedTarget, opts?: { contentType?: string }): Promise<{ publicUrl: string }> {
     const supabase = createServiceClient();
     let publicUrl: string | null = null;
     try {
@@ -37,7 +37,7 @@ export class SupabaseStorageProvider implements StorageProvider {
         .from(this.bucket)
         .upload(prepared.remoteKey, fileBuffer, {
           upsert: false,
-          contentType: "video/mp4",
+          contentType: opts?.contentType ?? "video/mp4",
         });
       if (upErr) {
         throw upErr;

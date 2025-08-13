@@ -138,7 +138,7 @@ function scheduleReconnect(): void {
 // Event handlers
 function handleRenderJobEvent(payload: RenderJobEventPayload): void {
   if (process.env.PG_EVENTS_DEBUG === '1') {
-    logger.info('Render job event received', payload);
+    logger.info('Render job event received', { payload });
   }
   
   for (const handler of renderJobHandlers) {
@@ -236,7 +236,7 @@ export async function notifyRenderJobEvent(payload: RenderJobEventPayload): Prom
     await client.query('SELECT pg_notify($1, $2)', [RENDER_COMPLETION_CHANNEL, text]);
     
     if (process.env.PG_EVENTS_DEBUG === '1') {
-      logger.info('Render job event published', payload);
+      logger.info('Render job event published', { payload });
     }
   } catch (error) {
     logger.errorWithStack('Failed to publish render job event', error, { payload });

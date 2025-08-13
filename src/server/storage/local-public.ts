@@ -28,7 +28,7 @@ export class LocalPublicStorageProvider implements StorageProvider {
     return { filePath, remoteKey };
   }
 
-  async finalize(prepared: StoragePreparedTarget): Promise<{ publicUrl: string }> {
+  async finalize(prepared: StoragePreparedTarget, _opts?: { contentType?: string }): Promise<{ publicUrl: string }> {
     const publicUrl = path.posix.join("/", prepared.remoteKey);
     return { publicUrl };
   }

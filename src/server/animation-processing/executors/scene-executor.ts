@@ -11,6 +11,7 @@ export class SceneNodeExecutor extends BaseExecutor {
   // Register scene node handlers
   protected registerHandlers(): void {
     this.registerHandler('scene', (node, context, connections) => this.executeScene(node, context, connections));
+    this.registerHandler('frame', (node, context, connections) => this.executeScene(node, context, connections));
   }
 
 

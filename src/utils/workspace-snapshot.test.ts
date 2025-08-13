@@ -48,10 +48,10 @@ describe('extract/merge timeline data', () => {
 
     const state = extractWorkspaceState(workspaceRow);
     expect(state.editors.timeline['anim1']).toBeDefined();
-    expect(state.editors.timeline['anim1'].duration).toBe(3);
+    expect(state.editors.timeline['anim1']!.duration).toBe(3);
 
     // mutate timeline and merge back
-    state.editors.timeline['anim1'].duration = 5;
+    state.editors.timeline['anim1']!.duration = 5;
     const merged = mergeEditorsIntoFlow(state);
     const node = (merged.nodes as any[]).find((n) => n.id === 'anim1');
     expect(node.data.duration).toBe(5);

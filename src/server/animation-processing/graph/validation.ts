@@ -292,9 +292,16 @@ export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: Reac
   for (const geoNode of geometryNodes) {
     const isConnectedToAnyOutput = isNodeConnectedToAnyOutputType(geoNode.data.identifier.id, edges, nodes, allTerminusTypes);
     if (isConnectedToAnyOutput) {
-      const canReachInsert = canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
-      if (!canReachInsert) {
-        throw new MissingInsertConnectionError(geoNode.data.identifier.displayName, geoNode.data.identifier.id);
+      // Skip Insert requirement if the only reachable output is the 'frame' image node (static image mode)
+      const reachesScene = canReachNodeType(geoNode.data.identifier.id, 'scene', edges, nodes);
+      const reachesFrame = canReachNodeType(geoNode.data.identifier.id, 'frame', edges, nodes);
+      const requiresInsert = reachesScene || (!reachesFrame && !reachesScene);
+
+      if (requiresInsert) {
+        const canReachInsert = canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
+        if (!canReachInsert) {
+          throw new MissingInsertConnectionError(geoNode.data.identifier.displayName, geoNode.data.identifier.id);
+        }
       }
     }
   }

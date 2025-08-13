@@ -12,6 +12,8 @@ import { ConstantsNode } from './constants-node';
 import { ResultNode } from './result-node';
 import { AnimationNode } from './animation-node';
 import { SceneNode } from './scene-node';
+import { CanvasNode } from './canvas-node';
+import { FrameNode } from './frame-node';
 import { CompareNode } from './compare-node';
 import { IfElseNode } from './if-else-node';
 import { BooleanOpNode } from './boolean-op-node';
@@ -28,6 +30,8 @@ export const COMPONENT_MAPPING = {
   'result': ResultNode,
   'animation': AnimationNode,
   'scene': SceneNode,
+  'canvas': CanvasNode,
+  'frame': FrameNode,
   'compare': CompareNode,
   'if_else': IfElseNode,
   'boolean_op': BooleanOpNode,
