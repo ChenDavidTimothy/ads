@@ -1,19 +1,20 @@
+// src/server/storage/smart-storage-provider-worker.ts
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { env } from "@/env";
-import type { StoragePreparedTarget, StorageProvider } from "./provider";
-import { createServiceClient } from "@/utils/supabase/service";
+import { workerEnv } from "../jobs/env";
+import type { StoragePreparedTarget, StorageProvider, FinalizeOptions } from "./provider";
+import { createServiceClient } from "@/utils/supabase/service-worker";
 
-export class SupabaseStorageProvider implements StorageProvider {
+export class SmartStorageProvider implements StorageProvider {
   private readonly userId: string | undefined;
   private readonly imagesBucket: string;
   private readonly videosBucket: string;
 
   constructor(userId?: string) {
     this.userId = userId;
-    this.imagesBucket = env.SUPABASE_IMAGES_BUCKET;
-    this.videosBucket = env.SUPABASE_VIDEOS_BUCKET;
+    this.imagesBucket = workerEnv.SUPABASE_IMAGES_BUCKET || 'images';
+    this.videosBucket = workerEnv.SUPABASE_VIDEOS_BUCKET || 'videos';
   }
 
   private getBucketForExtension(extension: string): string {
@@ -46,9 +47,10 @@ export class SupabaseStorageProvider implements StorageProvider {
     return { filePath, remoteKey };
   }
 
-  async finalize(prepared: StoragePreparedTarget, opts?: { contentType?: string }): Promise<{ publicUrl: string }> {
+  async finalize(prepared: StoragePreparedTarget, opts?: FinalizeOptions): Promise<{ publicUrl: string }> {
     const supabase = createServiceClient();
     let publicUrl: string | null = null;
+    
     try {
       const fileBuffer = await fs.promises.readFile(prepared.filePath);
       
@@ -62,6 +64,7 @@ export class SupabaseStorageProvider implements StorageProvider {
           upsert: false,
           contentType: opts?.contentType ?? this.getContentType(extension),
         });
+      
       if (upErr) {
         throw upErr;
       }
@@ -69,9 +72,11 @@ export class SupabaseStorageProvider implements StorageProvider {
       const { data: signed, error: urlErr } = await supabase.storage
         .from(bucket)
         .createSignedUrl(prepared.remoteKey, 60 * 60 * 24 * 7);
+      
       if (urlErr || !signed) {
         throw (urlErr ?? new Error("Failed to create signed URL"));
       }
+      
       publicUrl = signed.signedUrl;
       return { publicUrl };
     } finally {
@@ -101,5 +106,3 @@ export class SupabaseStorageProvider implements StorageProvider {
     return contentTypes[ext] || 'application/octet-stream';
   }
 }
-
-

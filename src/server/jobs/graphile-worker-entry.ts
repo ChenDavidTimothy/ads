@@ -4,7 +4,7 @@ import { workerEnv } from './env';
 import { run, type Runner, type TaskList } from 'graphile-worker';
 import { createServiceClient } from '@/utils/supabase/service-worker';
 import { CanvasRenderer } from '@/server/rendering/canvas-renderer';
-import { SupabaseStorageProvider } from '@/server/storage/supabase-worker';
+import { SmartStorageProvider } from '@/server/storage/smart-storage-provider-worker';
 import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 import { notifyRenderJobEvent } from './pg-events';
@@ -38,7 +38,7 @@ async function main() {
           .eq('id', jobId)
           .eq('user_id', userId);
 
-        const storageProvider = new SupabaseStorageProvider(userId);
+        const storageProvider = new SmartStorageProvider(userId);
         const renderer = new CanvasRenderer(storageProvider);
         const { publicUrl } = await renderer.render(scene, config);
 
@@ -77,7 +77,7 @@ async function main() {
           .eq('id', jobId)
           .eq('user_id', userId);
 
-        const storageProvider = new SupabaseStorageProvider(userId);
+        const storageProvider = new SmartStorageProvider(userId);
         const { ImageRenderer } = await import('@/server/rendering/image/image-renderer');
         const renderer = new ImageRenderer(storageProvider);
         const { publicUrl } = await renderer.render(scene, config);

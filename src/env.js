@@ -9,7 +9,9 @@ export const env = createEnv({
   server: {
     // Supabase server-only keys
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
-    SUPABASE_STORAGE_BUCKET: z.string().default('videos'),
+    SUPABASE_STORAGE_BUCKET: z.string().default('videos'), // Keep for backward compatibility
+    SUPABASE_IMAGES_BUCKET: z.string().default('images'),
+    SUPABASE_VIDEOS_BUCKET: z.string().default('videos'),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -30,11 +32,13 @@ export const env = createEnv({
 
   /**
    * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
-   * middlewares) or client-side so we need to destruct manually.
+   * middlewares) or client-side so you need to destruct manually.
    */
   runtimeEnv: {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET,
+    SUPABASE_IMAGES_BUCKET: process.env.SUPABASE_IMAGES_BUCKET,
+    SUPABASE_VIDEOS_BUCKET: process.env.SUPABASE_VIDEOS_BUCKET,
     NODE_ENV: process.env.NODE_ENV,
     FFMPEG_PATH: process.env.FFMPEG_PATH,
     RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY,

@@ -2,7 +2,7 @@
 export interface StoragePreparedTarget {
   // Absolute path on local filesystem where the encoder should write
   filePath: string;
-  // Remote key/path in the storage backend, e.g. "<userId>/animations/xyz.mp4"
+  // Remote key/path in the storage backend, e.g. "<userId>/xyz.mp4"
   remoteKey: string;
 }
 
