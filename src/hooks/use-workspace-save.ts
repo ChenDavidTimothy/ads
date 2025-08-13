@@ -42,6 +42,8 @@ export function useWorkspaceSave({
     },
   });
 
+  const isSaveInFlightRef = useRef(false);
+
   const hasUnsavedChanges = useCallback(
     (currentState: WorkspaceState) => {
       if (!lastSavedState) return false; // not initialized yet
@@ -61,6 +63,9 @@ export function useWorkspaceSave({
 
   const saveNow = useCallback(
     async (currentState: WorkspaceState) => {
+      if (isSaveInFlightRef.current) {
+        return; // drop overlapping manual save to avoid version conflicts
+      }
       // Avoid duplicate enqueues, but allow explicit saves even if snapshot unchanged
       const currentFlowSnapshot = createStableFlowSnapshot(currentState.flow);
       if (currentFlowSnapshot === lastQueuedFlowSnapshotRef.current && !hasUnsavedChanges(currentState)) {
@@ -72,12 +77,16 @@ export function useWorkspaceSave({
       const version = currentVersion;
       lastQueuedFlowSnapshotRef.current = currentFlowSnapshot;
 
-      const result = await saveMutation.mutateAsync({ id: workspaceId, flowData: flowDataWithEditors, version });
-
-      // Update last-saved state on success
-      setLastSavedState(currentState);
-      lastSavedFlowSnapshotRef.current = currentFlowSnapshot;
-      return result as SaveResult;
+      isSaveInFlightRef.current = true;
+      try {
+        const result = await saveMutation.mutateAsync({ id: workspaceId, flowData: flowDataWithEditors, version });
+        // Update last-saved state on success
+        setLastSavedState(currentState);
+        lastSavedFlowSnapshotRef.current = currentFlowSnapshot;
+        return result as SaveResult;
+      } finally {
+        isSaveInFlightRef.current = false;
+      }
     },
     [workspaceId, currentVersion, hasUnsavedChanges, saveMutation]
   );
