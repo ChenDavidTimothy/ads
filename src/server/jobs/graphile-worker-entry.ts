@@ -62,6 +62,43 @@ async function main() {
         throw error;
       }
     },
+    'render-image': async (payload: unknown, helpers) => {
+      const { job } = helpers;
+      const supabase = createServiceClient();
+      const { jobId, userId, scene, config } = payload as {
+        jobId: string; userId: string; scene: import('@/shared/types/scene').AnimationScene; config: {
+          width: number; height: number; backgroundColor: string; format: 'png'|'jpeg'; quality?: number; time?: number;
+        }
+      };
+
+      try {
+        await supabase.from('render_jobs')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        const storageProvider = new SupabaseStorageProvider(userId);
+        const { ImageRenderer } = await import('@/server/rendering/image-renderer');
+        const renderer = new ImageRenderer(storageProvider);
+        const { publicUrl } = await renderer.render(scene, config);
+
+        await supabase.from('render_jobs')
+          .update({ status: 'completed', output_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+
+        await notifyRenderJobEvent({ jobId, status: 'completed', publicUrl });
+        logger.info('Image render job completed successfully', { jobId, gwJobId: job.id, publicUrl });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.errorWithStack('Image render job failed', error, { jobId, gwJobId: job.id, userId });
+        await createServiceClient().from('render_jobs')
+          .update({ status: 'failed', error: errorMessage, updated_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('user_id', userId);
+        throw error;
+      }
+    }
   };
 
   runner = await run({

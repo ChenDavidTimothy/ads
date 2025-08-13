@@ -14,7 +14,9 @@ import type {
   AnimationNodeData, 
   SceneNodeData,
   FilterNodeData,
-  ConstantsNodeData
+  ConstantsNodeData,
+  FrameNodeData,
+  CanvasNodeData
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
 
@@ -35,6 +37,14 @@ function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
 
 function isSceneNodeData(data: NodeData): data is SceneNodeData {
   return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
+}
+
+function isFrameNodeData(data: NodeData): data is FrameNodeData {
+  return 'width' in data && 'height' in data && 'format' in data && 'quality' in data;
+}
+
+function isCanvasNodeData(data: NodeData): data is CanvasNodeData {
+  return 'position' in data && 'rotation' in data && 'scale' in data && 'opacity' in data;
 }
 
 function isFilterNodeData(data: NodeData): data is FilterNodeData {
@@ -187,6 +197,18 @@ export function PropertyPanel({
           data={node.data} 
           onChange={onChange} 
         />
+      )}
+
+      {nodeDefinition.execution.category === 'output' && isFrameNodeData(node.data) && (
+        <div className="space-y-2 text-xs text-gray-400">
+          <div>Image output will be rendered as {node.data.format.toUpperCase()}.</div>
+        </div>
+      )}
+
+      {nodeDefinition.execution.category === 'animation' && isCanvasNodeData(node.data) && (
+        <div className="space-y-2 text-xs text-gray-400">
+          <div>Static style overrides. No animation tracks.</div>
+        </div>
       )}
     </div>
   );

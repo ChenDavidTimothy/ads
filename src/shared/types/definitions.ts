@@ -466,6 +466,99 @@ export const NODE_DEFINITIONS = {
     }
   },
 
+  canvas: {
+    type: 'canvas',
+    label: 'Canvas',
+    description: 'Static styling for image export (no tracks)',
+    execution: {
+      category: 'animation',
+      executor: 'animation',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'object_stream', label: 'Objects' }
+      ],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Styled Objects' }
+      ]
+    },
+    properties: {
+      properties: [
+        { key: 'position', type: 'point2d', label: 'Position', defaultValue: { x: 0, y: 0 } },
+        { key: 'rotation', type: 'number', label: 'Rotation (radians)', defaultValue: 0 },
+        { key: 'scale', type: 'point2d', label: 'Scale', defaultValue: { x: 1, y: 1 } },
+        { key: 'opacity', type: 'number', label: 'Opacity', min: 0, max: 1, step: 0.05, defaultValue: 1 },
+        { key: 'fillColor', type: 'color', label: 'Fill Color', defaultValue: '#ffffff' },
+        { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#000000' },
+        { key: 'strokeWidth', type: 'number', label: 'Stroke Width', min: 0, step: 1, defaultValue: 2 }
+      ]
+    },
+    rendering: {
+      icon: '🖼️',
+      colors: {
+        primary: 'bg-fuchsia-600',
+        handle: '!bg-fuchsia-500',
+      }
+    },
+    defaults: {
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      scale: { x: 1, y: 1 },
+      opacity: 1,
+      fillColor: '#ffffff',
+      strokeColor: '#000000',
+      strokeWidth: 2,
+    }
+  },
+
+  frame: {
+    type: 'frame',
+    label: 'Frame',
+    description: 'Final image output configuration',
+    execution: {
+      category: 'output',
+      executor: 'scene',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'object_stream', label: 'Input' }
+      ],
+      outputs: []
+    },
+    properties: {
+      properties: [
+        { key: 'width', type: 'number', label: 'Width', min: 1, defaultValue: 1920 },
+        { key: 'height', type: 'number', label: 'Height', min: 1, defaultValue: 1080 },
+        { key: 'backgroundColor', type: 'color', label: 'Background Color', defaultValue: '#000000' },
+        { 
+          key: 'format', 
+          type: 'select', 
+          label: 'Image Format', 
+          options: [
+            { value: 'png', label: 'PNG' },
+            { value: 'jpeg', label: 'JPEG' }
+          ],
+          defaultValue: 'png'
+        },
+        { key: 'quality', type: 'range', label: 'JPEG Quality', min: 1, max: 100, defaultValue: 90 }
+      ]
+    },
+    rendering: {
+      icon: '🖨️',
+      colors: {
+        primary: 'bg-slate-600',
+        handle: '!bg-slate-500',
+      }
+    },
+    defaults: {
+      width: 1920,
+      height: 1080,
+      backgroundColor: '#000000',
+      format: 'png',
+      quality: 90,
+        }
+  },
+ 
   compare: {
     type: 'compare',
     label: 'Compare',

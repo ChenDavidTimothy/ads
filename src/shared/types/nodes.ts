@@ -177,6 +177,26 @@ export interface SceneNodeData extends BaseNodeData {
   videoCrf: number;
 }
 
+// Canvas node data (static styling/transform overrides for image export)
+export interface CanvasNodeData extends BaseNodeData {
+  position: Point2D;
+  rotation: number;
+  scale: Point2D;
+  opacity: number;
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: number;
+}
+
+// Frame node data (static image output configuration)
+export interface FrameNodeData extends BaseNodeData {
+  width: number;
+  height: number;
+  backgroundColor: string;
+  format: 'png' | 'jpeg';
+  quality: number; // 1-100 for JPEG; ignored for PNG
+}
+
 // Compare node data
 export interface CompareNodeData extends BaseNodeData {
   operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
@@ -200,6 +220,6 @@ export interface MathOpNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
 
 // NodeType is derived from the registry (definitions)

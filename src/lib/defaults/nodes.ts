@@ -27,6 +27,8 @@ function getNodeShortId(nodeType: NodeType): string {
     result: 'res',
     animation: 'ani',
     scene: 'scn',
+    canvas: 'cnv',
+    frame: 'frm',
     compare: 'cmp',
     if_else: 'ife',
     boolean_op: 'bop',

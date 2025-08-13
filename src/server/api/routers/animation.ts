@@ -562,6 +562,136 @@ export const animationRouter = createTRPCRouter({
       }
     }),
 
+  // Image generation (static) with graceful validation
+  generateImage: protectedProcedure
+    .input(generateSceneInputSchema)
+    .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
+      try {
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: n.data ?? {},
+        }));
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier: { id: string } }).identifier;
+            nodeIdMap.set(n.id, identifier.id);
+          }
+        });
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Basic node + connection validation as in generateScene
+        const nodeValidationResult = validateInputNodesGracefully(backendNodes);
+        if (!nodeValidationResult.success) {
+          return { success: false, errors: nodeValidationResult.errors, canRetry: true };
+        }
+        const connectionValidationResult = validateConnectionsGracefully(input.nodes, input.edges);
+        if (!connectionValidationResult.success) {
+          return { success: false, errors: connectionValidationResult.errors, canRetry: true };
+        }
+
+        // Universal validations; do NOT require Scene node or Insert for images
+        const engine = new ExecutionEngine();
+        engine.runUniversalValidation(backendNodes as ReactFlowNode<NodeData>[], backendEdges);
+
+        const executionContext = await engine.executeFlow(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges
+        );
+
+        // Find all frame nodes
+        const frameNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'frame') as ReactFlowNode<NodeData>[];
+        if (frameNodes.length === 0) {
+          return {
+            success: false,
+            errors: [{ type: 'error' as const, code: 'ERR_FRAME_REQUIRED', message: 'Frame node is required', suggestions: ['Add a Frame node from the Output section'] }],
+            canRetry: true
+          };
+        }
+
+        // Partition using scene partitioner (works with frame since we reuse scene executor per-scene storage)
+        const scenePartitions = partitionObjectsByScenes(executionContext, frameNodes, backendEdges);
+        if (scenePartitions.length === 0) {
+          throw new NoValidScenesError();
+        }
+
+        // Enqueue image jobs
+        const supabase = createServiceClient();
+        const jobIds: string[] = [];
+        await ensureWorkerReady();
+        const { imageQueue } = await import('@/server/jobs/image-queue');
+
+        for (const partition of scenePartitions) {
+          const scene: AnimationScene = buildAnimationSceneFromPartition(partition);
+          const frameData = partition.sceneNode.data as unknown as { width: number; height: number; backgroundColor: string; format: 'png'|'jpeg'; quality: number };
+          const config = {
+            width: Number(frameData.width),
+            height: Number(frameData.height),
+            backgroundColor: String(frameData.backgroundColor),
+            format: (frameData.format === 'jpeg' ? 'jpeg' : 'png') as 'png'|'jpeg',
+            quality: Number(frameData.quality ?? 90),
+          } as const;
+
+          const payload = { scene, config } as const;
+          const { data: jobRow, error: insErr } = await supabase
+            .from('render_jobs')
+            .insert({ user_id: ctx.user!.id, status: 'queued', payload })
+            .select('id')
+            .single();
+          if (insErr || !jobRow) continue;
+
+          await imageQueue.enqueueOnly({
+            scene,
+            config: { ...config },
+            userId: ctx.user!.id,
+            jobId: jobRow.id as string,
+          });
+
+          jobIds.push(jobRow.id as string);
+        }
+
+        if (jobIds.length === 0) {
+          return {
+            success: false,
+            errors: [{ type: 'error' as const, code: 'ERR_NO_VALID_FRAMES', message: 'No frames could be processed' }],
+            canRetry: true,
+          };
+        }
+
+        // Optionally short-wait for single job
+        if (jobIds.length === 1) {
+          const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+          const parsed = Number(inlineWaitMsRaw);
+          const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+          const notify = await waitForRenderJobEvent({ jobId: jobIds[0]!, timeoutMs: inlineWaitMs });
+          if (notify && notify.status === 'completed' && notify.publicUrl) {
+            return { success: true, imageUrl: notify.publicUrl, jobId: jobIds[0]!, totalScenes: 1 } as const;
+          }
+        }
+
+        return { success: true, jobIds, totalScenes: scenePartitions.length } as const;
+      } catch (error) {
+        logger.domain('Image generation failed', error, {
+          path: 'animation.generateImage',
+          userId: ctx.user?.id
+        });
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{ type: 'error' as const, code: isDomainError(error) ? error.code : 'ERR_UNKNOWN', message: translated.message, suggestions: translated.suggestions }],
+          canRetry: true,
+        };
+      }
+    }),
+
   // Enhanced validation endpoint with graceful error reporting
   validateScene: protectedProcedure
     .input(validateSceneInputSchema)

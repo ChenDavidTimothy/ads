@@ -56,7 +56,7 @@ function getGeneratedMappingsHash(): string {
     return Buffer.from(combined).toString('base64').slice(0, 16);
   } catch (error) {
     // If we can't generate hash, force fresh validation
-    logger.warn('Failed to generate mappings hash, forcing fresh validation', error);
+    logger.warn('Failed to generate mappings hash, forcing fresh validation', { error });
     return `error-${Date.now()}`;
   }
 }
@@ -94,7 +94,7 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
         logger.debug(`🕐 Validation cache expired (${Math.round(age/1000)}s old, TTL: ${REGISTRY_VALIDATION_TTL/1000}s)`);
       }
     } catch (error) {
-      logger.debug('📁 Validation cache file corrupted, running fresh validation', error);
+      logger.debug('📁 Validation cache file corrupted, running fresh validation', { error });
     }
   } else {
     logger.debug('📝 No validation cache found, running initial validation');
@@ -125,7 +125,7 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
     logger.debug(`💾 Saved validation cache for other workers`);
   } catch (error) {
     // File write failed, but validation still succeeded
-    logger.warn('Failed to write validation cache file', error);
+    logger.warn('Failed to write validation cache file', { error });
   }
   
   return result;
@@ -193,7 +193,7 @@ export function resetValidationCache(): void {
       require('fs').unlinkSync(VALIDATION_CACHE_FILE);
       logger.debug('🗑️ Cleared validation cache file');
     } catch (error) {
-      logger.warn('Failed to remove validation cache file', error);
+      logger.warn('Failed to remove validation cache file', { error });
     }
   }
 }

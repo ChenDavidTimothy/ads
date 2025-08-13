@@ -466,10 +466,18 @@ export class LogicNodeExecutor extends BaseExecutor {
           
           // CRITICAL FIX: Clone animations to prevent shared reference mutations
           // Ensures merge processing doesn't affect the original animation data
-          const clonedAnimations = animations.map(anim => ({
-            ...anim,
-            properties: { ...anim.properties }
-          }));
+          const clonedAnimations = animations.map((anim) => {
+            switch (anim.type) {
+              case 'move':
+              case 'rotate':
+              case 'scale':
+              case 'fade':
+              case 'color':
+                return { ...anim, properties: { ...anim.properties } } as SceneAnimationTrack;
+              default:
+                return anim as SceneAnimationTrack;
+            }
+          });
           
           // For each animation, check for conflicts with existing animations
           const existingAnimations = merged[objectId] ?? [];

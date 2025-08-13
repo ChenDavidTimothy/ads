@@ -24,7 +24,9 @@ describe('extractWorkspaceState', () => {
   it('ensures timeline tracks have identifiers', () => {
     const node = makeAnimationNode('anim1', [{ } as any]);
     const state = extractWorkspaceState({ id: 'ws', name: 'n', version: 1, updated_at: new Date().toISOString(), flow_data: { nodes: [node], edges: [] } });
-    const t = state.editors.timeline['anim1'].tracks[0];
+    const tl = state.editors.timeline['anim1'];
+    expect(tl).toBeDefined();
+    const t = tl!.tracks[0]!;
     expect(t).toBeDefined();
     expect((t as any).identifier).toBeDefined();
   });
