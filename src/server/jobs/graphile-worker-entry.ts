@@ -67,9 +67,9 @@ async function main() {
   runner = await run({
     connectionString,
     concurrency,
-    // Task handlers
     taskList: tasks,
-    // Polling interval is handled internally by Graphile Worker with LISTEN/NOTIFY
+    // Force longer polling to reduce database load
+    pollInterval: 30000, // 30 seconds instead of default 2 seconds
   });
 
   logger.info('Graphile Worker started', { concurrency });

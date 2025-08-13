@@ -46,8 +46,7 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
     throw new Error('Synchronous enqueue wait is not supported; use waitForRenderJobEvent');
   }
 
-  async getQueueStats(): Promise<{ pending: number; active: number; completed: number; failed: number }>
-  {
+  async getQueueStats(): Promise<{ pending: number; active: number; completed: number; failed: number }> {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error('DATABASE_URL is not set');
 
