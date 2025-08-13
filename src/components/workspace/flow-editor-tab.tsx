@@ -5,7 +5,7 @@ import { applyNodeChanges, applyEdgeChanges, type NodeTypes, type NodeChange, ty
 import { FlowCanvas } from './flow/components/flow-canvas';
 import { NodePalette } from './node-palette';
 import { ActionsToolbar } from './flow/components/actions-toolbar';
-import { VideoPreview } from './flow/components/video-preview';
+import { VideoPreview } from './flow/components/preview';
 import { RightSidebar } from './flow/components/right-sidebar';
 import { ResultLogModal } from './result-log-modal';
 import { createNodeTypes } from './flow/node-types';
