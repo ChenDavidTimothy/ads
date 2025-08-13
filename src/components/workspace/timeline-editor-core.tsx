@@ -22,12 +22,17 @@ import {
   isFadeTrack, 
   isColorTrack 
 } from "@/shared/types/nodes";
+import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 
 interface TimelineEditorCoreProps {
   animationNodeId: string;
   duration: number;
   tracks: AnimationTrack[];
   onChange: (updates: Partial<{ duration: number; tracks: AnimationTrack[] }>) => void;
+  // Optional per-object assignment editing
+  selectedObjectId?: string;
+  perObjectAssignments?: PerObjectAssignments;
+  onUpdateTrackOverride?: (trackId: string, updates: Partial<TrackOverride>) => void;
 }
 
 interface DragState {
@@ -83,7 +88,7 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
-export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange }: TimelineEditorCoreProps) {
+export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange, selectedObjectId, perObjectAssignments, onUpdateTrackOverride }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(controlledDuration);
   const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -387,10 +392,29 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
         {selectedTrack ? (
           <TrackProperties 
             track={selectedTrack} 
-            onChange={(updates) => updateTrack(selectedTrack.identifier.id, updates)} 
+            onChange={(updates) => {
+              if (selectedObjectId && onUpdateTrackOverride) {
+                // Route changes to per-object override instead of global
+                const mapped: Partial<TrackOverride> = {};
+                if (updates.easing) mapped.easing = updates.easing as any;
+                if (updates.startTime !== undefined) mapped.startTime = updates.startTime as number;
+                if (updates.duration !== undefined) mapped.duration = updates.duration as number;
+                if (updates.properties) mapped.properties = updates.properties as any;
+                onUpdateTrackOverride(selectedTrack.identifier.id, mapped);
+              } else {
+                onChange({ tracks: tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t) });
+              }
+            }} 
             allTracks={tracks}
             onDisplayNameChange={updateTransformDisplayName}
             validateDisplayName={validateTransformDisplayName}
+            // Pass current override values for display
+            override={(() => {
+              if (!selectedObjectId || !perObjectAssignments) return undefined;
+              const obj = perObjectAssignments[selectedObjectId];
+              const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
+              return tr;
+            })()}
           />
         ) : (
           <div className="text-gray-400 text-sm">Click a track to select and edit its properties</div>
@@ -406,9 +430,10 @@ interface TrackPropertiesProps {
   allTracks: AnimationTrack[];
   onDisplayNameChange: (trackId: string, newName: string) => boolean;
   validateDisplayName: (name: string, trackId: string) => string | null;
+  override?: TrackOverride | undefined;
 }
 
-function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName }: TrackPropertiesProps) {
+function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, override }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -428,35 +453,40 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
     ) => {
       switch (track.type) {
         case "move": {
-          const merged: MoveTrackProperties = { ...track.properties, ...(updates as Partial<MoveTrackProperties>) };
-          onChange({ properties: merged });
+          const base = override?.properties as Partial<MoveTrackProperties> | undefined;
+          const mergedProps: MoveTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<MoveTrackProperties>) } as MoveTrackProperties;
+          onChange({ properties: mergedProps });
           break;
         }
         case "rotate": {
-          const merged: RotateTrackProperties = { ...track.properties, ...(updates as Partial<RotateTrackProperties>) };
-          onChange({ properties: merged });
+          const base = override?.properties as Partial<RotateTrackProperties> | undefined;
+          const mergedProps: RotateTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<RotateTrackProperties>) } as RotateTrackProperties;
+          onChange({ properties: mergedProps });
           break;
         }
         case "scale": {
-          const merged: ScaleTrackProperties = { ...track.properties, ...(updates as Partial<ScaleTrackProperties>) };
-          onChange({ properties: merged });
+          const base = override?.properties as Partial<ScaleTrackProperties> | undefined;
+          const mergedProps: ScaleTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<ScaleTrackProperties>) } as ScaleTrackProperties;
+          onChange({ properties: mergedProps });
           break;
         }
         case "fade": {
-          const merged: FadeTrackProperties = { ...track.properties, ...(updates as Partial<FadeTrackProperties>) };
-          onChange({ properties: merged });
+          const base = override?.properties as Partial<FadeTrackProperties> | undefined;
+          const mergedProps: FadeTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<FadeTrackProperties>) } as FadeTrackProperties;
+          onChange({ properties: mergedProps });
           break;
         }
         case "color": {
-          const merged: ColorTrackProperties = { ...track.properties, ...(updates as Partial<ColorTrackProperties>) };
-          onChange({ properties: merged });
+          const base = override?.properties as Partial<ColorTrackProperties> | undefined;
+          const mergedProps: ColorTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<ColorTrackProperties>) } as ColorTrackProperties;
+          onChange({ properties: mergedProps });
           break;
         }
         default:
           break;
       }
     },
-    [track.type, track.properties, onChange],
+    [track.type, track.properties, onChange, override],
   );
 
   return (
@@ -492,38 +522,38 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
         </div>
       )}
       <SelectField
-        label="Easing"
-        value={track.easing}
+        label={override ? "Easing (override)" : "Easing"}
+        value={(override?.easing as any) ?? track.easing}
         onChange={(easing) => onChange({ easing: easing as AnimationTrack["easing"] })}
         options={easingOptions}
       />
 
       {isMoveTrack(track) && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-white">Move Properties</div>
+          <div className="text-sm font-medium text-white">Move Properties {override ? '(override)' : ''}</div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From X"
-              value={track.properties.from.x}
-              onChange={(x) => updateProperties({ from: { ...track.properties.from, x } })}
+              value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
+              onChange={(x) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, x } })}
               defaultValue={0}
             />
             <NumberField
               label="From Y"
-              value={track.properties.from.y}
-              onChange={(y) => updateProperties({ from: { ...track.properties.from, y } })}
+              value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
+              onChange={(y) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, y } })}
               defaultValue={0}
             />
             <NumberField
               label="To X"
-              value={track.properties.to.x}
-              onChange={(x) => updateProperties({ to: { ...track.properties.to, x } })}
+              value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
+              onChange={(x) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, x } })}
               defaultValue={100}
             />
             <NumberField
               label="To Y"
-              value={track.properties.to.y}
-              onChange={(y) => updateProperties({ to: { ...track.properties.to, y } })}
+              value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
+              onChange={(y) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, y } })}
               defaultValue={100}
             />
           </div>
@@ -532,18 +562,18 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
 
       {isRotateTrack(track) && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-white">Rotate Properties</div>
+          <div className="text-sm font-medium text-white">Rotate Properties {override ? '(override)' : ''}</div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Rotation"
-              value={track.properties.from}
+              value={(override?.properties as any)?.from ?? track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
             />
             <NumberField
               label="To Rotation"
-              value={track.properties.to}
+              value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
@@ -554,11 +584,11 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
 
       {isScaleTrack(track) && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-white">Scale Properties</div>
+          <div className="text-sm font-medium text-white">Scale Properties {override ? '(override)' : ''}</div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From"
-              value={track.properties.from}
+              value={(override?.properties as any)?.from ?? track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -566,7 +596,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             />
             <NumberField
               label="To"
-              value={track.properties.to}
+              value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -578,11 +608,11 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
 
       {isFadeTrack(track) && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-white">Fade Properties</div>
+          <div className="text-sm font-medium text-white">Fade Properties {override ? '(override)' : ''}</div>
           <div className="grid grid-cols-2 gap-2">
             <NumberField
               label="From Opacity"
-              value={track.properties.from}
+              value={(override?.properties as any)?.from ?? track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               min={0}
@@ -591,7 +621,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             />
             <NumberField
               label="To Opacity"
-              value={track.properties.to}
+              value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               min={0}
@@ -604,10 +634,10 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
 
       {isColorTrack(track) && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-white">Color Properties</div>
+          <div className="text-sm font-medium text-white">Color Properties {override ? '(override)' : ''}</div>
           <SelectField
             label="Property"
-            value={track.properties.property}
+            value={(override?.properties as any)?.property ?? track.properties.property}
             onChange={(property) => updateProperties({ property: property as "fill" | "stroke" })}
             options={[
               { value: "fill", label: "Fill" },
@@ -615,8 +645,8 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             ]}
           />
           <div className="grid grid-cols-2 gap-2">
-            <ColorField label="From Color" value={track.properties.from} onChange={(from) => updateProperties({ from })} />
-            <ColorField label="To Color" value={track.properties.to} onChange={(to) => updateProperties({ to })} />
+            <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} />
+            <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} />
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import { BaseExecutor } from "./base-executor";
 import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
 import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
@@ -37,15 +38,34 @@ export class CanvasNodeExecutor extends BaseExecutor {
       strokeWidth: data.strokeWidth as number | undefined,
     };
 
-    // Read optional per-object assignments metadata
-    const perObjectAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
+    // Read optional per-object assignments metadata (from upstream)
+    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
+    // Read node-level assignments stored on the Canvas node itself
+    const nodeAssignments: PerObjectAssignments | undefined = (data.perObjectAssignments as PerObjectAssignments | undefined);
+
+    // Merge upstream + node-level; node-level takes precedence per object
+    const mergedAssignments: PerObjectAssignments | undefined = (() => {
+      if (!upstreamAssignments && !nodeAssignments) return undefined;
+      const result: PerObjectAssignments = {};
+      const objectIds = new Set<string>([
+        ...Object.keys(upstreamAssignments ?? {}),
+        ...Object.keys(nodeAssignments ?? {}),
+      ]);
+      for (const objectId of objectIds) {
+        const base = upstreamAssignments?.[objectId];
+        const overrides = nodeAssignments?.[objectId];
+        const merged = mergeObjectAssignments(base, overrides);
+        if (merged) result[objectId] = merged as ObjectAssignments;
+      }
+      return result;
+    })();
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
         if (typeof obj === 'object' && obj !== null && 'id' in obj) {
           const original = obj as SceneObject as unknown as Record<string, unknown>;
-          const assignmentsForObject = perObjectAssignments?.[(original as { id: string }).id];
+          const assignmentsForObject = mergedAssignments?.[(original as { id: string }).id];
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
             original as unknown as SceneObject,
             canvasOverrides,
@@ -67,7 +87,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Pass through existing per-object animations/cursors/assignments unchanged if present
+    // Pass through existing per-object animations/cursors and the merged assignments
     const firstMeta = inputs[0]?.metadata as { perObjectTimeCursor?: Record<string, number>; perObjectAnimations?: Record<string, SceneAnimationTrack[]>; perObjectAssignments?: PerObjectAssignments } | undefined;
 
     setNodeOutput(
@@ -79,7 +99,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
       {
         perObjectTimeCursor: firstMeta?.perObjectTimeCursor,
         perObjectAnimations: firstMeta?.perObjectAnimations,
-        perObjectAssignments: firstMeta?.perObjectAssignments,
+        perObjectAssignments: mergedAssignments ?? firstMeta?.perObjectAssignments,
       }
     );
   }
