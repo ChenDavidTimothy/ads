@@ -101,7 +101,20 @@ export function FlowEditorTab() {
     pendingPropertySyncRef.current = false;
   }, [nodes, edges, updateFlow]);
 
-    const {
+  // Flush any pending property-panel sync on unmount or tab switch
+  useEffect(() => {
+    return () => {
+      if (pendingPropertySyncRef.current) {
+        updateFlow({
+          nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[],
+          edges: latestLocalEdgesRef.current as Edge[],
+        });
+        pendingPropertySyncRef.current = false;
+      }
+    };
+  }, [updateFlow]);
+
+  const {
     resultLogModalState,
     handleOpenResultLogViewer,
     handleCloseResultLogViewer,
@@ -117,6 +130,13 @@ export function FlowEditorTab() {
     selectedEdgesRef.current = (params.edges as Edge[]) ?? [];
   }, []);
 
+  const {
+    resultLogModalState,
+    handleOpenResultLogViewer,
+    handleCloseResultLogViewer,
+    getResultNodeData,
+  } = useResultLogViewer(nodes);
+
   // Robust custom deletion handler: Delete selected nodes (and their edges) or selected edges only
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -131,7 +151,8 @@ export function FlowEditorTab() {
       e.preventDefault();
 
       // Disable when modal is open
-      if (resultLogModalState.isOpen) return;
+      const modalOpen = (resultLogModalState as { isOpen?: boolean } | undefined)?.isOpen ?? false;
+      if (modalOpen) return;
 
       const selectedNodeIds = new Set((selectedNodesRef.current ?? []).map((n) => (n as unknown as { id: string }).id));
       const selectedEdgeIds = new Set((selectedEdgesRef.current ?? []).map((ed) => ed.id));
@@ -163,7 +184,7 @@ export function FlowEditorTab() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [flowTracker, setNodes, setEdges, updateFlow, resultLogModalState.isOpen]);
+  }, [flowTracker, setNodes, setEdges, updateFlow]);
 
   const ensureTimelineForNode = useCallback((nodeId: string) => {
     if (state.editors.timeline[nodeId]) return;
