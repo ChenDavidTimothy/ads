@@ -604,7 +604,8 @@ export const animationRouter = createTRPCRouter({
 
         const executionContext = await engine.executeFlow(
           backendNodes as ReactFlowNode<NodeData>[],
-          backendEdges
+          backendEdges,
+          { requireScene: false }
         );
 
         // Find all frame nodes

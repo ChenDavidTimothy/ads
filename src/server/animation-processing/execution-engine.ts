@@ -35,19 +35,21 @@ export class ExecutionEngine {
     this.registry.register(new SceneNodeExecutor());
   }
 
-  private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], options?: { requireScene?: boolean }): void {
     const flowKey = this.getFlowCacheKey(nodes, edges);
     const validationState = this.getValidationState(flowKey);
     
-    logger.info('Starting comprehensive validation for video generation');
+    logger.info('Starting comprehensive validation');
     
-    // 1. Basic scene structure validation (VIDEO GENERATION ONLY) - only if not done
-    if (!validationState.sceneValidated) {
-      logger.info('Validating scene structure');
-      validateScene(nodes);
-      validationState.sceneValidated = true;
-    } else {
-      logger.debug('⚡ Skipping scene validation - already validated');
+    // Scene structure validation only when required
+    if ((options?.requireScene ?? true)) {
+      if (!validationState.sceneValidated) {
+        logger.info('Validating scene structure');
+        validateScene(nodes);
+        validationState.sceneValidated = true;
+      } else {
+        logger.debug('⚡ Skipping scene validation - already validated');
+      }
     }
     
     // 2. Run universal validations (will skip if already done)
@@ -169,9 +171,9 @@ export class ExecutionEngine {
     }
   }
 
-  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): Promise<ExecutionContext> {
-    // Run comprehensive validation
-    this.runComprehensiveValidation(nodes, edges);
+  async executeFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], options?: { requireScene?: boolean }): Promise<ExecutionContext> {
+    // Run comprehensive validation (scene optional)
+    this.runComprehensiveValidation(nodes, edges, options);
     
     const context = createExecutionContext();
     
