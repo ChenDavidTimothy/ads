@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from 'react';
-import type { NodeTypes } from 'reactflow';
+import { applyNodeChanges, applyEdgeChanges, type NodeTypes, type NodeChange, type EdgeChange } from 'reactflow';
 import { FlowCanvas } from './flow/components/flow-canvas';
 import { NodePalette } from './node-palette';
 import { ActionsToolbar } from './flow/components/actions-toolbar';
@@ -15,12 +15,13 @@ import { useResultLogViewer } from './flow/hooks/use-result-log-viewer';
 import { useSceneGeneration } from './flow/hooks/use-scene-generation';
 import { useDebugExecution } from './flow/hooks/use-debug-execution';
 import { DebugProvider } from './flow/debug-context';
-import type { NodeData } from '@/shared/types';
+import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
 import type { Node, Edge } from 'reactflow';
 import { useWorkspace } from './workspace-context';
+import { generateTransformIdentifier } from '@/lib/defaults/transforms';
 
 export function FlowEditorTab() {
-  const { state, updateFlow, updateUI } = useWorkspace();
+  const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
   const { nodes: ctxNodes, edges: ctxEdges } = state.flow;
 
   const {
@@ -48,26 +49,25 @@ export function FlowEditorTab() {
     setEdges(ctxEdges as Edge[]);
   }, [ctxNodes, ctxEdges, setNodes, setEdges]);
 
-  // Sync context when local hook nodes/edges change via handlers
+  // Sync context when local hook nodes/edges change via handlers (synchronously compute updates)
   const handleNodesChange = useCallback(
-    (changes: Parameters<typeof onNodesChange>[0]) => {
+    (changes: NodeChange[]) => {
+      const updatedNodes = applyNodeChanges(changes, nodes);
+      setNodes(updatedNodes as unknown as Node<NodeData>[]);
+      updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
       onNodesChange(changes);
-      // get latest nodes after apply is inside hook; schedule sync on next tick
-      setTimeout(() => {
-        updateFlow({ nodes });
-      }, 0);
     },
-    [onNodesChange, updateFlow, nodes]
+    [nodes, setNodes, updateFlow, onNodesChange]
   );
 
   const handleEdgesChange = useCallback(
-    (changes: Parameters<typeof onEdgesChange>[0]) => {
+    (changes: EdgeChange[]) => {
+      const updatedEdges = applyEdgeChanges(changes, edges);
+      setEdges(updatedEdges);
+      updateFlow({ edges: updatedEdges });
       onEdgesChange(changes);
-      setTimeout(() => {
-        updateFlow({ edges });
-      }, 0);
     },
-    [onEdgesChange, updateFlow, edges]
+    [edges, setEdges, updateFlow, onEdgesChange]
   );
 
   // Result log viewer (must be declared before useMemo that references its handlers)
@@ -78,9 +78,27 @@ export function FlowEditorTab() {
     getResultNodeData,
   } = useResultLogViewer(nodes);
 
+  // Ensure timeline exists for a node
+  const ensureTimelineForNode = useCallback((nodeId: string) => {
+    if (state.editors.timeline[nodeId]) return;
+    const node = state.flow.nodes.find((n) => (n as any).id === nodeId || (n as any)?.data?.identifier?.id === nodeId) as any;
+    if (!node || node?.type !== 'animation') return;
+    const duration: number = typeof node?.data?.duration === 'number' ? node.data.duration : 3;
+    const rawTracks: AnimationTrack[] = Array.isArray(node?.data?.tracks) ? node.data.tracks : [];
+    const tracks: AnimationTrack[] = rawTracks.map((t, _, arr) => {
+      const anyT = t as any;
+      if (anyT.identifier) return t;
+      const identifier = generateTransformIdentifier(t.type, arr as AnimationTrack[]);
+      const { ...rest } = anyT as Omit<AnimationTrack, 'identifier'>;
+      return { ...(rest as object), identifier } as AnimationTrack;
+    });
+    updateTimeline(nodeId, { duration, tracks });
+  }, [state.editors.timeline, state.flow.nodes, updateTimeline]);
+
   // Double-click open timeline editor
   const nodeTypes: NodeTypes = useMemo(() => {
     const handleOpenTimelineEditor = (nodeId: string) => {
+      ensureTimelineForNode(nodeId);
       updateUI({ activeTab: 'timeline', selectedNodeId: nodeId, selectedNodeType: 'animation' });
       const url = new URL(window.location.href);
       url.searchParams.set('tab', 'timeline');
@@ -88,7 +106,7 @@ export function FlowEditorTab() {
       window.history.pushState({}, '', url.toString());
     };
     return createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer);
-  }, [updateUI, handleOpenResultLogViewer]);
+  }, [updateUI, handleOpenResultLogViewer, ensureTimelineForNode]);
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
