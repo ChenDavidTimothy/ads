@@ -9,6 +9,7 @@ export function useConnections(
   edges: Edge[],
   setEdges: (updater: Edge[] | ((eds: Edge[]) => Edge[])) => void,
   flowTracker: FlowTracker,
+  updateContextEdges?: (newEdges: Edge[]) => void,
 ) {
   // Toast notifications removed for connections as they're frequent user actions
 
@@ -50,9 +51,10 @@ export function useConnections(
     );
 
     setEdges(newEdges);
+    if (updateContextEdges) updateContextEdges(newEdges);
     
     // No success toast for connections - they're frequent user actions
-  }, [nodes, edges, setEdges, flowTracker]);
+  }, [nodes, edges, setEdges, flowTracker, updateContextEdges]);
 
   return { onConnect } as const;
 }

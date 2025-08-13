@@ -43,6 +43,12 @@ export function FlowEditorTab() {
     flowTracker,
   } = useFlowGraph();
 
+  // Keep a mutable ref to the latest local nodes to avoid spamming context during drag
+  const latestLocalNodesRef = useRef<Node<NodeData>[]>([]);
+  useEffect(() => {
+    latestLocalNodesRef.current = nodes as unknown as Node<NodeData>[];
+  }, [nodes]);
+
   useEffect(() => {
     setNodes(ctxNodes as unknown as Node<NodeData>[]);
     setEdges(ctxEdges as Edge[]);
@@ -52,16 +58,17 @@ export function FlowEditorTab() {
     (changes: NodeChange[]) => {
       const updatedNodes = applyNodeChanges(changes, nodes);
       setNodes(updatedNodes as unknown as Node<NodeData>[]);
-      updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
+      // Do NOT push to context here to avoid heavy snapshotting during drag
       onNodesChange(changes);
     },
-    [nodes, setNodes, updateFlow, onNodesChange]
+    [nodes, setNodes, onNodesChange]
   );
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       const updatedEdges = applyEdgeChanges(changes, edges);
       setEdges(updatedEdges);
+      // Edges can affect validity; keep context in sync immediately
       updateFlow({ edges: updatedEdges });
       onEdgesChange(changes);
     },
@@ -119,7 +126,13 @@ export function FlowEditorTab() {
     );
   }, []);
 
-  const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
+  const { onConnect } = useConnections(
+    nodes,
+    edges,
+    setEdges,
+    flowTracker,
+    (newEdges: Edge[]) => updateFlow({ edges: newEdges })
+  );
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
   const {
@@ -169,7 +182,10 @@ export function FlowEditorTab() {
             onPaneClick={onPaneClick}
             onNodesDelete={onNodesDelete}
             onEdgesDelete={onEdgesDelete}
-            onNodeDragStop={() => { /* optional: could trigger any post-drag sync if needed */ }}
+            onNodeDragStop={() => {
+              // Sync nodes to context once at the end of a drag gesture
+              updateFlow({ nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[] });
+            }}
             disableDeletion={resultLogModalState.isOpen}
           />
 
