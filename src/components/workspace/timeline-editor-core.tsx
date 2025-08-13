@@ -209,9 +209,13 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
   }, [selectedTrackId, onChange]);
 
   const handleDurationImmediate = useCallback((newDuration: number) => {
-    setDuration(newDuration);
-    onChange({ duration: newDuration });
-  }, [onChange]);
+    setDuration((prev) => {
+      const clamped = Math.max(0.1, newDuration);
+      if (clamped === prev) return prev;
+      return clamped;
+    });
+    onChange({ duration: Math.max(0.1, newDuration), tracks });
+  }, [onChange, tracks]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, trackId: string, type: DragState["type"]) => {
@@ -402,7 +406,9 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                 if (updates.properties) mapped.properties = updates.properties as any;
                 onUpdateTrackOverride(selectedTrack.identifier.id, mapped);
               } else {
-                onChange({ tracks: tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t) });
+                const nextTracks = tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t);
+                setTracks(nextTracks);
+                onChange({ tracks: nextTracks });
               }
             }} 
             allTracks={tracks}
