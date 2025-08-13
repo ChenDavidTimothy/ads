@@ -101,10 +101,13 @@ export function TimelinePageClient({ workspaceId, nodeId }: { workspaceId: strin
     <div className="h-screen w-full bg-gray-900">
       <TimelineEditorCore 
         animationNodeId={nodeId}
-        initialDuration={duration} 
-        initialTracks={tracks} 
-        onSave={handleSave} 
-        onCancel={handleCancel} 
+        duration={duration} 
+        tracks={tracks} 
+        onChange={(u) => {
+          const newDuration = typeof u.duration === 'number' ? u.duration : duration;
+          const newTracks = Array.isArray(u.tracks) ? u.tracks : tracks;
+          void handleSave(newDuration, newTracks);
+        }}
       />
     </div>
   );
