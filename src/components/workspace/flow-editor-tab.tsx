@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { applyNodeChanges, applyEdgeChanges, type NodeTypes, type NodeChange, type EdgeChange } from 'reactflow';
 import { FlowCanvas } from './flow/components/flow-canvas';
 import { NodePalette } from './node-palette';
@@ -43,13 +43,11 @@ export function FlowEditorTab() {
     flowTracker,
   } = useFlowGraph();
 
-  // Hydrate hook state from context flow on mount and when context changes
   useEffect(() => {
     setNodes(ctxNodes as unknown as Node<NodeData>[]);
     setEdges(ctxEdges as Edge[]);
   }, [ctxNodes, ctxEdges, setNodes, setEdges]);
 
-  // Sync context when local hook nodes/edges change via handlers (synchronously compute updates)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const updatedNodes = applyNodeChanges(changes, nodes);
@@ -70,7 +68,6 @@ export function FlowEditorTab() {
     [edges, setEdges, updateFlow, onEdgesChange]
   );
 
-  // Result log viewer (must be declared before useMemo that references its handlers)
   const {
     resultLogModalState,
     handleOpenResultLogViewer,
@@ -78,7 +75,6 @@ export function FlowEditorTab() {
     getResultNodeData,
   } = useResultLogViewer(nodes);
 
-  // Ensure timeline exists for a node
   const ensureTimelineForNode = useCallback((nodeId: string) => {
     if (state.editors.timeline[nodeId]) return;
     const node = state.flow.nodes.find((n) => (n as any).id === nodeId || (n as any)?.data?.identifier?.id === nodeId) as any;
@@ -95,9 +91,12 @@ export function FlowEditorTab() {
     updateTimeline(nodeId, { duration, tracks });
   }, [state.editors.timeline, state.flow.nodes, updateTimeline]);
 
-  // Double-click open timeline editor
-  const nodeTypes: NodeTypes = useMemo(() => {
-    const handleOpenTimelineEditor = (nodeId: string) => {
+  // Stable handler refs to avoid recreating nodeTypes
+  const openTimelineRef = useRef<(nodeId: string) => void>(() => {});
+  const openLogViewerRef = useRef<(nodeId: string) => void>(() => {});
+
+  useEffect(() => {
+    openTimelineRef.current = (nodeId: string) => {
       ensureTimelineForNode(nodeId);
       updateUI({ activeTab: 'timeline', selectedNodeId: nodeId, selectedNodeType: 'animation' });
       const url = new URL(window.location.href);
@@ -105,8 +104,20 @@ export function FlowEditorTab() {
       url.searchParams.set('node', nodeId);
       window.history.pushState({}, '', url.toString());
     };
-    return createNodeTypes(handleOpenTimelineEditor, handleOpenResultLogViewer);
-  }, [updateUI, handleOpenResultLogViewer, ensureTimelineForNode]);
+  }, [ensureTimelineForNode, updateUI]);
+
+  useEffect(() => {
+    openLogViewerRef.current = (nodeId: string) => {
+      handleOpenResultLogViewer(nodeId);
+    };
+  }, [handleOpenResultLogViewer]);
+
+  const nodeTypes: NodeTypes = useMemo(() => {
+    return createNodeTypes(
+      (id) => openTimelineRef.current(id),
+      (id) => openLogViewerRef.current(id)
+    );
+  }, []);
 
   const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker);
   const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
