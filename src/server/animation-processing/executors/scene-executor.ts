@@ -29,7 +29,7 @@ export class SceneNodeExecutor extends BaseExecutor {
     const sceneNodeId = node.data.identifier.id;
     let objectsAddedToThisScene = 0;
 
-    // CRITICAL FIX: Get or create per-scene storage for this scene
+    // Get or create per-scene storage for this scene
     const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) ?? [];
     const isFrameNode = node.type === 'frame';
 
@@ -81,7 +81,7 @@ export class SceneNodeExecutor extends BaseExecutor {
       }
     }
 
-    // CRITICAL: Store the scene-specific objects back to context
+    // Store the scene-specific objects back to context
     context.sceneObjectsByScene.set(sceneNodeId, sceneObjects);
 
     // Only throw insert error for video scenes; frame/image accepts untimed objects

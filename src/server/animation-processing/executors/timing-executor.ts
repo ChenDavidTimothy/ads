@@ -45,8 +45,7 @@ export class TimingNodeExecutor extends BaseExecutor {
     }
 
     context.currentTime = Math.max(context.currentTime, data.appearanceTime as number);
-    // CRITICAL FIX: Clone perObjectAnimations to prevent shared reference mutations
-    // Ensures timing node (insert) doesn't create shared references in animation data
+    // Clone perObjectAnimations to prevent shared reference mutations
     const sourceAnimations = (inputs[0]?.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
     const clonedAnimations = sourceAnimations ? 
       Object.fromEntries(
