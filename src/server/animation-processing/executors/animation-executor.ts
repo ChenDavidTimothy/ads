@@ -5,6 +5,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -30,7 +31,27 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
     const perObjectAnimations: Record<string, SceneAnimationTrack[]> = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[]);
-    const perObjectAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[]);
+    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[]);
+
+    // Read node-level assignments stored on the Animation node itself
+    const nodeAssignments: PerObjectAssignments | undefined = (data.perObjectAssignments as PerObjectAssignments | undefined);
+
+    // Merge upstream + node-level; node-level takes precedence per object
+    const mergedAssignments: PerObjectAssignments | undefined = (() => {
+      if (!upstreamAssignments && !nodeAssignments) return undefined;
+      const result: PerObjectAssignments = {};
+      const objectIds = new Set<string>([
+        ...Object.keys(upstreamAssignments ?? {}),
+        ...Object.keys(nodeAssignments ?? {}),
+      ]);
+      for (const objectId of objectIds) {
+        const base = upstreamAssignments?.[objectId];
+        const overrides = nodeAssignments?.[objectId];
+        const merged = mergeObjectAssignments(base, overrides);
+        if (merged) result[objectId] = merged as ObjectAssignments;
+      }
+      return result;
+    })();
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -51,7 +72,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
           objectId ?? '',
           baseline,
           priorForObject,
-          perObjectAssignments
+          mergedAssignments
         );
 
         if (objectId) {
@@ -106,7 +127,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, perObjectAssignments }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, perObjectAssignments: mergedAssignments }
     );
   }
 
