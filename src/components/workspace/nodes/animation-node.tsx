@@ -18,9 +18,12 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
     if (onOpenTimeline) return onOpenTimeline();
     // Fallback: navigate to dedicated timeline editor page preserving workspace
     const params = new URLSearchParams(window.location.search);
-    const workspaceId = params.get('workspace');
-    const target = `/workspace/timeline/${data.identifier.id}${workspaceId ? `?workspace=${workspaceId}` : ''}`;
-    window.location.href = target;
+    const ws = params.get('workspace');
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', 'timeline');
+    url.searchParams.set('node', data.identifier.id);
+    if (ws) url.searchParams.set('workspace', ws);
+    window.history.pushState({}, '', url.toString());
   };
 
   const trackCount = data.tracks?.length || 0;
@@ -28,11 +31,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
   const uniqueTypes = [...new Set(trackTypes)];
 
   return (
-    <Card 
-      selected={selected} 
-      className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-gray-750" 
-      onDoubleClick={handleDoubleClick}
-    >
+    <Card selected={selected} className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-gray-750" onDoubleClick={handleDoubleClick}>
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle

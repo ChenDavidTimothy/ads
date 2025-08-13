@@ -7,6 +7,8 @@ import type { TimelineEditorData } from '@/types/workspace-state';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { NodeData } from '@/shared/types';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
+import { EditorShell } from './common/editor-shell';
+import { ObjectSelectionPanel } from './common/object-selection-panel';
 
 export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const { state, updateTimeline, updateUI, updateFlow } = useWorkspace();
@@ -101,43 +103,51 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   }), [nodeId, data.duration, data.tracks]);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between bg-gray-900/60">
-        <div className="flex items-center gap-3">
-          <div className="text-white font-medium">Timeline</div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Object:</span>
-            <select
-              className="bg-gray-800 text-white text-xs px-2 py-1 rounded border border-gray-700"
-              value={selectedObjectId ?? ''}
-              onChange={(e) => setSelectedObjectId(e.target.value || null)}
-            >
-              <option value="">—</option>
-              {upstreamObjects.map((obj) => (
-                <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
-                  {obj.data.identifier.displayName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <button className="text-sm text-gray-300 hover:text-white" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>Back to Flow</button>
-      </div>
-      <div className="flex-1">
-        <TimelineEditorCore
-          animationNodeId={coreProps.animationNodeId}
-          duration={coreProps.duration}
-          tracks={coreProps.tracks}
-          onChange={handleChange}
-          // New props for per-object assignment editing
-          selectedObjectId={selectedObjectId ?? undefined}
-          perObjectAssignments={currentAssignments}
-          onUpdateTrackOverride={(trackId, updates) => {
-            if (!selectedObjectId) return;
-            updateAssignmentsForTrack(selectedObjectId, trackId, updates);
-          }}
+    <EditorShell
+      title="Timeline"
+      left={(
+        <ObjectSelectionPanel
+          items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
+          selectedId={selectedObjectId}
+          onSelect={(id) => setSelectedObjectId(id)}
+          emptyLabel="No upstream objects"
         />
-      </div>
-    </div>
+      )}
+      center={(
+        <div className="flex-1">
+          <TimelineEditorCore
+            animationNodeId={coreProps.animationNodeId}
+            duration={coreProps.duration}
+            tracks={coreProps.tracks}
+            onChange={handleChange}
+            // Per-object assignment editing
+            selectedObjectId={selectedObjectId ?? undefined}
+            perObjectAssignments={currentAssignments}
+            onUpdateTrackOverride={(trackId, updates) => {
+              if (!selectedObjectId) return;
+              updateAssignmentsForTrack(selectedObjectId, trackId, updates);
+            }}
+          />
+        </div>
+      )}
+      onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
+      headerExtras={(
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">Object:</span>
+          <select
+            className="bg-gray-800 text-white text-xs px-2 py-1 rounded border border-gray-700"
+            value={selectedObjectId ?? ''}
+            onChange={(e) => setSelectedObjectId(e.target.value || null)}
+          >
+            <option value="">—</option>
+            {upstreamObjects.map((obj) => (
+              <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
+                {obj.data.identifier.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    />
   );
 }

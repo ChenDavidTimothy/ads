@@ -22,15 +22,21 @@ export function RightSidebar({ node, allNodes, allEdges, onChange, onDisplayName
         {node.type?.charAt(0).toUpperCase()}
         {node.type?.slice(1)} Properties
       </h3>
-      <PropertyPanel
-        node={node}
-        onChange={(newData: Partial<NodeData>) => onChange(newData)}
-        onDisplayNameChange={onDisplayNameChange}
-        validateDisplayName={validateDisplayName}
-        allNodes={allNodes}
-        allEdges={allEdges}
-        flowTracker={flowTracker}
-      />
+      {node.type === 'canvas' ? (
+        <div className="text-xs text-gray-400">
+          Double-click the Canvas node to edit in its dedicated tab.
+        </div>
+      ) : (
+        <PropertyPanel
+          node={node}
+          onChange={(newData: Partial<NodeData>) => onChange(newData)}
+          onDisplayNameChange={onDisplayNameChange}
+          validateDisplayName={validateDisplayName}
+          allNodes={allNodes}
+          allEdges={allEdges}
+          flowTracker={flowTracker}
+        />
+      )}
     </div>
   );
 }
