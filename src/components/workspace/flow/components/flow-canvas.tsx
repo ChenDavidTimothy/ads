@@ -40,13 +40,13 @@ export function FlowCanvas(props: Props) {
 			panOnDrag
 			selectionOnDrag
 			zoomOnScroll
-			className="bg-gray-900"
+			className="bg-[var(--surface-0)]"
 			deleteKeyCode={(null as unknown as string | string[])}
 			multiSelectionKeyCode={disableDeletion ? (null as unknown as string) : 'Meta'}
 		>
-			<Background color="#374151" />
-			<Controls className="bg-gray-800 border-gray-600" />
-			<MiniMap className="bg-gray-800 border-gray-600" nodeColor="#6366f1" />
+			<Background color="#35353c" />
+			<Controls className="bg-[var(--surface-1)] border-[var(--border-primary)]" />
+			<MiniMap className="bg-[var(--surface-1)] border-[var(--border-primary)]" nodeColor="#6366f1" />
 		</ReactFlow>
 	);
 }

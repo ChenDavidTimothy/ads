@@ -6,20 +6,21 @@ import { cn } from "@/lib/utils";
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, children, ...props }, ref) => {
-    return (
-      <select
-        ref={ref}
-        className={cn(
-          "w-full rounded-md bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors",
-          className
-        )}
-        {...props}
-      >
-        {children}
-      </select>
-    );
-  }
+	({ className, children, ...props }, ref) => {
+		return (
+			<select
+				ref={ref}
+				className={cn(
+					"w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-primary)] text-[var(--text-primary)] px-3 py-2 text-sm",
+					"focus:outline-none focus:ring-2 focus:ring-[var(--ring-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-0)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
+					className
+				)}
+				{...props}
+			>
+				{children}
+			</select>
+		);
+	}
 );
 
 Select.displayName = "Select";

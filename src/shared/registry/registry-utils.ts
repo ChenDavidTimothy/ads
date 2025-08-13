@@ -37,14 +37,32 @@ export function registerNodeDefinition(definition: NodeDefinition): void {
   REGISTRY[definition.type] = definition;
 }
 
-
+// Map execution category to semantic token-based classes for UI tinting
+function getCategoryTokenClass(category: NodeDefinition['execution']['category']): { primary: string; handle: string } {
+  switch (category) {
+    case 'animation':
+      return { primary: 'bg-[var(--node-animation)]', handle: '!bg-[var(--node-animation)]' };
+    case 'logic':
+      return { primary: 'bg-[var(--node-logic)]', handle: '!bg-[var(--node-logic)]' };
+    case 'geometry':
+      return { primary: 'bg-[var(--node-geometry)]', handle: '!bg-[var(--node-geometry)]' };
+    case 'timing':
+      return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
+    case 'output':
+      return { primary: 'bg-[var(--node-output)]', handle: '!bg-[var(--node-output)]' };
+    default:
+      return { primary: 'bg-[var(--accent-500)]', handle: '!bg-[var(--accent-500)]' };
+  }
+}
 
 // Generate node colors from definitions (replaces hardcoded constants)
 export function generateNodeColors() {
   const colors: Record<string, { primary: string; handle: string }> = {};
   
   for (const [nodeType, definition] of Object.entries(REGISTRY)) {
-    colors[nodeType] = definition.rendering.colors;
+    // Prefer category token to avoid drift, fall back to definition colors if needed
+    const categoryColors = getCategoryTokenClass(definition.execution.category);
+    colors[nodeType] = definition.rendering?.colors ?? categoryColors;
   }
   
   return colors;
@@ -52,11 +70,11 @@ export function generateNodeColors() {
 
 // Generate track colors and icons from transform definitions
 export const TRACK_COLORS = {
-  move: "bg-purple-600",
-  rotate: "bg-indigo-600", 
-  scale: "bg-pink-600",
-  fade: "bg-yellow-600",
-  color: "bg-orange-600",
+  move: "bg-[var(--node-animation)]",
+  rotate: "bg-[var(--node-logic)]", 
+  scale: "bg-[var(--node-geometry)]",
+  fade: "bg-[var(--warning-600)]",
+  color: "bg-[var(--accent-600)]",
 } as const;
 
 export const TRACK_ICONS = {
@@ -258,8 +276,6 @@ function generateCustomPorts(baseDefinition: NodeDefinition, _nodeData?: Record<
   // Future implementation for nodes with custom port generation logic
   return baseDefinition;
 }
-
-
 
 // Resolution presets (preserved from existing)
 export const RESOLUTION_PRESETS = [
