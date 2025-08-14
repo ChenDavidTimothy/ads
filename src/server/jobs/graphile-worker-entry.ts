@@ -9,6 +9,7 @@ import type { AnimationScene } from '@/shared/types/scene';
 import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 import { notifyRenderJobEvent } from './pg-events';
 import { logger } from '@/lib/logger';
+import { Pool } from 'pg';
 
 interface RenderJobPayload {
   scene: AnimationScene;
@@ -101,12 +102,20 @@ async function main() {
     }
   };
 
-  runner = await run({
+  // Use a shared pool with TCP keepalive so LISTEN connections don't silently drop on idle
+  const pgPool = new Pool({
     connectionString,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+    idleTimeoutMillis: 0,
+  });
+
+  runner = await run({
+    pgPool,
     concurrency,
     taskList: tasks,
-    // Keep polling modest to ensure fast recovery if LISTEN drops
-    pollInterval: 2000, // 2 seconds (default) to minimize idle-lag wakeup
+    // Maintain low polling to reduce DB load; rely on NOTIFY for instant wake
+    pollInterval: 30000,
   });
 
   logger.info('Graphile Worker started', { concurrency });

@@ -36,7 +36,9 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
       ]);
       // Signal the worker to wake up immediately (in case its polling interval is long)
       try {
-        await client.query("select pg_notify('graphile_worker_wake', '')");
+        // Graphile Worker listens to its own wake notifications when a job is added;
+        // additionally, we emit an explicit wake signal on a known channel.
+        await client.query("select pg_notify('graphile_worker:jobs', '')");
       } catch {
         // Best-effort wake; ignore errors
       }
