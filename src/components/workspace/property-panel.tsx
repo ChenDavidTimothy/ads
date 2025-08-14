@@ -300,13 +300,14 @@ function SchemaBasedProperties({
                 value={point.x}
                 onChange={(x) => onChange({ [schema.key]: { ...point, x } } as Partial<NodeData>)}
                 defaultValue={0}
-                bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
+                bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={`${schema.key}.x`} />) : undefined}
               />
               <NumberField
                 label="Y"
                 value={point.y}
                 onChange={(y) => onChange({ [schema.key]: { ...point, y } } as Partial<NodeData>)}
                 defaultValue={0}
+                bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={`${schema.key}.y`} />) : undefined}
               />
             </div>
           </div>

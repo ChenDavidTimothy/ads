@@ -40,16 +40,25 @@ export function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]):
 }
 
 function applyTrackOverride(base: AnimationTrack, override: TrackOverride): AnimationTrack {
+  const baseProps = base.properties as unknown as Record<string, unknown>;
+  const overrideProps = (override.properties ?? {}) as Record<string, unknown>;
   const mergedProps = {
-    ...(base.properties as unknown as Record<string, unknown>),
-    ...(override.properties ?? {}),
-  } as unknown as typeof base.properties;
+    ...baseProps,
+    ...overrideProps,
+  } as Record<string, unknown>;
+  // Deep-merge nested 'from'/'to' objects to preserve per-field overrides (e.g., move.from.x)
+  if (typeof baseProps.from === 'object' && baseProps.from !== null && typeof overrideProps.from === 'object' && overrideProps.from !== null) {
+    mergedProps.from = { ...(baseProps.from as Record<string, unknown>), ...(overrideProps.from as Record<string, unknown>) };
+  }
+  if (typeof baseProps.to === 'object' && baseProps.to !== null && typeof overrideProps.to === 'object' && overrideProps.to !== null) {
+    mergedProps.to = { ...(baseProps.to as Record<string, unknown>), ...(overrideProps.to as Record<string, unknown>) };
+  }
   const merged: AnimationTrack = {
     ...base,
     startTime: override.startTime ?? base.startTime,
     duration: override.duration ?? base.duration,
     easing: (override.easing ?? base.easing) as AnimationTrack['easing'],
-    properties: mergedProps as never,
+    properties: mergedProps as unknown as typeof base.properties,
   } as AnimationTrack;
   return merged;
 }
@@ -189,19 +198,62 @@ export function convertTracksToSceneAnimations(
     // 2. End value from previous track of same type in the same sequence
     // 3. End value from prior animations for this object
     // 4. Default 'from' value
-    const hasExplicitFrom = Object.prototype.hasOwnProperty.call(baseTrack.properties ?? {}, 'from');
-    if (!hasExplicitFrom && (properties.from === undefined || isDefaultFrom(baseTrack.type, properties.from))) {
-      // Try to get from the same sequence first
-      let inherited = getEndValueFromSameSequence(baseTrack, sortedTracks, targetProperty);
-      
-      // If not found in same sequence, try prior animations
-      if (inherited === undefined) {
-        inherited = getPriorValue(targetProperty, effectiveStart, baseTrack);
+    const defaults = transformFactory.getDefaultProperties(baseTrack.type) as unknown as { from?: unknown } | undefined;
+    const defaultFrom = defaults?.from as unknown;
+
+    // Compute inherited end value we might chain from
+    let inherited: unknown = undefined;
+    const tryComputeInherited = () => {
+      if (inherited !== undefined) return inherited;
+      let inh = getEndValueFromSameSequence(baseTrack, sortedTracks, targetProperty);
+      if (inh === undefined) {
+        inh = getPriorValue(targetProperty, effectiveStart, baseTrack);
       }
-      
-      if (inherited !== undefined) {
-        // The inherited value shape aligns with the track type due to targetProperty narrowing
-        (properties as unknown as Record<string, unknown>).from = inherited as unknown;
+      inherited = inh;
+      return inherited;
+    };
+
+    if (baseTrack.type === 'move') {
+      const bf = (baseTrack.properties as any)?.from as { x?: number; y?: number } | undefined;
+      const pf = (properties as any)?.from as { x?: number; y?: number } | undefined;
+      const df = (defaultFrom as any) as { x?: number; y?: number } | undefined;
+      const ov = (matchedOverride?.properties as any)?.from as { x?: number; y?: number } | undefined;
+      const inh = (tryComputeInherited() as any) as { x?: number; y?: number } | undefined;
+
+      const nextFrom: { x?: number; y?: number } = { ...(pf ?? {}) };
+      // Per-axis explicit detection: explicit if override touched that axis or if base deviates from default
+      const xExplicit = (ov && Object.prototype.hasOwnProperty.call(ov, 'x')) || (bf?.x !== undefined && df?.x !== undefined && bf.x !== df.x);
+      const yExplicit = (ov && Object.prototype.hasOwnProperty.call(ov, 'y')) || (bf?.y !== undefined && df?.y !== undefined && bf.y !== df.y);
+
+      if (!xExplicit) {
+        if ((pf?.x === undefined) || (df?.x !== undefined && pf?.x === df.x)) {
+          if (inh?.x !== undefined) nextFrom.x = inh.x;
+        }
+      }
+      if (!yExplicit) {
+        if ((pf?.y === undefined) || (df?.y !== undefined && pf?.y === df.y)) {
+          if (inh?.y !== undefined) nextFrom.y = inh.y;
+        }
+      }
+      if (Object.keys(nextFrom).length > 0) {
+        (properties as unknown as Record<string, unknown>).from = nextFrom as unknown;
+      }
+    } else {
+      // Scalar or non-vector case: keep previous logic, but do not override when explicitly set or non-default
+      const fromExplicitByOverride = !!(matchedOverride && Object.prototype.hasOwnProperty.call(matchedOverride.properties ?? {}, 'from'));
+      const fromIsNonDefault = !isDefaultFrom(baseTrack.type, (baseTrack as any)?.properties?.from);
+      const isFromExplicit = fromExplicitByOverride || fromIsNonDefault;
+      if (!isFromExplicit && (properties as any).from !== undefined && defaultFrom !== undefined && isDefaultFrom(baseTrack.type, (properties as any).from)) {
+        const inh = tryComputeInherited();
+        if (inh !== undefined) {
+          (properties as unknown as Record<string, unknown>).from = inh as unknown;
+        }
+      }
+      if (!isFromExplicit && (properties as any).from === undefined) {
+        const inh = tryComputeInherited();
+        if (inh !== undefined) {
+          (properties as unknown as Record<string, unknown>).from = inh as unknown;
+        }
       }
     }
 

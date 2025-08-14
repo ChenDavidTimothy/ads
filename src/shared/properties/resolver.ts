@@ -30,18 +30,21 @@ export function resolveInitialObject(
 ): ResolveInitialResult {
   const sources: PropertySourceMap = {};
 
-  // Transform-like properties with precedence: base < canvas < assignment
-  const initialPosition = assignments?.initial?.position
-    ?? canvasOverrides?.position
-    ?? original.initialPosition;
+  // Transform-like properties with precedence: base < canvas < assignment (merged per field)
+  const basePos = original.initialPosition;
+  let initialPosition = { ...basePos };
+  if (canvasOverrides?.position) initialPosition = { ...initialPosition, ...canvasOverrides.position };
+  if (assignments?.initial?.position) initialPosition = { ...initialPosition, ...assignments.initial.position };
   sources.position = assignments?.initial?.position ? 'assignment' : canvasOverrides?.position ? 'canvas' : 'base';
 
   const initialRotation = assignments?.initial?.rotation
     ?? (canvasOverrides?.rotation ?? (original.initialRotation ?? 0));
   sources.rotation = assignments?.initial?.rotation ? 'assignment' : canvasOverrides?.rotation ? 'canvas' : 'base';
 
-  const initialScale = assignments?.initial?.scale
-    ?? (canvasOverrides?.scale ?? (original.initialScale ?? { x: 1, y: 1 }));
+  const baseScale = original.initialScale ?? { x: 1, y: 1 };
+  let initialScale = { ...baseScale };
+  if (canvasOverrides?.scale) initialScale = { ...initialScale, ...canvasOverrides.scale };
+  if (assignments?.initial?.scale) initialScale = { ...initialScale, ...assignments.initial.scale };
   sources.scale = assignments?.initial?.scale ? 'assignment' : canvasOverrides?.scale ? 'canvas' : 'base';
 
   const initialOpacity = assignments?.initial?.opacity

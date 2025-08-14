@@ -70,13 +70,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const applyBindingsToTrack = (t: AnimationTrack, keys: string[], reader: (k: string) => unknown): AnimationTrack => {
       // Copy track and properties
       const next = { ...t, properties: { ...t.properties } } as AnimationTrack;
+
+      const typePrefix = `${t.type}.`;
+      const trackTypePrefix = `track.${t.identifier.id}.${t.type}.`;
+      const trackScalarPrefix = `track.${t.identifier.id}.`;
+
+      // 1) Apply type-level keys (affect all tracks of this type)
       for (const key of keys) {
-        const prefix = `${t.type}.`;
-        if (!key.startsWith(prefix)) continue;
-        const subPath = key.slice(prefix.length);
+        if (!key.startsWith(typePrefix)) continue;
+        const subPath = key.slice(typePrefix.length);
         const val = reader(key);
         if (val === undefined) continue;
-        // Apply to properties when targeting property fields; allow 'easing', 'startTime', 'duration' via special cases
         if (subPath === 'easing') {
           (next as any).easing = val as any;
           continue;
@@ -89,9 +93,50 @@ export class AnimationNodeExecutor extends BaseExecutor {
           (next as any).duration = val as number;
           continue;
         }
-        // Otherwise set on properties via path (supports e.g., 'from', 'to', 'from.x', 'property')
         setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
       }
+
+      // 2) Apply track-specific keys (override type-level)
+      for (const key of keys) {
+        if (key.startsWith(trackTypePrefix)) {
+          const subPath = key.slice(trackTypePrefix.length);
+          const val = reader(key);
+          if (val === undefined) continue;
+          if (subPath === 'easing') {
+            (next as any).easing = val as any;
+            continue;
+          }
+          if (subPath === 'startTime' && typeof val === 'number') {
+            (next as any).startTime = val as number;
+            continue;
+          }
+          if (subPath === 'duration' && typeof val === 'number') {
+            (next as any).duration = val as number;
+            continue;
+          }
+          setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
+          continue;
+        }
+        // Also support scalar track keys like track.<id>.duration, track.<id>.easing
+        if (key.startsWith(trackScalarPrefix)) {
+          const sub = key.slice(trackScalarPrefix.length);
+          const val = reader(key);
+          if (val === undefined) continue;
+          if (sub === 'easing') {
+            (next as any).easing = val as any;
+            continue;
+          }
+          if (sub === 'startTime' && typeof val === 'number') {
+            (next as any).startTime = val as number;
+            continue;
+          }
+          if (sub === 'duration' && typeof val === 'number') {
+            (next as any).duration = val as number;
+            continue;
+          }
+        }
+      }
+
       return next;
     };
 
