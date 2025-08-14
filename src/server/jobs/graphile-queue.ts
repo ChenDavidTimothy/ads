@@ -34,6 +34,12 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
         job,
         { job_key: job.jobId, max_attempts: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5') },
       ]);
+      // Signal the worker to wake up immediately (in case its polling interval is long)
+      try {
+        await client.query("select pg_notify('graphile_worker_wake', '')");
+      } catch {
+        // Best-effort wake; ignore errors
+      }
     } finally {
       await client.end();
     }

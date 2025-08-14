@@ -105,8 +105,8 @@ async function main() {
     connectionString,
     concurrency,
     taskList: tasks,
-    // Force longer polling to reduce database load
-    pollInterval: 30000, // 30 seconds instead of default 2 seconds
+    // Keep polling modest to ensure fast recovery if LISTEN drops
+    pollInterval: 2000, // 2 seconds (default) to minimize idle-lag wakeup
   });
 
   logger.info('Graphile Worker started', { concurrency });
