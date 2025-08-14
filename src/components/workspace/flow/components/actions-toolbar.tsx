@@ -1,5 +1,7 @@
-// src/components/workspace/flow/components/actions-toolbar.tsx - Enhanced with validation error display
+// src/components/workspace/flow/components/actions-toolbar.tsx - Enhanced with validation error display and reorganized layout
 import { Button } from '@/components/ui/button';
+import { useWorkspace } from '../../workspace-context';
+import { HardDriveDownload, EyeOff, Download } from 'lucide-react';
 
 interface ValidationError {
 	type: 'error' | 'warning';
@@ -73,6 +75,8 @@ export function ActionsToolbar({
 	onResetGeneration,
 	validationSummary
 }: Props) {
+	const { updateUI, saveNow, isSaving, hasUnsavedChanges } = useWorkspace();
+
 	const getVideoButtonText = () => {
 		if (isGenerating) return 'Generating...';
 		if (lastError || validationSummary?.hasErrors) return 'Fix Issues & Try Again';
@@ -88,25 +92,45 @@ export function ActionsToolbar({
 
 	return (
 		<div className="w-full">
-			<div className="flex gap-2 justify-end">
-				<Button 
-					onClick={onGenerate} 
-					disabled={!canGenerate || isGenerating} 
-					variant={getVideoButtonVariant()}
-					size="sm"
-					className="min-w-36"
-				>
-					{getVideoButtonText()}
-				</Button>
-				<Button
-					onClick={onGenerateImage}
-					disabled={!canGenerateImage || isGeneratingImage}
-					variant="primary"
-					size="sm"
-					className="min-w-32"
-				>
-					{getImageButtonText()}
-				</Button>
+			<div className="flex items-center justify-between gap-[var(--space-3)]">
+				{/* Primary actions (left) */}
+				<div className="flex items-center gap-[var(--space-2)]">
+					<Button 
+						onClick={onGenerate} 
+						disabled={!canGenerate || isGenerating} 
+						variant={getVideoButtonVariant()}
+						size="sm"
+					>
+						{getVideoButtonText()}
+					</Button>
+					<Button
+						onClick={onGenerateImage}
+						disabled={!canGenerateImage || isGeneratingImage}
+						variant="primary"
+						size="sm"
+					>
+						{getImageButtonText()}
+					</Button>
+				</div>
+
+				{/* Secondary actions (right) */}
+				<div className="flex items-center gap-[var(--space-2)]">
+					{(hasVideo && onDownload) && (
+						<Button onClick={onDownload} variant="secondary" size="sm"><Download size={14} className="mr-1" /> MP4</Button>
+					)}
+					{(videos.length > 0 && onDownloadAll) && (
+						<Button onClick={onDownloadAll} variant="secondary" size="sm"><Download size={14} className="mr-1" /> Download All</Button>
+					)}
+					{(hasImage && onDownloadImage) && (
+						<Button onClick={onDownloadImage} variant="secondary" size="sm"><Download size={14} className="mr-1" /> Image</Button>
+					)}
+					<Button onClick={() => void saveNow()} disabled={isSaving || !hasUnsavedChanges} variant="primary" size="sm">
+						<HardDriveDownload size={14} className="mr-1" /> Save
+					</Button>
+					<Button onClick={() => updateUI({ previewVisible: false })} variant="ghost" size="sm" title="Hide Preview">
+						<EyeOff size={14} />
+					</Button>
+				</div>
 			</div>
 
 			{/* Validation error display */}
@@ -161,33 +185,6 @@ export function ActionsToolbar({
 							Reset Generation
 						</Button>
 					)}
-				</div>
-			)}
-
-			{/* Image/Video download buttons when ready */}
-			{(hasVideo && onDownload) && (
-				<Button onClick={onDownload} variant="primary" size="sm" className="w-full mt-2">Download MP4</Button>
-			)}
-			{(hasImage && onDownloadImage) && (
-				<Button onClick={onDownloadImage} variant="primary" size="sm" className="w-full mt-2">Download Image</Button>
-			)}
-
-			{/* Multi-video progress display */}
-			{videos.length > 0 && (
-				<div className="mt-2 text-xs bg-[var(--surface-2)] border border-[var(--border-primary)] p-3 rounded-[var(--radius-md)] space-y-2">
-					<div className="font-medium text-[var(--text-secondary)] flex items-center justify-between">
-						<span>Videos ({videos.filter(v => v.status === 'completed').length}/{videos.length})</span>
-						{videos.filter(v => v.status === 'completed').length > 1 && onDownloadAll && (
-							<Button
-								onClick={onDownloadAll}
-								variant="primary"
-								size="sm"
-								className="text-xs px-2 py-1"
-							>
-								Download All
-							</Button>
-						)}
-					</div>
 				</div>
 			)}
 		</div>
