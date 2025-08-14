@@ -535,7 +535,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
   const bindButton = (fieldKey: string) => {
     // Prefer track-specific key when a track is selected
     const specific = `track.${track.identifier.id}.${fieldKey}`;
-    return <BindButton nodeId={animationNodeId} bindingKey={specific} objectId={override ? selectedObjectId : undefined} />;
+    return <BindButton nodeId={animationNodeId} bindingKey={specific} objectId={selectedObjectId} />;
   };
 
   const clearBinding = (key: string) => {
@@ -612,7 +612,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={bindButton(`move.from.x`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
             <NumberField
               label="From Y"
               value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
@@ -620,7 +620,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={bindButton(`move.from.y`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
             <NumberField
               label="To X"
               value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
@@ -628,7 +628,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={100}
               bindAdornment={bindButton(`move.to.x`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
             <NumberField
               label="To Y"
               value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
@@ -636,7 +636,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={100}
               bindAdornment={bindButton(`move.to.y`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -653,7 +653,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={bindButton(`rotate.from`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
             <NumberField
               label="To Rotation"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -662,7 +662,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={bindButton(`rotate.to`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -679,7 +679,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={bindButton(`scale.from`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
             <NumberField
               label="To"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -688,7 +688,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={2}
               bindAdornment={bindButton(`scale.to`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -705,7 +705,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={bindButton(`fade.from`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
             <NumberField
               label="To Opacity"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -714,7 +714,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={bindButton(`fade.to`)}
             />
-            <div className="text-[10px]"><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -734,9 +734,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           />
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={bindButton(`color.from`)} />
-            <div className="text-[10px]"><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
             <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} bindAdornment={bindButton(`color.to`)} />
-            <div className="text-[10px]"><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={override ? selectedObjectId : undefined} /></div>
+            <div className="text-[10px]"><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
