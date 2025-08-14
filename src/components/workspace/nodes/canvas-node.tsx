@@ -22,15 +22,17 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
     window.history.pushState({}, '', url.toString());
   };
 
+  const handleClass = "bg-[var(--node-geometry)]";
+
   return (
-    <Card selected={selected} className="p-4 min-w-[220px] cursor-pointer transition-all hover:bg-gray-750" onDoubleClick={handleDoubleClick}>
+    <Card selected={selected} className="p-4 min-w-[220px] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
@@ -40,50 +42,50 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `${50 + idx * 16}%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-fuchsia-600 flex items-center justify-center rounded text-white font-bold text-sm">
+          <div className="w-6 h-6 bg-[var(--node-geometry)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             🖼️
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-white truncate">
+            <div className="font-semibold text-[var(--text-primary)] truncate">
               {data.identifier.displayName}
             </div>
-            <div className="text-xs text-gray-400 font-mono">
+            <div className="text-xs text-[var(--text-tertiary)] font-mono">
               {data.identifier.id.split('_').pop()}
             </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2 text-xs text-gray-300">
+      <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
         <div className="flex items-center justify-between">
           <span>Position:</span>
-          <span className="text-white font-medium">({data.position.x}, {data.position.y})</span>
+          <span className="text-[var(--text-primary)] font-medium">({data.position.x}, {data.position.y})</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Rotation:</span>
-          <span className="text-white font-medium">{data.rotation} rad</span>
+          <span className="text-[var(--text-primary)] font-medium">{data.rotation} rad</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Scale:</span>
-          <span className="text-white font-medium">{data.scale.x}×{data.scale.y}</span>
+          <span className="text-[var(--text-primary)] font-medium">{data.scale.x}×{data.scale.y}</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Opacity:</span>
-          <span className="text-white font-medium">{Math.round(data.opacity * 100)}%</span>
+          <span className="text-[var(--text-primary)] font-medium">{Math.round(data.opacity * 100)}%</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Fill/Stroke:</span>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border border-gray-500" style={{ backgroundColor: data.fillColor }} />
-            <div className="w-4 h-4 rounded border border-gray-500" style={{ backgroundColor: data.strokeColor }} />
-            <span className="text-white font-medium text-xs">{data.strokeWidth}px</span>
+            <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: data.fillColor }} />
+            <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: data.strokeColor }} />
+            <span className="text-[var(--text-primary)] font-medium text-xs">{data.strokeWidth}px</span>
           </div>
         </div>
       </CardContent>

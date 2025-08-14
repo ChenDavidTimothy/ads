@@ -9,6 +9,8 @@ import type { InsertNodeData } from "@/shared/types/nodes";
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const nodeDefinition = getNodeDefinition('insert');
   
+  const handleClass = "bg-[var(--node-data)]";
+
   return (
     <Card selected={selected} className="p-4 min-w-[180px]">
       {/* Single input port */}
@@ -18,28 +20,28 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition.rendering.colors.handle} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-orange-600 flex items-center justify-center rounded text-white font-bold text-sm">
+          <div className="w-6 h-6 bg-[var(--node-data)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             ⏰
           </div>
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
           </span>
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-gray-300">
+      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
         <div>Appears at: {data.appearanceTime}s</div>
         {data.appearanceTime === 0 ? (
-          <div className="text-green-400">Instant presence</div>
+          <div className="text-[var(--success-500)]">Instant presence</div>
         ) : (
-          <div className="text-blue-400">Delayed presence</div>
+          <div className="text-[var(--accent-600)]">Delayed presence</div>
         )}
       </CardContent>
 
@@ -50,7 +52,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition.rendering.colors.handle} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
