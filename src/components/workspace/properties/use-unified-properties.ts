@@ -92,7 +92,9 @@ export function useUnifiedProperties(nodeId: string): UnifiedPropertyManager {
           ...n,
           data: {
             ...(n as any).data,
-            granularPerObjectAssignments: newAssignments
+            granularPerObjectAssignments: newAssignments,
+            // Remove legacy assignments when updating to granular
+            perObjectAssignments: undefined
           }
         } as any;
       })
@@ -132,7 +134,10 @@ export function useUnifiedProperties(nodeId: string): UnifiedPropertyManager {
             ...n,
             data: {
               ...(n as any).data,
-              granularOverrides: newGlobal
+              granularOverrides: newGlobal,
+              // Remove any legacy group-based properties when using granular
+              position: newGlobal['position.x'] !== undefined || newGlobal['position.y'] !== undefined ? undefined : (n as any).data?.position,
+              scale: newGlobal['scale.x'] !== undefined || newGlobal['scale.y'] !== undefined ? undefined : (n as any).data?.scale,
             }
           } as any;
         })

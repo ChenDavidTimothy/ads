@@ -2,7 +2,7 @@
 
 import type { GeometryProperties, SceneObject, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
 import type { PropertySourceMap } from './precedence';
-import type { ObjectAssignments } from './assignments';
+// Legacy import removed
 import { 
   type GranularOverrides, 
   convertLegacyToGranular, 
@@ -217,23 +217,4 @@ export function resolveGranularObject(
   };
 }
 
-// Backward compatibility wrapper
-export function resolveGranularObjectLegacy(
-  original: SceneObject,
-  legacyCanvasOverrides?: {
-    position?: { x: number; y: number };
-    rotation?: number;
-    scale?: { x: number; y: number };
-    opacity?: number;
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
-  },
-  legacyAssignments?: ObjectAssignments
-): GranularResolveResult {
-  // Convert legacy formats to granular
-  const granularCanvasOverrides = legacyCanvasOverrides ? convertLegacyToGranular(legacyCanvasOverrides) : undefined;
-  const granularAssignments = legacyAssignments?.initial ? { initial: convertLegacyToGranular(legacyAssignments.initial) } : undefined;
-  
-  return resolveGranularObject(original, granularCanvasOverrides, granularAssignments);
-}
+// Legacy compatibility wrapper removed - use resolveGranularObject directly

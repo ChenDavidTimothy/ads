@@ -8,7 +8,7 @@ import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pick
 import { TypeValidationError } from "@/shared/types/validation";
 import { MultipleResultValuesError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+// Legacy import removed - using granular system
 
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
