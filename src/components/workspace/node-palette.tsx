@@ -25,20 +25,22 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 		if (nodes.length === 0) return null;
 
 		return (
-			<div className="mb-6">
-				<h3 className="text-xs font-semibold text-[var(--text-tertiary)] mb-3 uppercase tracking-wide">
+			<div className="mb-[var(--space-6)]">
+				<h3 className="text-xs font-semibold text-[var(--text-tertiary)] mb-[var(--space-3)] uppercase tracking-wide">
 					{title}
 				</h3>
-				<div className="space-y-2">
+				<div className="space-y-[var(--space-2)]">
 					{nodes.map((node) => (
 						<Button
 							key={node.type}
 							onClick={() => handleNodeClick(node.type)}
-							className={`w-full justify-start gap-3 ${nodeColors[node.type]?.primary ?? 'bg-[var(--surface-2)]'} hover:opacity-90`}
+							className="w-full justify-start gap-[var(--space-3)] bg-[var(--surface-2)] hover:bg-[var(--surface-interactive)] border border-[var(--border-primary)]"
 							size="md"
 						>
-							<span className="text-lg">{node.icon}</span>
-							<span>{node.label}</span>
+							{/* Category color indicator */}
+							<span className={`inline-block w-1.5 h-4 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-500)]'}`} />
+							{/* Placeholder for future icon system; keep label tight */}
+							<span className="text-[13px]">{node.label}</span>
 						</Button>
 					))}
 				</div>
@@ -47,8 +49,8 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 	};
 
 	return (
-		<div className="w-64 bg-[var(--surface-1)] border-r border-[var(--border-primary)] p-4 overflow-y-auto">
-			<h2 className="text-base font-semibold text-[var(--text-primary)] mb-4">Nodes</h2>
+		<div className="w-[var(--sidebar-width)] bg-[var(--surface-1)] border-r border-[var(--border-primary)] p-[var(--space-4)] overflow-y-auto">
+			<h2 className="text-base font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Nodes</h2>
 			{renderNodeSection("Geometry", palette.geometryNodes)}
 			{renderNodeSection("Timing", palette.timingNodes)}
 			{renderNodeSection("Logic", palette.logicNodes)}

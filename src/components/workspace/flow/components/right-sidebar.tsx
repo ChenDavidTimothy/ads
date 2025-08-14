@@ -17,8 +17,8 @@ interface Props {
 export function RightSidebar({ node, allNodes, allEdges, onChange, onDisplayNameChange, validateDisplayName, flowTracker }: Props) {
 	if (!node) return null;
 	return (
-		<div className="w-80 bg-[var(--surface-1)] border-l border-[var(--border-primary)] p-4 overflow-y-auto">
-			<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+		<div className="w-[var(--sidebar-width)] bg-[var(--surface-1)] border-l border-[var(--border-primary)] p-[var(--space-4)] overflow-y-auto">
+			<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">
 				{node.type?.charAt(0).toUpperCase()}
 				{node.type?.slice(1)} Properties
 			</h3>

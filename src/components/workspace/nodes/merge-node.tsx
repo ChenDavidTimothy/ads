@@ -39,7 +39,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card className={`p-4 min-w-[200px] ${getNodeHeight()} ${selected ? 'ring-2 ring-[var(--accent-500)]' : ''}`}>
+    <Card className={`p-[var(--card-padding)] min-w-[var(--node-min-width)] ${getNodeHeight()} ${selected ? 'ring-2 ring-[var(--accent-500)]' : ''}`}>
       {/* Dynamic input ports */}
       {inputPorts.map((port, index) => (
         <Handle
@@ -52,8 +52,8 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             ⊕
           </div>

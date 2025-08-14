@@ -28,7 +28,7 @@ function ToastItem({ notification, onRemove }: ToastItemProps) {
 	return (
 		<div
 			className={cn(
-				"flex items-start gap-3 p-4 rounded-[var(--radius-md)] border shadow-lg min-w-[300px] max-w-[500px]",
+				"flex items-start gap-3 p-[var(--space-4)] rounded-[var(--radius-md)] border shadow-lg min-w-[300px] max-w-[500px]",
 				TOAST_STYLES[notification.type]
 			)}
 		>
@@ -62,7 +62,7 @@ export function ToastContainer() {
 	if (notifications.length === 0) return null;
 
 	return (
-		<div className="fixed top-4 right-4 z-50 space-y-2">
+		<div className="fixed top-[var(--space-4)] right-[var(--space-4)] z-50 space-y-[var(--space-2)]">
 			{notifications.map((notification) => (
 				<ToastItem
 					key={notification.id}

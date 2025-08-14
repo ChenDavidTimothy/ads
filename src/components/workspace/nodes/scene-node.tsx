@@ -26,7 +26,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
   const handleClass = "bg-[var(--node-output)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[220px]">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -39,8 +39,8 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             🎬
           </div>
@@ -75,7 +75,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
 
         <div className="flex items-center justify-between">
           <span>Background</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-[var(--space-2)]">
             <div 
               className="w-4 h-4 rounded border border-[var(--border-primary)]"
               style={{ backgroundColor: data.backgroundColor }}

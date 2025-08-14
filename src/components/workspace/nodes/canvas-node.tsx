@@ -25,7 +25,7 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
   const handleClass = "bg-[var(--node-geometry)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[220px] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
@@ -47,8 +47,8 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-geometry)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             🖼️
           </div>
@@ -82,7 +82,7 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
         </div>
         <div className="flex items-center justify-between">
           <span>Fill/Stroke:</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-[var(--space-2)]">
             <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: data.fillColor }} />
             <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: data.strokeColor }} />
             <span className="text-[var(--text-primary)] font-medium text-xs">{data.strokeWidth}px</span>

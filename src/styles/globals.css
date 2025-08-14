@@ -26,6 +26,8 @@
   --accent-600: #2563eb;
   --accent-700: #1d4ed8;
   --accent-900: #1e3a8a;
+  /* Added lighter accent tint for chips/badges */
+  --accent-100: rgba(59, 130, 246, 0.15);
 
   --success-500: #10b981;
   --success-600: #059669;
@@ -46,16 +48,38 @@
   --ring-color: var(--accent-500);
   --ring-offset: var(--surface-0);
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Tightened radii for professional feel */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 
   --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 150ms;
   --duration-medium: 200ms;
 
   --header-height: 56px;
-  --sidebar-width: 16rem; /* 256px */
+  /* Unified/widened sidebar width */
+  --sidebar-width: 20rem; /* 320px */
+
+  /* Spacing system */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Component sizing tokens */
+  --node-min-width: 20rem;
+  --tab-max-width: 20rem;
+
+  /* Component paddings */
+  --card-padding: var(--space-4);
+  --button-padding-sm: var(--space-1) var(--space-2);
+  --button-padding-md: var(--space-2) var(--space-4);
+  --button-padding-lg: var(--space-3) var(--space-6);
 }
 
 :root[data-theme="dark"] {
@@ -77,6 +101,8 @@
   --accent-600: #2563eb;
   --accent-700: #1d4ed8;
   --accent-900: #1e3a8a;
+  /* Mirror light accent tint in dark theme */
+  --accent-100: rgba(59, 130, 246, 0.15);
 
   --success-500: #10b981;
   --success-600: #059669;
@@ -97,16 +123,38 @@
   --ring-color: var(--accent-500);
   --ring-offset: var(--surface-0);
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Tightened radii for professional feel */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 
   --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 150ms;
   --duration-medium: 200ms;
 
   --header-height: 56px;
-  --sidebar-width: 16rem;
+  /* Unified/widened sidebar width */
+  --sidebar-width: 20rem;
+
+  /* Spacing system */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Component sizing tokens */
+  --node-min-width: 20rem;
+  --tab-max-width: 20rem;
+
+  /* Component paddings */
+  --card-padding: var(--space-4);
+  --button-padding-sm: var(--space-1) var(--space-2);
+  --button-padding-md: var(--space-2) var(--space-4);
+  --button-padding-lg: var(--space-3) var(--space-6);
 }
 
 html {

@@ -12,7 +12,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const handleClass = "bg-[var(--node-data)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[180px]">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -25,8 +25,8 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-data)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             ⏰
           </div>

@@ -28,7 +28,7 @@ export function EditorShell({ title, left, center, right, rightHeader, onBack, h
 				{left}
 				{center}
 				{right !== undefined && (
-					<div className="w-80 border-l border-[var(--border-primary)] p-4 bg-[var(--surface-2)]">
+					<div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-2)]">
 						{rightHeader}
 						{right}
 					</div>

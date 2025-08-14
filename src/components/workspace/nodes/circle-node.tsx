@@ -10,9 +10,9 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
   const nodeDefinition = getNodeDefinition('circle');
   
   return (
-    <Card selected={selected} className="p-4 min-w-[180px]">
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div 
             className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text-primary)] font-bold"
             style={{ backgroundColor: data.color }}
@@ -28,7 +28,7 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
       <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
         <div>Radius: {data.radius}px</div>
         <div>Position: ({data.position.x}, {data.position.y})</div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[var(--space-2)]">
           <span>Color:</span>
           <div 
             className="w-4 h-4 rounded-full border border-[var(--border-primary)]"
