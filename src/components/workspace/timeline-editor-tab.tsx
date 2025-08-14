@@ -6,7 +6,7 @@ import { TimelineEditorCore } from './timeline-editor-core';
 import type { TimelineEditorData } from '@/types/workspace-state';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { NodeData } from '@/shared/types';
-// Legacy imports removed - using granular system
+import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
 
@@ -31,7 +31,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
 
   // Find the animation node in the flow and its current assignments
   const animationNode = React.useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
-  // Legacy assignments removed - timeline now uses unified property system
+  const currentAssignments: PerObjectAssignments = (animationNode?.data?.perObjectAssignments as PerObjectAssignments) ?? {};
 
   // Compute upstream objects
   const upstreamObjects = React.useMemo(() => {
@@ -39,7 +39,36 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     return tracker.getUpstreamGeometryObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
-  // Legacy track assignment function removed - using unified property system
+  const updateAssignmentsForTrack = React.useCallback((objectId: string, trackId: string, updates: Partial<TrackOverride>) => {
+    const next: PerObjectAssignments = { ...currentAssignments };
+    const obj: ObjectAssignments = { ...(next[objectId] ?? {}) } as ObjectAssignments;
+    const list: TrackOverride[] = Array.isArray(obj.tracks) ? [...obj.tracks] : [];
+    const idx = list.findIndex(t => t.trackId === trackId);
+    const base = idx >= 0 ? list[idx]! : ({ trackId } as TrackOverride);
+    const merged: TrackOverride = {
+      ...base,
+      // override scalar fields only if provided
+      ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
+      ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
+      ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
+      // properties merged shallowly to preserve granularity
+      properties: { ...(base.properties ?? {}), ...(updates.properties ?? {}) },
+    };
+    if (idx >= 0) list[idx] = merged; else list.push(merged);
+    obj.tracks = list;
+    next[objectId] = obj;
+
+    // Persist to flow.nodes
+    updateFlow({
+      nodes: state.flow.nodes.map((n) => {
+        if (((n as any)?.data?.identifier?.id) !== nodeId) return n;
+        return {
+          ...n,
+          data: { ...(n as any).data, perObjectAssignments: next },
+        } as unknown as typeof n;
+      })
+    });
+  }, [currentAssignments, state.flow.nodes, nodeId, updateFlow]);
 
   if (!data) {
     return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Timeline data not found</div>;
@@ -118,8 +147,13 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
             duration={coreProps.duration}
             tracks={coreProps.tracks}
             onChange={handleChange}
-            // Per-object assignment editing handled by UnifiedTimelineProperties
+            // Per-object assignment editing
             selectedObjectId={selectedObjectId ?? undefined}
+            perObjectAssignments={currentAssignments}
+            onUpdateTrackOverride={(trackId, updates) => {
+              if (!selectedObjectId) return;
+              updateAssignmentsForTrack(selectedObjectId, trackId, updates);
+            }}
           />
         </div>
       )}

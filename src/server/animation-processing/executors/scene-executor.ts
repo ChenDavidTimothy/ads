@@ -6,7 +6,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { MissingInsertConnectionError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
-// Legacy import removed - using granular system
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 export class SceneNodeExecutor extends BaseExecutor {
   // Register scene node handlers

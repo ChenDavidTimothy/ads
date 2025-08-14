@@ -84,6 +84,34 @@ interface ValidationResult {
     nodeName?: string;
   }>;
 }
+// Merge node data with registry defaults, ignoring undefined values and fixing point2d shapes
+function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknown): Record<string, unknown> {
+  const definition = nodeType ? getNodeDefinition(nodeType) : undefined;
+  const defaults = (definition?.defaults as Record<string, unknown> | undefined) ?? {};
+  const data = (rawData && typeof rawData === 'object' && rawData !== null) ? (rawData as Record<string, unknown>) : {};
+
+  // Start with defaults, then override with provided values except undefined
+  const merged: Record<string, unknown> = { ...defaults };
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) merged[key] = value as unknown;
+  }
+
+  // Ensure point2d properties are well-formed (x,y numbers)
+  const propertySchemas = (definition?.properties?.properties as Array<{ key: string; type: string; defaultValue?: unknown }> | undefined) ?? [];
+  for (const schema of propertySchemas) {
+    if (schema.type === 'point2d') {
+      const current = merged[schema.key];
+      const defVal = (schema.defaultValue as { x?: number; y?: number } | undefined) ?? { x: 0, y: 0 };
+      const curObj = (current && typeof current === 'object') ? (current as Record<string, unknown>) : {};
+      const x = typeof curObj.x === 'number' ? curObj.x : (typeof defVal.x === 'number' ? defVal.x : 0);
+      const y = typeof curObj.y === 'number' ? curObj.y : (typeof defVal.y === 'number' ? defVal.y : 0);
+      merged[schema.key] = { x, y } as const;
+    }
+  }
+
+  return merged;
+}
+
 
 // User-friendly error translation
 function translateDomainError(error: unknown): { message: string; suggestions: string[] } {
@@ -236,12 +264,15 @@ export const animationRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: DebugExecutionInput; ctx: TRPCContext }) => {
       try {
         // Convert React Flow nodes to backend format with proper ID mapping
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
 
         // Convert React Flow edges to backend format with identifier ID mapping
         const nodeIdMap = new Map<string, string>();
@@ -324,12 +355,15 @@ export const animationRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
         // Convert React Flow nodes to backend format with proper ID mapping
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
 
         // Convert React Flow edges to backend format with identifier ID mapping
         const nodeIdMap = new Map<string, string>();
@@ -567,12 +601,15 @@ export const animationRouter = createTRPCRouter({
     .input(generateSceneInputSchema)
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          data: n.data ?? {},
-        }));
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
         const nodeIdMap = new Map<string, string>();
         input.nodes.forEach(n => {
           if (n.data && typeof n.data === 'object' && n.data !== null) {
@@ -701,7 +738,7 @@ export const animationRouter = createTRPCRouter({
         id: n.id,
         type: n.type,
         position: n.position,
-        data: n.data ?? {},
+        data: mergeNodeDataWithDefaults(n.type, n.data),
       }));
 
       const nodeIdMap = new Map<string, string>();

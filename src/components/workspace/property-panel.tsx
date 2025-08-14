@@ -19,7 +19,7 @@ import type {
   CanvasNodeData
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
-// Legacy imports removed - using granular system
+import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
 import { BindButton } from '@/components/workspace/binding/bindings';
 
 interface PropertyPanelProps {

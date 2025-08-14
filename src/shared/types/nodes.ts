@@ -2,7 +2,7 @@
 import type { Point2D } from './core';
 import type { TransformIdentifier, TransformLineage } from './transforms';
 import type { NodeType } from './definitions';
-// Legacy import removed - using granular system
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
 
 // Node identifier system
 export interface NodeIdentifier {
@@ -167,7 +167,7 @@ export const isColorTrack = createTrackTypeGuard<ColorTrack>('color');
 export interface AnimationNodeData extends BaseNodeData {
   duration: number;
   tracks: AnimationTrack[];
-  // Legacy perObjectAssignments removed - using granularPerObjectAssignments
+  perObjectAssignments?: PerObjectAssignments;
   // Node-level variable bindings (defaults) for transform properties
   variableBindings?: Record<string, {
     // propertyKey e.g., "duration", "move.from.x", "color.property"
@@ -179,15 +179,6 @@ export interface AnimationNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string;
   }>>;
-  // New granular override system (field-level)
-  granularOverrides?: Record<string, unknown>;
-  granularPerObjectAssignments?: Record<string, {
-    initial?: Record<string, unknown>;
-    tracks?: Array<{
-      trackId: string;
-      properties: Record<string, unknown>;
-    }>;
-  }>;
 }
 
 // Scene node data
@@ -210,7 +201,7 @@ export interface CanvasNodeData extends BaseNodeData {
   fillColor: string;
   strokeColor: string;
   strokeWidth: number;
-  // Legacy perObjectAssignments removed - using granularPerObjectAssignments
+  perObjectAssignments?: PerObjectAssignments;
   // Node-level variable bindings for canvas defaults
   variableBindings?: Record<string, {
     target?: string;
@@ -221,15 +212,6 @@ export interface CanvasNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string;
   }>>;
-  // New granular override system (field-level)
-  granularOverrides?: Record<string, unknown>;
-  granularPerObjectAssignments?: Record<string, {
-    initial?: Record<string, unknown>;
-    tracks?: Array<{
-      trackId: string;
-      properties: Record<string, unknown>;
-    }>;
-  }>;
 }
 
 // Frame node data (static image output configuration)

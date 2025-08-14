@@ -4,8 +4,8 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
-import type { GranularPerObjectAssignments } from "@/shared/properties/granular-assignments";
-import { mergeGranularOverrides, convertLegacyToGranular } from "@/shared/properties/granular-assignments";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -148,44 +148,24 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
     const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
     const perObjectAnimations: Record<string, SceneAnimationTrack[]> = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[]);
-    const upstreamAssignments: GranularPerObjectAssignments | undefined = this.extractGranularPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[]);
+    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[]);
 
-    // Read node-level assignments (both legacy and new)
-    const legacyNodeAssignments = (data.perObjectAssignments as any);
-    const granularNodeAssignments = (data.granularPerObjectAssignments as GranularPerObjectAssignments | undefined);
-    
-    // Convert legacy assignments to granular if needed
-    const nodeAssignments: GranularPerObjectAssignments | undefined = (() => {
-      if (granularNodeAssignments) return granularNodeAssignments;
-      if (!legacyNodeAssignments) return undefined;
-      
-      const converted: GranularPerObjectAssignments = {};
-      for (const [objectId, assignment] of Object.entries(legacyNodeAssignments)) {
-        const legacyInitial = (assignment as any)?.initial;
-        if (legacyInitial) {
-          converted[objectId] = {
-            initial: convertLegacyToGranular(legacyInitial)
-          };
-        }
-      }
-      return converted;
-    })();
+    // Read node-level assignments stored on the Animation node itself
+    const nodeAssignments: PerObjectAssignments | undefined = (data.perObjectAssignments as PerObjectAssignments | undefined);
 
     // Merge upstream + node-level; node-level takes precedence per object
-    const mergedAssignments: GranularPerObjectAssignments | undefined = (() => {
+    const mergedAssignments: PerObjectAssignments | undefined = (() => {
       if (!upstreamAssignments && !nodeAssignments) return undefined;
-      const result: GranularPerObjectAssignments = {};
+      const result: PerObjectAssignments = {};
       const objectIds = new Set<string>([
         ...Object.keys(upstreamAssignments ?? {}),
         ...Object.keys(nodeAssignments ?? {}),
       ]);
       for (const objectId of objectIds) {
-        const base = upstreamAssignments?.[objectId]?.initial;
-        const overrides = nodeAssignments?.[objectId]?.initial;
-        const merged = mergeGranularOverrides(base, overrides);
-        if (merged && Object.keys(merged).length > 0) {
-          result[objectId] = { initial: merged };
-        }
+        const base = upstreamAssignments?.[objectId];
+        const overrides = nodeAssignments?.[objectId];
+        const merged = mergeObjectAssignments(base, overrides);
+        if (merged) result[objectId] = merged as ObjectAssignments;
       }
       return result;
     })();
@@ -270,7 +250,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, granularPerObjectAssignments: mergedAssignments }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, perObjectAssignments: mergedAssignments }
     );
   }
 
@@ -297,19 +277,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
     return merged;
   }
 
-  private extractGranularPerObjectAssignmentsFromInputs(inputs: ExecutionValue[]): GranularPerObjectAssignments | undefined {
-    const merged: GranularPerObjectAssignments = {};
+  private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[]): PerObjectAssignments | undefined {
+    const merged: PerObjectAssignments = {};
     let found = false;
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { granularPerObjectAssignments?: GranularPerObjectAssignments } | undefined)?.granularPerObjectAssignments;
+      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         found = true;
-        const existingInitial = merged[objectId]?.initial;
-        const newInitial = assignment.initial;
-        merged[objectId] = {
-          initial: mergeGranularOverrides(existingInitial, newInitial)
-        };
+        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
       }
     }
     return found ? merged : undefined;
