@@ -20,6 +20,7 @@ let listenerClient: Client | null = null;
 let listenerConnected: Promise<void> | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
 let isShuttingDown = false;
+let pingTimer: NodeJS.Timeout | null = null;
 
 // Event handlers
 const renderJobHandlers: RenderJobEventHandler[] = [];
@@ -46,6 +47,10 @@ async function connectListener(): Promise<void> {
         } catch {
           // ignore cleanup errors
         }
+      }
+      if (pingTimer) {
+        clearInterval(pingTimer);
+        pingTimer = null;
       }
 
       listenerClient = createPgClient();
@@ -97,6 +102,17 @@ async function connectListener(): Promise<void> {
           });
         }
       });
+
+      // Periodic ping to keep connection alive and detect silent drops
+      pingTimer = setInterval(async () => {
+        if (!listenerClient) return;
+        try {
+          await listenerClient.query('SELECT 1');
+        } catch (err) {
+          logger.errorWithStack('PostgreSQL listener ping failed', err);
+          scheduleReconnect();
+        }
+      }, 15000);
 
       logger.info('PostgreSQL event listener connected and subscribed', {
         channels: [RENDER_COMPLETION_CHANNEL]
@@ -285,6 +301,10 @@ export async function shutdownPgEvents(): Promise<void> {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+  if (pingTimer) {
+    clearInterval(pingTimer);
+    pingTimer = null;
   }
 
   renderJobHandlers.length = 0;

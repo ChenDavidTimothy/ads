@@ -315,6 +315,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         // Poll all pending jobs
         const jobPromises = Array.from(pendingJobs).map(async (jobId) => {
           try {
+            await utils.animation.getRenderJobStatus.invalidate({ jobId });
             const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
             return { jobId, ...res };
           } catch (error) {
@@ -427,6 +428,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       try {
         const res = await Promise.all(Array.from(pending).map(async (jobId) => {
           try {
+            await utils.animation.getRenderJobStatus.invalidate({ jobId });
             const status = await utils.animation.getRenderJobStatus.fetch({ jobId });
             return { jobId, ...status };
           } catch {
@@ -478,6 +480,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           return;
         }
         
+        await utils.animation.getRenderJobStatus.invalidate({ jobId });
         const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
         
         if (res.status === 'completed' && res.videoUrl) {
