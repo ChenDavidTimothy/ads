@@ -41,40 +41,20 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return readVarGlobal(key);
     };
     // Apply bound values to node defaults
-    const pos = readVarGlobal('position');
-    const posX = readVarGlobal('position.x');
-    const posY = readVarGlobal('position.y');
-    if (pos && typeof pos === 'object' && pos !== null && 'x' in (pos as any) && 'y' in (pos as any)) {
-      data.position = { x: Number((pos as any).x), y: Number((pos as any).y) };
-    }
-    if (typeof posX === 'number' || typeof posY === 'number') {
-      const base = (data.position as { x?: number; y?: number } | undefined) ?? { x: 0, y: 0 };
-      data.position = { x: typeof posX === 'number' ? posX : Number(base.x ?? 0), y: typeof posY === 'number' ? posY : Number(base.y ?? 0) };
-    }
-    const rot = readVarGlobal('rotation');
-    if (typeof rot === 'number') data.rotation = rot;
-    const scale = readVarGlobal('scale');
-    const scaleX = readVarGlobal('scale.x');
-    const scaleY = readVarGlobal('scale.y');
-    if (scale && typeof scale === 'object' && scale !== null && 'x' in (scale as any) && 'y' in (scale as any)) {
-      data.scale = { x: Number((scale as any).x), y: Number((scale as any).y) };
-    }
-    if (typeof scaleX === 'number' || typeof scaleY === 'number') {
-      const base = (data.scale as { x?: number; y?: number } | undefined) ?? { x: 1, y: 1 };
-      data.scale = { x: typeof scaleX === 'number' ? scaleX : Number(base.x ?? 1), y: typeof scaleY === 'number' ? scaleY : Number(base.y ?? 1) };
-    }
-    const opacity = readVarGlobal('opacity');
-    if (typeof opacity === 'number') data.opacity = opacity;
-    const fill = readVarGlobal('fillColor');
-    if (typeof fill === 'string') data.fillColor = fill;
-    const stroke = readVarGlobal('strokeColor');
-    if (typeof stroke === 'string') data.strokeColor = stroke;
-    const strokeW = readVarGlobal('strokeWidth');
-    if (typeof strokeW === 'number') data.strokeWidth = strokeW;
+    const setByPath = (target: Record<string, unknown>, path: string, value: unknown) => {
+      const parts = path.split('.');
+      let cursor: any = target;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i]!;
+        const next = cursor[key];
+        if (typeof next !== 'object' || next === null) cursor[key] = {};
+        cursor = cursor[key];
+      }
+      cursor[parts[parts.length - 1]!] = value as any;
+    };
 
-    const passThrough: unknown[] = [];
-
-    const canvasOverrides: CanvasOverrides = {
+    // Start with node defaults as overrides
+    const baseOverrides: CanvasOverrides = {
       position: data.position as { x: number; y: number } | undefined,
       rotation: data.rotation as number | undefined,
       scale: data.scale as { x: number; y: number } | undefined,
@@ -83,6 +63,17 @@ export class CanvasNodeExecutor extends BaseExecutor {
       strokeColor: data.strokeColor as string | undefined,
       strokeWidth: data.strokeWidth as number | undefined,
     };
+
+    // Apply all global binding keys generically into baseOverrides
+    const globalKeys = Object.keys(bindings);
+    const nodeOverrides: CanvasOverrides = JSON.parse(JSON.stringify(baseOverrides));
+    for (const key of globalKeys) {
+      const val = readVarGlobal(key);
+      if (val === undefined) continue;
+      setByPath(nodeOverrides as unknown as Record<string, unknown>, key, val);
+    }
+
+    const passThrough: unknown[] = [];
 
     // Read optional per-object assignments metadata (from upstream)
     const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
@@ -113,41 +104,13 @@ export class CanvasNodeExecutor extends BaseExecutor {
           const original = obj as SceneObject as unknown as Record<string, unknown>;
           const objectId = (original as { id: string }).id;
           const reader = readVarForObject(objectId);
-
-          // Build object-specific overrides from global + per-object bindings
-          const oPos = reader('position');
-          const oPosX = reader('position.x');
-          const oPosY = reader('position.y');
-          const oRot = reader('rotation');
-          const oScale = reader('scale');
-          const oScaleX = reader('scale.x');
-          const oScaleY = reader('scale.y');
-          const oOpacity = reader('opacity');
-          const oFill = reader('fillColor');
-          const oStroke = reader('strokeColor');
-          const oStrokeW = reader('strokeWidth');
-
-          const objectOverrides: CanvasOverrides = { ...canvasOverrides };
-          // position precedence: object-specific x/y > object-specific vec > global vec
-          if (oPos && typeof oPos === 'object' && oPos !== null && 'x' in (oPos as any) && 'y' in (oPos as any)) {
-            objectOverrides.position = { x: Number((oPos as any).x), y: Number((oPos as any).y) };
+          const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides));
+          const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+          for (const key of objectKeys) {
+            const val = reader(key);
+            if (val === undefined) continue;
+            setByPath(objectOverrides as unknown as Record<string, unknown>, key, val);
           }
-          if (typeof oPosX === 'number' || typeof oPosY === 'number') {
-            const base = objectOverrides.position ?? { x: 0, y: 0 };
-            objectOverrides.position = { x: typeof oPosX === 'number' ? oPosX : base.x, y: typeof oPosY === 'number' ? oPosY : base.y };
-          }
-          if (typeof oRot === 'number') objectOverrides.rotation = oRot as number;
-          if (oScale && typeof oScale === 'object' && oScale !== null && 'x' in (oScale as any) && 'y' in (oScale as any)) {
-            objectOverrides.scale = { x: Number((oScale as any).x), y: Number((oScale as any).y) };
-          }
-          if (typeof oScaleX === 'number' || typeof oScaleY === 'number') {
-            const base = objectOverrides.scale ?? { x: 1, y: 1 };
-            objectOverrides.scale = { x: typeof oScaleX === 'number' ? oScaleX : base.x, y: typeof oScaleY === 'number' ? oScaleY : base.y };
-          }
-          if (typeof oOpacity === 'number') objectOverrides.opacity = oOpacity as number;
-          if (typeof oFill === 'string') objectOverrides.fillColor = oFill as string;
-          if (typeof oStroke === 'string') objectOverrides.strokeColor = oStroke as string;
-          if (typeof oStrokeW === 'number') objectOverrides.strokeWidth = oStrokeW as number;
 
           const assignmentsForObject = mergedAssignments?.[objectId];
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
