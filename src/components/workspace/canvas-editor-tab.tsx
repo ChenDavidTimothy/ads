@@ -31,12 +31,18 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 		if (!selectedObjectId) return;
 		const next: PerObjectAssignments = { ...assignments };
 		const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) } as ObjectAssignments;
-		const currentInitial = { ...(current.initial ?? {}) } as Record<string, unknown>;
-		Object.assign(currentInitial, updates);
-		const cleanedInitial = Object.fromEntries(Object.entries(currentInitial).filter(([_, v]) => v !== undefined));
+		const baseInitial = (current.initial ?? {}) as Record<string, unknown>;
+		const mergedInitial: Record<string, unknown> = { ...baseInitial, ...updates };
+		// Deep-merge position/scale if both sides provide partials
+		if (typeof baseInitial.position === 'object' && baseInitial.position !== null && typeof updates.position === 'object' && updates.position !== null) {
+			mergedInitial.position = { ...(baseInitial.position as Record<string, unknown>), ...(updates.position as Record<string, unknown>) };
+		}
+		if (typeof baseInitial.scale === 'object' && baseInitial.scale !== null && typeof updates.scale === 'object' && updates.scale !== null) {
+			mergedInitial.scale = { ...(baseInitial.scale as Record<string, unknown>), ...(updates.scale as Record<string, unknown>) };
+		}
+		const cleanedInitial = Object.fromEntries(Object.entries(mergedInitial).filter(([_, v]) => v !== undefined));
 		current.initial = cleanedInitial as any;
 		next[selectedObjectId] = current;
-		// Persist to flow.nodes
 		updateFlow({
 			nodes: state.flow.nodes.map((n) => {
 				if (((n as any)?.data?.identifier?.id) !== nodeId) return n;

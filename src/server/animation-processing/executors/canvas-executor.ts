@@ -7,6 +7,7 @@ import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
 import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import { setByPath } from "@/shared/utils/object-path";
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
@@ -41,17 +42,6 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return readVarGlobal(key);
     };
     // Apply bound values to node defaults
-    const setByPath = (target: Record<string, unknown>, path: string, value: unknown) => {
-      const parts = path.split('.');
-      let cursor: any = target;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const key = parts[i]!;
-        const next = cursor[key];
-        if (typeof next !== 'object' || next === null) cursor[key] = {};
-        cursor = cursor[key];
-      }
-      cursor[parts[parts.length - 1]!] = value as any;
-    };
 
     // Start with node defaults as overrides
     const baseOverrides: CanvasOverrides = {
@@ -159,7 +149,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         found = true;
-        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+        const base = merged[objectId];
+        const combined = mergeObjectAssignments(base, assignment as any);
+        if (combined) merged[objectId] = combined as ObjectAssignments;
       }
     }
     return found ? merged : undefined;

@@ -6,6 +6,7 @@ import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import { setByPath } from "@/shared/utils/object-path";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -47,19 +48,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     if (typeof boundDuration === 'number') {
       data.duration = boundDuration;
     }
-
-    // Helper: deep set utility for applying bindings by path
-    const setByPath = (target: Record<string, unknown>, path: string, value: unknown) => {
-      const parts = path.split('.');
-      let cursor: any = target;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const key = parts[i]!;
-        const next = cursor[key];
-        if (typeof next !== 'object' || next === null) cursor[key] = {};
-        cursor = cursor[key];
-      }
-      cursor[parts[parts.length - 1]!] = value as any;
-    };
 
     // Build a list of binding keys to apply at global level
     const globalBindingKeys = Object.keys(bindings);
@@ -209,39 +197,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const localEnd = animations.length > 0
             ? Math.max(...animations.map(a => a.startTime + a.duration))
             : baseline;
-          const newCursor = animations.length > 0 ? localEnd : baseline;
-          outputCursorMap[objectId] = Math.max(outputCursorMap[objectId] ?? 0, newCursor);
+          outputCursorMap[objectId] = Math.max(outputCursorMap[objectId] ?? 0, localEnd);
         }
       }
-    }
-
-    context.sceneAnimations.push(...allAnimations);
-
-    // Track which Animation node created these animations
-    const animationNodeId = node.data.identifier.id;
-    for (const animation of allAnimations) {
-      context.animationSceneMap.set(`${animation.id}_source`, animationNodeId);
-    }
-    const maxDuration = allAnimations.length > 0 ?
-      Math.max(...allAnimations.map(a => a.startTime + a.duration), context.currentTime) :
-      context.currentTime;
-    context.currentTime = maxDuration;
-
-    // Deep clone perObjectAnimations to prevent shared reference mutations
-    const clonedPerObjectAnimations: Record<string, SceneAnimationTrack[]> = {};
-    for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
-      clonedPerObjectAnimations[objectId] = animations.map((anim) => {
-        switch (anim.type) {
-          case 'move':
-          case 'rotate':
-          case 'scale':
-          case 'fade':
-          case 'color':
-            return { ...anim, properties: { ...anim.properties } } as SceneAnimationTrack;
-          default:
-            return anim as SceneAnimationTrack;
-        }
-      });
     }
 
     setNodeOutput(
@@ -250,31 +208,39 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'output',
       'object_stream',
       passThoughObjects,
-      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: clonedPerObjectAnimations, perObjectAssignments: mergedAssignments }
+      { perObjectTimeCursor: outputCursorMap, perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations), perObjectAssignments: mergedAssignments }
     );
   }
 
-  private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
-    const maps: Record<string, number>[] = [];
-    for (const input of inputs) {
-      const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
-      if (isPerObjectCursorMap(maybeMap)) {
-        maps.push(maybeMap);
-      }
+  private clonePerObjectAnimations(map: Record<string, SceneAnimationTrack[]>): Record<string, SceneAnimationTrack[]> {
+    const cloned: Record<string, SceneAnimationTrack[]> = {};
+    for (const [k, v] of Object.entries(map)) {
+      cloned[k] = v.map((t) => ({ ...t, properties: JSON.parse(JSON.stringify(t.properties)) }));
     }
-    return mergeCursorMaps(maps);
+    return cloned;
   }
 
   private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[]): Record<string, SceneAnimationTrack[]> {
     const merged: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
-      if (!fromMeta) continue;
-      for (const [objectId, animations] of Object.entries(fromMeta)) {
-        merged[objectId] = [...(merged[objectId] ?? []), ...animations];
+      const perObj = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      if (!perObj) continue;
+      for (const [objectId, tracks] of Object.entries(perObj)) {
+        const list = merged[objectId] ?? [];
+        merged[objectId] = [...list, ...tracks];
       }
     }
     return merged;
+  }
+
+  private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
+    const maps: Record<string, number>[] = [];
+    for (const input of inputs) {
+      const cursors = (input.metadata as { perObjectTimeCursor?: Record<string, number> } | undefined)?.perObjectTimeCursor;
+      if (cursors) maps.push(cursors);
+    }
+    if (maps.length === 0) return {};
+    return mergeCursorMaps(maps);
   }
 
   private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[]): PerObjectAssignments | undefined {
@@ -285,7 +251,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         found = true;
-        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+        const base = merged[objectId];
+        const combined = mergeObjectAssignments(base, assignment as any);
+        if (combined) merged[objectId] = combined as ObjectAssignments;
       }
     }
     return found ? merged : undefined;
