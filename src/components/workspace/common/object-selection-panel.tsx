@@ -12,7 +12,7 @@ interface ObjectSelectionPanelProps {
 
 export function ObjectSelectionPanel({ items, selectedId, onSelect, emptyLabel = 'No items', title = 'Objects' }: ObjectSelectionPanelProps) {
 	return (
-		<div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
+		<div className="space-y-[var(--space-2)]">
 			<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">{title}</div>
 			<div className="space-y-[var(--space-2)] max-h-full overflow-y-auto bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)]">
 				{items.length === 0 ? (
