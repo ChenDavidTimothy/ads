@@ -44,7 +44,7 @@ export function FlowCanvas(props: Props) {
 			deleteKeyCode={(null as unknown as string | string[])}
 			multiSelectionKeyCode={disableDeletion ? (null as unknown as string) : 'Meta'}
 		>
-			<Background color="#35353c" />
+			<Background color="#45454c" gap={20} size={1} />
 			<Controls className="bg-[var(--surface-1)] border-[var(--border-primary)]" />
 			<MiniMap className="bg-[var(--surface-1)] border-[var(--border-primary)]" nodeColor="#6366f1" />
 		</ReactFlow>

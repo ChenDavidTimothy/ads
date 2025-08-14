@@ -177,7 +177,7 @@ export function FlowEditorTab() {
 
 		document.addEventListener('keydown', onKeyDown);
 		return () => document.removeEventListener('keydown', onKeyDown);
-	}, [flowTracker, setNodes, setEdges, updateFlow]);
+	}, [flowTracker, setNodes, setEdges, updateFlow, resultLogModalState]);
 
 	const ensureTimelineForNode = useCallback((nodeId: string) => {
 		if (state.editors.timeline[nodeId]) return;
@@ -276,7 +276,24 @@ export function FlowEditorTab() {
 
 	const validationSummary = getValidationSummary();
 
-	const { leftSidebarCollapsed, rightSidebarCollapsed } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean };
+	const { leftSidebarCollapsed, rightSidebarCollapsed, previewVisible = false, previewDock = 'bottom', previewActiveTab = 'video' } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean; previewVisible?: boolean; previewDock?: 'bottom' | 'overlay'; previewActiveTab?: 'video' | 'image' };
+
+	// Keep preview data in UI state for persistence/recoverability
+	useEffect(() => {
+		updateUI({
+			previewVideoUrl: videoUrl,
+			previewImageUrl: imageUrl ?? null,
+			previewVideos: videos as any,
+			previewImages: images as any,
+		});
+	}, [videoUrl, imageUrl, videos, images, updateUI]);
+
+	// Auto-show preview when new media arrives
+	useEffect(() => {
+		if ((videoUrl || images.length > 0 || imageUrl || videos.length > 0) && !previewVisible) {
+			updateUI({ previewVisible: true });
+		}
+	}, [videoUrl, imageUrl, images.length, videos.length, previewVisible, updateUI]);
 
 	return (
 		<div className="flex h-full">
@@ -309,45 +326,54 @@ export function FlowEditorTab() {
 						validationSummary={validationSummary}
 					/>
 				</div>
-				<div className="flex-1 relative">
+				<div className="flex-1 relative flex flex-col">
 					<DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, isDebugging }}>
-						<FlowCanvas
-							nodes={nodes}
-							edges={edges}
-							nodeTypes={nodeTypes}
-							onNodesChange={handleNodesChange}
-							onEdgesChange={handleEdgesChange}
-							onConnect={onConnect}
-							onNodeClick={onNodeClick}
-							onPaneClick={onPaneClick}
-							onNodesDelete={onNodesDelete}
-							onEdgesDelete={onEdgesDelete}
-							onNodeDragStop={() => {
+						<div className="flex-1">
+							<FlowCanvas
+								nodes={nodes}
+								edges={edges}
+								nodeTypes={nodeTypes}
+								onNodesChange={handleNodesChange}
+								onEdgesChange={handleEdgesChange}
+								onConnect={onConnect}
+								onNodeClick={onNodeClick}
+								onPaneClick={onPaneClick}
+								onNodesDelete={onNodesDelete}
+								onEdgesDelete={onEdgesDelete}
+								onNodeDragStop={() => {
 								// Sync nodes to context once at the end of a drag gesture
 								updateFlow({ nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[] });
 							}}
-							onSelectionChange={handleSelectionChange}
-							disableDeletion={resultLogModalState.isOpen}
-						/>
-						<ResultLogModal
-							isOpen={resultLogModalState.isOpen}
-							onClose={handleCloseResultLogViewer}
-							nodeId={resultLogModalState.nodeId ?? ''}
-							nodeName={getResultNodeData().name}
-							nodeLabel={getResultNodeData().label}
-						/>
-					</DebugProvider>
+								onSelectionChange={handleSelectionChange}
+								disableDeletion={resultLogModalState.isOpen}
+							/>
+							<ResultLogModal
+								isOpen={resultLogModalState.isOpen}
+								onClose={handleCloseResultLogViewer}
+								nodeId={resultLogModalState.nodeId ?? ''}
+								nodeName={getResultNodeData().name}
+								nodeLabel={getResultNodeData().label}
+							/>
+						</div>
 
-					<VideoPreview
-						videoUrl={videoUrl}
-						videos={videos}
-						onDownloadVideo={handleDownloadVideo}
-						onDownloadAll={handleDownloadAll}
-						imageUrl={imageUrl}
-						images={images}
-						onDownloadImage={handleDownloadImage}
-						onDownloadAllImages={handleDownloadAllImages}
-					/>
+						{/* Docked Preview Panel */}
+						{previewVisible && (
+							<VideoPreview
+								videoUrl={videoUrl}
+								videos={videos}
+								onDownloadVideo={handleDownloadVideo}
+								onDownloadAll={handleDownloadAll}
+								imageUrl={imageUrl}
+								images={images}
+								onDownloadImage={handleDownloadImage}
+								onDownloadAllImages={handleDownloadAllImages}
+								docked={previewDock === 'bottom'}
+								onClose={() => updateUI({ previewVisible: false })}
+								activeTab={previewActiveTab}
+								onTabChange={(tab) => updateUI({ previewActiveTab: tab })}
+							/>
+						)}
+					</DebugProvider>
 				</div>
 			</div>
 			{!rightSidebarCollapsed && (

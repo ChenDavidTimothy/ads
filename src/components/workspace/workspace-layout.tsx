@@ -14,7 +14,7 @@ export function WorkspaceLayout({ workspaceId }: { workspaceId: string }) {
 		<WorkspaceProvider workspaceId={workspaceId}>
 			<div className="h-screen flex flex-col bg-[var(--surface-0)]">
 				<WorkspaceHeader />
-				<div className="flex-1 overflow-hidden">
+				<div className="flex-1 overflow-hidden flex flex-col">
 					<WorkspaceTabContent />
 				</div>
 			</div>
