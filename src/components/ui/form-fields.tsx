@@ -34,7 +34,7 @@ export function FormField({
 
 interface NumberFieldProps {
 	label: string;
-	value: number | string;
+	value: number | string | undefined;
 	onChange: (value: number) => void;
 	required?: boolean;
 	error?: string;
@@ -59,12 +59,12 @@ export function NumberField({
 	className,
 	bindAdornment
 }: NumberFieldProps) {
-	const [inputValue, setInputValue] = useState(value.toString());
+	const [inputValue, setInputValue] = useState(value === undefined ? "" : value.toString());
 	const [internalError, setInternalError] = useState<string>("");
 
 	// Sync with external value changes
 	useEffect(() => {
-		setInputValue(value.toString());
+		setInputValue(value === undefined ? "" : value.toString());
 	}, [value]);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
