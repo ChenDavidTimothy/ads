@@ -579,7 +579,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
         <div className="space-y-[var(--space-2)] pb-[var(--space-3)] border-b border-[var(--border-primary)]">
           <div className="flex items-center justify-between">
             <div className="text-sm text-[var(--text-secondary)]">Transform Name</div>
-            <div className="text-xs text-[var(--text-tertiary)]">{getTransformDisplayLabel(track.type)} • #{track.identifier.sequence}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{getTransformDisplayLabel(track.type)}</div>
           </div>
           <div className="flex flex-col gap-[var(--space-1)] items-stretch">
             <input

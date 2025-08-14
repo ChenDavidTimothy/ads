@@ -49,9 +49,6 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
             <div className="font-semibold text-[var(--text-primary)] truncate">
               {data.identifier.displayName}
             </div>
-            <div className="text-xs text-[var(--text-tertiary)] font-mono">
-              {data.identifier.id.split('_').pop()}
-            </div>
           </div>
         </div>
       </CardHeader>

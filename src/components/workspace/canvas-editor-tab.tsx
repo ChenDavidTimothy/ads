@@ -64,67 +64,75 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	}, [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]);
 
 	return (
-		<div className="h-full flex flex-col">
-			<div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
-				<div className="flex items-center gap-3">
-					<div className="text-[var(--text-primary)] font-medium">Canvas</div>
-					<div className="flex items-center gap-[var(--space-2)]">
-						<span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
-						<select
-							className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-[var(--space-2)] py-[var(--space-1)] rounded border border-[var(--border-primary)]"
-							value={selectedObjectId ?? ''}
-							onChange={(e) => setSelectedObjectId(e.target.value || null)}
-						>
-							<option value="">Default</option>
-							{upstreamObjects.map((obj) => (
-								<option key={obj.data.identifier.id} value={obj.data.identifier.id}>
-									{obj.data.identifier.displayName}
-								</option>
-							))}
-						</select>
+		<div className="h-full flex">
+			{/* Left Sidebar - Object Selection */}
+			<div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
+				<div className="space-y-[var(--space-3)]">
+					<div>
+						<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
+						<DefaultSelector onClick={() => setSelectedObjectId(null)} active={selectedObjectId === null} />
+					</div>
+					<div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
+						<ObjectSelectionPanel
+							items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
+							selectedId={selectedObjectId}
+							onSelect={(id) => setSelectedObjectId(id)}
+							emptyLabel="No upstream objects"
+							title="Objects"
+						/>
 					</div>
 				</div>
-				<button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
-					Back to Flow
-				</button>
 			</div>
-			<div className="flex-1 flex">
-				<div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
-					<div className="space-y-[var(--space-3)]">
-						<div>
-							<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
-							<DefaultSelector onClick={() => setSelectedObjectId(null)} active={selectedObjectId === null} />
-						</div>
-						<div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
-							<ObjectSelectionPanel
-								items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
-								selectedId={selectedObjectId}
-								onSelect={(id) => setSelectedObjectId(id)}
-								emptyLabel="No upstream objects"
-								title="Objects"
-							/>
+
+			{/* Main Content Area */}
+			<div className="flex-1 flex flex-col">
+				{/* Header */}
+				<div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
+					<div className="flex items-center gap-3">
+						<div className="text-[var(--text-primary)] font-medium">Canvas</div>
+						<div className="flex items-center gap-[var(--space-2)]">
+							<span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
+							<select
+								className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-[var(--space-2)] py-[var(--space-1)] rounded border border-[var(--border-primary)]"
+								value={selectedObjectId ?? ''}
+								onChange={(e) => setSelectedObjectId(e.target.value || null)}
+							>
+								<option value="">Default</option>
+								{upstreamObjects.map((obj) => (
+									<option key={obj.data.identifier.id} value={obj.data.identifier.id}>
+										{obj.data.identifier.displayName}
+									</option>
+								))}
+							</select>
 						</div>
 					</div>
+					<button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
+						Back to Flow
+					</button>
 				</div>
+
+				{/* Canvas Content */}
 				<div className="flex-1 p-[var(--space-4)]">
 					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
 						No timeline for Canvas. Select Default or an object on the left to edit its properties.
 					</div>
 				</div>
-				<div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)]">
-					<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
-					{selectedObjectId ? (
-						<CanvasPerObjectProperties
-							nodeId={nodeId}
-							objectId={selectedObjectId}
-							assignments={assignments}
-							onChange={handleUpdateAssignment}
-							onClear={handleClearAssignment}
-						/>
-					) : (
-						<CanvasDefaultProperties nodeId={nodeId} />
-					)}
-				</div>
+			</div>
+
+			{/* Right Sidebar - Properties */}
+			<div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
+				{selectedObjectId ? (
+					<CanvasPerObjectProperties
+						nodeId={nodeId}
+						objectId={selectedObjectId}
+						assignments={assignments}
+						onChange={handleUpdateAssignment}
+						onClear={handleClearAssignment}
+					/>
+				) : (
+					<CanvasDefaultProperties nodeId={nodeId} />
+				)}
 			</div>
 		</div>
 	);

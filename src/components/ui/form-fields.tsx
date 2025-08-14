@@ -229,3 +229,131 @@ export function SelectField({
 		</FormField>
 	);
 }
+
+interface TextFieldProps {
+	label: string;
+	value: string;
+	onChange: (value: string) => void;
+	required?: boolean;
+	error?: string;
+	className?: string;
+	placeholder?: string;
+	bindAdornment?: React.ReactNode;
+	onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+	autoFocus?: boolean;
+}
+
+export function TextField({
+	label,
+	value,
+	onChange,
+	required = true,
+	error,
+	className,
+	placeholder,
+	bindAdornment,
+	onKeyDown,
+	autoFocus
+}: TextFieldProps) {
+	return (
+		<FormField label={label} required={required} error={error} className={className}>
+			<div className="relative">
+				<Input
+					type="text"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					onKeyDown={onKeyDown}
+					autoFocus={autoFocus}
+					error={!!error}
+					className={bindAdornment ? 'pr-9' : undefined}
+				/>
+				{bindAdornment && (
+					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+						{bindAdornment}
+					</div>
+				)}
+			</div>
+		</FormField>
+	);
+}
+
+interface RangeFieldProps {
+	label: string;
+	value: number;
+	onChange: (value: number) => void;
+	min?: number;
+	max?: number;
+	step?: number;
+	className?: string;
+	showValue?: boolean;
+	showLabels?: boolean;
+}
+
+export function RangeField({
+	label,
+	value,
+	onChange,
+	min = 0,
+	max = 100,
+	step = 1,
+	className,
+	showValue = true,
+	showLabels = true
+}: RangeFieldProps) {
+	return (
+		<FormField label={label} className={className}>
+			<div className="space-y-[var(--space-1)]">
+				{showValue && (
+					<div className="text-xs text-[var(--text-secondary)]">
+						{label}: {value}
+					</div>
+				)}
+				<input
+					type="range"
+					min={min}
+					max={max}
+					step={step}
+					value={value}
+					onChange={(e) => onChange(Number(e.target.value))}
+					className="w-full"
+				/>
+				{showLabels && (
+					<div className="flex justify-between text-xs text-[var(--text-muted)]">
+						<span>{min}</span>
+						<span>{Math.round((min + max) / 2)}</span>
+						<span>{max}</span>
+					</div>
+				)}
+			</div>
+		</FormField>
+	);
+}
+
+interface BooleanFieldProps {
+	label: string;
+	value: boolean;
+	onChange: (value: boolean) => void;
+	className?: string;
+}
+
+export function BooleanField({
+	label,
+	value,
+	onChange,
+	className
+}: BooleanFieldProps) {
+	return (
+		<FormField label="" className={className}>
+			<div className="flex items-center gap-[var(--space-2)]">
+				<input
+					type="checkbox"
+					checked={value}
+					onChange={(e) => onChange(e.target.checked)}
+					className="rounded"
+				/>
+				<label className="text-sm text-[var(--text-secondary)]">{label}</label>
+			</div>
+		</FormField>
+	);
+}

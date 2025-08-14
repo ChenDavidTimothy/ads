@@ -3,9 +3,8 @@
 
 import { useState } from "react";
 import type { Node, Edge } from "reactflow";
-import { NumberField, ColorField, SelectField } from "@/components/ui/form-fields";
+import { NumberField, ColorField, SelectField, TextField, RangeField, BooleanField } from "@/components/ui/form-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { RESOLUTION_PRESETS } from "@/shared/registry/registry-utils";
 import type { FlowTracker } from "@/lib/flow/flow-tracking";
@@ -99,15 +98,12 @@ export function PropertyPanel({
       {/* Node Identification Section */}
       <div className="space-y-[var(--space-3)] pb-[var(--space-4)] border-b border-gray-600">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-[var(--space-2)]">
-            Node Name
-          </label>
           {editingName ? (
             <div className="space-y-[var(--space-2)]">
-              <Input
+              <TextField
+                label="Node Name"
                 value={tempDisplayName}
-                onChange={(e) => setTempDisplayName(e.target.value)}
-                error={!!currentError}
+                onChange={setTempDisplayName}
                 placeholder="Enter node name"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !currentError) {
@@ -156,7 +152,7 @@ export function PropertyPanel({
         </div>
         
         <div className="text-xs text-gray-400">
-          {nodeDefinition.label} • #{node.data.identifier.sequence}
+          {nodeDefinition.label}
         </div>
         
         {nodeDefinition.description && (
@@ -228,6 +224,11 @@ function SchemaBasedProperties({
   onChange,
   nodeType
 }: SchemaBasedProps) {
+  // Skip rendering properties for canvas nodes - they should only be edited in the dedicated tab
+  if (nodeType === 'canvas') {
+    return null;
+  }
+
   const renderProperty = (schema: PropertySchema) => {
     const value = (data as unknown as Record<string, unknown>)[schema.key] ?? schema.defaultValue;
 
@@ -315,52 +316,36 @@ function SchemaBasedProperties({
 
       case 'range':
         return (
-          <div key={schema.key} className="space-y-[var(--space-1)]">
-            <label className="block text-xs text-gray-400">
-              {schema.label} {typeof value === 'number' ? `(${value})` : ''}
-            </label>
-            <input
-              type="range"
-              min={schema.min}
-              max={schema.max}
-              step={schema.step}
-              value={value as number}
-              onChange={(e) => onChange({ [schema.key]: Number(e.target.value) } as Partial<NodeData>)}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Highest ({schema.min})</span>
-              <span>Medium ({Math.round((schema.min + schema.max) / 2)})</span>
-              <span>Lowest ({schema.max})</span>
-            </div>
-          </div>
+          <RangeField
+            key={schema.key}
+            label={schema.label}
+            value={value as number}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+            min={schema.min}
+            max={schema.max}
+            step={schema.step}
+          />
         );
 
       case 'boolean':
         return (
-          <div key={schema.key} className="flex items-center gap-[var(--space-2)]">
-            <input
-              type="checkbox"
-              checked={value as boolean}
-              onChange={(e) => onChange({ [schema.key]: e.target.checked } as Partial<NodeData>)}
-              className="rounded"
-            />
-            <label className="text-sm text-gray-300">{schema.label}</label>
-          </div>
+          <BooleanField
+            key={schema.key}
+            label={schema.label}
+            value={value as boolean}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+          />
         );
 
       case 'string':
         return (
-          <div key={schema.key} className="space-y-[var(--space-1)]">
-            <label className="block text-sm font-medium text-gray-300">
-              {schema.label}
-            </label>
-            <Input
-              value={(value as string) || ''}
-              onChange={(e) => onChange({ [schema.key]: e.target.value } as Partial<NodeData>)}
-              placeholder={`Enter ${schema.label.toLowerCase()}`}
-            />
-          </div>
+          <TextField
+            key={schema.key}
+            label={schema.label}
+            value={(value as string) || ''}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+            placeholder={`Enter ${schema.label.toLowerCase()}`}
+          />
         );
 
       default:

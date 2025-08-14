@@ -25,17 +25,6 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
 
   const handleClass = "bg-[var(--node-geometry)]";
 
-  // Defensive fallbacks to handle older/sparse saved data
-  const position = data?.position ?? { x: 0, y: 0 };
-  const rotation = typeof (data as any)?.rotation === 'number' ? (data as any).rotation : 0;
-  const scale = (data as any)?.scale && typeof (data as any).scale === 'object'
-    ? { x: (data as any).scale.x ?? 1, y: (data as any).scale.y ?? 1 }
-    : { x: 1, y: 1 };
-  const opacity = typeof (data as any)?.opacity === 'number' ? (data as any).opacity : 1;
-  const fillColor = (data as any)?.fillColor ?? '#ffffff';
-  const strokeColor = (data as any)?.strokeColor ?? '#000000';
-  const strokeWidth = typeof (data as any)?.strokeWidth === 'number' ? (data as any).strokeWidth : 2;
-
   return (
     <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
@@ -68,39 +57,12 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
             <div className="font-semibold text-[var(--text-primary)] truncate">
               {data?.identifier?.displayName ?? 'Canvas'}
             </div>
-            <div className="text-xs text-[var(--text-tertiary)] font-mono">
-              {(data?.identifier?.id ?? '').split('_').pop()}
-            </div>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
-        <div className="flex items-center justify-between">
-          <span>Position:</span>
-          <span className="text-[var(--text-primary)] font-medium">({position.x}, {position.y})</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Rotation:</span>
-          <span className="text-[var(--text-primary)] font-medium">{rotation} rad</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Scale:</span>
-          <span className="text-[var(--text-primary)] font-medium">{scale.x}×{scale.y}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Opacity:</span>
-          <span className="text-[var(--text-primary)] font-medium">{Math.round(opacity * 100)}%</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Fill/Stroke:</span>
-          <div className="flex items-center gap-[var(--space-2)]">
-            <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: fillColor }} />
-            <div className="w-4 h-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: strokeColor }} />
-            <span className="text-[var(--text-primary)] font-medium text-xs">{strokeWidth}px</span>
-          </div>
-        </div>
-        <div className="text-[var(--text-tertiary)] text-[10px] pt-1">Defaults and bindings can be configured in Canvas tab</div>
+        <div className="text-[var(--text-tertiary)] text-[10px] pt-1">Double-click to edit in Canvas tab</div>
       </CardContent>
     </Card>
   );
