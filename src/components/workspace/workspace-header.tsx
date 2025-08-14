@@ -16,8 +16,8 @@ export function WorkspaceHeader() {
 	const { hasMultipleTabs } = useMultiTabDetection(state.meta.workspaceId);
 
 	return (
-		<div className="h-14 bg-[var(--surface-1)] border-b border-[var(--border-primary)] flex items-center justify-between px-4">
-			<div className="flex items-center gap-2">
+		<div className="h-14 bg-[var(--surface-1)] border-b border-[var(--border-primary)] flex items-center justify-between px-[var(--space-4)]">
+			<div className="flex items-center gap-[var(--space-2)]">
 				<Button
 					variant="ghost"
 					size="sm"
@@ -29,7 +29,7 @@ export function WorkspaceHeader() {
 				<WorkspaceTabs />
 			</div>
 			<h1 className="text-lg font-semibold text-[var(--text-primary)] truncate max-w-[300px]">{state.meta.name}</h1>
-			<div className="flex items-center gap-3">
+			<div className="flex items-center gap-[var(--space-3)]">
 				<AuthStatus />
 				<SaveStatus
 					lastSaved={lastSaved}
