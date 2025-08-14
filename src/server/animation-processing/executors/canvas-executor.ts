@@ -45,11 +45,31 @@ export class CanvasNodeExecutor extends BaseExecutor {
     if (pos && typeof pos === 'object' && pos !== null && 'x' in (pos as any) && 'y' in (pos as any)) {
       data.position = { x: Number((pos as any).x), y: Number((pos as any).y) };
     }
+    const posX = readVarGlobal('position.x');
+    if (typeof posX === 'number') {
+      const current = (data.position as { x: number; y: number }) ?? { x: 0, y: 0 };
+      data.position = { x: posX, y: current.y };
+    }
+    const posY = readVarGlobal('position.y');
+    if (typeof posY === 'number') {
+      const current = (data.position as { x: number; y: number }) ?? { x: 0, y: 0 };
+      data.position = { x: current.x, y: posY };
+    }
     const rot = readVarGlobal('rotation');
     if (typeof rot === 'number') data.rotation = rot;
     const scale = readVarGlobal('scale');
     if (scale && typeof scale === 'object' && scale !== null && 'x' in (scale as any) && 'y' in (scale as any)) {
       data.scale = { x: Number((scale as any).x), y: Number((scale as any).y) };
+    }
+    const scaleX = readVarGlobal('scale.x');
+    if (typeof scaleX === 'number') {
+      const current = (data.scale as { x: number; y: number }) ?? { x: 1, y: 1 };
+      data.scale = { x: scaleX, y: current.y };
+    }
+    const scaleY = readVarGlobal('scale.y');
+    if (typeof scaleY === 'number') {
+      const current = (data.scale as { x: number; y: number }) ?? { x: 1, y: 1 };
+      data.scale = { x: current.x, y: scaleY };
     }
     const opacity = readVarGlobal('opacity');
     if (typeof opacity === 'number') data.opacity = opacity;
@@ -106,11 +126,31 @@ export class CanvasNodeExecutor extends BaseExecutor {
           if (oPos && typeof oPos === 'object' && oPos !== null && 'x' in (oPos as any) && 'y' in (oPos as any)) {
             data.position = { x: Number((oPos as any).x), y: Number((oPos as any).y) };
           }
+          const oPosX = reader('position.x');
+          if (typeof oPosX === 'number') {
+            const current = (data.position as { x: number; y: number }) ?? { x: 0, y: 0 };
+            data.position = { x: oPosX, y: current.y };
+          }
+          const oPosY = reader('position.y');
+          if (typeof oPosY === 'number') {
+            const current = (data.position as { x: number; y: number }) ?? { x: 0, y: 0 };
+            data.position = { x: current.x, y: oPosY };
+          }
           const oRot = reader('rotation');
           if (typeof oRot === 'number') data.rotation = oRot;
           const oScale = reader('scale');
           if (oScale && typeof oScale === 'object' && oScale !== null && 'x' in (oScale as any) && 'y' in (oScale as any)) {
             data.scale = { x: Number((oScale as any).x), y: Number((oScale as any).y) };
+          }
+          const oScaleX = reader('scale.x');
+          if (typeof oScaleX === 'number') {
+            const currentS = (data.scale as { x: number; y: number }) ?? { x: 1, y: 1 };
+            data.scale = { x: oScaleX, y: currentS.y };
+          }
+          const oScaleY = reader('scale.y');
+          if (typeof oScaleY === 'number') {
+            const currentS = (data.scale as { x: number; y: number }) ?? { x: 1, y: 1 };
+            data.scale = { x: currentS.x, y: oScaleY };
           }
           const oOpacity = reader('opacity');
           if (typeof oOpacity === 'number') data.opacity = oOpacity;
