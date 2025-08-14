@@ -11,6 +11,7 @@ import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
 import { Link as LinkIcon } from 'lucide-react';
 import { BindButton } from '@/components/workspace/binding/bindings';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
@@ -155,47 +156,66 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	};
 	const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
+	const def = (getNodeDefinition('canvas')?.defaults as Record<string, unknown> & {
+		position?: { x: number; y: number };
+		scale?: { x: number; y: number };
+		rotation?: number;
+		opacity?: number;
+		fillColor?: string;
+		strokeColor?: string;
+		strokeWidth?: number;
+	}) ?? {};
+	const posX = (data.position?.x as number) ?? (def.position?.x as number) ?? 0;
+	const posY = (data.position?.y as number) ?? (def.position?.y as number) ?? 0;
+	const scaleX = (data.scale?.x as number) ?? (def.scale?.x as number) ?? 1;
+	const scaleY = (data.scale?.y as number) ?? (def.scale?.y as number) ?? 1;
+	const rotation = (data.rotation as number) ?? (def.rotation as number) ?? 0;
+	const opacity = (data.opacity as number) ?? (def.opacity as number) ?? 1;
+	const fillColor = (data.fillColor as string) ?? (def.fillColor as string) ?? '';
+	const strokeColor = (data.strokeColor as string) ?? (def.strokeColor as string) ?? '';
+	const strokeWidth = (data.strokeWidth as number) ?? (def.strokeWidth as number) ?? 1;
+
 	return (
 		<div className="space-y-[var(--space-2)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
-					<NumberField label="" value={(data.position?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, x } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} />
+					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, x } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
-					<NumberField label="" value={(data.position?.y as number) ?? NaN} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, y } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} />
+					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, y } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
-					<NumberField label="" value={(data.scale?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, x } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} />
+					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, x } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
-					<NumberField label="" value={(data.scale?.y as number) ?? NaN} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, y } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} />
+					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, y } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
-					<NumberField label="" value={(data.rotation as number) ?? NaN} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} />
+					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
-					<NumberField label="" value={(data.opacity as number) ?? NaN} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} />
+					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} />
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label="Fill" value={(data.fillColor as string) ?? ''} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} />
+					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} />
 				</div>
 				<div>
-					<ColorField label="Stroke" value={(data.strokeColor as string) ?? ''} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} />
+					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} />
 				</div>
 				<div>
-					<NumberField label="Stroke W" value={(data.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} />
+					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} />
 				</div>
 			</div>
 		</div>
@@ -226,8 +246,18 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	};
 
 	const { state, updateFlow } = useWorkspace();
+	// Base node defaults for display fallbacks
+	const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
+	const base = (node?.data ?? {}) as Record<string, unknown> & {
+		position?: { x: number; y: number };
+		scale?: { x: number; y: number };
+		rotation?: number;
+		opacity?: number;
+		fillColor?: string;
+		strokeColor?: string;
+		strokeWidth?: number;
+	};
 	const BindingTag = ({ keyName }: { keyName: string }) => {
-		const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
 		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
 		const bound = vbAll?.[objectId]?.[keyName]?.boundResultNodeId;
 		if (!bound) return null;
@@ -248,11 +278,10 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			default: return false;
 		}
 	};
-	const labelWithOverride = (base: string, key: string) => {
-		const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
+	const labelWithOverride = (baseLabel: string, key: string) => {
 		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
 		const isBound = !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-		return (isBound || isOverridden(key)) ? `${base} (override)` : base;
+		return (isBound || isOverridden(key)) ? `${baseLabel} (override)` : baseLabel;
 	};
 	const ToggleBinding = ({ keyName }: { keyName: string }) => (
 		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => {
@@ -270,20 +299,15 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 	return (
 		<div className="space-y-[var(--space-3)]">
-			<div className="flex items-center justify-between">
-				<span className="text-xs text-[var(--text-tertiary)]">Editing overrides for</span>
-				<button className="text-xs text-[var(--danger-500)] hover:text-[var(--danger-600)]" onClick={onClear}>Clear for this object</button>
-			</div>
-
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position X", "position.x")} <BindingTag keyName="position.x" /></label>
-					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
+					<NumberField label="" value={(initial.position?.x as number) ?? (base.position?.x as number) ?? 0} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position Y", "position.y")} <BindingTag keyName="position.y" /></label>
-					<NumberField label="" value={(initial.position?.y as number) ?? NaN} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
+					<NumberField label="" value={(initial.position?.y as number) ?? (base.position?.y as number) ?? 0} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} />
 				</div>
 			</div>
@@ -291,12 +315,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")}</label>
-					<NumberField label="" value={(initial.scale?.x as number) ?? NaN} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
+					<NumberField label="" value={(initial.scale?.x as number) ?? (base.scale?.x as number) ?? 1} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")}</label>
-					<NumberField label="" value={(initial.scale?.y as number) ?? NaN} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
+					<NumberField label="" value={(initial.scale?.y as number) ?? (base.scale?.y as number) ?? 1} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} />
 				</div>
 			</div>
@@ -304,29 +328,29 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Rotation", "rotation")} <BindingTag keyName="rotation" /></label>
-					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
+					<NumberField label="" value={(initial.rotation as number) ?? (base.rotation as number) ?? 0} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Opacity", "opacity")} <BindingTag keyName="opacity" /></label>
-					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
+					<NumberField label="" value={(initial.opacity as number) ?? (base.opacity as number) ?? 1} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
+					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} />
 					<div className="text-[10px] mt-1"><ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
-					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
+					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} />
 					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
-					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} />
 					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
 				</div>
