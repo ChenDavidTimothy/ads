@@ -34,5 +34,3 @@ export function RightSidebar({ node, allNodes, allEdges, onChange, onDisplayName
 		</div>
 	);
 }
-
-

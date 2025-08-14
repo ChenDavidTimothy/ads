@@ -7,7 +7,6 @@ import type { TimelineEditorData } from '@/types/workspace-state';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { NodeData } from '@/shared/types';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
-import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
 import type { AnimationTrack } from '@/shared/types/nodes';
 import { TrackProperties } from './timeline-editor-core';
@@ -181,9 +180,31 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   }), [nodeId, data.duration, data.tracks]);
 
   return (
-    <EditorShell
-      title="Timeline"
-      left={(
+    <div className="h-full flex flex-col">
+      <div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
+        <div className="flex items-center gap-3">
+          <div className="text-[var(--text-primary)] font-medium">Timeline</div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
+            <select
+              className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
+              value={selectedObjectId ?? ''}
+              onChange={(e) => setSelectedObjectId(e.target.value || null)}
+            >
+              <option value="">Default</option>
+              {upstreamObjects.map((obj) => (
+                <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
+                  {obj.data.identifier.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
+          Back to Flow
+        </button>
+      </div>
+      <div className="flex-1 flex">
         <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
           <div className="space-y-[var(--space-3)]">
             <div>
@@ -201,8 +222,6 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
             </div>
           </div>
         </div>
-      )}
-      center={(
         <div className="flex-1">
           <TimelineEditorCore
             animationNodeId={coreProps.animationNodeId}
@@ -219,60 +238,42 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
             onSelectedTrackChange={setSelectedTrack}
           />
         </div>
-      )}
-      rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>}
-      right={(
-        selectedTrack ? (
-          <TrackProperties
-            track={selectedTrack}
-            onChange={(updates) => {
-              if (selectedObjectId) {
-                updateAssignmentsForTrack(selectedObjectId, selectedTrack.identifier.id, updates as any);
-              } else {
-                const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as any) : t) as any;
+        <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)]">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
+          {selectedTrack ? (
+            <TrackProperties
+              track={selectedTrack}
+              onChange={(updates) => {
+                if (selectedObjectId) {
+                  updateAssignmentsForTrack(selectedObjectId, selectedTrack.identifier.id, updates as any);
+                } else {
+                  const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as any) : t) as any;
+                  handleChange({ tracks: nextTracks });
+                }
+              }}
+              allTracks={data.tracks}
+              onDisplayNameChange={(trackId, newName) => {
+                const error = validateNameHelper(newName, trackId, data.tracks as AnimationTrack[]);
+                if (error) return false;
+                const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === trackId ? ({ ...t, identifier: { ...(t as any).identifier, displayName: newName } } as any) : t) as any;
                 handleChange({ tracks: nextTracks });
-              }
-            }}
-            allTracks={data.tracks}
-            onDisplayNameChange={(trackId, newName) => {
-              const error = validateNameHelper(newName, trackId, data.tracks as AnimationTrack[]);
-              if (error) return false;
-              const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === trackId ? ({ ...t, identifier: { ...(t as any).identifier, displayName: newName } } as any) : t) as any;
-              handleChange({ tracks: nextTracks });
-              return true;
-            }}
-            validateDisplayName={(name, trackId) => validateNameHelper(name, trackId, data.tracks as AnimationTrack[])}
-            trackOverride={(() => {
-              if (!selectedObjectId || !currentAssignments) return undefined;
-              const obj = currentAssignments[selectedObjectId];
-              const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
-              return tr;
-            })()}
-            animationNodeId={nodeId}
-            selectedObjectId={selectedObjectId ?? undefined}
-          />
-        ) : (
-          <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
-        )
-      )}
-      onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
-      headerExtras={(
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
-          <select
-            className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
-            value={selectedObjectId ?? ''}
-            onChange={(e) => setSelectedObjectId(e.target.value || null)}
-          >
-            <option value="">Default</option>
-            {upstreamObjects.map((obj) => (
-              <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
-                {obj.data.identifier.displayName}
-              </option>
-            ))}
-          </select>
+                return true;
+              }}
+              validateDisplayName={(name, trackId) => validateNameHelper(name, trackId, data.tracks as AnimationTrack[])}
+              trackOverride={(() => {
+                if (!selectedObjectId || !currentAssignments) return undefined;
+                const obj = currentAssignments[selectedObjectId];
+                const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
+                return tr;
+              })()}
+              animationNodeId={nodeId}
+              selectedObjectId={selectedObjectId ?? undefined}
+            />
+          ) : (
+            <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
+          )}
         </div>
-      )}
-    />
+      </div>
+    </div>
   );
 }
