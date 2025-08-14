@@ -22,7 +22,7 @@ interface WorkspaceContextValue {
   hasBackup: boolean;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children, workspaceId }: { children: ReactNode; workspaceId: string }) {
   const { toast } = useNotifications();

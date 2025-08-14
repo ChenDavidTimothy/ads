@@ -10,6 +10,7 @@ import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
 import { Link as LinkIcon } from 'lucide-react';
+import { BindButton } from '@/components/workspace/binding/bindings';
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
@@ -148,51 +149,12 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	};
 	const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-	const variables = (() => {
-		const tracker = new FlowTracker();
-		return tracker.getAvailableResultVariables(nodeId, state.flow.nodes as any, state.flow.edges as any);
-	})();
-
-	const [openMenu, setOpenMenu] = useState<string | null>(null);
-	const bindButton = (key: string) => (
-		<div className="relative inline-block">
-			<button className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable" onClick={() => setOpenMenu(prev => prev === key ? null : key)}>
-				<LinkIcon size={14} />
-			</button>
-			{openMenu === key && (
-				<div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
-					{variables.length === 0 ? (
-						<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
-					) : variables.map(v => (
-						<div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => {
-							persistBinding(key, v.id);
-							setOpenMenu(null);
-						}}>
-							{v.name}
-						</div>
-					))}
-				</div>
-			)}
-		</div>
-	);
-
-	const persistBinding = (key: string, resultNodeId: string) => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				if (((n as any).data?.identifier?.id) !== nodeId) return n;
-				const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
-				const next = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
-				return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
-			})
-		});
-	};
-
 	return (
 		<div className="space-y-[var(--space-2)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
-					<NumberField label="" value={(data.position?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { x, y: (data.position?.y ?? 0) } } } as any)) })} defaultValue={0} bindAdornment={bindButton('position')} />
+					<NumberField label="" value={(data.position?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { x, y: (data.position?.y ?? 0) } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
@@ -202,7 +164,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
-					<NumberField label="" value={(data.scale?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { x, y: (data.scale?.y ?? 1) } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={bindButton('scale')} />
+					<NumberField label="" value={(data.scale?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { x, y: (data.scale?.y ?? 1) } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
@@ -212,22 +174,22 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
-					<NumberField label="" value={(data.rotation as number) ?? NaN} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={bindButton('rotation')} />
+					<NumberField label="" value={(data.rotation as number) ?? NaN} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
-					<NumberField label="" value={(data.opacity as number) ?? NaN} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={bindButton('opacity')} />
+					<NumberField label="" value={(data.opacity as number) ?? NaN} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} />
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label="Fill" value={(data.fillColor as string) ?? ''} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={bindButton('fillColor')} />
+					<ColorField label="Fill" value={(data.fillColor as string) ?? ''} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} />
 				</div>
 				<div>
-					<ColorField label="Stroke" value={(data.strokeColor as string) ?? ''} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={bindButton('strokeColor')} />
+					<ColorField label="Stroke" value={(data.strokeColor as string) ?? ''} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} />
 				</div>
 				<div>
-					<NumberField label="Stroke W" value={(data.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={bindButton('strokeWidth')} />
+					<NumberField label="Stroke W" value={(data.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} />
 				</div>
 			</div>
 		</div>
@@ -258,55 +220,6 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	};
 
 	const { state, updateFlow } = useWorkspace();
-	// Variable bindings per-object
-	const variables = (() => {
-		const tracker = new FlowTracker();
-		return tracker.getAvailableResultVariables(nodeId, state.flow.nodes as any, state.flow.edges as any);
-	})();
-	const [openMenu, setOpenMenu] = useState<string | null>(null);
-	const bindButton = (key: string) => (
-		<div className="relative inline-block">
-			<button className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable" onClick={() => setOpenMenu(prev => prev === key ? null : key)}>
-				<LinkIcon size={14} />
-			</button>
-			{openMenu === key && (
-				<div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
-					{variables.length === 0 ? (
-						<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
-					) : variables.map(v => (
-						<div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => {
-							persistBinding(key, v.id);
-							setOpenMenu(null);
-						}}>
-							{v.name}
-						</div>
-					))}
-				</div>
-			)}
-		</div>
-	);
-	const persistBinding = (key: string, resultNodeId: string) => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				if (((n as any).data?.identifier?.id) !== nodeId) return n;
-				const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-				const prev = prevAll[objectId] ?? {};
-				const nextObj = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
-				return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: nextObj } } } as any;
-			})
-		});
-	};
-	const clearBinding = (key: string) => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				if (((n as any).data?.identifier?.id) !== nodeId) return n;
-				const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-				const prev = { ...(prevAll[objectId] ?? {}) };
-				delete prev[key];
-				return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
-			})
-		});
-	};
 	const BindingTag = ({ keyName }: { keyName: string }) => {
 		const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
 		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
@@ -316,7 +229,17 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		return <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">(bound: {name ?? bound})</span>;
 	};
 	const ToggleBinding = ({ keyName }: { keyName: string }) => (
-		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
+		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => {
+			updateFlow({
+				nodes: state.flow.nodes.map((n) => {
+					if (((n as any).data?.identifier?.id) !== nodeId) return n;
+					const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+					const prev = { ...(prevAll[objectId] ?? {}) };
+					delete prev[keyName];
+					return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
+				})
+			});
+		}}>Use manual</button>
 	);
 
 	return (
@@ -328,8 +251,9 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Position X {initial.position?.x !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="position" /> {bindButton('position')} <ToggleBinding keyName="position" /></label>
-					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} />
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X {initial.position?.x !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="position" /></label>
+					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position" objectId={objectId} />} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y {initial.position?.y !== undefined ? <ConfiguredLabel /> : null}</label>
@@ -350,27 +274,32 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Rotation {initial.rotation !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="rotation" /> {bindButton('rotation')} <ToggleBinding keyName="rotation" /></label>
-					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} />
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation {initial.rotation !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="rotation" /></label>
+					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Opacity {initial.opacity !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="opacity" /> {bindButton('opacity')} <ToggleBinding keyName="opacity" /></label>
-					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} />
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity {initial.opacity !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="opacity" /></label>
+					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label="Fill" value={(initial.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} />
-					<div className="text-[10px] mt-1">{bindButton('fillColor')} <ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
+					<ColorField label="Fill" value={(initial.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} />
+					<div className="text-[10px] mt-1"><ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
-					<ColorField label="Stroke" value={(initial.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} />
-					<div className="text-[10px] mt-1">{bindButton('strokeColor')} <ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
+					<ColorField label="Stroke" value={(initial.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} />
+					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
-					<NumberField label="Stroke W" value={(initial.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} />
-					<div className="text-[10px] mt-1">{bindButton('strokeWidth')} <ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
+					<NumberField label="Stroke W" value={(initial.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} />
+					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
 				</div>
 			</div>
 		</div>

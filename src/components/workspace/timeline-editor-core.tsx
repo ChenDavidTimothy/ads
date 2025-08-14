@@ -26,6 +26,7 @@ import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/as
 import { Link as LinkIcon } from "lucide-react";
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
+import { BindButton } from '@/components/workspace/binding/bindings';
 
 function BindingTag({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
   const { state } = useWorkspace();
@@ -553,22 +554,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
   const [showBindMenuFor, setShowBindMenuFor] = useState<string | null>(null);
 
   const bindButton = (fieldKey: string, onBind: (resultNodeId: string) => void) => (
-    <div className="relative">
-      <button type="button" onClick={() => setShowBindMenuFor(prev => prev === fieldKey ? null : fieldKey)} className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable">
-        <LinkIcon size={14} />
-      </button>
-      {showBindMenuFor === fieldKey && (
-        <div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
-          {variables.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
-          ) : variables.map(v => (
-            <div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => { onBind(v.id); setShowBindMenuFor(null); }}>
-              {v.name}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <BindButton nodeId={animationNodeId} bindingKey={fieldKey} />
   );
 
   const clearBinding = (key: string) => {
@@ -777,6 +763,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               { value: "fill", label: "Fill" },
               { value: "stroke", label: "Stroke" },
             ]}
+            bindAdornment={!override ? (<BindButton nodeId={animationNodeId} bindingKey={`color.property`} />) : undefined}
           />
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={!override ? bindButton(`color.from`, (rid) => writeBinding(`color.from`, rid)) : undefined} />
