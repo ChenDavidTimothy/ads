@@ -22,15 +22,6 @@ export interface WorkspaceState {
 		selectedNodeType?: string;
 		leftSidebarCollapsed?: boolean;
 		rightSidebarCollapsed?: boolean;
-
-		// Preview panel state
-		previewVisible?: boolean;
-		previewDock?: 'bottom' | 'overlay';
-		previewActiveTab?: 'video' | 'image';
-		previewVideoUrl?: string | null;
-		previewImageUrl?: string | null;
-		previewVideos?: UIPreviewVideoJob[];
-		previewImages?: UIPreviewImageJob[];
 	};
 
 	// Metadata about the workspace
@@ -45,25 +36,6 @@ export interface WorkspaceState {
 export interface TimelineEditorData {
 	duration: number;
 	tracks: AnimationTrack[];
-}
-
-// Lightweight UI types for persisting preview job state in memory/local backup
-export interface UIPreviewVideoJob {
-	jobId: string;
-	sceneName: string;
-	sceneId: string;
-	status: 'pending' | 'processing' | 'completed' | 'failed';
-	videoUrl?: string;
-	error?: string;
-}
-
-export interface UIPreviewImageJob {
-	jobId: string;
-	frameName: string;
-	frameId: string;
-	status: 'pending' | 'processing' | 'completed' | 'failed';
-	imageUrl?: string;
-	error?: string;
 }
 
 // Future editor data types

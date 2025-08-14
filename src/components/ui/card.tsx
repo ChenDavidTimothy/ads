@@ -13,7 +13,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
 			<div
 				ref={ref}
 				className={cn(
-					"bg-[var(--surface-2)] border rounded-[var(--radius-md)] transition-colors shadow-sm",
+					"bg-[var(--surface-1)] border rounded-[var(--radius-md)] transition-colors",
 					selected ? "border-[var(--accent-500)] shadow-[0_0_0_1px_rgba(59,130,246,0.3)]" : "border-[var(--border-primary)]",
 					className
 				)}

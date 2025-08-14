@@ -30,13 +30,6 @@ export function extractWorkspaceState(workspaceData: unknown): WorkspaceState {
 			selectedNodeType: undefined,
 			leftSidebarCollapsed: false,
 			rightSidebarCollapsed: false,
-			previewVisible: false,
-			previewDock: 'bottom',
-			previewActiveTab: 'video',
-			previewVideoUrl: null,
-			previewImageUrl: null,
-			previewVideos: [],
-			previewImages: [],
 		},
 		meta: {
 			version: Number(ws?.version ?? 0),
