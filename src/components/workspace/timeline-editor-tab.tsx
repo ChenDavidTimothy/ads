@@ -57,14 +57,63 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         ? { to: { ...(baseProps.to as Record<string, unknown>), ...(updateProps.to as Record<string, unknown>) } }
         : {}),
     } as Record<string, unknown>;
+
+    // Prune fields equal to base track defaults so only explicit changes remain
+    const baseTrack = (state.editors.timeline[nodeId]?.tracks ?? []).find(t => (t as any).identifier?.id === trackId) as any;
+    const prunedProps = (() => {
+      if (!baseTrack) return mergedProps;
+      const baseTrackProps = (baseTrack.properties ?? {}) as Record<string, unknown>;
+      const copy: Record<string, unknown> = { ...mergedProps };
+
+      // Helper to prune nested point2d-like objects (from/to)
+      const pruneNested = (key: string) => {
+        const mergedVal = copy[key] as any;
+        const baseVal = baseTrackProps[key] as any;
+        if (mergedVal && typeof mergedVal === 'object' && baseVal && typeof baseVal === 'object') {
+          const out: Record<string, unknown> = {};
+          for (const k of Object.keys(mergedVal)) {
+            const mv = mergedVal[k];
+            const bv = baseVal[k];
+            if (mv !== bv) out[k] = mv;
+          }
+          if (Object.keys(out).length > 0) copy[key] = out; else delete copy[key];
+        } else if (mergedVal === baseVal) {
+          delete copy[key];
+        }
+      };
+
+      for (const key of Object.keys(copy)) {
+        if (key === 'from' || key === 'to') pruneNested(key);
+        else if (copy[key] === baseTrackProps[key]) delete copy[key];
+      }
+      return copy;
+    })();
+
     const merged: TrackOverride = {
       ...base,
       ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
       ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
       ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
-      properties: mergedProps,
+      properties: prunedProps,
     };
-    if (idx >= 0) list[idx] = merged; else list.push(merged);
+
+    // Also prune timing/easing if equal to base track
+    if (baseTrack) {
+      if ((merged as any).easing === baseTrack.easing) delete (merged as any).easing;
+      if ((merged as any).startTime === baseTrack.startTime) delete (merged as any).startTime;
+      if ((merged as any).duration === baseTrack.duration) delete (merged as any).duration;
+    }
+
+    // If no properties and no timing/easing overrides remain, drop this override entry entirely
+    const hasProps = merged.properties && Object.keys(merged.properties as Record<string, unknown>).length > 0;
+    const hasMeta = (merged as any).easing !== undefined || (merged as any).startTime !== undefined || (merged as any).duration !== undefined;
+
+    if (!hasProps && !hasMeta) {
+      if (idx >= 0) list.splice(idx, 1);
+    } else {
+      if (idx >= 0) list[idx] = merged; else list.push(merged);
+    }
+
     obj.tracks = list;
     next[objectId] = obj;
 
@@ -77,7 +126,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         } as unknown as typeof n;
       })
     });
-  }, [currentAssignments, state.flow.nodes, nodeId, updateFlow]);
+  }, [currentAssignments, state.flow.nodes, nodeId, updateFlow, state.editors.timeline]);
 
   if (!data) {
     return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Timeline data not found</div>;
