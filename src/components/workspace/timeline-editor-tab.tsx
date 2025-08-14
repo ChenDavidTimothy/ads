@@ -10,6 +10,18 @@ import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/s
 import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
 
+function DefaultSelector({ onClick, active }: { onClick: () => void; active: boolean }) {
+  return (
+    <div
+      className={`flex items-center space-x-3 py-[var(--space-1)] px-[var(--space-2)] rounded-[var(--radius-sm)] cursor-pointer ${active ? 'bg-[color:rgba(59,130,246,0.2)]' : 'hover:bg-[var(--surface-interactive)]'}`}
+      onClick={onClick}
+    >
+      <input type="radio" checked={active} readOnly className="rounded" />
+      <span className="text-sm text-[var(--text-primary)] truncate flex-1">Default</span>
+    </div>
+  );
+}
+
 export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const { state, updateTimeline, updateUI, updateFlow } = useWorkspace();
   const data = state.editors.timeline[nodeId];
@@ -106,12 +118,23 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     <EditorShell
       title="Timeline"
       left={(
-        <ObjectSelectionPanel
-          items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
-          selectedId={selectedObjectId}
-          onSelect={(id) => setSelectedObjectId(id)}
-          emptyLabel="No upstream objects"
-        />
+        <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
+          <div className="space-y-[var(--space-3)]">
+            <div>
+              <div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
+              <DefaultSelector onClick={() => setSelectedObjectId(null)} active={selectedObjectId === null} />
+            </div>
+            <div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
+              <ObjectSelectionPanel
+                items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
+                selectedId={selectedObjectId}
+                onSelect={(id) => setSelectedObjectId(id)}
+                emptyLabel="No upstream objects"
+                title="Objects"
+              />
+            </div>
+          </div>
+        </div>
       )}
       center={(
         <div className="flex-1">
@@ -133,13 +156,13 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
       headerExtras={(
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-tertiary)]">Object:</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
           <select
             className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
             value={selectedObjectId ?? ''}
             onChange={(e) => setSelectedObjectId(e.target.value || null)}
           >
-            <option value="">—</option>
+            <option value="">Default</option>
             {upstreamObjects.map((obj) => (
               <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
                 {obj.data.identifier.displayName}

@@ -64,7 +64,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 					<div className="space-y-[var(--space-3)]">
 						<div>
 							<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
-							<CanvasDefaultProperties nodeId={nodeId} />
+							<DefaultSelector onClick={() => setSelectedObjectId(null)} active={selectedObjectId === null} />
 						</div>
 						<div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
 							<ObjectSelectionPanel
@@ -81,7 +81,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 			center={(
 				<div className="flex-1 p-[var(--space-4)]">
 					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
-						No timeline for Canvas. Select an object on the left to edit its overrides.
+						No timeline for Canvas. Select Default or an object on the left to edit its properties.
 					</div>
 				</div>
 			)}
@@ -95,20 +95,20 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 						onClear={handleClearAssignment}
 					/>
 				) : (
-					<div className="text-[var(--text-tertiary)] text-sm">Select an object to edit its overrides</div>
+					<CanvasDefaultProperties nodeId={nodeId} />
 				)
 			)}
 			rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>}
 			onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
 			headerExtras={(
 				<div className="flex items-center gap-[var(--space-2)]">
-					<span className="text-xs text-[var(--text-tertiary)]">Object:</span>
+					<span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
 					<select
 						className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-[var(--space-2)] py-[var(--space-1)] rounded border border-[var(--border-primary)]"
 						value={selectedObjectId ?? ''}
 						onChange={(e) => setSelectedObjectId(e.target.value || null)}
 					>
-						<option value="">—</option>
+						<option value="">Default</option>
 						{upstreamObjects.map((obj) => (
 							<option key={obj.data.identifier.id} value={obj.data.identifier.id}>
 								{obj.data.identifier.displayName}
@@ -118,6 +118,18 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 				</div>
 			)}
 		/>
+	);
+}
+
+function DefaultSelector({ onClick, active }: { onClick: () => void; active: boolean }) {
+	return (
+		<div
+			className={`flex items-center space-x-3 py-[var(--space-1)] px-[var(--space-2)] rounded-[var(--radius-sm)] cursor-pointer ${active ? 'bg-[color:rgba(59,130,246,0.2)]' : 'hover:bg-[var(--surface-interactive)]'}`}
+			onClick={onClick}
+		>
+			<input type="radio" checked={active} readOnly className="rounded" />
+			<span className="text-sm text-[var(--text-primary)] truncate flex-1">Default</span>
+		</div>
 	);
 }
 
@@ -245,6 +257,68 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		strokeWidth?: number;
 	};
 
+	const { state, updateFlow } = useWorkspace();
+	// Variable bindings per-object
+	const variables = (() => {
+		const tracker = new FlowTracker();
+		return tracker.getAvailableResultVariables(nodeId, state.flow.nodes as any, state.flow.edges as any);
+	})();
+	const [openMenu, setOpenMenu] = useState<string | null>(null);
+	const bindButton = (key: string) => (
+		<div className="relative inline-block">
+			<button className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable" onClick={() => setOpenMenu(prev => prev === key ? null : key)}>
+				<LinkIcon size={14} />
+			</button>
+			{openMenu === key && (
+				<div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
+					{variables.length === 0 ? (
+						<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+					) : variables.map(v => (
+						<div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => {
+							persistBinding(key, v.id);
+							setOpenMenu(null);
+						}}>
+							{v.name}
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+	const persistBinding = (key: string, resultNodeId: string) => {
+		updateFlow({
+			nodes: state.flow.nodes.map((n) => {
+				if (((n as any).data?.identifier?.id) !== nodeId) return n;
+				const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+				const prev = prevAll[objectId] ?? {};
+				const nextObj = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
+				return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: nextObj } } } as any;
+			})
+		});
+	};
+	const clearBinding = (key: string) => {
+		updateFlow({
+			nodes: state.flow.nodes.map((n) => {
+				if (((n as any).data?.identifier?.id) !== nodeId) return n;
+				const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+				const prev = { ...(prevAll[objectId] ?? {}) };
+				delete prev[key];
+				return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
+			})
+		});
+	};
+	const BindingTag = ({ keyName }: { keyName: string }) => {
+		const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
+		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+		const bound = vbAll?.[objectId]?.[keyName]?.boundResultNodeId;
+		if (!bound) return null;
+		const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+		return <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">(bound: {name ?? bound})</span>;
+	};
+	const ToggleBinding = ({ keyName }: { keyName: string }) => (
+		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
+	);
+
 	return (
 		<div className="space-y-[var(--space-3)]">
 			<div className="flex items-center justify-between">
@@ -254,7 +328,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Position X {initial.position?.x !== undefined ? <ConfiguredLabel /> : null}</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X {initial.position?.x !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="position" /> {bindButton('position')} <ToggleBinding keyName="position" /></label>
 					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} />
 				</div>
 				<div>
@@ -276,11 +350,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Rotation {initial.rotation !== undefined ? <ConfiguredLabel /> : null}</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation {initial.rotation !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="rotation" /> {bindButton('rotation')} <ToggleBinding keyName="rotation" /></label>
 					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Opacity {initial.opacity !== undefined ? <ConfiguredLabel /> : null}</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity {initial.opacity !== undefined ? <ConfiguredLabel /> : null} <BindingTag keyName="opacity" /> {bindButton('opacity')} <ToggleBinding keyName="opacity" /></label>
 					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} />
 				</div>
 			</div>
@@ -288,12 +362,15 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
 					<ColorField label="Fill" value={(initial.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} />
+					<div className="text-[10px] mt-1">{bindButton('fillColor')} <ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
 					<ColorField label="Stroke" value={(initial.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} />
+					<div className="text-[10px] mt-1">{bindButton('strokeColor')} <ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
 					<NumberField label="Stroke W" value={(initial.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} />
+					<div className="text-[10px] mt-1">{bindButton('strokeWidth')} <ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
 				</div>
 			</div>
 		</div>
