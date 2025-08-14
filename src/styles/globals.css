@@ -4,3 +4,120 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
+
+:root {
+  color-scheme: dark;
+  /* default to dark variables to avoid FOUC before hydration */
+  --surface-0: #0a0a0b;
+  --surface-1: #141418;
+  --surface-2: #1c1c21;
+  --surface-interactive: #242429;
+
+  --border-primary: #2a2a2f;
+  --border-secondary: #35353c;
+
+  --text-primary: #f8f9fa;
+  --text-secondary: #e1e5e9;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-disabled: #4b5563;
+
+  --accent-500: #3b82f6;
+  --accent-600: #2563eb;
+  --accent-700: #1d4ed8;
+  --accent-900: #1e3a8a;
+
+  --success-500: #10b981;
+  --success-600: #059669;
+  --success-700: #047857;
+
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+
+  --node-animation: #8b5cf6;
+  --node-logic: #a855f7;
+  --node-data: #06b6d4;
+  --node-geometry: #ec4899;
+  --node-output: #64748b;
+
+  --ring-color: var(--accent-500);
+  --ring-offset: var(--surface-0);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-medium: 200ms;
+
+  --header-height: 56px;
+  --sidebar-width: 16rem; /* 256px */
+}
+
+:root[data-theme="dark"] {
+  --surface-0: #0a0a0b;
+  --surface-1: #141418;
+  --surface-2: #1c1c21;
+  --surface-interactive: #242429;
+
+  --border-primary: #2a2a2f;
+  --border-secondary: #35353c;
+
+  --text-primary: #f8f9fa;
+  --text-secondary: #e1e5e9;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-disabled: #4b5563;
+
+  --accent-500: #3b82f6;
+  --accent-600: #2563eb;
+  --accent-700: #1d4ed8;
+  --accent-900: #1e3a8a;
+
+  --success-500: #10b981;
+  --success-600: #059669;
+  --success-700: #047857;
+
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+
+  --node-animation: #8b5cf6;
+  --node-logic: #a855f7;
+  --node-data: #06b6d4;
+  --node-geometry: #ec4899;
+  --node-output: #64748b;
+
+  --ring-color: var(--accent-500);
+  --ring-offset: var(--surface-0);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-medium: 200ms;
+
+  --header-height: 56px;
+  --sidebar-width: 16rem;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

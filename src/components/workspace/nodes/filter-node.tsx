@@ -12,6 +12,8 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
   const selectedCount = data.selectedObjectIds?.length || 0;
   const hasSelection = selectedCount > 0;
 
+  const handleClass = "bg-[var(--node-logic)]";
+
   return (
     <Card selected={selected} className="p-4 min-w-[200px]">
       {/* Single input port */}
@@ -21,17 +23,17 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-violet-600 flex items-center justify-center rounded text-white font-bold text-sm">
+          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             ⏷
           </div>
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
           </span>
         </div>
@@ -39,25 +41,19 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
 
       <CardContent className="p-0 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-300">Selected:</span>
-          <span className="text-xs text-white font-medium">{selectedCount}</span>
+          <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
+          <span className="text-xs text-[var(--text-primary)] font-medium">{selectedCount}</span>
         </div>
         
         {hasSelection ? (
-          <div className="text-xs text-green-400">
+          <div className="text-xs text-[var(--success-500)]">
             {selectedCount} object{selectedCount !== 1 ? 's' : ''} passing through
           </div>
         ) : (
-          <div className="text-xs text-yellow-400">
+          <div className="text-xs text-[var(--warning-600)]">
             No objects selected
           </div>
         )}
-
-        <div className="mt-3 pt-2 border-t border-gray-700">
-          <div className="text-xs text-gray-400 text-center">
-            Configure in Properties panel
-          </div>
-        </div>
       </CardContent>
 
       {/* Single output port */}
@@ -67,7 +63,7 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}

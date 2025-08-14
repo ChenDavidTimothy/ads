@@ -4,25 +4,26 @@ import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean;
+	error?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, error, ...props }, ref) => {
-    return (
-      <input
-        ref={ref}
-        className={cn(
-          "w-full rounded-md bg-gray-700 border px-3 py-2 text-white text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors",
-          error 
-            ? "border-red-500 focus:ring-red-500" 
-            : "border-gray-600 focus:ring-blue-500",
-          className
-        )}
-        {...props}
-      />
-    );
-  }
+	({ className, error, ...props }, ref) => {
+		return (
+			<input
+				ref={ref}
+				className={cn(
+					"w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] border px-3 py-2 text-[var(--text-primary)] text-sm",
+					"placeholder:text-[var(--text-muted)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
+					error
+						? "border-[var(--danger-500)] focus:outline-none focus:ring-2 focus:ring-[var(--danger-500)] focus:ring-offset-2 focus:ring-offset-[var(--surface-0)]"
+						: "border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-0)]",
+					className
+				)}
+				{...props}
+			/>
+		);
+	}
 );
 
 Input.displayName = "Input";

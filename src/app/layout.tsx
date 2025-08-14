@@ -7,7 +7,7 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "@/trpc/react";
 import { NotificationProvider } from "@/hooks/use-notifications";
 import { ToastContainer } from "@/components/ui/toast";
-import { AuthStatus } from "@/components/auth/auth-status";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -24,15 +24,14 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body>
+    <html lang="en" className={`${geist.variable}`} data-theme="dark">
+      <body className="bg-[var(--surface-0)] text-[var(--text-primary)]">
         <NotificationProvider>
           <TRPCReactProvider>
-            <div className="p-3 border-b flex justify-end">
-              <AuthStatus />
-            </div>
-            {children}
-            <ToastContainer />
+            <ThemeProvider>
+              {children}
+              <ToastContainer />
+            </ThemeProvider>
           </TRPCReactProvider>
         </NotificationProvider>
       </body>

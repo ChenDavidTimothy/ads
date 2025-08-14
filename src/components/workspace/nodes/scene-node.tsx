@@ -23,6 +23,8 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
     return "Low";
   };
 
+  const handleClass = "bg-[var(--node-output)]";
+
   return (
     <Card selected={selected} className="p-4 min-w-[220px]">
       {/* Single input port */}
@@ -32,70 +34,67 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${nodeDefinition?.rendering.colors.handle ?? 'bg-gray-500'} !border-2 !border-white`}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gray-600 flex items-center justify-center rounded text-white font-bold text-sm">
+          <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             🎬
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-white truncate">
+            <div className="font-semibold text-[var(--text-primary)] truncate">
               {data.identifier.displayName}
             </div>
-            <div className="text-xs text-gray-400 font-mono">
+            <div className="text-xs text-[var(--text-tertiary)] font-mono">
               {data.identifier.id.split('_').pop()}
             </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2 text-xs text-gray-300">
+      <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
         <div className="flex items-center justify-between">
-          <span>Resolution:</span>
-          <span className="text-white font-medium">
+          <span>Resolution</span>
+          <span className="text-[var(--text-primary)] font-medium">
             {getResolutionLabel(data.width, data.height)} ({data.width}×{data.height})
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span>Frame Rate:</span>
-          <span className="text-white font-medium">{data.fps} FPS</span>
+          <span>Frame Rate</span>
+          <span className="text-[var(--text-primary)] font-medium">{data.fps} FPS</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span>Duration:</span>
-          <span className="text-white font-medium">{data.duration}s</span>
+          <span>Duration</span>
+          <span className="text-[var(--text-primary)] font-medium">{data.duration}s</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span>Background:</span>
+          <span>Background</span>
           <div className="flex items-center gap-2">
             <div 
-              className="w-4 h-4 rounded border border-gray-500"
+              className="w-4 h-4 rounded border border-[var(--border-primary)]"
               style={{ backgroundColor: data.backgroundColor }}
             />
-            <span className="text-white font-medium text-xs">
+            <span className="text-[var(--text-primary)] font-medium text-xs">
               {data.backgroundColor.toUpperCase()}
             </span>
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <span>Quality:</span>
-          <span className="text-white font-medium">
+          <span>Quality</span>
+          <span className="text-[var(--text-primary)] font-medium">
             {getQualityLabel(data.videoCrf)} ({data.videoPreset})
           </span>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-600">
-          <div className="text-xs text-gray-400 text-center">
-            Final Video Output
-          </div>
-          <div className="text-xs text-green-400 text-center mt-1">
+        <div className="mt-4 pt-3 border-t border-[var(--border-primary)]">
+          <div className="text-xs text-[var(--text-tertiary)] text-center">
             {data.width}×{data.height} @ {data.fps}fps
           </div>
         </div>

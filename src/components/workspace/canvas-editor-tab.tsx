@@ -68,7 +68,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 			)}
 			center={(
 				<div className="flex-1 p-4">
-					<div className="h-full w-full flex items-center justify-center text-gray-500">
+					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
 						No timeline for Canvas. Select an object on the left to edit its overrides.
 					</div>
 				</div>
@@ -83,16 +83,16 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 						onClear={handleClearAssignment}
 					/>
 				) : (
-					<div className="text-gray-400 text-sm">Select an object to edit its overrides</div>
+					<div className="text-[var(--text-tertiary)] text-sm">Select an object to edit its overrides</div>
 				)
 			)}
-			rightHeader={<h3 className="text-lg font-semibold text-white mb-4">Properties</h3>}
+			rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Properties</h3>}
 			onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
 			headerExtras={(
 				<div className="flex items-center gap-2">
-					<span className="text-xs text-gray-400">Object:</span>
+					<span className="text-xs text-[var(--text-tertiary)]">Object:</span>
 					<select
-						className="bg-gray-800 text-white text-xs px-2 py-1 rounded border border-gray-700"
+						className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
 						value={selectedObjectId ?? ''}
 						onChange={(e) => setSelectedObjectId(e.target.value || null)}
 					>
@@ -130,39 +130,39 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between">
-				<span className="text-xs text-gray-400">Editing overrides for</span>
-				<button className="text-xs text-red-400 hover:text-red-300" onClick={onClear}>Clear for this object</button>
+				<span className="text-xs text-[var(--text-tertiary)]">Editing overrides for</span>
+				<button className="text-xs text-[var(--danger-500)] hover:text-[var(--danger-600)]" onClick={onClear}>Clear for this object</button>
 			</div>
 
 			<div className="grid grid-cols-2 gap-2">
 				<div>
-					<label className="block text-xs text-gray-400">Position X</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
 					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} />
 				</div>
 				<div>
-					<label className="block text-xs text-gray-400">Position Y</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
 					<NumberField label="" value={(initial.position?.y as number) ?? NaN} onChange={(y) => onChange({ position: { x: initial.position?.x ?? 0, y } })} defaultValue={0} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-2 gap-2">
 				<div>
-					<label className="block text-xs text-gray-400">Scale X</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
 					<NumberField label="" value={(initial.scale?.x as number) ?? NaN} onChange={(x) => onChange({ scale: { x, y: initial.scale?.y ?? 1 } })} defaultValue={1} min={0} step={0.1} />
 				</div>
 				<div>
-					<label className="block text-xs text-gray-400">Scale Y</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
 					<NumberField label="" value={(initial.scale?.y as number) ?? NaN} onChange={(y) => onChange({ scale: { x: initial.scale?.x ?? 1, y } })} defaultValue={1} min={0} step={0.1} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-2 gap-2">
 				<div>
-					<label className="block text-xs text-gray-400">Rotation</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
 					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} />
 				</div>
 				<div>
-					<label className="block text-xs text-gray-400">Opacity</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
 					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} />
 				</div>
 			</div>

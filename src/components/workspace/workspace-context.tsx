@@ -116,7 +116,7 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
   }, [state, updateFlow, updateTimeline, updateUI, saveNow, isSaving, hasUnsavedChanges, lastSaved, backup.hasBackup]);
 
   if (isLoading || !contextValue) {
-    return <div className="h-screen w-full bg-gray-900 text-gray-300 p-6">Loading workspace…</div>;
+    return <div className="h-screen w-full bg-[var(--surface-0)] text-[var(--text-secondary)] p-6">Loading workspace…</div>;
   }
 
   return <WorkspaceContext.Provider value={contextValue}>{children}</WorkspaceContext.Provider>;
