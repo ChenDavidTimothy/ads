@@ -858,16 +858,29 @@ export const animationRouter = createTRPCRouter({
         throw new Error(error.message);
       }
       
-      if (data?.status !== 'completed' || !data?.output_url) {
+      // If not completed yet, wait briefly for a NOTIFY; then re-check DB before returning
+      let current = data;
+      if (current?.status !== 'completed' || !current?.output_url) {
         const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
         if (notify && notify.status === 'completed' && notify.publicUrl) {
           return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;
         }
+        // Fallback: job may have completed during the wait but event was missed; re-query DB
+        const { data: latest, error: latestError } = await supabase
+          .from('render_jobs')
+          .select('status, output_url, error')
+          .eq('id', input.jobId)
+          .eq('user_id', ctx.user!.id)
+          .single();
+        if (!latestError && latest) {
+          current = latest;
+        }
       }
+
       return { 
-        status: (data?.status as string) ?? 'unknown', 
-        videoUrl: (data?.output_url as string) ?? null, 
-        error: (data?.error as string) ?? null 
+        status: (current?.status as string) ?? 'unknown', 
+        videoUrl: (current?.output_url as string) ?? null, 
+        error: (current?.error as string) ?? null 
       } as const;
     }),
 
