@@ -90,21 +90,58 @@ function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknow
   const defaults = (definition?.defaults as Record<string, unknown> | undefined) ?? {};
   const data = (rawData && typeof rawData === 'object' && rawData !== null) ? (rawData as Record<string, unknown>) : {};
 
+  // Look up property schemas up-front so we can handle structured types (e.g., point2d)
+  const propertySchemas = (definition?.properties?.properties as Array<{ key: string; type: string; defaultValue?: unknown }> | undefined) ?? [];
+  const point2dKeys = new Set(propertySchemas.filter(s => s.type === 'point2d').map(s => s.key));
+
   // Start with defaults, then override with provided values except undefined
   const merged: Record<string, unknown> = { ...defaults };
   for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) merged[key] = value as unknown;
+    if (value === undefined) continue;
+
+    // Deep-merge point2d objects so providing only x (or y) preserves the other axis from defaults
+    if (point2dKeys.has(key) && value && typeof value === 'object') {
+      const baseObj = (typeof defaults[key] === 'object' && defaults[key] !== null)
+        ? (defaults[key] as Record<string, unknown>)
+        : {};
+      merged[key] = { ...baseObj, ...(value as Record<string, unknown>) };
+    } else {
+      merged[key] = value as unknown;
+    }
   }
 
   // Ensure point2d properties are well-formed (x,y numbers)
-  const propertySchemas = (definition?.properties?.properties as Array<{ key: string; type: string; defaultValue?: unknown }> | undefined) ?? [];
   for (const schema of propertySchemas) {
     if (schema.type === 'point2d') {
-      const current = merged[schema.key];
-      const defVal = (schema.defaultValue as { x?: number; y?: number } | undefined) ?? { x: 0, y: 0 };
-      const curObj = (current && typeof current === 'object') ? (current as Record<string, unknown>) : {};
-      const x = typeof curObj.x === 'number' ? curObj.x : (typeof defVal.x === 'number' ? defVal.x : 0);
-      const y = typeof curObj.y === 'number' ? curObj.y : (typeof defVal.y === 'number' ? defVal.y : 0);
+      // Prefer actual input, then node-level defaults, then schema defaults, then 0
+      const provided = (data[schema.key] && typeof data[schema.key] === 'object')
+        ? (data[schema.key] as Record<string, unknown>)
+        : {};
+      const nodeDef = (defaults[schema.key] && typeof defaults[schema.key] === 'object')
+        ? (defaults[schema.key] as { x?: number; y?: number })
+        : undefined;
+      const schemaDef = (schema.defaultValue as { x?: number; y?: number } | undefined) ?? undefined;
+
+      const x = typeof provided.x === 'number'
+        ? provided.x
+        : typeof (merged[schema.key] as any)?.x === 'number'
+          ? (merged[schema.key] as any).x
+          : typeof nodeDef?.x === 'number'
+            ? nodeDef.x
+            : typeof schemaDef?.x === 'number'
+              ? schemaDef.x
+              : 0;
+
+      const y = typeof provided.y === 'number'
+        ? provided.y
+        : typeof (merged[schema.key] as any)?.y === 'number'
+          ? (merged[schema.key] as any).y
+          : typeof nodeDef?.y === 'number'
+            ? nodeDef.y
+            : typeof schemaDef?.y === 'number'
+              ? schemaDef.y
+              : 0;
+
       merged[schema.key] = { x, y } as const;
     }
   }
