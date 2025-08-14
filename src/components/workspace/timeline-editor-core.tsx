@@ -415,10 +415,10 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
               if (selectedObjectId && onUpdateTrackOverride) {
                 // Route changes to per-object override instead of global
                 const mapped: Partial<TrackOverride> = {};
-                if (updates.easing) mapped.easing = updates.easing as any;
+                if (updates.easing !== undefined) mapped.easing = updates.easing as any;
                 if (updates.startTime !== undefined) mapped.startTime = updates.startTime as number;
                 if (updates.duration !== undefined) mapped.duration = updates.duration as number;
-                if (updates.properties) mapped.properties = updates.properties as any;
+                if (updates.properties !== undefined) mapped.properties = updates.properties as any;
                 onUpdateTrackOverride(selectedTrack.identifier.id, mapped);
               } else {
                 const nextTracks = tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t);
@@ -430,13 +430,14 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
             onDisplayNameChange={updateTransformDisplayName}
             validateDisplayName={validateTransformDisplayName}
             // Pass current override values for display
-            override={(() => {
+            trackOverride={(() => {
               if (!selectedObjectId || !perObjectAssignments) return undefined;
               const obj = perObjectAssignments[selectedObjectId];
               const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
               return tr;
             })()}
             animationNodeId={animationNodeId}
+            selectedObjectId={selectedObjectId}
           />
         ) : (
           <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
@@ -448,15 +449,16 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
 
 interface TrackPropertiesProps {
   track: AnimationTrack;
-  onChange: (updates: Partial<AnimationTrack>) => void;
+  onChange: (updates: Partial<AnimationTrack> & { properties?: any }) => void;
   allTracks: AnimationTrack[];
   onDisplayNameChange: (trackId: string, newName: string) => boolean;
   validateDisplayName: (name: string, trackId: string) => string | null;
-  override?: TrackOverride | undefined;
+  trackOverride?: TrackOverride | undefined;
   animationNodeId: string;
+  selectedObjectId?: string;
 }
 
-function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, override, animationNodeId }: TrackPropertiesProps) {
+function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -476,33 +478,48 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
     ) => {
       switch (track.type) {
         case "move": {
-          const base = override?.properties as Partial<MoveTrackProperties> | undefined;
-          const mergedProps: MoveTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<MoveTrackProperties>) } as MoveTrackProperties;
-          onChange({ properties: mergedProps });
+          if (override) {
+            onChange({ properties: updates as any });
+          } else {
+            const mergedProps: MoveTrackProperties = { ...(track.properties as MoveTrackProperties), ...(updates as Partial<MoveTrackProperties>) } as MoveTrackProperties;
+            onChange({ properties: mergedProps });
+          }
           break;
         }
         case "rotate": {
-          const base = override?.properties as Partial<RotateTrackProperties> | undefined;
-          const mergedProps: RotateTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<RotateTrackProperties>) } as RotateTrackProperties;
-          onChange({ properties: mergedProps });
+          if (override) {
+            onChange({ properties: updates as any });
+          } else {
+            const mergedProps: RotateTrackProperties = { ...(track.properties as RotateTrackProperties), ...(updates as Partial<RotateTrackProperties>) } as RotateTrackProperties;
+            onChange({ properties: mergedProps });
+          }
           break;
         }
         case "scale": {
-          const base = override?.properties as Partial<ScaleTrackProperties> | undefined;
-          const mergedProps: ScaleTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<ScaleTrackProperties>) } as ScaleTrackProperties;
-          onChange({ properties: mergedProps });
+          if (override) {
+            onChange({ properties: updates as any });
+          } else {
+            const mergedProps: ScaleTrackProperties = { ...(track.properties as ScaleTrackProperties), ...(updates as Partial<ScaleTrackProperties>) } as ScaleTrackProperties;
+            onChange({ properties: mergedProps });
+          }
           break;
         }
         case "fade": {
-          const base = override?.properties as Partial<FadeTrackProperties> | undefined;
-          const mergedProps: FadeTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<FadeTrackProperties>) } as FadeTrackProperties;
-          onChange({ properties: mergedProps });
+          if (override) {
+            onChange({ properties: updates as any });
+          } else {
+            const mergedProps: FadeTrackProperties = { ...(track.properties as FadeTrackProperties), ...(updates as Partial<FadeTrackProperties>) } as FadeTrackProperties;
+            onChange({ properties: mergedProps });
+          }
           break;
         }
         case "color": {
-          const base = override?.properties as Partial<ColorTrackProperties> | undefined;
-          const mergedProps: ColorTrackProperties = { ...(base ? { ...track.properties, ...base } : track.properties), ...(updates as Partial<ColorTrackProperties>) } as ColorTrackProperties;
-          onChange({ properties: mergedProps });
+          if (override) {
+            onChange({ properties: updates as any });
+          } else {
+            const mergedProps: ColorTrackProperties = { ...(track.properties as ColorTrackProperties), ...(updates as Partial<ColorTrackProperties>) } as ColorTrackProperties;
+            onChange({ properties: mergedProps });
+          }
           break;
         }
         default:
@@ -515,16 +532,22 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
   // Variable discovery uses animationNodeId to mirror object discovery behavior
   const { state, updateFlow } = useWorkspace();
 
-  const bindButton = (fieldKey: string, onBind: (resultNodeId: string) => void) => (
-    <BindButton nodeId={animationNodeId} bindingKey={fieldKey} />
+  const bindButton = (fieldKey: string) => (
+    <BindButton nodeId={animationNodeId} bindingKey={fieldKey} objectId={override ? selectedObjectId : undefined} />
   );
 
   const clearBinding = (key: string) => {
     updateFlow({
       nodes: state.flow.nodes.map((n) => {
         if (((n as any).data?.identifier?.id) !== animationNodeId) return n;
+        if (override && selectedObjectId) {
+          const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+          const prev = { ...(prevAll[selectedObjectId] ?? {}) };
+          delete prev[key];
+          return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [selectedObjectId]: prev } } } as any;
+        }
         const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
-        const next = { ...prev };
+        const next = { ...prev } as typeof prev;
         delete next[key];
         return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
       })
@@ -583,33 +606,33 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
               onChange={(x) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, x } })}
               defaultValue={0}
-              bindAdornment={!override ? bindButton(`move.from.x`, () => {}) : undefined}
+              bindAdornment={bindButton(`move.from.x`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName="move.from.x" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName="move.from.x" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="From Y"
               value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
               onChange={(y) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, y } })}
               defaultValue={0}
-              bindAdornment={!override ? bindButton(`move.from.y`, () => {}) : undefined}
+              bindAdornment={bindButton(`move.from.y`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName="move.from.y" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName="move.from.y" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="To X"
               value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
               onChange={(x) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, x } })}
               defaultValue={100}
-              bindAdornment={!override ? bindButton(`move.to.x`, () => {}) : undefined}
+              bindAdornment={bindButton(`move.to.x`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName="move.to.x" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName="move.to.x" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="To Y"
               value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
               onChange={(y) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, y } })}
               defaultValue={100}
-              bindAdornment={!override ? bindButton(`move.to.y`, () => {}) : undefined}
+              bindAdornment={bindButton(`move.to.y`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName="move.to.y" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName="move.to.y" objectId={override ? selectedObjectId : undefined} /></div>
           </div>
         </div>
       )}
@@ -624,18 +647,18 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
-              bindAdornment={!override ? bindButton(`rotate.from`, () => {}) : undefined}
+              bindAdornment={bindButton(`rotate.from`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName="rotate.from" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName="rotate.from" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="To Rotation"
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
-              bindAdornment={!override ? bindButton(`rotate.to`, () => {}) : undefined}
+              bindAdornment={bindButton(`rotate.to`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName="rotate.to" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName="rotate.to" objectId={override ? selectedObjectId : undefined} /></div>
           </div>
         </div>
       )}
@@ -649,21 +672,19 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               value={(override?.properties as any)?.from ?? track.properties.from}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
-              min={0}
               defaultValue={1}
-              bindAdornment={!override ? bindButton(`scale.from`, () => {}) : undefined}
+              bindAdornment={bindButton(`scale.from`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName="scale.from" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName="scale.from" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="To"
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
-              min={0}
-              defaultValue={1.5}
-              bindAdornment={!override ? bindButton(`scale.to`, () => {}) : undefined}
+              defaultValue={2}
+              bindAdornment={bindButton(`scale.to`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName="scale.to" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName="scale.to" objectId={override ? selectedObjectId : undefined} /></div>
           </div>
         </div>
       )}
@@ -676,24 +697,20 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               label="From Opacity"
               value={(override?.properties as any)?.from ?? track.properties.from}
               onChange={(from) => updateProperties({ from })}
-              step={0.1}
-              min={0}
-              max={1}
+              step={0.05}
               defaultValue={1}
-              bindAdornment={!override ? bindButton(`fade.from`, () => {}) : undefined}
+              bindAdornment={bindButton(`fade.from`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName="fade.from" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName="fade.from" objectId={override ? selectedObjectId : undefined} /></div>
             <NumberField
               label="To Opacity"
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
-              step={0.1}
-              min={0}
-              max={1}
-              defaultValue={0.5}
-              bindAdornment={!override ? bindButton(`fade.to`, () => {}) : undefined}
+              step={0.05}
+              defaultValue={0}
+              bindAdornment={bindButton(`fade.to`)}
             />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName="fade.to" /></>)}</div>
+            <div className="text-[10px]"><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName="fade.to" objectId={override ? selectedObjectId : undefined} /></div>
           </div>
         </div>
       )}
@@ -704,18 +721,18 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           <SelectField
             label="Property"
             value={(override?.properties as any)?.property ?? track.properties.property}
-            onChange={(property) => updateProperties({ property: property as "fill" | "stroke" })}
+            onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
               { value: "fill", label: "Fill" },
               { value: "stroke", label: "Stroke" },
             ]}
-            bindAdornment={!override ? (<BindButton nodeId={animationNodeId} bindingKey={`color.property`} />) : undefined}
+            bindAdornment={bindButton(`color.property`)}
           />
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={!override ? bindButton(`color.from`, () => {}) : undefined} />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName="color.from" /></>)}</div>
-            <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} bindAdornment={!override ? bindButton(`color.to`, () => {}) : undefined} />
-            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName="color.to" /></>)}</div>
+            <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={bindButton(`color.from`)} />
+            <div className="text-[10px]"><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName="color.from" objectId={override ? selectedObjectId : undefined} /></div>
+            <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} bindAdornment={bindButton(`color.to`)} />
+            <div className="text-[10px]"><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName="color.to" objectId={override ? selectedObjectId : undefined} /></div>
           </div>
         </div>
       )}
