@@ -28,30 +28,37 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Resolve variable bindings from upstream Result nodes
     const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
-    const readVar = (key: string): unknown => {
+    const bindingsByObject = (data.variableBindingsByObject as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>> | undefined) ?? {};
+    const readVarGlobal = (key: string): unknown => {
       const rid = bindings[key]?.boundResultNodeId;
       if (!rid) return undefined;
       const val = (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
       return val;
     };
+    const readVarForObject = (objectId: string | undefined) => (key: string): unknown => {
+      if (!objectId) return readVarGlobal(key);
+      const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
+      if (rid) return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+      return readVarGlobal(key);
+    };
 
-    // Resolve duration binding if present
-    const boundDuration = readVar('duration');
+    // Resolve duration binding if present (global only)
+    const boundDuration = readVarGlobal('duration');
     if (typeof boundDuration === 'number') {
       data.duration = boundDuration;
     }
 
     // Clone tracks and apply per-track bindings
     const originalTracks: AnimationTrack[] = (data.tracks as AnimationTrack[]) || [];
-    const resolvedTracks: AnimationTrack[] = originalTracks.map((t) => {
+    const resolveTrackWithBindings = (t: AnimationTrack, reader: (k: string) => unknown): AnimationTrack => {
       switch (t.type) {
         case 'move': {
-          const fromX = readVar('move.from.x');
-          const fromY = readVar('move.from.y');
-          const toX = readVar('move.to.x');
-          const toY = readVar('move.to.y');
-          const fromPoint = readVar('move.from');
-          const toPoint = readVar('move.to');
+          const fromX = reader('move.from.x');
+          const fromY = reader('move.from.y');
+          const toX = reader('move.to.x');
+          const toY = reader('move.to.y');
+          const fromPoint = reader('move.from');
+          const toPoint = reader('move.to');
           const next = { ...t, properties: { ...t.properties } } as typeof t;
           if (typeof fromX === 'number') next.properties.from = { ...next.properties.from, x: fromX };
           if (typeof fromY === 'number') next.properties.from = { ...next.properties.from, y: fromY };
@@ -66,33 +73,93 @@ export class AnimationNodeExecutor extends BaseExecutor {
           return next;
         }
         case 'rotate': {
-          const from = readVar('rotate.from');
-          const to = readVar('rotate.to');
+          const from = reader('rotate.from');
+          const to = reader('rotate.to');
           const next = { ...t, properties: { ...t.properties } } as typeof t;
           if (typeof from === 'number') next.properties.from = from;
           if (typeof to === 'number') next.properties.to = to;
           return next;
         }
         case 'scale': {
-          const from = readVar('scale.from');
-          const to = readVar('scale.to');
+          const from = reader('scale.from');
+          const to = reader('scale.to');
           const next = { ...t, properties: { ...t.properties } } as typeof t;
           if (typeof from === 'number') next.properties.from = from;
           if (typeof to === 'number') next.properties.to = to;
           return next;
         }
         case 'fade': {
-          const from = readVar('fade.from');
-          const to = readVar('fade.to');
+          const from = reader('fade.from');
+          const to = reader('fade.to');
           const next = { ...t, properties: { ...t.properties } } as typeof t;
           if (typeof from === 'number') next.properties.from = from;
           if (typeof to === 'number') next.properties.to = to;
           return next;
         }
         case 'color': {
-          const from = readVar('color.from');
-          const to = readVar('color.to');
-          const prop = readVar('color.property');
+          const from = reader('color.from');
+          const to = reader('color.to');
+          const prop = reader('color.property');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'string') next.properties.from = from;
+          if (typeof to === 'string') next.properties.to = to;
+          if (prop === 'fill' || prop === 'stroke') next.properties.property = prop;
+          return next;
+        }
+        default:
+          return t;
+      }
+    };
+    const resolvedTracks: AnimationTrack[] = originalTracks.map((t) => {
+      switch (t.type) {
+        case 'move': {
+          const fromX = readVarGlobal('move.from.x');
+          const fromY = readVarGlobal('move.from.y');
+          const toX = readVarGlobal('move.to.x');
+          const toY = readVarGlobal('move.to.y');
+          const fromPoint = readVarGlobal('move.from');
+          const toPoint = readVarGlobal('move.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof fromX === 'number') next.properties.from = { ...next.properties.from, x: fromX };
+          if (typeof fromY === 'number') next.properties.from = { ...next.properties.from, y: fromY };
+          if (typeof toX === 'number') next.properties.to = { ...next.properties.to, x: toX };
+          if (typeof toY === 'number') next.properties.to = { ...next.properties.to, y: toY };
+          if (fromPoint && typeof fromPoint === 'object' && fromPoint !== null && 'x' in (fromPoint as any) && 'y' in (fromPoint as any)) {
+            next.properties.from = { x: Number((fromPoint as any).x), y: Number((fromPoint as any).y) };
+          }
+          if (toPoint && typeof toPoint === 'object' && toPoint !== null && 'x' in (toPoint as any) && 'y' in (toPoint as any)) {
+            next.properties.to = { x: Number((toPoint as any).x), y: Number((toPoint as any).y) };
+          }
+          return next;
+        }
+        case 'rotate': {
+          const from = readVarGlobal('rotate.from');
+          const to = readVarGlobal('rotate.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'scale': {
+          const from = readVarGlobal('scale.from');
+          const to = readVarGlobal('scale.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'fade': {
+          const from = readVarGlobal('fade.from');
+          const to = readVarGlobal('fade.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'color': {
+          const from = readVarGlobal('color.from');
+          const to = readVarGlobal('color.to');
+          const prop = readVarGlobal('color.property');
           const next = { ...t, properties: { ...t.properties } } as typeof t;
           if (typeof from === 'string') next.properties.from = from;
           if (typeof to === 'string') next.properties.to = to;
@@ -146,7 +213,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Only include prior animations from the current execution path
         const priorForObject = objectId ? (perObjectAnimations[objectId] ?? []) : [];
         const animations = convertTracksToSceneAnimations(
-          resolvedTracks,
+          (objectId ? resolvedTracks.map((t) => resolveTrackWithBindings(t, readVarForObject(objectId))) : resolvedTracks),
           objectId ?? '',
           baseline,
           priorForObject,

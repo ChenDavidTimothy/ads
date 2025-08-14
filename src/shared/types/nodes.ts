@@ -174,6 +174,11 @@ export interface AnimationNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string; // selected Result node identifier.id
   }>;
+  // Per-object variable bindings overriding defaults
+  variableBindingsByObject?: Record<string, Record<string, {
+    target?: string;
+    boundResultNodeId?: string;
+  }>>;
 }
 
 // Scene node data
@@ -202,6 +207,11 @@ export interface CanvasNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string;
   }>;
+  // Per-object variable bindings overriding defaults
+  variableBindingsByObject?: Record<string, Record<string, {
+    target?: string;
+    boundResultNodeId?: string;
+  }>>;
 }
 
 // Frame node data (static image output configuration)

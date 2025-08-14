@@ -27,6 +27,16 @@ import { Link as LinkIcon } from "lucide-react";
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 
+function BindingTag({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+  const { state } = useWorkspace();
+  const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
+  const vb = (objectId ? (node?.data?.variableBindingsByObject?.[objectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
+  const bound = vb?.[keyName]?.boundResultNodeId;
+  if (!bound) return null;
+  const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+  return <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">(bound: {name ?? bound})</span>;
+}
+
 interface TimelineEditorCoreProps {
   animationNodeId: string;
   duration: number;
@@ -561,6 +571,22 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
     </div>
   );
 
+  const clearBinding = (key: string) => {
+    updateFlow({
+      nodes: state.flow.nodes.map((n) => {
+        if (((n as any).data?.identifier?.id) !== animationNodeId) return n;
+        const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+        const next = { ...prev };
+        delete next[key];
+        return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
+      })
+    });
+  };
+
+  const ToggleBinding = ({ keyName }: { keyName: string }) => (
+    <button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
+  );
+
   const writeBinding = (targetKey: string, resultNodeId: string) => {
     // Persist variable binding at node-level defaults in flow graph for this animation node
     const nodeId = (state.ui.selectedNodeId ?? state.ui.selectedNodeId) as string | undefined;
@@ -627,6 +653,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={!override ? bindButton(`move.from.x`, (rid) => writeBinding(`move.from.x`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName="move.from.x" /></>)}</div>
             <NumberField
               label="From Y"
               value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
@@ -634,6 +661,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={!override ? bindButton(`move.from.y`, (rid) => writeBinding(`move.from.y`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName="move.from.y" /></>)}</div>
             <NumberField
               label="To X"
               value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
@@ -641,6 +669,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={100}
               bindAdornment={!override ? bindButton(`move.to.x`, (rid) => writeBinding(`move.to.x`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName="move.to.x" /></>)}</div>
             <NumberField
               label="To Y"
               value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
@@ -648,6 +677,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={100}
               bindAdornment={!override ? bindButton(`move.to.y`, (rid) => writeBinding(`move.to.y`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName="move.to.y" /></>)}</div>
           </div>
         </div>
       )}
@@ -664,6 +694,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0}
               bindAdornment={!override ? bindButton(`rotate.from`, (rid) => writeBinding(`rotate.from`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName="rotate.from" /></>)}</div>
             <NumberField
               label="To Rotation"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -672,6 +703,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={!override ? bindButton(`rotate.to`, (rid) => writeBinding(`rotate.to`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName="rotate.to" /></>)}</div>
           </div>
         </div>
       )}
@@ -689,6 +721,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={!override ? bindButton(`scale.from`, (rid) => writeBinding(`scale.from`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName="scale.from" /></>)}</div>
             <NumberField
               label="To"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -698,6 +731,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1.5}
               bindAdornment={!override ? bindButton(`scale.to`, (rid) => writeBinding(`scale.to`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName="scale.to" /></>)}</div>
           </div>
         </div>
       )}
@@ -716,6 +750,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={1}
               bindAdornment={!override ? bindButton(`fade.from`, (rid) => writeBinding(`fade.from`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName="fade.from" /></>)}</div>
             <NumberField
               label="To Opacity"
               value={(override?.properties as any)?.to ?? track.properties.to}
@@ -726,6 +761,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               defaultValue={0.5}
               bindAdornment={!override ? bindButton(`fade.to`, (rid) => writeBinding(`fade.to`, rid)) : undefined}
             />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName="fade.to" /></>)}</div>
           </div>
         </div>
       )}
@@ -744,7 +780,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           />
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={!override ? bindButton(`color.from`, (rid) => writeBinding(`color.from`, rid)) : undefined} />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName="color.from" /></>)}</div>
             <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} bindAdornment={!override ? bindButton(`color.to`, (rid) => writeBinding(`color.to`, rid)) : undefined} />
+            <div className="text-[10px]">{!override && (<><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName="color.to" /></>)}</div>
           </div>
         </div>
       )}

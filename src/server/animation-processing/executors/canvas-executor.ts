@@ -28,29 +28,36 @@ export class CanvasNodeExecutor extends BaseExecutor {
 
     // Resolve variable bindings (Result nodes) at node level
     const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
-    const readVar = (key: string): unknown => {
+    const bindingsByObject = (data.variableBindingsByObject as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>> | undefined) ?? {};
+    const readVarGlobal = (key: string): unknown => {
       const rid = bindings[key]?.boundResultNodeId;
       if (!rid) return undefined;
       return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
     };
+    const readVarForObject = (objectId: string | undefined) => (key: string): unknown => {
+      if (!objectId) return readVarGlobal(key);
+      const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
+      if (rid) return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+      return readVarGlobal(key);
+    };
     // Apply bound values to node defaults
-    const pos = readVar('position');
+    const pos = readVarGlobal('position');
     if (pos && typeof pos === 'object' && pos !== null && 'x' in (pos as any) && 'y' in (pos as any)) {
       data.position = { x: Number((pos as any).x), y: Number((pos as any).y) };
     }
-    const rot = readVar('rotation');
+    const rot = readVarGlobal('rotation');
     if (typeof rot === 'number') data.rotation = rot;
-    const scale = readVar('scale');
+    const scale = readVarGlobal('scale');
     if (scale && typeof scale === 'object' && scale !== null && 'x' in (scale as any) && 'y' in (scale as any)) {
       data.scale = { x: Number((scale as any).x), y: Number((scale as any).y) };
     }
-    const opacity = readVar('opacity');
+    const opacity = readVarGlobal('opacity');
     if (typeof opacity === 'number') data.opacity = opacity;
-    const fill = readVar('fillColor');
+    const fill = readVarGlobal('fillColor');
     if (typeof fill === 'string') data.fillColor = fill;
-    const stroke = readVar('strokeColor');
+    const stroke = readVarGlobal('strokeColor');
     if (typeof stroke === 'string') data.strokeColor = stroke;
-    const strokeW = readVar('strokeWidth');
+    const strokeW = readVarGlobal('strokeWidth');
     if (typeof strokeW === 'number') data.strokeWidth = strokeW;
 
     const passThrough: unknown[] = [];
@@ -92,7 +99,28 @@ export class CanvasNodeExecutor extends BaseExecutor {
       for (const obj of inputData) {
         if (typeof obj === 'object' && obj !== null && 'id' in obj) {
           const original = obj as SceneObject as unknown as Record<string, unknown>;
-          const assignmentsForObject = mergedAssignments?.[(original as { id: string }).id];
+          const objectId = (original as { id: string }).id;
+          const reader = readVarForObject(objectId);
+          // Object-level variable bindings override defaults
+          const oPos = reader('position');
+          if (oPos && typeof oPos === 'object' && oPos !== null && 'x' in (oPos as any) && 'y' in (oPos as any)) {
+            data.position = { x: Number((oPos as any).x), y: Number((oPos as any).y) };
+          }
+          const oRot = reader('rotation');
+          if (typeof oRot === 'number') data.rotation = oRot;
+          const oScale = reader('scale');
+          if (oScale && typeof oScale === 'object' && oScale !== null && 'x' in (oScale as any) && 'y' in (oScale as any)) {
+            data.scale = { x: Number((oScale as any).x), y: Number((oScale as any).y) };
+          }
+          const oOpacity = reader('opacity');
+          if (typeof oOpacity === 'number') data.opacity = oOpacity;
+          const oFill = reader('fillColor');
+          if (typeof oFill === 'string') data.fillColor = oFill;
+          const oStroke = reader('strokeColor');
+          if (typeof oStroke === 'string') data.strokeColor = oStroke;
+          const oStrokeW = reader('strokeWidth');
+          if (typeof oStrokeW === 'number') data.strokeWidth = oStrokeW;
+          const assignmentsForObject = mergedAssignments?.[objectId];
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
             original as unknown as SceneObject,
             canvasOverrides,
