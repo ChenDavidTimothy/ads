@@ -639,7 +639,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             <NumberField
               label={labelWithOverride("From X", "move.from.x")}
               value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
-              onChange={(x) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, x } })}
+              onChange={(x) => updateProperties({ from: { x } } as any)}
               defaultValue={0}
               bindAdornment={bindButton(`move.from.x`)}
             />
@@ -647,7 +647,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             <NumberField
               label={labelWithOverride("From Y", "move.from.y")}
               value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
-              onChange={(y) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, y } })}
+              onChange={(y) => updateProperties({ from: { y } } as any)}
               defaultValue={0}
               bindAdornment={bindButton(`move.from.y`)}
             />
@@ -655,7 +655,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             <NumberField
               label={labelWithOverride("To X", "move.to.x")}
               value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
-              onChange={(x) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, x } })}
+              onChange={(x) => updateProperties({ to: { x } } as any)}
               defaultValue={100}
               bindAdornment={bindButton(`move.to.x`)}
             />
@@ -663,7 +663,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             <NumberField
               label={labelWithOverride("To Y", "move.to.y")}
               value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
-              onChange={(y) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, y } })}
+              onChange={(y) => updateProperties({ to: { y } } as any)}
               defaultValue={100}
               bindAdornment={bindButton(`move.to.y`)}
             />
