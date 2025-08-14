@@ -9,6 +9,9 @@ import type { NodeData } from '@/shared/types';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
+import type { AnimationTrack } from '@/shared/types/nodes';
+import { TrackProperties } from './timeline-editor-core';
+import { validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
 
 function DefaultSelector({ onClick, active }: { onClick: () => void; active: boolean }) {
   return (
@@ -28,6 +31,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const pendingRef = useRef<TimelineEditorData | null>(null);
   const rafRef = useRef<number | null>(null);
   const [selectedObjectId, setSelectedObjectId] = React.useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = React.useState<AnimationTrack | null>(null);
 
   // Find the animation node in the flow and its current assignments
   const animationNode = React.useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
@@ -212,8 +216,44 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
               if (!selectedObjectId) return;
               updateAssignmentsForTrack(selectedObjectId, trackId, updates);
             }}
+            onSelectedTrackChange={setSelectedTrack}
           />
         </div>
+      )}
+      rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>}
+      right={(
+        selectedTrack ? (
+          <TrackProperties
+            track={selectedTrack}
+            onChange={(updates) => {
+              if (selectedObjectId) {
+                updateAssignmentsForTrack(selectedObjectId, selectedTrack.identifier.id, updates as any);
+              } else {
+                const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as any) : t) as any;
+                handleChange({ tracks: nextTracks });
+              }
+            }}
+            allTracks={data.tracks}
+            onDisplayNameChange={(trackId, newName) => {
+              const error = validateNameHelper(newName, trackId, data.tracks as AnimationTrack[]);
+              if (error) return false;
+              const nextTracks = (data.tracks ?? []).map(t => (t as any).identifier?.id === trackId ? ({ ...t, identifier: { ...(t as any).identifier, displayName: newName } } as any) : t) as any;
+              handleChange({ tracks: nextTracks });
+              return true;
+            }}
+            validateDisplayName={(name, trackId) => validateNameHelper(name, trackId, data.tracks as AnimationTrack[])}
+            trackOverride={(() => {
+              if (!selectedObjectId || !currentAssignments) return undefined;
+              const obj = currentAssignments[selectedObjectId];
+              const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
+              return tr;
+            })()}
+            animationNodeId={nodeId}
+            selectedObjectId={selectedObjectId ?? undefined}
+          />
+        ) : (
+          <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
+        )
       )}
       onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
       headerExtras={(

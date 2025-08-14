@@ -47,6 +47,8 @@ interface TimelineEditorCoreProps {
   selectedObjectId?: string;
   perObjectAssignments?: PerObjectAssignments;
   onUpdateTrackOverride?: (trackId: string, updates: Partial<TrackOverride>) => void;
+  // Allow parent to control/render right panel externally
+  onSelectedTrackChange?: (track: AnimationTrack | null) => void;
 }
 
 interface DragState {
@@ -102,7 +104,7 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
-export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange, selectedObjectId, perObjectAssignments, onUpdateTrackOverride }: TimelineEditorCoreProps) {
+export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange, selectedObjectId, perObjectAssignments, onUpdateTrackOverride, onSelectedTrackChange }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(controlledDuration);
   const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -134,6 +136,13 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
       tracker.updateTrackIndex(t.identifier.id, index);
     });
   }, [tracks]);
+
+  useEffect(() => {
+    if (typeof onSelectedTrackChange === 'function') {
+      setDuration(controlledDuration);
+      setTracks(controlledTracks);
+    }
+  }, [controlledDuration, controlledTracks, onSelectedTrackChange]);
 
   const addTrack = useCallback(
     (type: AnimationTrack["type"]) => {
@@ -289,6 +298,13 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
   // Disable save if any display name invalid
   const hasInvalidNames = tracks.some((t) => !!validateNameHelper(t.identifier.displayName, t.identifier.id, tracks));
 
+  // Notify parent of selection changes when requested
+  useEffect(() => {
+    if (typeof onSelectedTrackChange === 'function') {
+      onSelectedTrackChange(selectedTrack ?? null);
+    }
+  }, [selectedTrack, onSelectedTrackChange]);
+
   return (
     <div className="flex h-full">
       <div className="flex-1 p-[var(--space-4)] overflow-auto">
@@ -407,43 +423,45 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
         </div>
       </div>
 
-      <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-2)]">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
-        {selectedTrack ? (
-          <TrackProperties 
-            track={selectedTrack} 
-            onChange={(updates) => {
-              if (selectedObjectId && onUpdateTrackOverride) {
-                // Route changes to per-object override instead of global
-                const mapped: Partial<TrackOverride> = {};
-                if (updates.easing !== undefined) mapped.easing = updates.easing as any;
-                if (updates.startTime !== undefined) mapped.startTime = updates.startTime as number;
-                if (updates.duration !== undefined) mapped.duration = updates.duration as number;
-                if (updates.properties !== undefined) mapped.properties = updates.properties as any;
-                onUpdateTrackOverride(selectedTrack.identifier.id, mapped);
-              } else {
-                const nextTracks = tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t);
-                setTracks(nextTracks);
-                onChange({ tracks: nextTracks });
-              }
-            }} 
-            allTracks={tracks}
-            onDisplayNameChange={updateTransformDisplayName}
-            validateDisplayName={validateTransformDisplayName}
-            // Pass current override values for display
-            trackOverride={(() => {
-              if (!selectedObjectId || !perObjectAssignments) return undefined;
-              const obj = perObjectAssignments[selectedObjectId];
-              const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
-              return tr;
-            })()}
-            animationNodeId={animationNodeId}
-            selectedObjectId={selectedObjectId}
-          />
-        ) : (
-          <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
-        )}
-      </div>
+      {typeof onSelectedTrackChange !== 'function' && (
+        <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-2)]">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
+          {selectedTrack ? (
+            <TrackProperties 
+              track={selectedTrack} 
+              onChange={(updates) => {
+                if (selectedObjectId && onUpdateTrackOverride) {
+                  // Route changes to per-object override instead of global
+                  const mapped: Partial<TrackOverride> = {};
+                  if (updates.easing !== undefined) mapped.easing = updates.easing as any;
+                  if (updates.startTime !== undefined) mapped.startTime = updates.startTime as number;
+                  if (updates.duration !== undefined) mapped.duration = updates.duration as number;
+                  if (updates.properties !== undefined) mapped.properties = updates.properties as any;
+                  onUpdateTrackOverride(selectedTrack.identifier.id, mapped);
+                } else {
+                  const nextTracks = tracks.map(t => t.identifier.id === selectedTrack.identifier.id ? ({ ...t, ...(updates as any) } as AnimationTrack) : t);
+                  setTracks(nextTracks);
+                  onChange({ tracks: nextTracks });
+                }
+              }} 
+              allTracks={tracks}
+              onDisplayNameChange={updateTransformDisplayName}
+              validateDisplayName={validateTransformDisplayName}
+              // Pass current override values for display
+              trackOverride={(() => {
+                if (!selectedObjectId || !perObjectAssignments) return undefined;
+                const obj = perObjectAssignments[selectedObjectId];
+                const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
+                return tr;
+              })()}
+              animationNodeId={animationNodeId}
+              selectedObjectId={selectedObjectId}
+            />
+          ) : (
+            <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -459,7 +477,7 @@ interface TrackPropertiesProps {
   selectedObjectId?: string;
 }
 
-function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
+export function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
