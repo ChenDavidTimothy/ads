@@ -179,6 +179,15 @@ export interface AnimationNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string;
   }>>;
+  // New granular override system (field-level)
+  granularOverrides?: Record<string, unknown>;
+  granularPerObjectAssignments?: Record<string, {
+    initial?: Record<string, unknown>;
+    tracks?: Array<{
+      trackId: string;
+      properties: Record<string, unknown>;
+    }>;
+  }>;
 }
 
 // Scene node data
@@ -212,6 +221,15 @@ export interface CanvasNodeData extends BaseNodeData {
     target?: string;
     boundResultNodeId?: string;
   }>>;
+  // New granular override system (field-level)
+  granularOverrides?: Record<string, unknown>;
+  granularPerObjectAssignments?: Record<string, {
+    initial?: Record<string, unknown>;
+    tracks?: Array<{
+      trackId: string;
+      properties: Record<string, unknown>;
+    }>;
+  }>;
 }
 
 // Frame node data (static image output configuration)
