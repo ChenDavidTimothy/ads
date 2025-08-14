@@ -175,6 +175,16 @@ export class LogicNodeExecutor extends BaseExecutor {
       value,
       { resultType: valueType, displayValue: String(value) }
     );
+
+    // Also expose on canonical 'output' port for variables
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'data',
+      value,
+      { resultType: valueType, displayValue: String(value) }
+    );
   }
 
   private getValueType(value: unknown): string {

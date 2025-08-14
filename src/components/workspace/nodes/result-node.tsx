@@ -58,7 +58,18 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
           position={Position.Left}
           id={port.id}
           className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          style={{ top: `35%` }}
+        />
+      ))}
+      {/* New output port to expose variable value */}
+      {nodeDefinition?.ports.outputs.map((port) => (
+        <Handle
+          key={port.id}
+          type="source"
+          position={Position.Right}
+          id={port.id}
+          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          style={{ top: `35%` }}
         />
       ))}
 
@@ -90,7 +101,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         </Button>
 
         <div className="bg-[var(--surface-2)] p-[var(--space-3)] rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-center">
-          <div className="text-xs text-[var(--text-secondary)]">Debug</div>
+          <div className="text-xs text-[var(--text-secondary)]">Debug / Variable Output</div>
         </div>
       </CardContent>
     </Card>

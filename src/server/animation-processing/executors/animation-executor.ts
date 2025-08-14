@@ -26,6 +26,84 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'input'
     );
 
+    // Resolve variable bindings from upstream Result nodes
+    const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
+    const readVar = (key: string): unknown => {
+      const rid = bindings[key]?.boundResultNodeId;
+      if (!rid) return undefined;
+      const val = (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+      return val;
+    };
+
+    // Resolve duration binding if present
+    const boundDuration = readVar('duration');
+    if (typeof boundDuration === 'number') {
+      data.duration = boundDuration;
+    }
+
+    // Clone tracks and apply per-track bindings
+    const originalTracks: AnimationTrack[] = (data.tracks as AnimationTrack[]) || [];
+    const resolvedTracks: AnimationTrack[] = originalTracks.map((t) => {
+      switch (t.type) {
+        case 'move': {
+          const fromX = readVar('move.from.x');
+          const fromY = readVar('move.from.y');
+          const toX = readVar('move.to.x');
+          const toY = readVar('move.to.y');
+          const fromPoint = readVar('move.from');
+          const toPoint = readVar('move.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof fromX === 'number') next.properties.from = { ...next.properties.from, x: fromX };
+          if (typeof fromY === 'number') next.properties.from = { ...next.properties.from, y: fromY };
+          if (typeof toX === 'number') next.properties.to = { ...next.properties.to, x: toX };
+          if (typeof toY === 'number') next.properties.to = { ...next.properties.to, y: toY };
+          if (fromPoint && typeof fromPoint === 'object' && fromPoint !== null && 'x' in (fromPoint as any) && 'y' in (fromPoint as any)) {
+            next.properties.from = { x: Number((fromPoint as any).x), y: Number((fromPoint as any).y) };
+          }
+          if (toPoint && typeof toPoint === 'object' && toPoint !== null && 'x' in (toPoint as any) && 'y' in (toPoint as any)) {
+            next.properties.to = { x: Number((toPoint as any).x), y: Number((toPoint as any).y) };
+          }
+          return next;
+        }
+        case 'rotate': {
+          const from = readVar('rotate.from');
+          const to = readVar('rotate.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'scale': {
+          const from = readVar('scale.from');
+          const to = readVar('scale.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'fade': {
+          const from = readVar('fade.from');
+          const to = readVar('fade.to');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'number') next.properties.from = from;
+          if (typeof to === 'number') next.properties.to = to;
+          return next;
+        }
+        case 'color': {
+          const from = readVar('color.from');
+          const to = readVar('color.to');
+          const prop = readVar('color.property');
+          const next = { ...t, properties: { ...t.properties } } as typeof t;
+          if (typeof from === 'string') next.properties.from = from;
+          if (typeof to === 'string') next.properties.to = to;
+          if (prop === 'fill' || prop === 'stroke') next.properties.property = prop;
+          return next;
+        }
+        default:
+          return t;
+      }
+    });
+
     const allAnimations: SceneAnimationTrack[] = [];
     const passThoughObjects: unknown[] = [];
     const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
@@ -68,7 +146,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Only include prior animations from the current execution path
         const priorForObject = objectId ? (perObjectAnimations[objectId] ?? []) : [];
         const animations = convertTracksToSceneAnimations(
-          (data.tracks as AnimationTrack[]) || [],
+          resolvedTracks,
           objectId ?? '',
           baseline,
           priorForObject,

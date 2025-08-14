@@ -23,6 +23,9 @@ import {
   isColorTrack 
 } from "@/shared/types/nodes";
 import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
+import { Link as LinkIcon } from "lucide-react";
+import { useWorkspace } from './workspace-context';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
 
 interface TimelineEditorCoreProps {
   animationNodeId: string;
@@ -93,6 +96,22 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
   const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const { state, updateFlow } = useWorkspace();
+  const availableVariables = (() => {
+    const tracker = new FlowTracker();
+    return tracker.getAvailableResultVariables(animationNodeId, state.flow.nodes as any, state.flow.edges as any);
+  })();
+  const [showDurationBind, setShowDurationBind] = useState(false);
+  const bindDuration = (resultNodeId: string) => {
+    updateFlow({
+      nodes: state.flow.nodes.map((n) => {
+        if (((n as any).data?.identifier?.id) !== animationNodeId) return n;
+        const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+        const next = { ...prev, ['duration']: { target: 'duration', boundResultNodeId: resultNodeId } };
+        return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
+      })
+    });
+  };
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
@@ -287,6 +306,24 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
               step={0.1}
               defaultValue={3}
               className="w-32"
+              bindAdornment={(
+                <div className="relative">
+                  <button type="button" onClick={() => setShowDurationBind(v => !v)} className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable">
+                    <LinkIcon size={14} />
+                  </button>
+                  {showDurationBind && (
+                    <div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
+                      {availableVariables.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+                      ) : availableVariables.map(v => (
+                        <div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => { bindDuration(v.id); setShowDurationBind(false); }}>
+                          {v.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             />
           </div>
           {/* Save/Cancel removed: unified manual save handled at workspace level */}
@@ -495,6 +532,47 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
     [track.type, track.properties, onChange, override],
   );
 
+  const [showBindMenuFor, setShowBindMenuFor] = useState<string | null>(null);
+  const { state, updateFlow } = useWorkspace();
+  const variables = (() => {
+    const tracker = new FlowTracker();
+    return tracker.getAvailableResultVariables(track.identifier.id.split(':')[0] ?? '', state.flow.nodes as any, state.flow.edges as any);
+  })();
+  const bindButton = (fieldKey: string, onBind: (resultNodeId: string) => void) => (
+    <div className="relative">
+      <button type="button" onClick={() => setShowBindMenuFor(prev => prev === fieldKey ? null : fieldKey)} className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable">
+        <LinkIcon size={14} />
+      </button>
+      {showBindMenuFor === fieldKey && (
+        <div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
+          {variables.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+          ) : variables.map(v => (
+            <div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => { onBind(v.id); setShowBindMenuFor(null); }}>
+              {v.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const writeBinding = (targetKey: string, resultNodeId: string) => {
+    // Persist variable binding at node-level defaults in flow graph for this animation node
+    const nodeId = (state.ui.selectedNodeId ?? state.ui.selectedNodeId) as string | undefined;
+    const animNodeId = nodeId ?? (state.ui.selectedNodeId as string | undefined);
+    if (!animNodeId) return;
+    updateFlow({
+      nodes: state.flow.nodes.map((n) => {
+        if (((n as any).data?.identifier?.id) !== animNodeId) return n;
+        const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+        const key = targetKey;
+        const next = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
+        return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
+      })
+    });
+  };
+
   return (
     <div className="space-y-[var(--space-4)]">
       {/* Name editing (non-breaking): if identifier exists, allow editing */}
@@ -543,24 +621,28 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
               onChange={(x) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, x } })}
               defaultValue={0}
+              bindAdornment={!override ? bindButton(`move.from.x`, (rid) => writeBinding(`move.from.x`, rid)) : undefined}
             />
             <NumberField
               label="From Y"
               value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
               onChange={(y) => updateProperties({ from: { ...(override?.properties as any)?.from ?? track.properties.from, y } })}
               defaultValue={0}
+              bindAdornment={!override ? bindButton(`move.from.y`, (rid) => writeBinding(`move.from.y`, rid)) : undefined}
             />
             <NumberField
               label="To X"
               value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
               onChange={(x) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, x } })}
               defaultValue={100}
+              bindAdornment={!override ? bindButton(`move.to.x`, (rid) => writeBinding(`move.to.x`, rid)) : undefined}
             />
             <NumberField
               label="To Y"
               value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
               onChange={(y) => updateProperties({ to: { ...(override?.properties as any)?.to ?? track.properties.to, y } })}
               defaultValue={100}
+              bindAdornment={!override ? bindButton(`move.to.y`, (rid) => writeBinding(`move.to.y`, rid)) : undefined}
             />
           </div>
         </div>
@@ -576,6 +658,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
+              bindAdornment={!override ? bindButton(`rotate.from`, (rid) => writeBinding(`rotate.from`, rid)) : undefined}
             />
             <NumberField
               label="To Rotation"
@@ -583,6 +666,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
+              bindAdornment={!override ? bindButton(`rotate.to`, (rid) => writeBinding(`rotate.to`, rid)) : undefined}
             />
           </div>
         </div>
@@ -599,6 +683,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               step={0.1}
               min={0}
               defaultValue={1}
+              bindAdornment={!override ? bindButton(`scale.from`, (rid) => writeBinding(`scale.from`, rid)) : undefined}
             />
             <NumberField
               label="To"
@@ -607,6 +692,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               step={0.1}
               min={0}
               defaultValue={1.5}
+              bindAdornment={!override ? bindButton(`scale.to`, (rid) => writeBinding(`scale.to`, rid)) : undefined}
             />
           </div>
         </div>
@@ -624,6 +710,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               min={0}
               max={1}
               defaultValue={1}
+              bindAdornment={!override ? bindButton(`fade.from`, (rid) => writeBinding(`fade.from`, rid)) : undefined}
             />
             <NumberField
               label="To Opacity"
@@ -633,6 +720,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               min={0}
               max={1}
               defaultValue={0.5}
+              bindAdornment={!override ? bindButton(`fade.to`, (rid) => writeBinding(`fade.to`, rid)) : undefined}
             />
           </div>
         </div>
@@ -651,8 +739,8 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
             ]}
           />
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} />
-            <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} />
+            <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} bindAdornment={!override ? bindButton(`color.from`, (rid) => writeBinding(`color.from`, rid)) : undefined} />
+            <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} bindAdornment={!override ? bindButton(`color.to`, (rid) => writeBinding(`color.to`, rid)) : undefined} />
           </div>
         </div>
       )}

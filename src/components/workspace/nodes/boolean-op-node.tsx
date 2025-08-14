@@ -4,7 +4,7 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
-import type { BooleanOpNodeData } from "@shared/types/nodes";
+import type { BooleanOpNodeData } from "@/shared/types/nodes";
 import { Binary } from "lucide-react";
 
 export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
