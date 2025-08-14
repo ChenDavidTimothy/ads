@@ -17,6 +17,7 @@ export class SmartStorageProvider implements StorageProvider {
   private readonly tempDir: string;
   private readonly logger: Console;
   private readonly healthMonitor: StorageHealthMonitor;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(userId?: string) {
     this.userId = userId;
@@ -334,7 +335,7 @@ export class SmartStorageProvider implements StorageProvider {
   }
 
   private startCleanupInterval(): void {
-    setInterval(async () => {
+    this.cleanupInterval = setInterval(async () => {
       try {
         await this.cleanupOldTempFiles();
       } catch (error) {
@@ -362,6 +363,18 @@ export class SmartStorageProvider implements StorageProvider {
         }
       }
     } catch (error) {
+      // If the temp directory was removed externally (e.g., OS cleanup), recreate it silently
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === 'ENOENT') {
+        try {
+          await fs.promises.mkdir(this.tempDir, { recursive: true });
+          this.logger.warn(`Temp directory missing; recreated at ${this.tempDir}`);
+          return;
+        } catch (mkdirErr) {
+          this.logger.error('Failed to recreate temp directory:', mkdirErr);
+          return;
+        }
+      }
       this.logger.error('Failed to read temp directory for cleanup:', error);
     }
   }
@@ -373,6 +386,10 @@ export class SmartStorageProvider implements StorageProvider {
   // Cleanup method for graceful shutdown
   async cleanup(): Promise<void> {
     try {
+      if (this.cleanupInterval) {
+        clearInterval(this.cleanupInterval);
+        this.cleanupInterval = null;
+      }
       // Remove temp directory and all contents
       await fs.promises.rm(this.tempDir, { recursive: true, force: true });
       this.logger.info('SmartStorageProvider cleanup completed');
