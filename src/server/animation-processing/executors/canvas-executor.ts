@@ -26,6 +26,33 @@ export class CanvasNodeExecutor extends BaseExecutor {
       'input'
     );
 
+    // Resolve variable bindings (Result nodes) at node level
+    const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
+    const readVar = (key: string): unknown => {
+      const rid = bindings[key]?.boundResultNodeId;
+      if (!rid) return undefined;
+      return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+    };
+    // Apply bound values to node defaults
+    const pos = readVar('position');
+    if (pos && typeof pos === 'object' && pos !== null && 'x' in (pos as any) && 'y' in (pos as any)) {
+      data.position = { x: Number((pos as any).x), y: Number((pos as any).y) };
+    }
+    const rot = readVar('rotation');
+    if (typeof rot === 'number') data.rotation = rot;
+    const scale = readVar('scale');
+    if (scale && typeof scale === 'object' && scale !== null && 'x' in (scale as any) && 'y' in (scale as any)) {
+      data.scale = { x: Number((scale as any).x), y: Number((scale as any).y) };
+    }
+    const opacity = readVar('opacity');
+    if (typeof opacity === 'number') data.opacity = opacity;
+    const fill = readVar('fillColor');
+    if (typeof fill === 'string') data.fillColor = fill;
+    const stroke = readVar('strokeColor');
+    if (typeof stroke === 'string') data.strokeColor = stroke;
+    const strokeW = readVar('strokeWidth');
+    if (typeof strokeW === 'number') data.strokeWidth = strokeW;
+
     const passThrough: unknown[] = [];
 
     const canvasOverrides: CanvasOverrides = {

@@ -358,7 +358,9 @@ export const NODE_DEFINITIONS = {
       inputs: [
         { id: 'input', type: 'data', label: 'Value' }
       ],
-      outputs: []
+      outputs: [
+        { id: 'output', type: 'data', label: 'Value' }
+      ]
     },
     properties: {
       properties: [

@@ -9,6 +9,7 @@ import type { PerObjectAssignments, ObjectAssignments } from '@/shared/propertie
 import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { EditorShell } from './common/editor-shell';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
+import { Link as LinkIcon } from 'lucide-react';
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
@@ -59,12 +60,23 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 		<EditorShell
 			title="Canvas"
 			left={(
-				<ObjectSelectionPanel
-					items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
-					selectedId={selectedObjectId}
-					onSelect={(id) => setSelectedObjectId(id)}
-					emptyLabel="No upstream objects"
-				/>
+				<div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
+					<div className="space-y-[var(--space-3)]">
+						<div>
+							<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
+							<CanvasDefaultProperties nodeId={nodeId} />
+						</div>
+						<div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
+							<ObjectSelectionPanel
+								items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
+								selectedId={selectedObjectId}
+								onSelect={(id) => setSelectedObjectId(id)}
+								emptyLabel="No upstream objects"
+								title="Objects"
+							/>
+						</div>
+					</div>
+				</div>
 			)}
 			center={(
 				<div className="flex-1 p-[var(--space-4)]">
@@ -109,6 +121,112 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	);
 }
 
+function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
+	const { state, updateFlow } = useWorkspace();
+	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
+	const data = (node?.data ?? {}) as Record<string, unknown> & {
+		position?: { x: number; y: number };
+		scale?: { x: number; y: number };
+		rotation?: number;
+		opacity?: number;
+		fillColor?: string;
+		strokeColor?: string;
+		strokeWidth?: number;
+		variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+	};
+	const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+
+	const variables = (() => {
+		const tracker = new FlowTracker();
+		return tracker.getAvailableResultVariables(nodeId, state.flow.nodes as any, state.flow.edges as any);
+	})();
+
+	const [openMenu, setOpenMenu] = useState<string | null>(null);
+	const bindButton = (key: string) => (
+		<div className="relative inline-block">
+			<button className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable" onClick={() => setOpenMenu(prev => prev === key ? null : key)}>
+				<LinkIcon size={14} />
+			</button>
+			{openMenu === key && (
+				<div className="absolute right-0 z-10 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[160px]">
+					{variables.length === 0 ? (
+						<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+					) : variables.map(v => (
+						<div key={v.id} className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer" onClick={() => {
+							persistBinding(key, v.id);
+							setOpenMenu(null);
+						}}>
+							{v.name}
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+
+	const persistBinding = (key: string, resultNodeId: string) => {
+		updateFlow({
+			nodes: state.flow.nodes.map((n) => {
+				if (((n as any).data?.identifier?.id) !== nodeId) return n;
+				const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+				const next = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
+				return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
+			})
+		});
+	};
+
+	return (
+		<div className="space-y-[var(--space-2)]">
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
+					<NumberField label="" value={(data.position?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { x, y: (data.position?.y ?? 0) } } } as any)) })} defaultValue={0} bindAdornment={bindButton('position')} />
+				</div>
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
+					<NumberField label="" value={(data.position?.y as number) ?? NaN} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { x: (data.position?.x ?? 0), y } } } as any)) })} defaultValue={0} />
+				</div>
+			</div>
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
+					<NumberField label="" value={(data.scale?.x as number) ?? NaN} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { x, y: (data.scale?.y ?? 1) } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={bindButton('scale')} />
+				</div>
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
+					<NumberField label="" value={(data.scale?.y as number) ?? NaN} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { x: (data.scale?.x ?? 1), y } } } as any)) })} defaultValue={1} min={0} step={0.1} />
+				</div>
+			</div>
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
+					<NumberField label="" value={(data.rotation as number) ?? NaN} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={bindButton('rotation')} />
+				</div>
+				<div>
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
+					<NumberField label="" value={(data.opacity as number) ?? NaN} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={bindButton('opacity')} />
+				</div>
+			</div>
+			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
+				<div>
+					<ColorField label="Fill" value={(data.fillColor as string) ?? ''} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={bindButton('fillColor')} />
+				</div>
+				<div>
+					<ColorField label="Stroke" value={(data.strokeColor as string) ?? ''} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={bindButton('strokeColor')} />
+				</div>
+				<div>
+					<NumberField label="Stroke W" value={(data.strokeWidth as number) ?? NaN} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={bindButton('strokeWidth')} />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Show a small configured marker for per-object overrides
+function ConfiguredLabel() {
+	return <span className="ml-1 text-[var(--text-tertiary)]">(configured)</span>;
+}
+
 function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, onClear }: {
 	nodeId: string;
 	objectId: string;
@@ -136,11 +254,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X {initial.position?.x !== undefined ? <ConfiguredLabel /> : null}</label>
 					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position Y {initial.position?.y !== undefined ? <ConfiguredLabel /> : null}</label>
 					<NumberField label="" value={(initial.position?.y as number) ?? NaN} onChange={(y) => onChange({ position: { x: initial.position?.x ?? 0, y } })} defaultValue={0} />
 				</div>
 			</div>
@@ -158,11 +276,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation {initial.rotation !== undefined ? <ConfiguredLabel /> : null}</label>
 					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity {initial.opacity !== undefined ? <ConfiguredLabel /> : null}</label>
 					<NumberField label="" value={(initial.opacity as number) ?? NaN} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} />
 				</div>
 			</div>

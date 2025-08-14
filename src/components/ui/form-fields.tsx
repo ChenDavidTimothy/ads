@@ -43,6 +43,7 @@ interface NumberFieldProps {
 	step?: number;
 	defaultValue?: number;
 	className?: string;
+	bindAdornment?: React.ReactNode;
 }
 
 export function NumberField({
@@ -55,7 +56,8 @@ export function NumberField({
 	max,
 	step,
 	defaultValue,
-	className
+	className,
+	bindAdornment
 }: NumberFieldProps) {
 	const [inputValue, setInputValue] = useState(value.toString());
 	const [internalError, setInternalError] = useState<string>("");
@@ -122,16 +124,24 @@ export function NumberField({
 
 	return (
 		<FormField label={label} required={required} error={displayError} className={className}>
-			<Input
-				type="number"
-				value={inputValue}
-				onChange={handleChange}
-				onBlur={handleBlur}
-				error={!!displayError}
-				min={min}
-				max={max}
-				step={step}
-			/>
+			<div className="relative">
+				<Input
+					type="number"
+					value={inputValue}
+					onChange={handleChange}
+					onBlur={handleBlur}
+					error={!!displayError}
+					min={min}
+					max={max}
+					step={step}
+					className={bindAdornment ? 'pr-9' : undefined}
+				/>
+				{bindAdornment && (
+					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+						{bindAdornment}
+					</div>
+				)}
+			</div>
 		</FormField>
 	);
 }
@@ -143,6 +153,7 @@ interface ColorFieldProps {
 	required?: boolean;
 	error?: string;
 	className?: string;
+	bindAdornment?: React.ReactNode;
 }
 
 export function ColorField({
@@ -151,17 +162,25 @@ export function ColorField({
 	onChange,
 	required = true,
 	error,
-	className
+	className,
+	bindAdornment
 }: ColorFieldProps) {
 	return (
 		<FormField label={label} required={required} error={error} className={className}>
-			<Input
-				type="color"
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				error={!!error}
-				className="h-12"
-			/>
+			<div className="relative">
+				<Input
+					type="color"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					error={!!error}
+					className={`h-12 ${bindAdornment ? 'pr-9' : ''}`}
+				/>
+				{bindAdornment && (
+					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+						{bindAdornment}
+					</div>
+				)}
+			</div>
 		</FormField>
 	);
 }

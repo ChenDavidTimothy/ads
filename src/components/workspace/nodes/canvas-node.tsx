@@ -89,6 +89,7 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
             <span className="text-[var(--text-primary)] font-medium text-xs">{data.strokeWidth}px</span>
           </div>
         </div>
+        <div className="text-[var(--text-tertiary)] text-[10px] pt-1">Defaults and bindings can be configured in Canvas tab</div>
       </CardContent>
     </Card>
   );

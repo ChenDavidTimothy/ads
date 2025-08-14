@@ -372,4 +372,48 @@ export class FlowTracker {
     
     return traverse(nodeId);
   }
+
+  // Discover upstream Result nodes for variable binding
+  getUpstreamResultNodes(
+    nodeId: string,
+    allNodes: Node<NodeData>[],
+    allEdges: Edge[]
+  ): Node<NodeData>[] {
+    const result: Node<NodeData>[] = [];
+    const visited = new Set<string>();
+    const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
+    const canonicalEdges = canonicalizeEdges(
+      allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
+      allEdges as unknown as Array<{ source: string; target: string }>
+    );
+    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
+      return allNodes.find((n) => n.data.identifier.id === identifierId);
+    };
+    const traverseUpstream = (currentId: string) => {
+      if (visited.has(currentId)) return;
+      visited.add(currentId);
+      const current = getNodeByIdentifierId(currentId);
+      if (!current) return;
+      if (current.type === 'result') {
+        result.push(current);
+      }
+      const incoming = canonicalEdges.filter((e: { target: string }) => e.target === currentId);
+      for (const e of incoming) traverseUpstream(e.source);
+    };
+    const start = toCanonicalId(nodeId, idMap);
+    traverseUpstream(start);
+    return result.sort((a, b) => a.data.identifier.displayName.localeCompare(b.data.identifier.displayName));
+  }
+
+  // Build a compact list of available variable bindings for UI
+  getAvailableResultVariables(
+    nodeId: string,
+    allNodes: Node<NodeData>[],
+    allEdges: Edge[]
+  ): Array<{ id: string; name: string }>{
+    return this.getUpstreamResultNodes(nodeId, allNodes, allEdges).map((n) => ({
+      id: n.data.identifier.id,
+      name: n.data.identifier.displayName,
+    }));
+  }
 }

@@ -81,6 +81,8 @@ export interface ConstantsNodeData extends BaseNodeData {
 // Result node data
 export interface ResultNodeData extends BaseNodeData {
   label: string;
+  lastValue?: unknown;
+  lastValueType?: string;
 }
 
 // Animation track properties - aligned with API schema
@@ -166,6 +168,12 @@ export interface AnimationNodeData extends BaseNodeData {
   duration: number;
   tracks: AnimationTrack[];
   perObjectAssignments?: PerObjectAssignments;
+  // Node-level variable bindings (defaults) for transform properties
+  variableBindings?: Record<string, {
+    // propertyKey e.g., "duration", "move.from.x", "color.property"
+    target?: string;
+    boundResultNodeId?: string; // selected Result node identifier.id
+  }>;
 }
 
 // Scene node data
@@ -189,6 +197,11 @@ export interface CanvasNodeData extends BaseNodeData {
   strokeColor: string;
   strokeWidth: number;
   perObjectAssignments?: PerObjectAssignments;
+  // Node-level variable bindings for canvas defaults
+  variableBindings?: Record<string, {
+    target?: string;
+    boundResultNodeId?: string;
+  }>;
 }
 
 // Frame node data (static image output configuration)

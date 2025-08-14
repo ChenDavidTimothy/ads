@@ -85,6 +85,8 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
             No tracks
           </div>
         )}
+
+        <div className="text-[var(--text-tertiary)] text-[10px] pt-1">Variables can be bound in the timeline editor</div>
       </CardContent>
 
       {/* Single output port */}
