@@ -20,6 +20,7 @@ import type {
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
+import { BindButton } from '@/components/workspace/binding/bindings';
 
 interface PropertyPanelProps {
   node: Node<NodeData>;
@@ -239,6 +240,10 @@ function SchemaBasedProperties({
       if (schema.key === 'colorValue' && data.valueType !== 'color') return null;
     }
 
+    // Only nodes that support variableBindings get the bind adornment (animation, canvas)
+    const supportsBinding = nodeType === 'animation' || nodeType === 'canvas';
+    const nodeId = (data as any)?.identifier?.id as string | undefined;
+
     switch (schema.type) {
       case 'number':
         return (
@@ -251,6 +256,7 @@ function SchemaBasedProperties({
             max={schema.max}
             step={schema.step}
             defaultValue={schema.defaultValue}
+            bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
           />
         );
 
@@ -261,6 +267,7 @@ function SchemaBasedProperties({
             label={schema.label}
             value={value as string}
             onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+            bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
           />
         );
 
@@ -276,6 +283,7 @@ function SchemaBasedProperties({
               onChange({ [schema.key]: casted } as Partial<NodeData>);
             }}
             options={schema.options}
+            bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
           />
         );
 
@@ -292,6 +300,7 @@ function SchemaBasedProperties({
                 value={point.x}
                 onChange={(x) => onChange({ [schema.key]: { ...point, x } } as Partial<NodeData>)}
                 defaultValue={0}
+                bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
               />
               <NumberField
                 label="Y"

@@ -193,6 +193,7 @@ interface SelectFieldProps {
 	required?: boolean;
 	error?: string;
 	className?: string;
+	bindAdornment?: React.ReactNode;
 }
 
 export function SelectField({
@@ -202,20 +203,29 @@ export function SelectField({
 	options,
 	required = true,
 	error,
-	className
+	className,
+	bindAdornment
 }: SelectFieldProps) {
 	return (
 		<FormField label={label} required={required} error={error} className={className}>
-			<Select
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-			>
-				{options.map(option => (
-					<option key={option.value} value={option.value}>
-						{option.label}
-					</option>
-				))}
-			</Select>
+			<div className="relative">
+				<Select
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					className={bindAdornment ? 'pr-9' : undefined}
+				>
+					{options.map(option => (
+						<option key={option.value} value={option.value}>
+							{option.label}
+						</option>
+					))}
+				</Select>
+				{bindAdornment && (
+					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+						{bindAdornment}
+					</div>
+				)}
+			</div>
 		</FormField>
 	);
 }
