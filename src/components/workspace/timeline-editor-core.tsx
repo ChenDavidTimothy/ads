@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
@@ -458,6 +458,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
               const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
               return tr;
             })()}
+            animationNodeId={animationNodeId}
           />
         ) : (
           <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
@@ -474,9 +475,10 @@ interface TrackPropertiesProps {
   onDisplayNameChange: (trackId: string, newName: string) => boolean;
   validateDisplayName: (name: string, trackId: string) => string | null;
   override?: TrackOverride | undefined;
+  animationNodeId: string;
 }
 
-function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, override }: TrackPropertiesProps) {
+function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, override, animationNodeId }: TrackPropertiesProps) {
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -532,12 +534,14 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
     [track.type, track.properties, onChange, override],
   );
 
-  const [showBindMenuFor, setShowBindMenuFor] = useState<string | null>(null);
+  // Variable discovery uses animationNodeId to mirror object discovery behavior
   const { state, updateFlow } = useWorkspace();
-  const variables = (() => {
+  const variables = useMemo(() => {
     const tracker = new FlowTracker();
-    return tracker.getAvailableResultVariables(track.identifier.id.split(':')[0] ?? '', state.flow.nodes as any, state.flow.edges as any);
-  })();
+    return tracker.getAvailableResultVariables(animationNodeId, state.flow.nodes as any, state.flow.edges as any);
+  }, [animationNodeId, state.flow.nodes, state.flow.edges]);
+  const [showBindMenuFor, setShowBindMenuFor] = useState<string | null>(null);
+
   const bindButton = (fieldKey: string, onBind: (resultNodeId: string) => void) => (
     <div className="relative">
       <button type="button" onClick={() => setShowBindMenuFor(prev => prev === fieldKey ? null : fieldKey)} className="p-1 rounded hover:bg-[var(--surface-interactive)]" title="Bind to Result variable">
