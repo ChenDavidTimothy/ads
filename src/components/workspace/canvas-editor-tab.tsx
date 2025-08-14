@@ -67,7 +67,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 				/>
 			)}
 			center={(
-				<div className="flex-1 p-4">
+				<div className="flex-1 p-[var(--space-4)]">
 					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
 						No timeline for Canvas. Select an object on the left to edit its overrides.
 					</div>
@@ -86,13 +86,13 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 					<div className="text-[var(--text-tertiary)] text-sm">Select an object to edit its overrides</div>
 				)
 			)}
-			rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Properties</h3>}
+			rightHeader={<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>}
 			onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
 			headerExtras={(
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-[var(--space-2)]">
 					<span className="text-xs text-[var(--text-tertiary)]">Object:</span>
 					<select
-						className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
+						className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-[var(--space-2)] py-[var(--space-1)] rounded border border-[var(--border-primary)]"
 						value={selectedObjectId ?? ''}
 						onChange={(e) => setSelectedObjectId(e.target.value || null)}
 					>
@@ -128,13 +128,13 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	};
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-[var(--space-3)]">
 			<div className="flex items-center justify-between">
 				<span className="text-xs text-[var(--text-tertiary)]">Editing overrides for</span>
 				<button className="text-xs text-[var(--danger-500)] hover:text-[var(--danger-600)]" onClick={onClear}>Clear for this object</button>
 			</div>
 
-			<div className="grid grid-cols-2 gap-2">
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
 					<NumberField label="" value={(initial.position?.x as number) ?? NaN} onChange={(x) => onChange({ position: { x, y: initial.position?.y ?? 0 } })} defaultValue={0} />
@@ -145,7 +145,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-2">
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
 					<NumberField label="" value={(initial.scale?.x as number) ?? NaN} onChange={(x) => onChange({ scale: { x, y: initial.scale?.y ?? 1 } })} defaultValue={1} min={0} step={0.1} />
@@ -156,7 +156,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-2">
+			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
 					<NumberField label="" value={(initial.rotation as number) ?? NaN} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} />
@@ -167,7 +167,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 				</div>
 			</div>
 
-			<div className="grid grid-cols-3 gap-2 items-end">
+			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
 					<ColorField label="Fill" value={(initial.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} />
 				</div>

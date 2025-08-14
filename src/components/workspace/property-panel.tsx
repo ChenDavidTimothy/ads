@@ -56,7 +56,6 @@ function isConstantsNodeData(data: NodeData): data is ConstantsNodeData {
   return 'valueType' in data;
 }
 
-
 export function PropertyPanel({ 
   node, 
   onChange, 
@@ -95,15 +94,15 @@ export function PropertyPanel({
   const currentError = editingName ? validateDisplayName(tempDisplayName, node.data.identifier.id) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[var(--space-4)]">
       {/* Node Identification Section */}
-      <div className="space-y-3 pb-4 border-b border-gray-600">
+      <div className="space-y-[var(--space-3)] pb-[var(--space-4)] border-b border-gray-600">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-[var(--space-2)]">
             Node Name
           </label>
           {editingName ? (
-            <div className="space-y-2">
+            <div className="space-y-[var(--space-2)]">
               <Input
                 value={tempDisplayName}
                 onChange={(e) => setTempDisplayName(e.target.value)}
@@ -121,7 +120,7 @@ export function PropertyPanel({
               {currentError && (
                 <div className="text-xs text-red-400">{currentError}</div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-[var(--space-2)]">
                 <Button
                   onClick={handleSaveDisplayName}
                   disabled={!!currentError}
@@ -201,13 +200,13 @@ export function PropertyPanel({
       )}
 
       {nodeDefinition.execution.category === 'output' && isFrameNodeData(node.data) && (
-        <div className="space-y-2 text-xs text-gray-400">
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
           <div>Image output will be rendered as {node.data.format.toUpperCase()}.</div>
         </div>
       )}
 
       {nodeDefinition.execution.category === 'animation' && isCanvasNodeData(node.data) && (
-        <div className="space-y-2 text-xs text-gray-400">
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
           <div>Double-click the Canvas node to edit in its dedicated tab.</div>
         </div>
       )}
@@ -283,11 +282,11 @@ function SchemaBasedProperties({
       case 'point2d':
         const point = (value as { x: number; y: number }) ?? { x: 0, y: 0 };
         return (
-          <div key={schema.key} className="space-y-2">
+          <div key={schema.key} className="space-y-[var(--space-2)]">
             <label className="block text-sm font-medium text-gray-300">
               {schema.label}
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label="X"
                 value={point.x}
@@ -306,7 +305,7 @@ function SchemaBasedProperties({
 
       case 'range':
         return (
-          <div key={schema.key} className="space-y-1">
+          <div key={schema.key} className="space-y-[var(--space-1)]">
             <label className="block text-xs text-gray-400">
               {schema.label} {typeof value === 'number' ? `(${value})` : ''}
             </label>
@@ -329,7 +328,7 @@ function SchemaBasedProperties({
 
       case 'boolean':
         return (
-          <div key={schema.key} className="flex items-center space-x-2">
+          <div key={schema.key} className="flex items-center gap-[var(--space-2)]">
             <input
               type="checkbox"
               checked={value as boolean}
@@ -342,7 +341,7 @@ function SchemaBasedProperties({
 
       case 'string':
         return (
-          <div key={schema.key} className="space-y-1">
+          <div key={schema.key} className="space-y-[var(--space-1)]">
             <label className="block text-sm font-medium text-gray-300">
               {schema.label}
             </label>
@@ -412,13 +411,13 @@ function FilterSpecialProperties({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[var(--space-4)]">
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-[var(--space-3)]">
           <label className="block text-sm font-medium text-gray-300">
             Object Selection
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-[var(--space-2)]">
             <Button 
               onClick={handleSelectAll} 
               variant="ghost" 
@@ -438,13 +437,13 @@ function FilterSpecialProperties({
         </div>
 
         {upstreamObjects.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-4 bg-gray-700 rounded border-2 border-dashed border-gray-600">
+          <div className="text-xs text-gray-500 text-center py-[var(--space-4)] bg-gray-700 rounded-[var(--radius-sm)] border-2 border-dashed border-gray-600">
             No upstream objects available.
             <br />
             Connect geometry nodes to see filtering options.
           </div>
         ) : (
-          <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-700 rounded p-3">
+          <div className="space-y-[var(--space-2)] max-h-48 overflow-y-auto bg-gray-700 rounded-[var(--radius-sm)] p-[var(--space-3)]">
             {upstreamObjects.map((objectNode) => {
               const isSelected = selectedIds.has(objectNode.data.identifier.id);
               const nodeDefinition = getNodeDefinition(objectNode.type!);
@@ -452,7 +451,7 @@ function FilterSpecialProperties({
               return (
                 <div 
                   key={objectNode.data.identifier.id}
-                  className="flex items-center space-x-3 py-1"
+                  className="flex items-center gap-[var(--space-3)] py-[var(--space-1)]"
                 >
                   <input
                     type="checkbox"
@@ -460,7 +459,7 @@ function FilterSpecialProperties({
                     onChange={() => handleToggleObject(objectNode.data.identifier.id)}
                     className="rounded"
                   />
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="flex items-center gap-[var(--space-2)] flex-1 min-w-0">
                     <div 
                       className="w-4 h-4 rounded border border-gray-400 flex-shrink-0 flex items-center justify-center text-xs"
                       style={{ 
@@ -482,7 +481,7 @@ function FilterSpecialProperties({
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
+        <div className="flex items-center justify-between text-xs text-gray-400 mt-[var(--space-2)]">
           <span>Selected: {data.selectedObjectIds.length}</span>
           <span>Available: {upstreamObjects.length}</span>
         </div>
@@ -499,11 +498,11 @@ interface AnimationSpecialProps {
 function AnimationSpecialProperties({ data }: AnimationSpecialProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-1">Tracks</label>
+      <label className="block text-sm font-medium text-gray-300 mb-[var(--space-1)]">Tracks</label>
       <div className="text-xs text-gray-400">
         {data.tracks?.length ?? 0} animation tracks defined
       </div>
-      <div className="text-xs text-blue-400 mt-2">
+      <div className="text-xs text-blue-400 mt-[var(--space-2)]">
         Double-click the node to edit timeline
       </div>
     </div>
@@ -517,10 +516,10 @@ interface SceneSpecialProps {
 
 function SceneSpecialProperties({ onChange }: SceneSpecialProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-[var(--space-4)]">
       <div>
-        <h4 className="text-sm font-semibold text-white mb-3">Resolution Presets</h4>
-        <div className="flex gap-2 flex-wrap">
+        <h4 className="text-sm font-semibold text-white mb-[var(--space-3)]">Resolution Presets</h4>
+        <div className="flex gap-[var(--space-2)] flex-wrap">
           {RESOLUTION_PRESETS.map(preset => (
             <Button
               key={preset.label}

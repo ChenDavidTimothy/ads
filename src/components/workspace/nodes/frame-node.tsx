@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { FrameNodeData } from "@/shared/types/nodes";
+import { Image as ImageIcon } from "lucide-react";
 
 export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
   const nodeDefinition = getNodeDefinition('frame');
@@ -34,8 +35,8 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            🖨️
+          <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <ImageIcon size={12} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-[var(--text-primary)] truncate">
@@ -48,7 +49,7 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
+      <CardContent className="p-0 space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
         <div className="flex items-center justify-between">
           <span>Resolution:</span>
           <span className="text-[var(--text-primary)] font-medium">
@@ -81,7 +82,7 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
           </div>
         )}
 
-        <div className="mt-4 pt-3 border-t border-[var(--border-primary)] text-center text-xs text-[var(--text-tertiary)]">
+        <div className="mt-[var(--space-4)] pt-[var(--space-3)] border-t border-[var(--border-primary)] text-center text-xs text-[var(--text-tertiary)]">
           Final Image Output
         </div>
       </CardContent>

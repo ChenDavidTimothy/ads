@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { RectangleNodeData } from "@/shared/types/nodes";
+import { Square } from "lucide-react";
 
 export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) {
   const nodeDefinition = getNodeDefinition('rectangle');
@@ -14,10 +15,10 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div 
-            className="w-6 h-4 flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-xs"
+            className="w-6 h-4 flex items-center justify-center rounded text-[var(--text-primary)]"
             style={{ backgroundColor: data.color }}
           >
-            ▬
+            <Square size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}

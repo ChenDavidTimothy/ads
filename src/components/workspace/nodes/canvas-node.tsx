@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { CanvasNodeData } from "@/shared/types/nodes";
+import { Palette } from "lucide-react";
 
 type CanvasNodeProps = NodeProps<CanvasNodeData> & { onOpenCanvas?: () => void };
 
@@ -49,8 +50,8 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-geometry)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            🖼️
+          <div className="w-6 h-6 bg-[var(--node-geometry)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <Palette size={12} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-[var(--text-primary)] truncate">

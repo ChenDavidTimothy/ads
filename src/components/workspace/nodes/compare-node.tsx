@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { CompareNodeData } from "@/shared/types/nodes";
+import { Equal } from "lucide-react";
 
 export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
   const nodeDefinition = getNodeDefinition('compare');
@@ -49,8 +50,8 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            ≷
+          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <Equal size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
@@ -73,7 +74,7 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--success-100)] text-[var(--success-700)] px-2 py-1 rounded">
+          <span className="bg-[var(--success-100)] text-[var(--success-700)] px-2 py-1 rounded-[var(--radius-sm)]">
             Boolean Output
           </span>
         </div>

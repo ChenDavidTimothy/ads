@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
 import type { MathOpNodeData } from "@/shared/types/nodes";
+import { Calculator } from "lucide-react";
 
 export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
   const nodeDefinition = getNodeDefinitionWithDynamicPorts('math_op', data as unknown as Record<string, unknown>);
@@ -59,8 +60,8 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            🧮
+          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <Calculator size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
@@ -86,7 +87,7 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded">
+          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded-[var(--radius-sm)]">
             Number Math
           </span>
         </div>
