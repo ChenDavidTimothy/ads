@@ -15,6 +15,7 @@ import type {
   FadeTrackProperties,
   ColorTrackProperties,
 } from "@/shared/types/nodes";
+import { deepMerge } from '@/shared/utils/object-path';
 import { 
   isMoveTrack, 
   isRotateTrack, 
@@ -481,7 +482,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           if (override) {
             onChange({ properties: updates as any });
           } else {
-            const mergedProps: MoveTrackProperties = { ...(track.properties as MoveTrackProperties), ...(updates as Partial<MoveTrackProperties>) } as MoveTrackProperties;
+            const mergedProps: MoveTrackProperties = deepMerge(track.properties as MoveTrackProperties, updates as Partial<MoveTrackProperties>);
             onChange({ properties: mergedProps });
           }
           break;
@@ -490,7 +491,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           if (override) {
             onChange({ properties: updates as any });
           } else {
-            const mergedProps: RotateTrackProperties = { ...(track.properties as RotateTrackProperties), ...(updates as Partial<RotateTrackProperties>) } as RotateTrackProperties;
+            const mergedProps: RotateTrackProperties = deepMerge(track.properties as RotateTrackProperties, updates as Partial<RotateTrackProperties>);
             onChange({ properties: mergedProps });
           }
           break;
@@ -499,7 +500,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           if (override) {
             onChange({ properties: updates as any });
           } else {
-            const mergedProps: ScaleTrackProperties = { ...(track.properties as ScaleTrackProperties), ...(updates as Partial<ScaleTrackProperties>) } as ScaleTrackProperties;
+            const mergedProps: ScaleTrackProperties = deepMerge(track.properties as ScaleTrackProperties, updates as Partial<ScaleTrackProperties>);
             onChange({ properties: mergedProps });
           }
           break;
@@ -508,7 +509,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           if (override) {
             onChange({ properties: updates as any });
           } else {
-            const mergedProps: FadeTrackProperties = { ...(track.properties as FadeTrackProperties), ...(updates as Partial<FadeTrackProperties>) } as FadeTrackProperties;
+            const mergedProps: FadeTrackProperties = deepMerge(track.properties as FadeTrackProperties, updates as Partial<FadeTrackProperties>);
             onChange({ properties: mergedProps });
           }
           break;
@@ -517,7 +518,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
           if (override) {
             onChange({ properties: updates as any });
           } else {
-            const mergedProps: ColorTrackProperties = { ...(track.properties as ColorTrackProperties), ...(updates as Partial<ColorTrackProperties>) } as ColorTrackProperties;
+            const mergedProps: ColorTrackProperties = deepMerge(track.properties as ColorTrackProperties, updates as Partial<ColorTrackProperties>);
             onChange({ properties: mergedProps });
           }
           break;
