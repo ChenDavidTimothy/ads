@@ -9,7 +9,8 @@ function TestWorkspaceProvider({ children }: { children: React.ReactNode }) {
 	const mockState: WorkspaceState = {
 		flow: { nodes: [], edges: [] },
 		editors: { timeline: {} as Record<string, TimelineEditorData> },
-		ui: { activeTab: 'timeline', selectedNodeId: 'n1', selectedNodeType: 'animation' }
+		ui: { activeTab: 'timeline', selectedNodeId: 'n1', selectedNodeType: 'animation' },
+		meta: { version: 1, lastModified: new Date(), workspaceId: 'ws1', name: 'Test' }
 	};
 	const value = {
 		state: mockState,

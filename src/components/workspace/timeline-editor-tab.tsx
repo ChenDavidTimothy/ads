@@ -47,7 +47,11 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     const base = idx >= 0 ? list[idx]! : ({ trackId } as TrackOverride);
     const merged: TrackOverride = {
       ...base,
-      ...(updates as TrackOverride),
+      // override scalar fields only if provided
+      ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
+      ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
+      ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
+      // properties merged shallowly to preserve granularity
       properties: { ...(base.properties ?? {}), ...(updates.properties ?? {}) },
     };
     if (idx >= 0) list[idx] = merged; else list.push(merged);
