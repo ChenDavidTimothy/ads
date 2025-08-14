@@ -189,8 +189,11 @@ export function convertTracksToSceneAnimations(
     // 2. End value from previous track of same type in the same sequence
     // 3. End value from prior animations for this object
     // 4. Default 'from' value
-    const hasExplicitFrom = Object.prototype.hasOwnProperty.call(baseTrack.properties ?? {}, 'from');
-    if (!hasExplicitFrom && (properties.from === undefined || isDefaultFrom(baseTrack.type, properties.from))) {
+    // Explicit only when the field is truly overridden (manual per-field override or non-default value)
+    const fromExplicitByOverride = !!(matchedOverride && Object.prototype.hasOwnProperty.call(matchedOverride.properties ?? {}, 'from'));
+    const fromIsNonDefault = !isDefaultFrom(baseTrack.type, (baseTrack as any)?.properties?.from);
+    const isFromExplicit = fromExplicitByOverride || fromIsNonDefault;
+    if (!isFromExplicit && (properties.from === undefined || isDefaultFrom(baseTrack.type, properties.from))) {
       // Try to get from the same sequence first
       let inherited = getEndValueFromSameSequence(baseTrack, sortedTracks, targetProperty);
       

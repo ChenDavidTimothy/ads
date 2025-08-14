@@ -78,6 +78,7 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 	const [open, setOpen] = useState(false);
 	const boundId = getBinding(bindingKey);
 	const boundName = getBoundName(boundId);
+	const isBound = !!boundId;
 
 	return (
 		<div className={`relative ${className ?? ''}`}>
@@ -85,9 +86,10 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 				type="button"
 				title={boundId ? `Bound to ${boundName ?? boundId}` : 'Bind to Result variable'}
 				onClick={() => setOpen(v => !v)}
-				className={`p-1 rounded hover:bg-[var(--surface-interactive)] ${boundId ? 'text-[var(--accent-500)]' : ''}`}
+				className={`relative p-1 rounded hover:bg-[var(--surface-interactive)] ${isBound ? 'text-[var(--accent-500)]' : ''}`}
 			>
 				<LinkIcon size={14} />
+				{isBound && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-500)] rounded-full" />}
 			</button>
 			{open && (
 				<div className="absolute right-0 z-50 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[180px]">
