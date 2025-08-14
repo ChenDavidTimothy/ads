@@ -12,12 +12,12 @@ export function WorkspaceTabContent() {
   switch (activeTab) {
     case 'timeline':
       if (!selectedNodeId || selectedNodeType !== 'animation') {
-        return <div className="h-full w-full flex items-center justify-center text-gray-300">No animation node selected</div>;
+        return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">No animation node selected</div>;
       }
       return <TimelineEditorTab nodeId={selectedNodeId} />;
     case 'canvas':
       if (!selectedNodeId || selectedNodeType !== 'canvas') {
-        return <div className="h-full w-full flex items-center justify-center text-gray-300">No canvas node selected</div>;
+        return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">No canvas node selected</div>;
       }
       return <CanvasEditorTab nodeId={selectedNodeId} />;
     case 'flow':

@@ -359,7 +359,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                   >
                    <div className="flex items-center justify-between h-full px-2">
                       <span className="text-xs font-medium truncate">{track.identifier.displayName}</span>
-                      <span className="text-xs text-white/80">{track.duration.toFixed(1)}s</span>
+                      <span className="text-xs text-[color:rgba(248,249,250,0.8)]">{track.duration.toFixed(1)}s</span>
                     </div>
                   </div>
 

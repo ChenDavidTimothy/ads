@@ -55,7 +55,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   }, [currentAssignments, state.flow.nodes, nodeId, updateFlow]);
 
   if (!data) {
-    return <div className="h-full w-full flex items-center justify-center text-gray-300">Timeline data not found</div>;
+    return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Timeline data not found</div>;
   }
 
   const scheduleUpdate = useCallback(() => {
@@ -133,9 +133,9 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       onBack={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
       headerExtras={(
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">Object:</span>
+          <span className="text-xs text-[var(--text-tertiary)]">Object:</span>
           <select
-            className="bg-gray-800 text-white text-xs px-2 py-1 rounded border border-gray-700"
+            className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
             value={selectedObjectId ?? ''}
             onChange={(e) => setSelectedObjectId(e.target.value || null)}
           >

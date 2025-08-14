@@ -47,7 +47,7 @@ function ToastItem({ notification, onRemove }: ToastItemProps) {
 				variant="ghost"
 				size="sm"
 				onClick={() => onRemove(notification.id)}
-				className="flex-shrink-0 text-current hover:bg-white/10 h-6 w-6 p-0"
+				className="flex-shrink-0 text-current hover:bg-[color:rgba(255,255,255,0.08)] h-6 w-6 p-0"
 				aria-label="Close"
 			>
 				✕
