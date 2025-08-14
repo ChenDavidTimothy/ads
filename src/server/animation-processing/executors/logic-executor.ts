@@ -9,6 +9,7 @@ import { TypeValidationError } from "@/shared/types/validation";
 import { MultipleResultValuesError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
@@ -538,11 +539,12 @@ export class LogicNodeExecutor extends BaseExecutor {
     for (const input of inputs) {
       const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
       if (!fromMeta) continue;
-      for (const [objectId, assignment] of Object.entries(fromMeta)) {
-        if (!allowIds.includes(objectId)) continue;
-        // Last-in wins (closer to this node) for simplicity, consistent with cursor/animations precedence
-        merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
-      }
+              for (const [objectId, assignment] of Object.entries(fromMeta)) {
+          if (!allowIds.includes(objectId)) continue;
+          const base = merged[objectId];
+          const combined = mergeObjectAssignments(base, assignment as any);
+          if (combined) merged[objectId] = combined as ObjectAssignments;
+        }
     }
     return merged;
   }
@@ -557,8 +559,9 @@ export class LogicNodeExecutor extends BaseExecutor {
         if (!fromMeta) continue;
         for (const [objectId, assignment] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
-          // Higher priority port overwrites lower priority
-          merged[objectId] = { ...(merged[objectId] ?? {}), ...assignment };
+          const base = merged[objectId];
+          const combined = mergeObjectAssignments(base, assignment as any);
+          if (combined) merged[objectId] = combined as ObjectAssignments;
         }
       }
     }

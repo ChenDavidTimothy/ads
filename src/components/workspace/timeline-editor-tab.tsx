@@ -45,20 +45,29 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     const list: TrackOverride[] = Array.isArray(obj.tracks) ? [...obj.tracks] : [];
     const idx = list.findIndex(t => t.trackId === trackId);
     const base = idx >= 0 ? list[idx]! : ({ trackId } as TrackOverride);
+    const baseProps = (base.properties ?? {}) as Record<string, unknown>;
+    const updateProps = (updates.properties ?? {}) as Record<string, unknown>;
+    const mergedProps = {
+      ...baseProps,
+      ...updateProps,
+      ...(typeof baseProps.from === 'object' && baseProps.from !== null && typeof updateProps.from === 'object' && updateProps.from !== null
+        ? { from: { ...(baseProps.from as Record<string, unknown>), ...(updateProps.from as Record<string, unknown>) } }
+        : {}),
+      ...(typeof baseProps.to === 'object' && baseProps.to !== null && typeof updateProps.to === 'object' && updateProps.to !== null
+        ? { to: { ...(baseProps.to as Record<string, unknown>), ...(updateProps.to as Record<string, unknown>) } }
+        : {}),
+    } as Record<string, unknown>;
     const merged: TrackOverride = {
       ...base,
-      // override scalar fields only if provided
       ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
       ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
       ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
-      // properties merged shallowly to preserve granularity
-      properties: { ...(base.properties ?? {}), ...(updates.properties ?? {}) },
+      properties: mergedProps,
     };
     if (idx >= 0) list[idx] = merged; else list.push(merged);
     obj.tracks = list;
     next[objectId] = obj;
 
-    // Persist to flow.nodes
     updateFlow({
       nodes: state.flow.nodes.map((n) => {
         if (((n as any)?.data?.identifier?.id) !== nodeId) return n;
