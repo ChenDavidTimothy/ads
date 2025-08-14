@@ -276,9 +276,9 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
+      <div className="flex-1 p-[var(--space-4)] overflow-auto">
+        <div className="flex items-center gap-[var(--space-4)] mb-[var(--space-4)]">
+          <div className="flex items-center gap-[var(--space-2)]">
             <NumberField
               label="Duration (seconds)"
               value={duration}
@@ -292,8 +292,8 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           {/* Save/Cancel removed: unified manual save handled at workspace level */}
         </div>
 
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="mb-[var(--space-4)]">
+          <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-2)]">
             <span className="text-sm font-medium text-[var(--text-secondary)]">Add Track:</span>
             {transformFactory.getAllTransformTypes().map((type) => {
               const trackColors = transformFactory.getTrackColors();
@@ -312,8 +312,8 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           </div>
         </div>
 
-        <div ref={timelineRef} className="relative bg-[var(--surface-0)] rounded-[var(--radius-md)] p-4" style={{ width: `${TIMELINE_WIDTH}px` }}>
-          <div className="relative h-6 mb-4">
+        <div ref={timelineRef} className="relative bg-[var(--surface-0)] rounded-[var(--radius-md)] p-[var(--space-4)]" style={{ width: `${TIMELINE_WIDTH}px` }}>
+          <div className="relative h-6 mb-[var(--space-4)]">
             {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
               <div key={i} className="absolute flex flex-col items-center" style={{ left: `${(i / duration) * 100}%` }}>
                 <div className="w-px h-4 bg-[var(--border-secondary)]" />
@@ -322,11 +322,11 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
             ))}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-[var(--space-3)]">
             {tracks.map((track) => (
               <div key={track.identifier.id} className="relative">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-[var(--space-2)]">
                     <span className="text-sm font-medium text-[var(--text-primary)] w-16">
                       {(() => {
                         const trackIcons = transformFactory.getTrackIcons();
@@ -334,7 +334,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                       })()} {track.type}
                     </span>
                     {selectedTrackId === track.identifier.id && (
-                      <span className="text-xs bg-[var(--accent-600)] text-[var(--text-primary)] px-2 py-1 rounded">SELECTED</span>
+                      <span className="text-xs bg-[var(--accent-600)] text-[var(--text-primary)] px-2 py-1 rounded-[var(--radius-sm)]">SELECTED</span>
                     )}
                   </div>
                   <Button onClick={() => deleteTrack(track.identifier.id)} variant="danger" size="sm" className="text-xs">
@@ -385,14 +385,14 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           {tracks.length === 0 && (
             <div className="text-center py-12 text-[var(--text-tertiary)]">
               <div className="text-lg mb-2">No animation tracks</div>
-              <div className="text-sm mb-4">Click the colored buttons above to add animation tracks</div>
+              <div className="text-sm mb-[var(--space-4)]">Click the colored buttons above to add animation tracks</div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="w-80 border-l border-[var(--border-primary)] p-4 bg-[var(--surface-2)]">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Properties</h3>
+      <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-2)]">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
         {selectedTrack ? (
           <TrackProperties 
             track={selectedTrack} 
@@ -496,17 +496,17 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[var(--space-4)]">
       {/* Name editing (non-breaking): if identifier exists, allow editing */}
       {track.identifier && (
-        <div className="space-y-2 pb-3 border-b border-[var(--border-primary)]">
+        <div className="space-y-[var(--space-2)] pb-[var(--space-3)] border-b border-[var(--border-primary)]">
           <div className="flex items-center justify-between">
             <div className="text-sm text-[var(--text-secondary)]">Transform Name</div>
             <div className="text-xs text-[var(--text-tertiary)]">{getTransformDisplayLabel(track.type)} • #{track.identifier.sequence}</div>
           </div>
-          <div className="flex flex-col gap-1 items-stretch">
+          <div className="flex flex-col gap-[var(--space-1)] items-stretch">
             <input
-              className="bg-[var(--surface-1)] text-[var(--text-primary)] text-sm px-2 py-1 rounded w-full border border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)]"
+              className="bg-[var(--surface-1)] text-[var(--text-primary)] text-sm px-[var(--space-2)] py-[var(--space-1)] rounded w-full border border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)]"
               value={track.identifier.displayName}
               onChange={(e) => {
                 const proposed = e.target.value;
@@ -535,9 +535,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
       />
 
       {isMoveTrack(track) && (
-        <div className="space-y-3">
+        <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)]">Move Properties {override ? '(override)' : ''}</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label="From X"
               value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
@@ -567,9 +567,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
       )}
 
       {isRotateTrack(track) && (
-        <div className="space-y-3">
+        <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)]">Rotate Properties {override ? '(override)' : ''}</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label="From Rotation"
               value={(override?.properties as any)?.from ?? track.properties.from}
@@ -589,9 +589,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
       )}
 
       {isScaleTrack(track) && (
-        <div className="space-y-3">
+        <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)]">Scale Properties {override ? '(override)' : ''}</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label="From"
               value={(override?.properties as any)?.from ?? track.properties.from}
@@ -613,9 +613,9 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
       )}
 
       {isFadeTrack(track) && (
-        <div className="space-y-3">
+        <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)]">Fade Properties {override ? '(override)' : ''}</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label="From Opacity"
               value={(override?.properties as any)?.from ?? track.properties.from}
@@ -639,7 +639,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
       )}
 
       {isColorTrack(track) && (
-        <div className="space-y-3">
+        <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)]">Color Properties {override ? '(override)' : ''}</div>
           <SelectField
             label="Property"
@@ -650,7 +650,7 @@ function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, vali
               { value: "stroke", label: "Stroke" },
             ]}
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <ColorField label="From Color" value={(override?.properties as any)?.from ?? track.properties.from} onChange={(from) => updateProperties({ from })} />
             <ColorField label="To Color" value={(override?.properties as any)?.to ?? track.properties.to} onChange={(to) => updateProperties({ to })} />
           </div>

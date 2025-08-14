@@ -9,6 +9,7 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { ResultNodeData } from "@/shared/types/nodes";
 import { useDebugContext } from "../flow/debug-context";
 import { logger } from "@/lib/logger";
+import { Target } from "lucide-react";
 
 interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;
@@ -46,7 +47,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
   return (
     <Card 
       selected={selected} 
-      className="p-4 min-w-[220px] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" 
+      className="p-[var(--card-padding)] min-w-[var(--node-min-width)] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" 
       onDoubleClick={handleDoubleClick}
     >
       {/* Single input port */}
@@ -61,10 +62,10 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            🎯
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <Target size={12} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-[var(--text-primary)] truncate">
@@ -77,7 +78,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-3">
+      <CardContent className="p-0 space-y-[var(--space-3)]">
         <Button
           onClick={handleRunToHere}
           disabled={isRunning || !onRunToHere}
@@ -88,7 +89,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
           {isRunning ? 'Running...' : 'Run to Here'}
         </Button>
 
-        <div className="bg-[var(--surface-2)] p-3 rounded border border-[var(--border-primary)] text-center">
+        <div className="bg-[var(--surface-2)] p-[var(--space-3)] rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-center">
           <div className="text-xs text-[var(--text-secondary)]">Debug</div>
         </div>
       </CardContent>

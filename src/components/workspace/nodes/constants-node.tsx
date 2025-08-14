@@ -49,9 +49,9 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
   const handleClass = "bg-[var(--node-data)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[180px]">
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-data)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
             {getTypeIcon()}
           </div>
@@ -61,7 +61,7 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2">
+      <CardContent className="p-0 space-y-[var(--space-2)]">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">Type:</span>
           <span className="text-xs text-[var(--text-primary)] font-medium capitalize">
@@ -69,15 +69,15 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
           </span>
         </div>
         
-        <div className="bg-[var(--surface-2)] p-2 rounded border border-[var(--border-primary)]">
-          <div className="text-xs text-[var(--text-tertiary)] mb-1">Current Value:</div>
+        <div className="bg-[var(--surface-2)] p-[var(--space-2)] rounded border border-[var(--border-primary)]">
+          <div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-1)]">Current Value:</div>
           <div className="text-sm text-[var(--text-primary)] font-mono">
             {getValueDisplay()}
           </div>
         </div>
 
         {data.valueType === 'color' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-[var(--space-2)]">
             <div 
               className="w-4 h-4 rounded border border-[var(--border-primary)]"
               style={{ backgroundColor: data.colorValue }}
@@ -86,7 +86,7 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
           </div>
         )}
 
-        <div className="mt-3 pt-2 border-t border-[var(--border-primary)]">
+        <div className="mt-[var(--space-3)] pt-[var(--space-2)] border-t border-[var(--border-primary)]">
           <div className="text-xs text-[var(--text-tertiary)] text-center">
             Constant Value Output
           </div>

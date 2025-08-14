@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { IfElseNodeData } from "@/shared/types/nodes";
+import { GitBranch } from "lucide-react";
 
 export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
   const nodeDefinition = getNodeDefinition('if_else');
@@ -12,7 +13,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[220px]">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
       {/* Condition input port */}
       <Handle
         type="target"
@@ -31,10 +32,10 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         style={{ top: '65%' }}
       />
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            🔀
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <GitBranch size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
@@ -55,7 +56,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded">Data Router</span>
+          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded-[var(--radius-sm)]">Data Router</span>
         </div>
 
         <div className="mt-3 pt-2 border-t border-[var(--border-primary)]">

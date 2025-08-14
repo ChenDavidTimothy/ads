@@ -272,7 +272,7 @@ export function AuthStatus() {
 	// Show loading state
 	if (authState === 'loading') {
 		return (
-			<div className="text-sm flex items-center gap-2">
+			<div className="text-sm flex items-center gap-[var(--space-2)]">
 				<div className="animate-pulse">Checking authentication...</div>
 			</div>
 		);
@@ -281,7 +281,7 @@ export function AuthStatus() {
 	// Show error state
 	if (authState === 'error') {
 		return (
-			<div className="text-sm flex items-center gap-2 text-[var(--danger-500)]">
+			<div className="text-sm flex items-center gap-[var(--space-2)] text-[var(--danger-500)]">
 				<span>Auth error</span>
 				<button 
 					onClick={checkAuthState}
@@ -296,7 +296,7 @@ export function AuthStatus() {
 	// Show authenticated state
 	if (authState === 'authenticated' && email) {
 		return (
-			<div className="text-sm flex items-center gap-3">
+			<div className="text-sm flex items-center gap-[var(--space-3)]">
 				<div className="flex flex-col">
 					<span>Signed in as {email}</span>
 					{timeRemaining && (
@@ -317,7 +317,7 @@ export function AuthStatus() {
 
 	// Show unauthenticated state
 	return (
-		<div className="text-sm flex items-center gap-2">
+		<div className="text-sm flex items-center gap-[var(--space-2)]">
 			<Link href="/auth" className="underline hover:text-[var(--text-secondary)]">
 				Login
 			</Link>

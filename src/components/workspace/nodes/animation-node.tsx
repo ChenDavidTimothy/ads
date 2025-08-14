@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
+import { Clapperboard } from "lucide-react";
 
 interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
   onOpenTimeline?: () => void;
@@ -33,7 +34,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
   const handleClass = "bg-[var(--node-animation)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[200px] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -46,11 +47,11 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-6 h-6 bg-[var(--node-animation)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-              🎬
+          <div className="flex items-center gap-[var(--space-2)] flex-1 min-w-0">
+            <div className="w-6 h-6 bg-[var(--node-animation)] flex items-center justify-center rounded text-[var(--text-primary)]">
+              <Clapperboard size={12} />
             </div>
             <span className="font-semibold text-[var(--text-primary)]">
               {data.identifier.displayName}
@@ -60,7 +61,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2">
+      <CardContent className="p-0 space-y-[var(--space-2)]">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">Tracks:</span>
           <span className="text-xs text-[var(--text-primary)] font-medium">{trackCount}</span>

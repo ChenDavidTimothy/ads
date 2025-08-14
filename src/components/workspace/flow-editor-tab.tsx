@@ -282,7 +282,7 @@ export function FlowEditorTab() {
 		<div className="flex h-full">
 			{!leftSidebarCollapsed && <NodePalette onAddNode={handleAddNode} />}
 			<div className="flex-1 flex flex-col">
-				<div className="h-12 flex items-center px-3 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
+				<div className="h-12 flex items-center px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
 					<ActionsToolbar
 						onGenerate={handleGenerateScene}
 						canGenerate={canGenerate}

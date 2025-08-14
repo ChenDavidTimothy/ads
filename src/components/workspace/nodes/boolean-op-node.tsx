@@ -4,7 +4,8 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
-import type { BooleanOpNodeData } from "@/shared/types/nodes";
+import type { BooleanOpNodeData } from "@shared/types/nodes";
+import { Binary } from "lucide-react";
 
 export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
   const nodeDefinition = getNodeDefinitionWithDynamicPorts('boolean_op', data as unknown as Record<string, unknown>);
@@ -30,7 +31,7 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card selected={selected} className="p-4 min-w-[180px]">
+    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
       {/* Dynamic input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
@@ -43,10 +44,10 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
         />
       ))}
 
-      <CardHeader className="p-0 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
-            ⊙
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+            <Binary size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
@@ -72,7 +73,7 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded">
+          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded-[var(--radius-sm)]">
             Boolean Logic
           </span>
         </div>

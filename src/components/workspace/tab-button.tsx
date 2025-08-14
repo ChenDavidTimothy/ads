@@ -16,8 +16,8 @@ export function TabButton({ active, onClick, icon, label, onClose }: TabButtonPr
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-colors",
-        "border-b-2 min-w-0 max-w-[260px]",
+        "flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-none cursor-pointer transition-colors",
+        "border-b min-w-0 max-w-[var(--tab-max-width)]",
         active ? "bg-[var(--surface-2)] border-[var(--accent-500)] text-[var(--text-primary)]" : "bg-[var(--surface-1)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]"
       )}
       onClick={onClick}
@@ -30,7 +30,7 @@ export function TabButton({ active, onClick, icon, label, onClose }: TabButtonPr
             e.stopPropagation();
             onClose();
           }}
-          className="ml-1 p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+          className="ml-1 p-[var(--space-1)] rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
         >
           <X size={12} />
         </button>

@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 			<input
 				ref={ref}
 				className={cn(
-					"w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] border px-3 py-2 text-[var(--text-primary)] text-sm",
+					"w-full rounded-[var(--radius-sm)] bg-[var(--surface-2)] border px-[var(--space-3)] py-[var(--space-2)] text-[var(--text-primary)] text-sm",
 					"placeholder:text-[var(--text-muted)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
 					error
 						? "border-[var(--danger-500)] focus:outline-none focus:ring-2 focus:ring-[var(--danger-500)] focus:ring-offset-2 focus:ring-offset-[var(--surface-0)]"

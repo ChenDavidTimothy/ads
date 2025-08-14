@@ -14,15 +14,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 			<button
 				ref={ref}
 				className={cn(
-					"inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium transition-all",
+					"inline-flex items-center justify-center rounded-[var(--radius-sm)] font-medium transition-all",
 					"duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
 					"focus:outline-none focus:ring-2 focus:ring-[var(--ring-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-0)]",
 					"disabled:opacity-50 disabled:cursor-not-allowed",
-					// Size variants
+					// Size variants (tokenized)
 					{
-						"px-2 py-1 text-xs": size === "sm",
-						"px-4 py-2 text-sm": size === "md",
-						"px-6 py-3 text-base": size === "lg",
+						"p-[var(--button-padding-sm)] text-[11px] font-medium": size === "sm",
+						"p-[var(--button-padding-md)] text-[13px] font-medium": size === "md",
+						"p-[var(--button-padding-lg)] text-[14px] font-medium": size === "lg",
 					},
 					// Color variants via semantic tokens
 					{

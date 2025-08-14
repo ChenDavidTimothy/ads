@@ -60,7 +60,7 @@ export function Modal({
 				tabIndex={-1}
 			>
 				{title && (
-					<div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+					<div className="flex items-center justify-between p-[var(--space-4)] border-b border-[var(--border-primary)]">
 						<h2 className="text-xl font-bold text-[var(--text-primary)]">{title}</h2>
 						<Button variant="ghost" size="sm" onClick={onClose} aria-label="Close modal">
 							✕
