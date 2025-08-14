@@ -5,7 +5,7 @@ import type { SceneTransform } from "@/shared/types/transforms";
 import { transformFactory } from "@/shared/registry/transforms";
 import { transformEvaluator } from "@/shared/registry/transform-evaluator";
 import type { Point2D } from "@/shared/types/core";
-import type { PerObjectAssignments, TrackOverride } from "@/shared/properties/assignments";
+// Legacy imports removed - using granular system
 
 export type PerObjectCursorMap = Record<string, number>;
 
@@ -39,36 +39,7 @@ export function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]):
   return picked;
 }
 
-function applyTrackOverride(base: AnimationTrack, override: TrackOverride): AnimationTrack {
-  const baseProps = base.properties as unknown as Record<string, unknown>;
-  const overrideProps = (override.properties ?? {}) as Record<string, unknown>;
-  const mergedProps = {
-    ...baseProps,
-    ...overrideProps,
-  } as Record<string, unknown>;
-  // Deep-merge nested 'from'/'to' objects to preserve per-field overrides (e.g., move.from.x)
-  if (typeof baseProps.from === 'object' && baseProps.from !== null && typeof overrideProps.from === 'object' && overrideProps.from !== null) {
-    mergedProps.from = { ...(baseProps.from as Record<string, unknown>), ...(overrideProps.from as Record<string, unknown>) };
-  }
-  if (typeof baseProps.to === 'object' && baseProps.to !== null && typeof overrideProps.to === 'object' && overrideProps.to !== null) {
-    mergedProps.to = { ...(baseProps.to as Record<string, unknown>), ...(overrideProps.to as Record<string, unknown>) };
-  }
-  const merged: AnimationTrack = {
-    ...base,
-    startTime: override.startTime ?? base.startTime,
-    duration: override.duration ?? base.duration,
-    easing: (override.easing ?? base.easing) as AnimationTrack['easing'],
-    properties: mergedProps as unknown as typeof base.properties,
-  } as AnimationTrack;
-  return merged;
-}
-
-function pickOverridesForTrack(overrides: TrackOverride[] | undefined, track: AnimationTrack): TrackOverride | undefined {
-  if (!overrides || overrides.length === 0) return undefined;
-  const byId = overrides.find(o => o.trackId && o.trackId === track.identifier.id);
-  if (byId) return byId;
-  return overrides.find(o => !o.trackId && o.type === track.type);
-}
+// Legacy track override functions removed - using granular system
 
 export function convertTracksToSceneAnimations(
   tracks: AnimationTrack[],
