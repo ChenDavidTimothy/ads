@@ -1028,10 +1028,41 @@ export class LogicNodeExecutor extends BaseExecutor {
       return;
     }
 
-    // Extract all upstream metadata
-    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], []);
-    const upstreamAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], []);
+    // First extract input object IDs to pass to filtering methods
+    const inputObjectIds: string[] = [];
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      for (const obj of inputData) {
+        if (this.hasValidObjectStructure(obj)) {
+          inputObjectIds.push((obj as { id: string }).id);
+        }
+      }
+    }
+
+    // Extract all upstream metadata with correct object ID filtering
+    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], inputObjectIds);
+    const upstreamAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], inputObjectIds);
     const upstreamCursors = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
+
+    // DEBUG: Log input metadata check
+    console.log(`[${node.data.identifier.displayName}] Input metadata check:`, 
+      inputs.map((input, i) => ({
+        inputIndex: i,
+        hasMetadata: !!input.metadata,
+        hasAnimations: !!(input.metadata as any)?.perObjectAnimations,
+        animationKeys: Object.keys((input.metadata as any)?.perObjectAnimations || {})
+      }))
+    );
+
+    // DEBUG: Log upstream animations
+    console.log(`[${node.data.identifier.displayName}] INPUT METADATA:`, {
+      upstreamAnimations: Object.entries(upstreamAnimations)
+        .map(([objId, tracks]) => ({
+          objectId: objId,
+          trackCount: tracks.length,
+          trackIds: tracks.map(t => t.id)
+        }))
+    });
 
     // Initialize output collections
     const allOutputObjects: unknown[] = [];
@@ -1089,6 +1120,16 @@ export class LogicNodeExecutor extends BaseExecutor {
     }
 
     logger.debug(`Duplicate execution complete. Output: ${allOutputObjects.length} objects`);
+
+    // DEBUG: Log output metadata
+    console.log(`[${node.data.identifier.displayName}] OUTPUT METADATA:`, {
+      expandedAnimations: Object.entries(expandedAnimations)
+        .map(([objId, tracks]) => ({
+          objectId: objId,
+          trackCount: tracks.length,
+          trackIds: tracks.map(t => t.id)
+        }))
+    });
 
     setNodeOutput(
       context,
@@ -1220,12 +1261,13 @@ export class LogicNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Copy animations with objectId updates
+    // Copy animations with objectId updates and trackId consistency
     if (sourceAnimations[sourceId]) {
       try {
         targetAnimations[targetId] = sourceAnimations[sourceId].map(anim => ({
           ...anim,
           objectId: targetId,
+          id: anim.id.replace(sourceId, targetId), // ✅ Fix trackId reference for consistency
           properties: JSON.parse(JSON.stringify(anim.properties))
         }));
       } catch (error) {
