@@ -4,6 +4,7 @@
 import { useState } from "react";
 import type { Node, Edge } from "reactflow";
 import { NumberField, ColorField, SelectField, TextField, RangeField, BooleanField } from "@/components/ui/form-fields";
+import { SelectionList } from "@/components/ui/selection";
 import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { RESOLUTION_PRESETS } from "@/shared/registry/registry-utils";
@@ -408,73 +409,25 @@ function FilterSpecialProperties({
   return (
     <div className="space-y-[var(--space-4)]">
       <div>
-        <div className="flex items-center justify-between mb-[var(--space-3)]">
-          <label className="block text-sm font-medium text-gray-300">
+        <div className="mb-[var(--space-3)]">
+          <label className="block text-sm font-medium text-gray-300 mb-[var(--space-2)]">
             Object Selection
           </label>
-          <div className="flex gap-[var(--space-2)]">
-            <Button 
-              onClick={handleSelectAll} 
-              variant="ghost" 
-              size="sm"
-              disabled={upstreamObjects.length === 0}
-            >
-              All
-            </Button>
-            <Button 
-              onClick={handleSelectNone} 
-              variant="ghost" 
-              size="sm"
-            >
-              None
-            </Button>
-          </div>
+          <SelectionList
+            mode="multi"
+            items={upstreamObjects.map(obj => ({
+              id: obj.data.identifier.id,
+              label: obj.data.identifier.displayName,
+              icon: getNodeDefinition(obj.type!)?.rendering.icon,
+              color: (obj.data as any)?.color
+            }))}
+            selectedIds={data.selectedObjectIds}
+            onToggle={handleToggleObject}
+            onSelectAll={handleSelectAll}
+            onSelectNone={handleSelectNone}
+            emptyLabel="No upstream objects available. Connect geometry nodes to see filtering options."
+          />
         </div>
-
-        {upstreamObjects.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-[var(--space-4)] bg-gray-700 rounded-[var(--radius-sm)] border-2 border-dashed border-gray-600">
-            No upstream objects available.
-            <br />
-            Connect geometry nodes to see filtering options.
-          </div>
-        ) : (
-          <div className="space-y-[var(--space-2)] max-h-48 overflow-y-auto bg-gray-700 rounded-[var(--radius-sm)] p-[var(--space-3)]">
-            {upstreamObjects.map((objectNode) => {
-              const isSelected = selectedIds.has(objectNode.data.identifier.id);
-              const nodeDefinition = getNodeDefinition(objectNode.type!);
-              
-              return (
-                <div 
-                  key={objectNode.data.identifier.id}
-                  className="flex items-center gap-[var(--space-3)] py-[var(--space-1)]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleToggleObject(objectNode.data.identifier.id)}
-                    className="rounded"
-                  />
-                  <div className="flex items-center gap-[var(--space-2)] flex-1 min-w-0">
-                    <div 
-                      className="w-4 h-4 rounded border border-gray-400 flex-shrink-0 flex items-center justify-center text-xs"
-                      style={{ 
-                        backgroundColor: ((objectNode.data as unknown as { color?: string })?.color) ?? '#666'
-                      }}
-                    >
-                      {nodeDefinition?.rendering.icon ?? '?'}
-                    </div>
-                    <span className="text-sm text-white truncate">
-                      {objectNode.data.identifier.displayName}
-                    </span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">
-                      {nodeDefinition?.label ?? objectNode.type}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         <div className="flex items-center justify-between text-xs text-gray-400 mt-[var(--space-2)]">
           <span>Selected: {data.selectedObjectIds.length}</span>
