@@ -24,24 +24,15 @@ export interface SceneObject {
 
 export interface TriangleProperties {
   size: number;
-  color: string;
-  strokeColor?: string;
-  strokeWidth?: number;
 }
 
 export interface CircleProperties {
   radius: number;
-  color: string;
-  strokeColor?: string;
-  strokeWidth?: number;
 }
 
 export interface RectangleProperties {
   width: number;
   height: number;
-  color: string;
-  strokeColor?: string;
-  strokeWidth?: number;
 }
 
 export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties;

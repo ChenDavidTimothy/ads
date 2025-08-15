@@ -5,7 +5,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { RectangleNodeData } from "@/shared/types/nodes";
-import { Square } from "lucide-react";
+import { Square as SquareIcon } from "lucide-react";
 
 export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) {
   const nodeDefinition = getNodeDefinition('rectangle');
@@ -15,10 +15,10 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div 
-            className="w-6 h-4 flex items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: data.color || '#44ff44' }}
+            className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-primary)]"
+            style={{ backgroundColor: '#4444ff' }} // Canvas default
           >
-            <Square size={12} />
+            <SquareIcon size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
             {data.identifier.displayName}
@@ -27,15 +27,8 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
       </CardHeader>
 
       <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
-        <div>Size: {data.width || 100}×{data.height || 60}px</div>
-        <div>Position: ({data.position?.x || 960}, {data.position?.y || 540})</div>
-        <div className="flex items-center gap-[var(--space-2)]">
-          <span>Color:</span>
-          <div 
-            className="w-4 h-4 rounded border border-[var(--border-primary)]"
-            style={{ backgroundColor: data.color || '#44ff44' }}
-          />
-        </div>
+        <div>Width: {data.width || 100}px</div>
+        <div>Height: {data.height || 60}px</div>
       </CardContent>
 
       {/* Single output port */}

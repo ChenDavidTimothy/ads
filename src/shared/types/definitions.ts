@@ -71,11 +71,7 @@ export const NODE_DEFINITIONS = {
     },
     properties: {
       properties: [
-        { key: 'size', type: 'number', label: 'Size', min: 1, defaultValue: 80 },
-        { key: 'color', type: 'color', label: 'Color', defaultValue: '#ff4444' },
-        { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#ffffff' },
-        { key: 'strokeWidth', type: 'number', label: 'Stroke Width', min: 0, defaultValue: 3 },
-        { key: 'position', type: 'point2d', label: 'Position', defaultValue: { x: 960, y: 540 } }
+        { key: 'size', type: 'number', label: 'Size', min: 1, defaultValue: 80 }
       ]
     },
     rendering: {
@@ -86,11 +82,7 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
-      size: 80,
-      color: "#ff4444",
-      strokeColor: "#ffffff",
-      strokeWidth: 3,
-      position: { x: 960, y: 540 },
+      size: 80
     }
   },
 
@@ -110,11 +102,7 @@ export const NODE_DEFINITIONS = {
     },
     properties: {
       properties: [
-        { key: 'radius', type: 'number', label: 'Radius', min: 1, defaultValue: 50 },
-        { key: 'color', type: 'color', label: 'Color', defaultValue: '#4444ff' },
-        { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#ffffff' },
-        { key: 'strokeWidth', type: 'number', label: 'Stroke Width', min: 0, defaultValue: 2 },
-        { key: 'position', type: 'point2d', label: 'Position', defaultValue: { x: 960, y: 540 } }
+        { key: 'radius', type: 'number', label: 'Radius', min: 1, defaultValue: 50 }
       ]
     },
     rendering: {
@@ -125,11 +113,7 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
-      radius: 50,
-      color: "#4444ff",
-      strokeColor: "#ffffff", 
-      strokeWidth: 2,
-      position: { x: 960, y: 540 },
+      radius: 50
     }
   },
 
@@ -150,11 +134,7 @@ export const NODE_DEFINITIONS = {
     properties: {
       properties: [
         { key: 'width', type: 'number', label: 'Width', min: 1, defaultValue: 100 },
-        { key: 'height', type: 'number', label: 'Height', min: 1, defaultValue: 60 },
-        { key: 'color', type: 'color', label: 'Color', defaultValue: '#44ff44' },
-        { key: 'strokeColor', type: 'color', label: 'Stroke Color', defaultValue: '#ffffff' },
-        { key: 'strokeWidth', type: 'number', label: 'Stroke Width', min: 0, defaultValue: 2 },
-        { key: 'position', type: 'point2d', label: 'Position', defaultValue: { x: 960, y: 540 } }
+        { key: 'height', type: 'number', label: 'Height', min: 1, defaultValue: 60 }
       ]
     },
     rendering: {
@@ -166,11 +146,7 @@ export const NODE_DEFINITIONS = {
     },
     defaults: {
       width: 100,
-      height: 60,
-      color: "#44ff44",
-      strokeColor: "#ffffff",
-      strokeWidth: 2,
-      position: { x: 960, y: 540 },
+      height: 60
     }
   },
 
@@ -503,13 +479,13 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
-      position: { x: 0, y: 0 },
+      position: { x: 960, y: 540 }, // Center of 1920x1080
       rotation: 0,
       scale: { x: 1, y: 1 },
       opacity: 1,
-      fillColor: '#ffffff',
-      strokeColor: '#000000',
-      strokeWidth: 2,
+      fillColor: '#4444ff', // Good default blue
+      strokeColor: '#ffffff', // White stroke
+      strokeWidth: 2, // Reasonable default
     }
   },
 

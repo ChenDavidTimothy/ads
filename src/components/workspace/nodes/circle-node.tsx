@@ -15,8 +15,8 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div 
-            className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text-primary)]"
-            style={{ backgroundColor: data.color || '#4444ff' }}
+            className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-primary)]"
+            style={{ backgroundColor: '#4444ff' }} // Canvas default
           >
             <CircleIcon size={12} />
           </div>
@@ -28,14 +28,6 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
 
       <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
         <div>Radius: {data.radius || 50}px</div>
-        <div>Position: ({data.position?.x || 960}, {data.position?.y || 540})</div>
-        <div className="flex items-center gap-[var(--space-2)]">
-          <span>Color:</span>
-          <div 
-            className="w-4 h-4 rounded-full border border-[var(--border-primary)]"
-            style={{ backgroundColor: data.color || '#4444ff' }}
-          />
-        </div>
       </CardContent>
 
       {/* Single output port */}

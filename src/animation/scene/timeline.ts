@@ -52,16 +52,9 @@ function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
 }
 
 function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
-  switch (objectType) {
-    case 'triangle':
-      return (properties as TriangleProperties).strokeColor;
-    case 'circle':
-      return (properties as CircleProperties).strokeColor;
-    case 'rectangle':
-      return (properties as RectangleProperties).strokeColor;
-    default:
-      return undefined;
-  }
+  // Styling properties are now provided by Canvas node, not geometry properties
+  // Return undefined to let the Canvas defaults handle this
+  return undefined;
 }
 
 function evaluateVisibility(object: SceneObject, time: number): number {
@@ -91,8 +84,9 @@ export function getObjectStateAtTime(
     scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: evaluateVisibility(object, time),
     colors: {
-      fill: object.properties.color,
-      stroke: getStrokeColor(object.properties, object.type)
+      // Styling properties are now provided by Canvas node, not geometry properties
+      fill: '#4444ff', // Canvas default
+      stroke: '#ffffff' // Canvas default
     }
   };
   
@@ -106,8 +100,9 @@ export function getObjectStateAtTime(
     scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: object.initialOpacity ?? 1,
     colors: {
-      fill: object.properties.color,
-      stroke: getStrokeColor(object.properties, object.type)
+      // Styling properties are now provided by Canvas node, not geometry properties
+      fill: '#4444ff', // Canvas default
+      stroke: '#ffffff' // Canvas default
     }
   };
   

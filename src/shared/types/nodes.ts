@@ -29,27 +29,15 @@ export interface BaseNodeData {
 // Geometry node data types
 export interface TriangleNodeData extends BaseNodeData {
   size: number;
-  color: string;
-  strokeColor: string;
-  strokeWidth: number;
-  position: Point2D;
 }
 
 export interface CircleNodeData extends BaseNodeData {
   radius: number;
-  color: string;
-  strokeColor: string;
-  strokeWidth: number;
-  position: Point2D;
 }
 
 export interface RectangleNodeData extends BaseNodeData {
   width: number;
   height: number;
-  color: string;
-  strokeColor: string;
-  strokeWidth: number;
-  position: Point2D;
 }
 
 export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;

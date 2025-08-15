@@ -114,8 +114,9 @@ export class SceneRenderer {
   private renderTriangle(ctx: NodeCanvasContext, props: TriangleProperties, state: ObjectState): void {
     const style: TriangleStyle = {
       fillColor: state.colors.fill,
-      strokeColor: state.colors.stroke ?? props.strokeColor ?? '#ffffff',
-      strokeWidth: props.strokeWidth ?? 2
+      // Canvas/Animation must provide these - no fallback to props
+      strokeColor: state.colors.stroke ?? '#ffffff', 
+      strokeWidth: 2 // Canvas default
     };
 
     // Triangle is drawn at origin since transform is already applied
@@ -125,8 +126,9 @@ export class SceneRenderer {
   private renderCircle(ctx: NodeCanvasContext, props: CircleProperties, state: ObjectState): void {
     const style: CircleStyle = {
       fillColor: state.colors.fill,
-      strokeColor: state.colors.stroke ?? props.strokeColor ?? '#ffffff',
-      strokeWidth: props.strokeWidth ?? 2
+      // Canvas/Animation must provide these - no fallback to props
+      strokeColor: state.colors.stroke ?? '#ffffff',
+      strokeWidth: 2 // Canvas default
     };
 
     drawCircle(ctx, { x: 0, y: 0 }, props.radius, style);
@@ -135,8 +137,9 @@ export class SceneRenderer {
   private renderRectangle(ctx: NodeCanvasContext, props: RectangleProperties, state: ObjectState): void {
     const style: RectangleStyle = {
       fillColor: state.colors.fill,
-      strokeColor: state.colors.stroke ?? props.strokeColor ?? '#ffffff',
-      strokeWidth: props.strokeWidth ?? 2
+      // Canvas/Animation must provide these - no fallback to props
+      strokeColor: state.colors.stroke ?? '#ffffff',
+      strokeWidth: 2 // Canvas default
     };
 
     // Draw rectangle centered at origin
@@ -161,19 +164,13 @@ export function addTriangleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  size: number,
-  color: string,
-  strokeColor?: string,
-  strokeWidth?: number
+  size: number
 ): void {
   scene.objects.push({
     id,
     type: 'triangle',
     properties: {
-      size,
-      color,
-      strokeColor,
-      strokeWidth
+      size
     },
     initialPosition: position,
     initialRotation: 0,
@@ -186,19 +183,13 @@ export function addCircleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  radius: number,
-  color: string,
-  strokeColor?: string,
-  strokeWidth?: number
+  radius: number
 ): void {
   scene.objects.push({
     id,
     type: 'circle',
     properties: {
-      radius,
-      color,
-      strokeColor,
-      strokeWidth
+      radius
     },
     initialPosition: position,
     initialRotation: 0,
@@ -212,20 +203,14 @@ export function addRectangleToScene(
   id: string,
   position: Point2D,
   width: number,
-  height: number,
-  color: string,
-  strokeColor?: string,
-  strokeWidth?: number
+  height: number
 ): void {
   scene.objects.push({
     id,
     type: 'rectangle',
     properties: {
       width,
-      height,
-      color,
-      strokeColor,
-      strokeWidth
+      height
     },
     initialPosition: position,
     initialRotation: 0,

@@ -30,7 +30,7 @@ export class GeometryNodeExecutor extends BaseExecutor {
     const baseObject = {
       id: node.data.identifier.id,
       type: node.type as "triangle" | "circle" | "rectangle",
-      initialPosition: data.position as { x: number; y: number },
+      initialPosition: { x: 0, y: 0 }, // Default origin - Canvas will provide positioning
       initialRotation: 0,
       initialScale: { x: 1, y: 1 },
       initialOpacity: 1,
@@ -42,9 +42,6 @@ export class GeometryNodeExecutor extends BaseExecutor {
           ...baseObject,
           properties: {
             size: data.size as number,
-            color: data.color as string,
-            strokeColor: data.strokeColor as string,
-            strokeWidth: data.strokeWidth as number,
           },
         };
       case "circle":
@@ -52,9 +49,6 @@ export class GeometryNodeExecutor extends BaseExecutor {
           ...baseObject,
           properties: {
             radius: data.radius as number,
-            color: data.color as string,
-            strokeColor: data.strokeColor as string,
-            strokeWidth: data.strokeWidth as number,
           },
         };
       case "rectangle":
@@ -63,9 +57,6 @@ export class GeometryNodeExecutor extends BaseExecutor {
           properties: {
             width: data.width as number,
             height: data.height as number,
-            color: data.color as string,
-            strokeColor: data.strokeColor as string,
-            strokeWidth: data.strokeWidth as number,
           },
         };
       default:

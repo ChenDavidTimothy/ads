@@ -18,4 +18,5 @@ export interface PropertySourceMap {
     fill?: PropertySource;
     stroke?: PropertySource;
   };
+  strokeWidth?: PropertySource;
 }
