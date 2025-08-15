@@ -4,26 +4,18 @@ import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useWorkspace } from './workspace-context';
 import { TimelineEditorCore } from './timeline-editor-core';
 import { Button } from '@/components/ui/button';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { TimelineEditorData } from '@/types/workspace-state';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { NodeData } from '@/shared/types';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { ObjectSelectionPanel } from './common/object-selection-panel';
+import { DefaultSelector } from './common/default-selector';
 import type { AnimationTrack } from '@/shared/types/nodes';
 import { TrackProperties } from './timeline-editor-core';
 import { validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
 
-function DefaultSelector({ onClick, active }: { onClick: () => void; active: boolean }) {
-  return (
-    <div
-      className={`flex items-center space-x-3 py-[var(--space-1)] px-[var(--space-2)] rounded-[var(--radius-sm)] cursor-pointer ${active ? 'bg-[color:rgba(59,130,246,0.2)]' : 'hover:bg-[var(--surface-interactive)]'}`}
-      onClick={onClick}
-    >
-      <input type="radio" checked={active} readOnly className="rounded" />
-      <span className="text-sm text-[var(--text-primary)] truncate flex-1">Default</span>
-    </div>
-  );
-}
+
 
 export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const { state, updateTimeline, updateUI, updateFlow } = useWorkspace();
@@ -186,12 +178,18 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
         <div className="space-y-[var(--space-3)]">
           <div>
-            <div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">Default</div>
+            <div className="text-xs text-[var(--text-secondary)] font-medium mb-[var(--space-2)]">Selection Mode</div>
             <DefaultSelector onClick={() => setSelectedObjectId(null)} active={selectedObjectId === null} />
           </div>
           <div className="pt-[var(--space-3)] border-t border-[var(--border-primary)]">
             <ObjectSelectionPanel
-              items={upstreamObjects.map(o => ({ id: o.data.identifier.id, label: o.data.identifier.displayName }))}
+              items={upstreamObjects.map(o => ({ 
+                id: o.data.identifier.id, 
+                label: o.data.identifier.displayName,
+                type: o.type,
+                icon: getNodeDefinition(o.type!)?.rendering.icon,
+                color: (o.data as any)?.color
+              }))}
               selectedId={selectedObjectId}
               onSelect={(id) => setSelectedObjectId(id)}
               emptyLabel="No upstream objects"
@@ -207,21 +205,6 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         <div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
           <div className="flex items-center gap-3">
             <div className="text-[var(--text-primary)] font-medium">Timeline</div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--text-tertiary)]">Selection:</span>
-              <select
-                className="bg-[var(--surface-1)] text-[var(--text-primary)] text-xs px-2 py-1 rounded border border-[var(--border-primary)]"
-                value={selectedObjectId ?? ''}
-                onChange={(e) => setSelectedObjectId(e.target.value || null)}
-              >
-                <option value="">Default</option>
-                {upstreamObjects.map((obj) => (
-                  <option key={obj.data.identifier.id} value={obj.data.identifier.id}>
-                    {obj.data.identifier.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
             Back to Flow

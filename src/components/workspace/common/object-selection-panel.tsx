@@ -1,38 +1,102 @@
 "use client";
 
-import React from 'react';
+import { Button } from '@/components/ui/button';
+import { ObjectCard } from '@/components/ui/object-card';
 
 interface ObjectSelectionPanelProps {
-	items: Array<{ id: string; label: string }>;
-	selectedId: string | null;
-	onSelect: (id: string) => void;
-	emptyLabel?: string;
-	title?: string;
+  items: Array<{ 
+    id: string; 
+    label: string; 
+    type?: string;
+    icon?: string;
+    color?: string;
+  }>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  emptyLabel?: string;
+  title?: string;
+  variant?: 'single' | 'multi';
+  selectedIds?: string[]; // For multi-selection
+  onToggle?: (id: string) => void; // For multi-selection
+  onSelectAll?: () => void; // For bulk select all operation
+  onSelectNone?: () => void; // For bulk select none operation
 }
 
-export function ObjectSelectionPanel({ items, selectedId, onSelect, emptyLabel = 'No items', title = 'Objects' }: ObjectSelectionPanelProps) {
-	return (
-		<div className="space-y-[var(--space-2)]">
-			<div className="text-xs text-[var(--text-tertiary)] mb-[var(--space-2)]">{title}</div>
-			<div className="space-y-[var(--space-2)] max-h-full overflow-y-auto bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)]">
-				{items.length === 0 ? (
-					<div className="text-xs text-[var(--text-tertiary)] text-center py-[var(--space-4)] border-2 border-dashed border-[var(--border-primary)] rounded-[var(--radius-sm)]">{emptyLabel}</div>
-				) : (
-					items.map((item) => {
-						const isSelected = selectedId === item.id;
-						return (
-							<div
-								key={item.id}
-								className={`flex items-center space-x-3 py-[var(--space-1)] px-[var(--space-2)] rounded-[var(--radius-sm)] cursor-pointer ${isSelected ? 'bg-[color:rgba(59,130,246,0.2)]' : 'hover:bg-[var(--surface-interactive)]'}`}
-								onClick={() => onSelect(item.id)}
-							>
-								<input type="radio" checked={isSelected} readOnly className="rounded" />
-								<span className="text-sm text-[var(--text-primary)] truncate flex-1">{item.label}</span>
-							</div>
-						);
-					})
-				)}
-			</div>
-		</div>
-	);
+export function ObjectSelectionPanel({ 
+  items, 
+  selectedId, 
+  onSelect, 
+  emptyLabel = 'No items', 
+  title = 'Objects',
+  variant = 'single',
+  selectedIds = [],
+  onToggle,
+  onSelectAll,
+  onSelectNone
+}: ObjectSelectionPanelProps) {
+  const handleSelect = (id: string) => {
+    if (variant === 'multi' && onToggle) {
+      onToggle(id);
+    } else {
+      onSelect(id);
+    }
+  };
+
+  const isSelected = (id: string) => {
+    return variant === 'multi' 
+      ? selectedIds.includes(id)
+      : selectedId === id;
+  };
+
+
+
+  return (
+    <div className="space-y-[var(--space-2)]">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-[var(--text-secondary)] font-medium">{title}</div>
+        {variant === 'multi' && items.length > 0 && (
+          <div className="flex gap-[var(--space-1)]">
+            <Button 
+              variant="ghost" 
+              size="xs" 
+              onClick={onSelectAll}
+              className="text-xs"
+            >
+              All
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="xs" 
+              onClick={onSelectNone}
+              className="text-xs"
+            >
+              None
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      <div className="space-y-[var(--space-2)] max-h-64 overflow-y-auto scrollbar-elegant">
+        {items.length === 0 ? (
+          <div className="glass-panel p-[var(--space-4)] text-center border-2 border-dashed border-[var(--border-secondary)]">
+            <div className="text-xs text-[var(--text-tertiary)]">{emptyLabel}</div>
+          </div>
+        ) : (
+          items.map((item) => (
+            <ObjectCard
+              key={item.id}
+              id={item.id}
+              label={item.label}
+              type={item.type}
+              icon={item.icon}
+              color={item.color}
+              selected={isSelected(item.id)}
+              onSelect={() => handleSelect(item.id)}
+              variant={variant}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
