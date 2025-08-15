@@ -1,11 +1,17 @@
 // src/components/workspace/result-log-modal.tsx - Production-ready debug output viewer
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Modal } from "@/components/ui/modal";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { DraggableModal } from "@/components/ui/draggable-modal";
 import { useDebugContext } from "./flow/debug-context";
+import { cn } from "@/lib/utils";
+import { 
+  Trash2, 
+  Download, 
+  Target,
+  Clock
+} from "lucide-react";
 
 interface ResultLogEntry {
   value: unknown;
@@ -35,142 +41,100 @@ export function ResultLogModal({
 }: ResultLogModalProps) {
   const [logs, setLogs] = useState<ResultLogEntry[]>([]);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  
   const logsEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const debugContext = useDebugContext();
 
-  // Format value for display
+  // Format value for display - more efficient
   const formatValue = useCallback((value: unknown): string => {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
-    if (typeof value === 'string') return value;
+    if (typeof value === 'string') return `"${value}"`;
     if (typeof value === 'number') return value.toString();
-    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (Array.isArray(value)) {
       if (value.length === 0) return '[]';
-      if (value.length <= 3) return `[${value.map(formatValue).join(', ')}]`;
-      return `[${value.slice(0, 3).map(formatValue).join(', ')}...] (${value.length} items)`;
+      if (value.length <= 2) return `[${value.map(formatValue).join(', ')}]`;
+      return `[${value.slice(0, 2).map(formatValue).join(', ')}, ...] (${value.length} items)`;
     }
     if (typeof value === 'object') {
       const keys = Object.keys(value as Record<string, unknown>);
       if (keys.length === 0) return '{}';
-      if (keys.length <= 3) return `{${keys.slice(0, 3).map(k => `${k}: ${formatValue((value as Record<string, unknown>)[k])}`).join(', ')}}`;
-      return `{${keys.slice(0, 3).map(k => `${k}: ${formatValue((value as Record<string, unknown>)[k])}`).join(', ')}...} (${keys.length} keys)`;
+      if (keys.length <= 2) {
+        const entries = keys.slice(0, 2).map(k => `${k}: ${formatValue((value as Record<string, unknown>)[k])}`);
+        return `{${entries.join(', ')}}`;
+      }
+      return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`;
     }
-    if (typeof value === 'symbol') return value.toString();
-    if (typeof value === 'function') return '[Function]';
-    if (typeof value === 'bigint') return value.toString() + 'n';
-    return '[Unknown Type]';
+    return '[Complex Type]';
   }, []);
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll functionality
   useEffect(() => {
     if (isAutoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, isAutoScroll]);
 
-  // Handle scroll to detect when user manually scrolls up
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
     setIsAutoScroll(isAtBottom);
-  };
+  }, []);
 
-  // Load all accumulated logs when modal opens or debug results change
+  // Load and refresh logs
   useEffect(() => {
     if (!isOpen || !debugContext?.getAllDebugResults) return;
 
-    const allResults = debugContext.getAllDebugResults(nodeId);
-    const formattedLogs = allResults.map(result => ({
-      value: result.value,
-      type: result.type,
-      timestamp: result.timestamp,
-      formattedValue: formatValue(result.value),
-      executionId: result.executionId ?? `exec-${result.timestamp}`,
-      flowState: result.flowState,
-      hasConnections: result.hasConnections,
-      inputCount: result.inputCount
-    }));
-
-    setLogs(formattedLogs);
-    setIsAutoScroll(true);
-  }, [isOpen, nodeId, debugContext, debugContext?.getAllDebugResults, formatValue]);
-
-  // Poll for new logs while modal is open - always poll to catch new results
-  useEffect(() => {
-    if (!isOpen || !debugContext?.getAllDebugResults) return;
-
-    const interval = setInterval(() => {
+    const refreshLogs = () => {
       const allResults = debugContext.getAllDebugResults(nodeId);
-      if (allResults.length > logs.length) {
-        const formattedLogs = allResults.map(result => ({
-          value: result.value,
-          type: result.type,
-          timestamp: result.timestamp,
-          formattedValue: formatValue(result.value),
-          executionId: result.executionId ?? `exec-${result.timestamp}`,
-          flowState: result.flowState,
-          hasConnections: result.hasConnections,
-          inputCount: result.inputCount
-        }));
+      const formattedLogs = allResults.map(result => ({
+        value: result.value,
+        type: result.type,
+        timestamp: result.timestamp,
+        formattedValue: formatValue(result.value),
+        executionId: result.executionId ?? `exec-${result.timestamp}`,
+        flowState: result.flowState,
+        hasConnections: result.hasConnections,
+        inputCount: result.inputCount
+      }));
+      setLogs(formattedLogs);
+    };
 
-        setLogs(formattedLogs);
-      }
-    }, 3000); // Changed from 1000 to 3000 (3 seconds instead of 1)
+    refreshLogs();
+    setIsAutoScroll(true);
 
+    // Poll for updates
+    const interval = setInterval(refreshLogs, 2000);
     return () => clearInterval(interval);
-  }, [isOpen, nodeId, debugContext, debugContext?.getAllDebugResults, logs.length, formatValue]);
+  }, [isOpen, nodeId, debugContext, formatValue]);
 
-  // Get color for value type
+  // Value type colors
   const getValueTypeColor = (type: string): string => {
     switch (type) {
       case 'string': return 'text-[var(--success-500)]';
       case 'number': return 'text-[var(--accent-primary)]';
       case 'boolean': return 'text-[var(--warning-600)]';
       case 'array': return 'text-[var(--node-logic)]';
-      case 'object': return 'text-[var(--text-primary)]';
-      case 'null': return 'text-[var(--text-tertiary)]';
+      case 'object': return 'text-[var(--node-geometry)]';
+      case 'null':
       case 'undefined': return 'text-[var(--text-tertiary)]';
       default: return 'text-[var(--text-primary)]';
     }
   };
 
-  // Clear all logs
-  const clearLogs = () => {
-    setLogs([]);
-  };
-
-  // Refresh logs from debug context
-  const refreshLogs = () => {
-    if (!debugContext?.getAllDebugResults) return;
-
-    const allResults = debugContext.getAllDebugResults(nodeId);
-    const formattedLogs = allResults.map(result => ({
-      value: result.value,
-      type: result.type,
-      timestamp: result.timestamp,
-      formattedValue: formatValue(result.value),
-      executionId: result.executionId ?? `exec-${result.timestamp}`,
-      flowState: result.flowState,
-      hasConnections: result.hasConnections,
-      inputCount: result.inputCount
-    }));
-
-    setLogs(formattedLogs);
-    setIsAutoScroll(true);
-  };
-
-  // Export logs as JSON
+  // Export functionality
   const exportLogs = () => {
     const exportData = {
       nodeId,
       nodeName,
       nodeLabel,
       exportTimestamp: new Date().toISOString(),
+      totalEntries: logs.length,
       logs: logs.map(log => ({
         ...log,
         timestamp: new Date(log.timestamp).toISOString()
@@ -189,132 +153,146 @@ export function ResultLogModal({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={`Debug Output: ${nodeName}`}
-      size="xl"
-    >
-      <div className="flex flex-col h-full">
-        {/* Header with node info and controls */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--success-600)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold">
-              📊
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">{nodeName}</h3>
-              <p className="text-sm text-[var(--text-tertiary)]">Label: {nodeLabel}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={refreshLogs}
-              variant="secondary"
-              size="sm"
-            >
-              🔄 Refresh
-            </Button>
-            <Button
-              onClick={clearLogs}
-              variant="secondary"
-              size="sm"
-              disabled={logs.length === 0}
-            >
-              Clear Logs
-            </Button>
-            <Button
-              onClick={exportLogs}
-              variant="secondary"
-              size="sm"
-              disabled={logs.length === 0}
-            >
-              Export JSON
-            </Button>
-            <Button onClick={onClose} variant="primary" size="sm">
-              Close
-            </Button>
-          </div>
+    <DraggableModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={nodeName}
+      width="w-[32rem]"
+      height="h-[32rem]"
+      collapsible={true}
+      headerIcon={
+        <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]">
+          <Target size={12} />
         </div>
+      }
+      headerActions={
+        <div className="text-[11px] text-[var(--text-tertiary)]">
+          {nodeLabel} • {logs.length} entries
+        </div>
+      }
+    >
+      {/* Toolbar */}
+      <div className="flex items-center justify-between p-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-2)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            isAutoScroll ? "bg-[var(--success-500)]" : "bg-[var(--warning-500)]"
+          )} />
+          <span className="text-[11px] text-[var(--text-tertiary)]">
+            {isAutoScroll ? "Auto-scroll" : "Manual scroll"}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-[var(--space-1)]">
+          <Button
+            onClick={() => setLogs([])}
+            variant="minimal"
+            size="xs"
+            disabled={logs.length === 0}
+            className="text-[10px]"
+          >
+            <Trash2 size={10} className="mr-1" />
+            Clear
+          </Button>
+          <Button
+            onClick={exportLogs}
+            variant="minimal"
+            size="xs"
+            disabled={logs.length === 0}
+            className="text-[10px]"
+          >
+            <Download size={10} className="mr-1" />
+            Export
+          </Button>
+        </div>
+      </div>
 
-        {/* Logs display */}
-        <div className="flex-1 overflow-hidden">
-          {logs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-4">
-                <span className="text-2xl">📊</span>
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Debug Output Yet</h3>
-              <p className="text-[var(--text-tertiary)] mb-4 max-w-md">
-                Click &quot;Run to Here&quot; on the result node to execute your flow and see debug output here.
-              </p>
-              <div className="text-xs text-[var(--text-tertiary)] space-y-1">
-                <p>• The result node captures all data flowing through it</p>
-                <p>• Use it to inspect values at specific points in your flow</p>
-                <p>• Perfect for debugging complex animation logic</p>
-              </div>
+      {/* Logs Content */}
+      <div className="flex-1 overflow-hidden">
+        {logs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full p-[var(--space-6)] text-center">
+            <div className="w-12 h-12 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-[var(--space-3)]">
+              <Target size={20} className="text-[var(--text-tertiary)]" />
             </div>
-          ) : (
-            <div 
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
-              className="h-full overflow-y-auto p-4 space-y-3"
-            >
-              {logs.map((log, index) => (
-                <div key={index} className="bg-[var(--surface-1)] rounded-lg p-4 border border-[var(--border-primary)]">
-                  {/* Log header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        "px-2 py-1 rounded text-xs font-mono",
-                        getValueTypeColor(log.type)
-                      )}>
-                        {log.type}
-                      </span>
-                      {log.executionId && (
-                        <span className="text-xs text-[var(--text-tertiary)] font-mono">
-                          {log.executionId}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-[var(--text-tertiary)]">
-                      {new Date(log.timestamp).toLocaleTimeString()}
-                    </div>
+            <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-[var(--space-2)]">
+              No Debug Output
+            </h3>
+            <p className="text-[11px] text-[var(--text-tertiary)] mb-[var(--space-3)] max-w-[20rem]">
+              Run your flow to capture values at this node. Results will appear here in real-time.
+            </p>
+            <div className="text-[10px] text-[var(--text-tertiary)] space-y-[var(--space-1)]">
+              <p>• Values are captured when data flows through</p>
+              <p>• Perfect for debugging complex logic</p>
+            </div>
+          </div>
+        ) : (
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="h-full overflow-y-auto scrollbar-elegant p-[var(--space-3)] space-y-[var(--space-2)]"
+          >
+            {logs.map((log, index) => (
+              <div 
+                key={index} 
+                className="bg-[var(--surface-1)] rounded-[var(--radius-sm)] p-[var(--space-3)] border border-[var(--border-primary)]"
+              >
+                {/* Compact Header */}
+                <div className="flex items-center justify-between mb-[var(--space-2)]">
+                  <div className="flex items-center gap-[var(--space-2)]">
+                    <span className={cn(
+                      "px-[var(--space-2)] py-[var(--space-half)] rounded-[var(--radius-sm)] text-[10px] font-mono font-medium",
+                      "bg-[var(--surface-2)] border border-[var(--border-primary)]",
+                      getValueTypeColor(log.type)
+                    )}>
+                      {log.type}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-mono">
+                      #{index + 1}
+                    </span>
                   </div>
-
-                  {/* Log value */}
-                  <div className="mb-3">
-                    <div className="text-sm text-[var(--text-secondary)] mb-1">Value:</div>
-                    <div className="bg-[var(--surface-0)] p-3 rounded border border-[var(--border-primary)] font-mono text-sm text-[var(--text-primary)] break-all">
-                      {log.formattedValue}
-                    </div>
+                  <div className="flex items-center gap-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                    <Clock size={10} />
+                    {new Date(log.timestamp).toLocaleTimeString()}
                   </div>
+                </div>
 
-                  {/* Execution context */}
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-[var(--text-tertiary)]">Flow State:</span>
-                      <span className="ml-2 text-[var(--text-primary)]">{log.flowState ?? 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[var(--text-tertiary)]">Connections:</span>
-                      <span className="ml-2 text-[var(--text-primary)]">{log.hasConnections ? 'Yes' : 'No'}</span>
-                    </div>
-                    {log.inputCount !== undefined && (
+                {/* Value Display */}
+                <div className="bg-[var(--surface-0)] p-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border-primary)]">
+                  <div className="font-mono text-[11px] text-[var(--text-primary)] break-all">
+                    {log.formattedValue}
+                  </div>
+                </div>
+
+                {/* Execution Info */}
+                {(log.flowState || log.hasConnections !== undefined) && (
+                  <div className="mt-[var(--space-2)] pt-[var(--space-2)] border-t border-[var(--border-secondary)] flex items-center gap-[var(--space-4)] text-[10px]">
+                    {log.flowState && (
                       <div>
-                        <span className="text-[var(--text-tertiary)]">Input Count:</span>
-                        <span className="ml-2 text-[var(--text-primary)]">{log.inputCount}</span>
+                        <span className="text-[var(--text-tertiary)]">State:</span>
+                        <span className="ml-[var(--space-1)] text-[var(--text-primary)]">
+                          {log.flowState}
+                        </span>
+                      </div>
+                    )}
+                    {log.hasConnections !== undefined && (
+                      <div>
+                        <span className="text-[var(--text-tertiary)]">Connected:</span>
+                        <span className={cn(
+                          "ml-[var(--space-1)]",
+                          log.hasConnections ? "text-[var(--success-500)]" : "text-[var(--warning-600)]"
+                        )}>
+                          {log.hasConnections ? 'Yes' : 'No'}
+                        </span>
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
-              <div ref={logsEndRef} />
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            ))}
+            <div ref={logsEndRef} />
+          </div>
+        )}
       </div>
-    </Modal>
+    </DraggableModal>
   );
 }
