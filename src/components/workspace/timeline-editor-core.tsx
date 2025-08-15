@@ -25,7 +25,6 @@ import {
 } from "@/shared/types/nodes";
 import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { useWorkspace } from './workspace-context';
-import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { BindButton } from '@/components/workspace/binding/bindings';
 
 function BindingTag({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
@@ -109,6 +108,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
   const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [localDragTracks, setLocalDragTracks] = useState<AnimationTrack[]>([]); // Local state for smooth dragging
   const { state, updateFlow } = useWorkspace();
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -122,6 +122,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
       setTracks(controlledTracks);
       setSelectedTrackId(null);
       setDragState(null);
+      setLocalDragTracks([]);
       const tracker = trackerRef.current;
       controlledTracks.forEach((t, index) => {
         tracker.trackTransformCreation(t.identifier.id, animationNodeId, index);
@@ -129,6 +130,9 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
       prevNodeIdRef.current = animationNodeId;
     }
   }, [animationNodeId, controlledDuration, controlledTracks]);
+
+  // Use local tracks during drag for smooth performance
+  const displayTracks = dragState ? localDragTracks : tracks;
 
   useEffect(() => {
     const tracker = trackerRef.current;
@@ -195,32 +199,9 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
     [duration, tracks, onChange]
   );
 
-  const updateTransformDisplayName = useCallback((trackId: string, newDisplayName: string) => {
-    const error = validateNameHelper(newDisplayName, trackId, tracks);
-    if (error) return false;
-    setTracks((prev) => prev.map((t) => (
-      t.identifier.id === trackId
-        ? ({ ...t, identifier: { ...t.identifier, displayName: newDisplayName } })
-        : t
-    )));
-    return true;
-  }, [tracks]);
-
   const validateTransformDisplayName = useCallback((name: string, trackId: string) => {
     return validateNameHelper(name, trackId, tracks);
   }, [tracks]);
-
-  const updateTrack = useCallback(<T extends AnimationTrack>(trackId: string, updates: Partial<T>) => {
-    setTracks((prev) => {
-      const next = prev.map((track) => {
-        if (track.identifier.id !== trackId) return track;
-        if (track.type !== (updates.type ?? track.type)) return track;
-        return { ...track, ...updates } as AnimationTrack;
-      });
-      onChange({ tracks: next });
-      return next;
-    });
-  }, [onChange]);
 
   const deleteTrack = useCallback((trackId: string) => {
     setTracks((prev) => {
@@ -247,40 +228,56 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
       const track = tracks.find((t) => t.identifier.id === trackId);
       if (!track) return;
       setDragState({ trackId, type, startX: e.clientX, startTime: track.startTime, startDuration: track.duration });
+      // Initialize local drag state for smooth updates
+      setLocalDragTracks(tracks);
     },
     [tracks],
   );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!dragState) return;
-      const track = tracks.find((t) => t.identifier.id === dragState.trackId);
+      if (!dragState || !localDragTracks.length) return;
+      const track = localDragTracks.find((t) => t.identifier.id === dragState.trackId);
       if (!track) return;
+      
       const deltaX = e.clientX - dragState.startX;
       const deltaTime = (deltaX / TIMELINE_WIDTH) * duration;
-      switch (dragState.type) {
-        case "move": {
-          const newStartTime = Math.max(0, Math.min(duration - track.duration, dragState.startTime + deltaTime));
-          updateTrack(dragState.trackId, { startTime: newStartTime });
-          break;
+      
+      // Update local state immediately for smooth visual feedback
+      setLocalDragTracks((prev) => prev.map((t) => {
+        if (t.identifier.id !== dragState.trackId) return t;
+        
+        switch (dragState.type) {
+          case "move": {
+            const newStartTime = Math.max(0, Math.min(duration - t.duration, dragState.startTime + deltaTime));
+            return { ...t, startTime: newStartTime };
+          }
+          case "resize-start": {
+            const newStart = Math.max(0, Math.min(dragState.startTime + dragState.startDuration - 0.1, dragState.startTime + deltaTime));
+            const newDuration = dragState.startDuration - (newStart - dragState.startTime);
+            return { ...t, startTime: newStart, duration: Math.max(0.1, newDuration) };
+          }
+          case "resize-end": {
+            const newDur = Math.max(0.1, Math.min(duration - dragState.startTime, dragState.startDuration + deltaTime));
+            return { ...t, duration: newDur };
+          }
+          default:
+            return t;
         }
-        case "resize-start": {
-          const newStart = Math.max(0, Math.min(dragState.startTime + dragState.startDuration - 0.1, dragState.startTime + deltaTime));
-          const newDuration = dragState.startDuration - (newStart - dragState.startTime);
-          updateTrack(dragState.trackId, { startTime: newStart, duration: Math.max(0.1, newDuration) });
-          break;
-        }
-        case "resize-end": {
-          const newDur = Math.max(0.1, Math.min(duration - dragState.startTime, dragState.startDuration + deltaTime));
-          updateTrack(dragState.trackId, { duration: newDur });
-          break;
-        }
-      }
+      }));
     },
-    [dragState, tracks, duration, updateTrack],
+    [dragState, localDragTracks, duration],
   );
 
-  const handleMouseUp = useCallback(() => setDragState(null), []);
+  const handleMouseUp = useCallback(() => {
+    if (dragState && localDragTracks.length > 0) {
+      // Update parent with final drag state
+      onChange({ tracks: localDragTracks });
+      setTracks(localDragTracks);
+    }
+    setDragState(null);
+    setLocalDragTracks([]);
+  }, [dragState, localDragTracks, onChange]);
 
   useEffect(() => {
     if (dragState) {
@@ -294,9 +291,6 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
   }, [dragState, handleMouseMove, handleMouseUp]);
 
   const selectedTrack = tracks.find((t) => t.identifier.id === selectedTrackId);
-
-  // Disable save if any display name invalid
-  const hasInvalidNames = tracks.some((t) => !!validateNameHelper(t.identifier.displayName, t.identifier.id, tracks));
 
   // Notify parent of selection changes when requested
   useEffect(() => {
@@ -334,7 +328,10 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                 <Button 
                   key={type} 
                   onClick={() => addTrack(type as AnimationTrack["type"])} 
-                  className={cn("text-xs", trackColors[type] ?? "bg-[var(--surface-2)]")} 
+                  className={cn(
+                    "text-xs font-medium border border-[var(--border-primary)] transition-all",
+                    trackColors[type] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]"
+                  )} 
                   size="sm"
                 >
                   {trackIcons[type] ?? "●"} {type}
@@ -344,7 +341,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           </div>
         </div>
 
-        <div ref={timelineRef} className="relative bg-[var(--surface-0)] rounded-[var(--radius-md)] p-[var(--space-4)]" style={{ width: `${TIMELINE_WIDTH}px` }}>
+        <div ref={timelineRef} className="relative bg-[var(--surface-1)] border border-[var(--border-primary)] rounded-[var(--radius-md)] p-[var(--space-4)] shadow-glass" style={{ width: `${TIMELINE_WIDTH}px` }}>
           <div className="relative h-6 mb-[var(--space-4)]">
             {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
               <div key={i} className="absolute flex flex-col items-center" style={{ left: `${(i / duration) * 100}%` }}>
@@ -355,7 +352,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           </div>
 
           <div className="space-y-[var(--space-3)]">
-            {tracks.map((track) => (
+            {displayTracks.map((track) => (
               <div key={track.identifier.id} className="relative">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-[var(--space-2)]">
@@ -366,7 +363,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                       })()} {track.type}
                     </span>
                     {selectedTrackId === track.identifier.id && (
-                      <span className="text-xs bg-[var(--accent-600)] text-[var(--text-primary)] px-2 py-1 rounded-[var(--radius-sm)]">SELECTED</span>
+                      <span className="text-xs bg-[var(--accent-600)] text-[var(--text-primary)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] font-medium">SELECTED</span>
                     )}
                   </div>
                   <Button onClick={() => deleteTrack(track.identifier.id)} variant="danger" size="sm" className="text-xs">
@@ -374,35 +371,37 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                   </Button>
                 </div>
 
-                <div className="relative h-8 bg-[var(--surface-2)] rounded">
+                <div className="relative h-8 bg-[var(--surface-2)] border border-[var(--border-secondary)] rounded-[var(--radius-sm)]">
                   <div
                     className={cn(
-                      "absolute h-6 rounded cursor-move transition-all text-[var(--text-primary)]",
+                      "absolute h-6 rounded-[var(--radius-sm)] cursor-move text-[var(--text-primary)] border border-transparent",
                       (() => {
                         const trackColors = transformFactory.getTrackColors();
                         return trackColors[track.type] ?? "bg-[var(--surface-interactive)]";
                       })(),
-                      selectedTrackId === track.identifier.id ? "ring-2 ring-[var(--accent-500)] shadow-lg" : "hover:brightness-110",
+                      selectedTrackId === track.identifier.id 
+                        ? "border-[var(--accent-500)] shadow-[0_0_20px_rgba(139,92,246,0.6),0_4px_12px_rgba(139,92,246,0.4)]" 
+                        : "hover:brightness-110 hover:border-[var(--border-accent)]",
                       dragState?.trackId === track.identifier.id ? "opacity-80" : "",
                     )}
                     style={{ left: `${(track.startTime / duration) * 100}%`, width: `${(track.duration / duration) * 100}%`, top: "1px" }}
                     onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "move")}
                     onClick={() => setSelectedTrackId(track.identifier.id)}
                   >
-                   <div className="flex items-center justify-between h-full px-2">
+                   <div className="flex items-center justify-between h-full px-[var(--space-2)]">
                       <span className="text-xs font-medium truncate">{track.identifier.displayName}</span>
-                      <span className="text-xs text-[color:rgba(248,249,250,0.8)]">{track.duration.toFixed(1)}s</span>
+                      <span className="text-xs text-[var(--text-secondary)]">{track.duration.toFixed(1)}s</span>
                     </div>
                   </div>
 
                   <div
-                    className="absolute w-3 h-6 cursor-w-resize bg-white/30 hover:bg-white/50 rounded-l z-10"
+                    className="absolute w-1 h-6 cursor-w-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-500)] rounded-l-[var(--radius-sm)] z-10 transition-colors"
                     style={{ left: `${(track.startTime / duration) * 100}%`, top: "1px" }}
                     onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-start")}
                   />
                   <div
-                    className="absolute w-3 h-6 cursor-e-resize bg-white/30 hover:bg-white/50 rounded-r z-10"
-                    style={{ left: `${((track.startTime + track.duration) / duration) * 100 - (12 / TIMELINE_WIDTH) * 100}%`, top: "1px" }}
+                    className="absolute w-1 h-6 cursor-e-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-500)] rounded-r-[var(--radius-sm)] z-10 transition-colors"
+                    style={{ left: `${((track.startTime + track.duration) / duration) * 100 - (4 / TIMELINE_WIDTH) * 100}%`, top: "1px" }}
                     onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-end")}
                   />
                 </div>
@@ -428,16 +427,19 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
 
 interface TrackPropertiesProps {
   track: AnimationTrack;
-  onChange: (updates: Partial<AnimationTrack> & { properties?: any }) => void;
+  onChange: (updates: Partial<AnimationTrack>) => void;
   allTracks: AnimationTrack[];
   onDisplayNameChange: (trackId: string, newName: string) => boolean;
   validateDisplayName: (name: string, trackId: string) => string | null;
-  trackOverride?: TrackOverride | undefined;
+  trackOverride?: TrackOverride;
   animationNodeId: string;
   selectedObjectId?: string;
 }
 
 export function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
+  const [editingName, setEditingName] = useState(false);
+  const [tempDisplayName, setTempDisplayName] = useState(track.identifier.displayName);
+
   const easingOptions = [
     { value: "linear", label: "Linear" },
     { value: "easeInOut", label: "Ease In Out" },
@@ -569,8 +571,22 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
   };
 
   const ToggleBinding = ({ keyName }: { keyName: string }) => (
-    <button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
+    <button className="text-[10px] text-[var(--text-secondary)] underline hover:text-[var(--text-primary)] transition-colors ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
   );
+
+  const handleSaveDisplayName = () => {
+    const success = onDisplayNameChange(track.identifier.id, tempDisplayName);
+    if (success) {
+      setEditingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setTempDisplayName(track.identifier.displayName);
+    setEditingName(false);
+  };
+
+  const currentError = editingName ? validateDisplayName(tempDisplayName, track.identifier.id) : null;
 
   return (
     <div className="space-y-[var(--space-4)]">
@@ -582,25 +598,57 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-tertiary)]">{getTransformDisplayLabel(track.type)}</div>
           </div>
           <div className="flex flex-col gap-[var(--space-1)] items-stretch">
-            <input
-              className="bg-[var(--surface-1)] text-[var(--text-primary)] text-sm px-[var(--space-2)] py-[var(--space-1)] rounded w-full border border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)]"
-              value={track.identifier.displayName}
-              onChange={(e) => {
-                const proposed = e.target.value;
-                onChange({ identifier: { ...track.identifier!, displayName: proposed } as unknown as AnimationTrack['identifier'] });
-              }}
-              onBlur={(e) => {
-                const proposed = e.target.value;
-                const error = validateDisplayName(proposed, track.identifier.id);
-                if (!error) {
-                  onDisplayNameChange(track.identifier.id, proposed);
-                }
-              }}
-            />
-            {(() => {
-              const err = validateDisplayName(track.identifier.displayName, track.identifier.id);
-              return err ? <span className="text-xs text-[var(--text-red)]">{err}</span> : null;
-            })()}
+            {editingName ? (
+              <>
+                <input
+                  className="bg-[var(--surface-1)] text-[var(--text-primary)] text-sm px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] w-full border border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)] focus:border-[var(--accent-500)] transition-colors"
+                  value={tempDisplayName}
+                  onChange={(e) => setTempDisplayName(e.target.value)}
+                  placeholder="Enter transform name"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !currentError) {
+                      handleSaveDisplayName();
+                    } else if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
+                  autoFocus
+                />
+                {currentError && (
+                  <div className="text-xs text-red-400">{currentError}</div>
+                )}
+                <div className="flex gap-[var(--space-2)]">
+                  <Button
+                    onClick={handleSaveDisplayName}
+                    disabled={!!currentError}
+                    variant="primary"
+                    size="sm"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--text-primary)] font-medium">
+                  {track.identifier.displayName}
+                </span>
+                <Button
+                  onClick={() => setEditingName(true)}
+                  variant="minimal"
+                  size="sm"
+                >
+                  Edit
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -642,7 +690,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
                 bindAdornment={bindButton(`move.from.y`)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
               <div><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
               <div><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
             </div>
@@ -667,7 +715,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
                 bindAdornment={bindButton(`move.to.y`)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
               <div><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
               <div><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
             </div>
@@ -696,7 +744,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`rotate.to`)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
             <div><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
             <div><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
           </div>
@@ -724,7 +772,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`scale.to`)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
             <div><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
             <div><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
           </div>
@@ -752,7 +800,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`fade.to`)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
             <div><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
             <div><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
           </div>
@@ -792,7 +840,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
                 bindAdornment={bindButton(`color.to`)} 
               />
             </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px]">
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
               <div><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
               <div><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
             </div>
