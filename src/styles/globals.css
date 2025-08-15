@@ -72,7 +72,7 @@
   --space-8: 24px;
 
   /* Component sizing - Ultra-compact */
-  --node-min-width: 18rem;
+  --node-min-width: 14rem;
   --tab-max-width: 16rem;
   --sidebar-width: 18rem;
   --header-height: 48px;
@@ -164,7 +164,7 @@
   --space-8: 24px;
 
   /* Component sizing - Ultra-compact */
-  --node-min-width: 18rem;
+  --node-min-width: 14rem;
   --tab-max-width: 16rem;
   --sidebar-width: 18rem;
   --header-height: 48px;

@@ -46,7 +46,20 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
   }, [workspace, state, initializeFromWorkspace]);
 
   const updateFlow = useCallback((updates: Partial<WorkspaceState['flow']>) => {
-    setState((prev) => (prev ? { ...prev, flow: { ...prev.flow, ...updates } } : prev));
+    setState((prev) => {
+      if (!prev) return prev;
+      
+      // Only update if there are actual changes to prevent unnecessary re-renders
+      const hasChanges = Object.keys(updates).some(key => {
+        const updateValue = updates[key as keyof typeof updates];
+        const currentValue = prev.flow[key as keyof typeof prev.flow];
+        return JSON.stringify(updateValue) !== JSON.stringify(currentValue);
+      });
+      
+      if (!hasChanges) return prev;
+      
+      return { ...prev, flow: { ...prev.flow, ...updates } };
+    });
   }, []);
 
   const updateTimeline = useCallback((nodeId: string, data: Partial<TimelineEditorData>) => {

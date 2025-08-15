@@ -19,6 +19,7 @@ import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
 import type { Node, Edge } from 'reactflow';
 import { useWorkspace } from './workspace-context';
 import { generateTransformIdentifier } from '@/lib/defaults/transforms';
+import { debounce } from '@/lib/utils';
 
 export function FlowEditorTab() {
 	const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
@@ -53,10 +54,18 @@ export function FlowEditorTab() {
 		}
 	}, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
 
-	// Sync local state to context when it changes (single source of truth)
+	// Debounced context sync to prevent performance issues during drag
+	const debouncedContextSync = useCallback(
+		debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
+			updateFlow({ nodes: newNodes, edges: newEdges });
+		}, 50),
+		[updateFlow]
+	);
+
+	// Use debounced sync for better performance
 	useEffect(() => {
-		updateFlow({ nodes: nodes as unknown as Node<NodeData>[], edges });
-	}, [nodes, edges, updateFlow]);
+		debouncedContextSync(nodes as unknown as Node<NodeData>[], edges);
+	}, [nodes, edges, debouncedContextSync]);
 
 	const {
 		resultLogModalState,

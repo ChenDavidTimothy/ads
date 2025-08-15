@@ -52,18 +52,16 @@ export function ActionsToolbar({
 	onResetGeneration,
 	validationSummary
 }: Props) {
-	const getVideoButtonText = () => {
-		if (isGenerating) return 'Generating...';
+	const getButtonText = (isGenerating: boolean, type: 'video' | 'image') => {
+		if (isGenerating) return type === 'video' ? 'Generating...' : 'Generating...';
 		if (lastError || validationSummary?.hasErrors) return 'Fix Issues & Try Again';
-		return 'Generate Video';
+		return type === 'video' ? 'Generate Video' : 'Generate Image';
 	};
 
-	const getVideoButtonVariant = () => {
+	const getButtonVariant = () => {
 		if (lastError || validationSummary?.hasErrors) return 'danger' as const;
 		return 'success' as const;
 	};
-
-	const getImageButtonText = () => (isGeneratingImage ? 'Generating...' : 'Generate Image');
 
 	return (
 		<div className="flex items-center gap-[var(--space-2)]">
@@ -71,21 +69,22 @@ export function ActionsToolbar({
 			<Button
 				onClick={onGenerate}
 				disabled={!canGenerate || isGenerating}
-				variant={getVideoButtonVariant()}
+				variant={getButtonVariant()}
 				size="sm"
 				className="font-medium"
 			>
-				{getVideoButtonText()}
+				{getButtonText(isGenerating, 'video')}
 			</Button>
 
 			{/* Image Generation */}
 			<Button
 				onClick={onGenerateImage}
 				disabled={!canGenerateImage || isGeneratingImage}
-				variant="secondary"
+				variant={getButtonVariant()}
 				size="sm"
+				className="font-medium"
 			>
-				{getImageButtonText()}
+				{getButtonText(isGeneratingImage, 'image')}
 			</Button>
 
 			{/* Reset/Clear button for error states */}

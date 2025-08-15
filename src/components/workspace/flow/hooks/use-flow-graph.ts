@@ -1,6 +1,6 @@
 // src/components/workspace/flow/hooks/useFlowGraph.ts - Fixed React render errors
 import { useCallback, useMemo, useState } from 'react';
-import { useEdgesState, useNodesState, type Edge, type Node } from 'reactflow';
+import { useEdgesState, useNodesState, type Edge, type Node, type NodeChange } from 'reactflow';
 import { getDefaultNodeData } from '@/lib/defaults/nodes';
 import { getNodeDefinition, getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import type { NodeData, NodeType } from '@/shared/types';
@@ -13,6 +13,28 @@ export function useFlowGraph() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [flowTracker] = useState(() => new FlowTracker());
   const { toast } = useNotifications();
+
+  // Optimized node change handler to reduce re-renders during drag
+  const optimizedOnNodesChange = useCallback((changes: NodeChange[]) => {
+    // Batch position-only changes to improve drag performance
+    const positionChanges = changes.filter(change => 
+      change.type === 'position' && change.dragging === true
+    );
+    
+    const otherChanges = changes.filter(change => 
+      change.type !== 'position' || change.dragging !== true
+    );
+    
+    // Handle position changes immediately for smooth dragging
+    if (positionChanges.length > 0) {
+      onNodesChange(positionChanges);
+    }
+    
+    // Handle other changes with a small delay to batch them
+    if (otherChanges.length > 0) {
+      setTimeout(() => onNodesChange(otherChanges), 8); // 120fps for responsiveness
+    }
+  }, [onNodesChange]);
 
   // Unified edge validation function for nodes with dynamic ports
   const cleanupInvalidDynamicEdges = useCallback((currentNodes: Node<NodeData>[], currentEdges: Edge[]) => {
@@ -270,7 +292,7 @@ export function useFlowGraph() {
     edges,
     setNodes,
     setEdges,
-    onNodesChange,
+    onNodesChange: optimizedOnNodesChange,
     onEdgesChange,
     selectedNodeId,
     selectedNode,
