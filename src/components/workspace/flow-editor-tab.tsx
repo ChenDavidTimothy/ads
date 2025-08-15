@@ -41,6 +41,7 @@ export function FlowEditorTab() {
 		onPaneClick,
 		onNodesDelete,
 		onEdgesDelete,
+		handleAddNode,
 		flowTracker,
 	} = useFlowGraph();
 
@@ -64,27 +65,7 @@ export function FlowEditorTab() {
 		latestLocalEdgesRef.current = edges;
 	}, [nodes, edges]);
 
-	const handleNodesChange = useCallback(
-		(changes: NodeChange[]) => {
-			const updatedNodes = applyNodeChanges(changes, nodes);
-			setNodes(updatedNodes);
-			// For most node changes, sync immediately to prevent data loss
-			updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
-			onNodesChange(changes);
-		},
-		[nodes, setNodes, onNodesChange, updateFlow]
-	);
 
-	const handleEdgesChange = useCallback(
-		(changes: EdgeChange[]) => {
-			const updatedEdges = applyEdgeChanges(changes, edges);
-			setEdges(updatedEdges);
-			// Edges can affect validity; keep context in sync immediately
-			updateFlow({ edges: updatedEdges });
-			onEdgesChange(changes);
-		},
-		[edges, setEdges, updateFlow, onEdgesChange]
-	);
 
 	// After property-panel updates mutate local nodes/edges, push the latest to context once
 	useEffect(() => {
@@ -125,54 +106,7 @@ export function FlowEditorTab() {
 		selectedEdgesRef.current = (params.edges as Edge[]) ?? [];
 	}, []);
 
-	// Robust custom deletion handler: Delete selected nodes (and their edges) or selected edges only
-	useEffect(() => {
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (!(e.key === 'Delete' || e.key === 'Backspace')) return;
-			// Avoid when user is typing in inputs or contenteditable
-			const target = e.target as HTMLElement | null;
-			const tag = target?.tagName?.toLowerCase();
-			const isFormInput = tag === 'input' || tag === 'textarea' || (target?.getAttribute('contenteditable') === 'true');
-			if (isFormInput) return;
-
-			// Prevent browser navigation on Backspace
-			e.preventDefault();
-
-			// Disable when modal is open
-			const modalOpen = (resultLogModalState as { isOpen?: boolean } | undefined)?.isOpen ?? false;
-			if (modalOpen) return;
-
-			const selectedNodeIds = new Set((selectedNodesRef.current ?? []).map((n) => (n as unknown as { id: string }).id));
-			const selectedEdgeIds = new Set((selectedEdgesRef.current ?? []).map((ed) => ed.id));
-
-			if (selectedNodeIds.size > 0) {
-				// Remove selected nodes
-				const nextNodes = (latestLocalNodesRef.current as unknown as Node<NodeData>[]) 
-					.filter((n) => !selectedNodeIds.has((n as unknown as { id: string }).id));
-				// Remove edges connected to any removed node
-				const nextEdges = (latestLocalEdgesRef.current as Edge[])
-					.filter((ed) => !selectedNodeIds.has(ed.source) && !selectedNodeIds.has(ed.target));
-
-				// Update local state first for immediate UI feedback
-				setNodes(nextNodes as unknown as Node<NodeData>[]);
-				setEdges(nextEdges as Edge[]);
-				// Update context to persist
-				updateFlow({ nodes: nextNodes as unknown as Node<NodeData>[], edges: nextEdges as Edge[] });
-				// Update tracker
-				selectedNodeIds.forEach((nodeId) => flowTracker.removeNode(nodeId));
-			} else if (selectedEdgeIds.size > 0) {
-				// Remove only selected edges
-				const nextEdges = (latestLocalEdgesRef.current as Edge[])
-					.filter((ed) => !selectedEdgeIds.has(ed.id));
-				setEdges(nextEdges as Edge[]);
-				updateFlow({ edges: nextEdges as Edge[] });
-				selectedEdgeIds.forEach((edgeId) => flowTracker.removeConnection(edgeId));
-			}
-		};
-
-		document.addEventListener('keydown', onKeyDown);
-		return () => document.removeEventListener('keydown', onKeyDown);
-	}, [flowTracker, setNodes, setEdges, updateFlow]);
+	// Use the robust deletion handlers from useFlowGraph - no custom keyboard handling needed
 
 	const ensureTimelineForNode = useCallback((nodeId: string) => {
 		if (state.editors.timeline[nodeId]) return;
@@ -273,28 +207,11 @@ export function FlowEditorTab() {
 
 	const { leftSidebarCollapsed, rightSidebarCollapsed } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean };
 
-	const onNodeAdd = useCallback(
-		(nodeType: string, position: { x: number; y: number }) => {
-			// Use the existing handleAddNode from useFlowGraph hook
-			// This ensures proper node data structure with all required properties
-			const nodeData = getDefaultNodeData(nodeType as NodeType, nodes);
-			const newNode: Node<NodeData> = {
-				id: nodeData.identifier.id,
-				type: nodeType,
-				position,
-				data: nodeData,
-			};
 
-			const newNodes = [...nodes, newNode];
-			setNodes(newNodes);
-			updateFlow({ nodes: newNodes as unknown as Node<NodeData>[] });
-		},
-		[nodes, setNodes, updateFlow]
-	);
 
 	return (
 		<div className="flex h-full">
-			{!leftSidebarCollapsed && <NodePalette onAddNode={onNodeAdd} />}
+			{!leftSidebarCollapsed && <NodePalette onAddNode={handleAddNode} />}
 			<div className="flex-1 flex flex-col">
 				<div className="h-12 flex items-center px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
 					<ActionsToolbar
@@ -318,8 +235,8 @@ export function FlowEditorTab() {
 							nodes={nodes}
 							edges={edges}
 							nodeTypes={nodeTypes}
-							onNodesChange={handleNodesChange}
-							onEdgesChange={handleEdgesChange}
+							onNodesChange={onNodesChange}
+							onEdgesChange={onEdgesChange}
 							onConnect={onConnect}
 							onNodeClick={onNodeClick}
 							onPaneClick={onPaneClick}

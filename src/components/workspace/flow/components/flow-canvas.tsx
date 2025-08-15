@@ -41,7 +41,7 @@ export function FlowCanvas(props: Props) {
 			selectionOnDrag
 			zoomOnScroll
 			className="bg-[var(--surface-0)]"
-			deleteKeyCode={(null as unknown as string | string[])}
+			deleteKeyCode={['Delete', 'Backspace']}
 			multiSelectionKeyCode={disableDeletion ? (null as unknown as string) : 'Meta'}
 		>
 			<Background color="#35353c" />
