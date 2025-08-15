@@ -14,3 +14,4 @@ export { CompareNode } from "./compare-node";
 export { IfElseNode } from "./if-else-node";
 export { BooleanOpNode } from "./boolean-op-node";
 export { MathOpNode } from "./math-op-node";
+export { DuplicateNode } from "./duplicate-node";

@@ -18,6 +18,7 @@ import { CompareNode } from './compare-node';
 import { IfElseNode } from './if-else-node';
 import { BooleanOpNode } from './boolean-op-node';
 import { MathOpNode } from './math-op-node';
+import { DuplicateNode } from './duplicate-node';
 
 export const COMPONENT_MAPPING = {
   'triangle': TriangleNode,
@@ -36,6 +37,7 @@ export const COMPONENT_MAPPING = {
   'if_else': IfElseNode,
   'boolean_op': BooleanOpNode,
   'math_op': MathOpNode,
+  'duplicate': DuplicateNode,
 } as const;
 
 export type ComponentMapping = typeof COMPONENT_MAPPING;

@@ -233,7 +233,14 @@ export interface MathOpNodeData extends BaseNodeData {
   operator: 'add' | 'subtract' | 'multiply' | 'divide' | 'modulo' | 'power' | 'sqrt' | 'abs' | 'min' | 'max';
 }
 
+// Duplicate node data
+export interface DuplicateNodeData extends BaseNodeData {
+  count: number;
+  pattern: 'none' | 'linear' | 'grid';
+  spacing: number;
+}
+
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData;
+export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
 
 // NodeType is derived from the registry (definitions)

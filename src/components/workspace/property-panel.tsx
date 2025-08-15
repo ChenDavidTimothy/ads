@@ -1,7 +1,7 @@
 // src/components/workspace/property-panel.tsx - Registry-aware property panel
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import type { Node, Edge } from "reactflow";
 import { NumberField, ColorField, SelectField, TextField, RangeField, BooleanField } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
@@ -382,8 +382,35 @@ function FilterSpecialProperties({
   flowTracker, 
   nodeId 
 }: FilterSpecialProps) {
-  // Use registry-aware flow tracking
-  const upstreamObjects = flowTracker.getUpstreamGeometryObjects(nodeId, allNodes, allEdges);
+  // NEW: Use enhanced object detection for filter node
+  const upstreamObjects = React.useMemo(() => {
+    // Get actual objects including duplicates
+    const objectDescriptors = flowTracker.getUpstreamObjects(nodeId, allNodes, allEdges);
+    
+    // Convert to format expected by SelectionList
+    return objectDescriptors.map(obj => ({
+      data: {
+        identifier: {
+          id: obj.id,
+          displayName: obj.displayName,
+          type: obj.type
+        }
+      },
+      type: obj.type
+    }));
+  }, [nodeId, allNodes, allEdges, flowTracker]);
+
+  // Log for debugging
+  React.useEffect(() => {
+    console.log(`[Filter] Detected ${upstreamObjects.length} objects for filter node ${nodeId}:`, 
+      upstreamObjects.map(o => ({
+        id: o.data.identifier.id,
+        name: o.data.identifier.displayName,
+        type: o.data.identifier.type
+      }))
+    );
+  }, [upstreamObjects, nodeId]);
+
   const selectedIds = new Set(data.selectedObjectIds);
 
   const handleToggleObject = (objectId: string) => {
@@ -432,6 +459,11 @@ function FilterSpecialProperties({
         <div className="flex items-center justify-between text-xs text-gray-400 mt-[var(--space-2)]">
           <span>Selected: {data.selectedObjectIds.length}</span>
           <span>Available: {upstreamObjects.length}</span>
+        </div>
+        
+        {/* NEW: Debug info */}
+        <div className="text-xs text-[var(--text-tertiary)] mt-[var(--space-1)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
+          Including duplicated objects from upstream duplicate nodes
         </div>
       </div>
     </div>

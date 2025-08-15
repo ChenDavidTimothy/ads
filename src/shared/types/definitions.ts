@@ -717,6 +717,69 @@ export const NODE_DEFINITIONS = {
       supportsDynamicPorts: true,
       portGenerator: 'math'
     }
+  },
+
+  duplicate: {
+    type: 'duplicate',
+    label: 'Duplicate',
+    description: 'Creates multiple copies of objects with unique IDs while preserving all properties and metadata',
+    execution: {
+      category: 'logic',
+      executor: 'logic',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'object_stream', label: 'Objects' }
+      ],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Duplicated' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'count', 
+          type: 'number', 
+          label: 'Total Count', 
+          min: 1, 
+          max: 50, 
+          defaultValue: 3,
+          description: 'Total number of objects (including original)'
+        },
+        { 
+          key: 'pattern', 
+          type: 'select', 
+          label: 'Layout Pattern', 
+          options: [
+            { value: 'none', label: 'None (Same Position)' },
+            { value: 'linear', label: 'Linear (Horizontal)' },
+            { value: 'grid', label: 'Grid (Future)' }
+          ],
+          defaultValue: 'none' 
+        },
+        { 
+          key: 'spacing', 
+          type: 'number', 
+          label: 'Spacing', 
+          min: 0, 
+          max: 500, 
+          defaultValue: 50,
+          description: 'Distance between duplicates (pixels)'
+        }
+      ]
+    },
+    rendering: {
+      icon: '⚌',
+      colors: {
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
+      }
+    },
+    defaults: {
+      count: 3,
+      pattern: 'none',
+      spacing: 50
+    }
   }
 } as const;
 

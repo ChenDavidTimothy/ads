@@ -19,11 +19,36 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const canvasNode = useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
 	const assignments: PerObjectAssignments = (canvasNode?.data?.perObjectAssignments as PerObjectAssignments) ?? {};
 
-	// Compute upstream objects
+	// NEW: Use enhanced object detection that understands duplication
 	const upstreamObjects = useMemo(() => {
 		const tracker = new FlowTracker();
-		return tracker.getUpstreamGeometryObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
+		
+		// Use new duplicate-aware method
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
+		
+		// Convert to display format expected by SelectionList
+		return objectDescriptors.map(obj => ({
+			data: {
+				identifier: {
+					id: obj.id,
+					displayName: obj.displayName,
+					type: obj.type
+				}
+			},
+			type: obj.type
+		}));
 	}, [nodeId, state.flow.nodes, state.flow.edges]);
+
+	// Log for debugging
+	React.useEffect(() => {
+		console.log(`[Canvas] Detected ${upstreamObjects.length} objects for canvas node ${nodeId}:`, 
+			upstreamObjects.map(o => ({
+				id: o.data.identifier.id,
+				name: o.data.identifier.displayName,
+				type: o.data.identifier.type
+			}))
+		);
+	}, [upstreamObjects, nodeId]);
 
 	const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
@@ -78,8 +103,13 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 						onSelect={setSelectedObjectId}
 						showDefault={true}
 						defaultLabel="Default"
-						emptyLabel="No upstream objects"
+						emptyLabel="No upstream objects detected"
 					/>
+					
+					{/* NEW: Show object count for debugging */}
+					<div className="text-xs text-[var(--text-tertiary)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
+						Detected: {upstreamObjects.length} object{upstreamObjects.length !== 1 ? 's' : ''}
+					</div>
 				</div>
 			</div>
 

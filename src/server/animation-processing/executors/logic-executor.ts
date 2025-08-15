@@ -6,7 +6,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
 import { TypeValidationError } from "@/shared/types/validation";
-import { MultipleResultValuesError } from "@/shared/errors/domain";
+import { MultipleResultValuesError, DuplicateNodeError, DuplicateCountExceededError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
@@ -22,6 +22,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     this.registerHandler('if_else', this.executeIfElse.bind(this));
     this.registerHandler('boolean_op', this.executeBooleanOp.bind(this));
     this.registerHandler('math_op', this.executeMathOp.bind(this));
+    this.registerHandler('duplicate', this.executeDuplicate.bind(this));
   }
 
 
@@ -986,5 +987,256 @@ export class LogicNodeExecutor extends BaseExecutor {
       result,
       { logicType: 'number', validated: true }
     );
+  }
+
+  private async executeDuplicate(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    logger.debug(`Starting duplicate execution for node: ${node.data.identifier.displayName}`);
+    
+    const data = node.data as unknown as Record<string, unknown>;
+    const count = Math.min(Math.max(Number(data.count) || 1, 1), 50); // Enforce limits
+    const pattern = (data.pattern as string) || 'none';
+    const spacing = Number(data.spacing) || 50;
+
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+
+    // Validate inputs before processing
+    this.validateDuplicateInputs(count, pattern, spacing, inputs.length, node.data.identifier.id, node.data.identifier.displayName);
+
+    if (inputs.length === 0) {
+      logger.debug('No inputs connected to duplicate node');
+      setNodeOutput(
+        context, 
+        node.data.identifier.id, 
+        'output', 
+        'object_stream', 
+        [], 
+        { 
+          perObjectTimeCursor: {}, 
+          perObjectAnimations: {}, 
+          perObjectAssignments: {} 
+        }
+      );
+      return;
+    }
+
+    // Extract all upstream metadata
+    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], []);
+    const upstreamAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], []);
+    const upstreamCursors = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
+
+    // Initialize output collections
+    const allOutputObjects: unknown[] = [];
+    const expandedAssignments: PerObjectAssignments = {};
+    const expandedAnimations: Record<string, SceneAnimationTrack[]> = {};
+    const expandedCursors: Record<string, number> = {};
+
+    // Track created IDs for collision detection
+    const allExistingIds = this.getAllExistingObjectIds(context);
+    const newlyCreatedIds = new Set<string>();
+
+    let totalObjectsProcessed = 0;
+    const maxTotalObjects = 200; // System-wide safety limit
+
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      logger.debug(`Processing input with ${inputData.length} objects`);
+
+      for (const originalObject of inputData) {
+        // Safety check for total object count
+        if (totalObjectsProcessed * count > maxTotalObjects) {
+          logger.warn(`Duplicate operation would exceed maximum object limit (${maxTotalObjects})`);
+          throw new Error('Duplicate operation would create too many objects. Reduce count or input objects.');
+        }
+
+        if (!this.hasValidObjectStructure(originalObject)) {
+          // Pass through non-object data unchanged
+          allOutputObjects.push(originalObject);
+          continue;
+        }
+
+        const originalId = (originalObject as { id: string }).id;
+        logger.debug(`Duplicating object ${originalId} with count ${count}`);
+
+        // Add original object
+        allOutputObjects.push(originalObject);
+        this.copyMetadataForObject(originalId, originalId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
+
+        // Create duplicates
+        for (let i = 1; i < count; i++) {
+          const duplicateId = this.generateUniqueId(originalId, i, allExistingIds, newlyCreatedIds);
+          
+          // Create duplicate object with pattern-based positioning
+          const duplicate = this.createDuplicateObject(originalObject, duplicateId, i, pattern, spacing);
+          allOutputObjects.push(duplicate);
+
+          // Copy and adapt all metadata
+          this.copyMetadataForObject(originalId, duplicateId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
+          
+          newlyCreatedIds.add(duplicateId);
+        }
+
+        totalObjectsProcessed++;
+      }
+    }
+
+    logger.debug(`Duplicate execution complete. Output: ${allOutputObjects.length} objects`);
+
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      allOutputObjects,
+      {
+        perObjectTimeCursor: expandedCursors,
+        perObjectAnimations: expandedAnimations,
+        perObjectAssignments: expandedAssignments
+      }
+    );
+  }
+
+  private validateDuplicateInputs(
+    count: number, 
+    pattern: string, 
+    spacing: number,
+    totalInputObjects: number,
+    nodeId: string,
+    nodeDisplayName: string
+  ): void {
+    // Count validation
+    if (count < 1) {
+      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Duplicate count must be at least 1');
+    }
+    if (count > 50) {
+      throw new DuplicateCountExceededError(nodeId, nodeDisplayName, count, 50);
+    }
+
+    // Pattern validation
+    const validPatterns = ['none', 'linear', 'grid'];
+    if (!validPatterns.includes(pattern)) {
+      throw new DuplicateNodeError(
+        nodeId, 
+        nodeDisplayName, 
+        `Invalid pattern: ${pattern}. Must be one of: ${validPatterns.join(', ')}`
+      );
+    }
+
+    // Spacing validation
+    if (spacing < 0) {
+      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Spacing cannot be negative');
+    }
+    if (spacing > 1000) {
+      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Spacing cannot exceed 1000 pixels');
+    }
+
+    // Total output validation
+    const totalOutput = totalInputObjects * count;
+    if (totalOutput > 200) {
+      throw new DuplicateNodeError(
+        nodeId, 
+        nodeDisplayName, 
+        `Operation would create ${totalOutput} objects, exceeding system limit of 200`
+      );
+    }
+  }
+
+  private hasValidObjectStructure(obj: unknown): boolean {
+    return typeof obj === 'object' && 
+           obj !== null && 
+           'id' in obj && 
+           typeof (obj as { id: unknown }).id === 'string';
+  }
+
+  private generateUniqueId(originalId: string, index: number, existingIds: Set<string>, newIds: Set<string>): string {
+    const baseId = `${originalId}_dup_${index.toString().padStart(3, '0')}`;
+    let candidateId = baseId;
+    let suffix = 0;
+    
+    while (existingIds.has(candidateId) || newIds.has(candidateId)) {
+      suffix++;
+      candidateId = `${baseId}_${suffix}`;
+    }
+    
+    return candidateId;
+  }
+
+  private getAllExistingObjectIds(context: ExecutionContext): Set<string> {
+    const ids = new Set<string>();
+    
+    for (const [key, output] of context.nodeOutputs.entries()) {
+      if (output.type !== 'object_stream') continue;
+      
+      const objects = Array.isArray(output.data) ? output.data : [output.data];
+      for (const obj of objects) {
+        if (this.hasValidObjectStructure(obj)) {
+          ids.add((obj as { id: string }).id);
+        }
+      }
+    }
+    
+    return ids;
+  }
+
+  private createDuplicateObject(original: unknown, duplicateId: string, index: number, pattern: string, spacing: number): unknown {
+    const duplicate = JSON.parse(JSON.stringify(original)); // Deep clone
+    (duplicate as { id: string }).id = duplicateId;
+    
+    // Apply positioning patterns
+    if (pattern === 'linear' && 'initialPosition' in duplicate) {
+      const pos = (duplicate as { initialPosition: { x: number; y: number } }).initialPosition;
+      pos.x += index * spacing;
+    }
+    // Future: grid pattern implementation
+    
+    return duplicate;
+  }
+
+  private copyMetadataForObject(
+    sourceId: string,
+    targetId: string,
+    sourceAssignments: PerObjectAssignments | undefined,
+    sourceAnimations: Record<string, SceneAnimationTrack[]>,
+    sourceCursors: Record<string, number>,
+    targetAssignments: PerObjectAssignments,
+    targetAnimations: Record<string, SceneAnimationTrack[]>,
+    targetCursors: Record<string, number>
+  ): void {
+    // Copy assignments with deep clone
+    if (sourceAssignments?.[sourceId]) {
+      try {
+        targetAssignments[targetId] = JSON.parse(JSON.stringify(sourceAssignments[sourceId]));
+      } catch (error) {
+        logger.warn(`Failed to clone assignments for ${sourceId}→${targetId}:`, { error: String(error) });
+        targetAssignments[targetId] = {} as ObjectAssignments;
+      }
+    }
+
+    // Copy animations with objectId updates
+    if (sourceAnimations[sourceId]) {
+      try {
+        targetAnimations[targetId] = sourceAnimations[sourceId].map(anim => ({
+          ...anim,
+          objectId: targetId,
+          properties: JSON.parse(JSON.stringify(anim.properties))
+        }));
+      } catch (error) {
+        logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, { error: String(error) });
+        targetAnimations[targetId] = [];
+      }
+    }
+
+    // Copy timing cursors
+    if (sourceCursors[sourceId] !== undefined) {
+      targetCursors[targetId] = sourceCursors[sourceId];
+    }
   }
 }

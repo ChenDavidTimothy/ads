@@ -27,11 +27,36 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const animationNode = React.useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
   const currentAssignments: PerObjectAssignments = (animationNode?.data?.perObjectAssignments as PerObjectAssignments) ?? {};
 
-  // Compute upstream objects
+  // NEW: Use enhanced object detection that understands duplication
   const upstreamObjects = React.useMemo(() => {
     const tracker = new FlowTracker();
-    return tracker.getUpstreamGeometryObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
+    
+    // Use new duplicate-aware method
+    const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
+    
+    // Convert to display format expected by SelectionList
+    return objectDescriptors.map(obj => ({
+      data: {
+        identifier: {
+          id: obj.id,
+          displayName: obj.displayName,
+          type: obj.type
+        }
+      },
+      type: obj.type
+    }));
   }, [nodeId, state.flow.nodes, state.flow.edges]);
+
+  // Log for debugging
+  React.useEffect(() => {
+    console.log(`[Timeline] Detected ${upstreamObjects.length} objects for animation node ${nodeId}:`, 
+      upstreamObjects.map(o => ({
+        id: o.data.identifier.id,
+        name: o.data.identifier.displayName,
+        type: o.data.identifier.type
+      }))
+    );
+  }, [upstreamObjects, nodeId]);
 
   const updateAssignmentsForTrack = React.useCallback((objectId: string, trackId: string, updates: Partial<TrackOverride>) => {
     const next: PerObjectAssignments = { ...currentAssignments };
@@ -187,6 +212,11 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
               defaultLabel="Default"
               emptyLabel="No upstream objects"
             />
+            
+            {/* NEW: Show object count for debugging */}
+            <div className="text-xs text-[var(--text-tertiary)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
+              Detected: {upstreamObjects.length} object{upstreamObjects.length !== 1 ? 's' : ''}
+            </div>
           </div>
       </div>
 

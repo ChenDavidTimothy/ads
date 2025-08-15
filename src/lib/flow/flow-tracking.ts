@@ -4,6 +4,15 @@ import type { NodeData, NodeLineage } from "@/shared/types/nodes";
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 import { canonicalizeEdges, buildIdMap, toCanonicalId } from "@/shared/graph/id";
 
+// Enhanced object descriptor for duplicate-aware tracking
+interface ObjectDescriptor {
+  id: string;
+  nodeId: string;
+  displayName: string;
+  type: string;
+  sourceGeometryNodeId: string;
+}
+
 export class FlowTracker {
   private nodeLineages = new Map<string, NodeLineage>();
 
@@ -107,62 +116,189 @@ export class FlowTracker {
     return duplicate ? "Name already exists" : null;
   }
 
-  // Registry-aware geometry object discovery using canonical node IDs
-  getUpstreamGeometryObjects(
+
+
+  // Enhanced method to get actual objects (including duplicates)
+  getUpstreamObjects(
     nodeId: string,
     allNodes: Node<NodeData>[],
     allEdges: Edge[]
-  ): Node<NodeData>[] {
-    const geometryNodes: Node<NodeData>[] = [];
+  ): ObjectDescriptor[] {
+    const objects: ObjectDescriptor[] = [];
     const visited = new Set<string>();
 
-    // Get geometry node types from registry instead of hardcoding
-    const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
-
-    // Canonicalize IDs and edges once, then operate only on identifier.id
+    // Build ID mapping
     const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
     const canonicalEdges = canonicalizeEdges(
       allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
       allEdges as unknown as Array<{ source: string; target: string }>
     );
 
+    // Get all node types from registry
+    const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const duplicateNodeTypes = ['duplicate']; // Can be expanded for other multiplier nodes
+
     const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
       return allNodes.find((n) => n.data.identifier.id === identifierId);
     };
 
-    // Recursive function to traverse upstream from the target node
-    const traverseUpstream = (currentNodeId: string): void => {
-      if (visited.has(currentNodeId)) return;
+    // Enhanced: Handle multiple input ports for merge nodes
+    const getInputPortsForNode = (node: Node<NodeData>): string[] => {
+      if (node.type === 'merge') {
+        const mergeData = node.data as unknown as { inputPortCount?: number };
+        const portCount = Math.min(Math.max(Number(mergeData.inputPortCount) || 2, 2), 5);
+        return Array.from({ length: portCount }, (_, i) => `input${i + 1}`);
+      }
+      return ['input']; // Default single input port
+    };
+
+    // Trace objects through the flow with merge node support
+    const traceObjects = (currentNodeId: string, objectsByPort: Map<string, ObjectDescriptor[]>): ObjectDescriptor[] => {
+      if (visited.has(currentNodeId)) return [];
       visited.add(currentNodeId);
 
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) {
         console.warn(`Node not found for ID: ${currentNodeId}`);
-        return;
+        return [];
       }
 
-      // Registry-aware geometry node detection
+      // If this is a geometry node, it creates new objects
       if (geometryNodeTypes.includes(currentNode.type!)) {
-        geometryNodes.push(currentNode);
+        const newObject: ObjectDescriptor = {
+          id: currentNode.data.identifier.id,
+          nodeId: currentNode.data.identifier.id,
+          displayName: currentNode.data.identifier.displayName,
+          type: currentNode.type!,
+          sourceGeometryNodeId: currentNode.data.identifier.id
+        };
+        return [newObject];
       }
 
-      // Find edges targeting this node using canonical (identifier) IDs
-      const incomingEdges = canonicalEdges.filter((edge: { target: string }) => edge.target === currentNode.data.identifier.id);
-
-      // Recursively traverse all source nodes
-      for (const edge of incomingEdges) {
-        traverseUpstream(edge.source);
+      // Handle merge nodes with multiple ports and conflict resolution
+      if (currentNode.type === 'merge') {
+        return this.processMergeNode(objectsByPort);
       }
+
+      // If this is a duplicate node, multiply the objects
+      if (duplicateNodeTypes.includes(currentNode.type!)) {
+        const duplicateData = currentNode.data as unknown as { count?: number };
+        const count = Math.min(Math.max(Number(duplicateData.count) || 1, 1), 50);
+        
+        // Get objects from single input port
+        const inputObjects = objectsByPort.get('input') || [];
+        const multipliedObjects: ObjectDescriptor[] = [];
+        
+        for (const obj of inputObjects) {
+          // Add original
+          multipliedObjects.push(obj);
+          
+          // Add duplicates  
+          for (let i = 1; i < count; i++) {
+            const duplicateId = `${obj.id}_dup_${i.toString().padStart(3, '0')}`;
+            multipliedObjects.push({
+              id: duplicateId,
+              nodeId: currentNode.data.identifier.id,
+              displayName: `${obj.displayName} (Copy ${i})`,
+              type: obj.type,
+              sourceGeometryNodeId: obj.sourceGeometryNodeId
+            });
+          }
+        }
+        
+        return multipliedObjects;
+      }
+
+      // For other nodes (filter, canvas, animation), pass through from single input
+      const inputObjects = objectsByPort.get('input') || [];
+      return inputObjects;
     };
 
-    // Start traversal from the target node, canonicalizing the starting ID
-    const startId = toCanonicalId(nodeId, idMap);
-    traverseUpstream(startId);
+    // Recursive traversal with merge-aware port handling
+    const traverseUpstream = (currentNodeId: string): ObjectDescriptor[] => {
+      const currentNode = getNodeByIdentifierId(currentNodeId);
+      if (!currentNode) return [];
 
-    // Return all geometry nodes (including duplicates for validation)
-    // Sort by display name for consistent UI
-    return geometryNodes.sort((a, b) => a.data.identifier.displayName.localeCompare(b.data.identifier.displayName));
+      // Get input ports for this node type
+      const inputPorts = getInputPortsForNode(currentNode);
+      
+      // Collect objects from each input port
+      const objectsByPort = new Map<string, ObjectDescriptor[]>();
+      
+      for (const portId of inputPorts) {
+        // Find edges targeting this specific port (using React Flow IDs)
+        const portEdges = allEdges.filter((edge) => {
+          // Map React Flow target to canonical ID for comparison
+          const targetCanonicalId = toCanonicalId(edge.target, idMap);
+          return targetCanonicalId === currentNode.data.identifier.id && 
+                 (edge.targetHandle === portId || (!edge.targetHandle && portId === 'input'));
+        });
+        
+        const portObjects: ObjectDescriptor[] = [];
+        for (const edge of portEdges) {
+          // Map edge source to canonical identifier ID
+          const sourceCanonicalId = toCanonicalId(edge.source, idMap);
+          const upstreamObjs = traverseUpstream(sourceCanonicalId);
+          portObjects.push(...upstreamObjs);
+        }
+        
+        if (portObjects.length > 0) {
+          objectsByPort.set(portId, portObjects);
+        }
+      }
+
+      // If no input ports have objects and this is a geometry node, it's a source
+      if (objectsByPort.size === 0 && geometryNodeTypes.includes(currentNode.type!)) {
+        return traceObjects(currentNodeId, new Map([['input', []]]));
+      }
+
+      // Process objects through current node
+      return traceObjects(currentNodeId, objectsByPort);
+    };
+
+    // Start traversal from target node
+    const startId = toCanonicalId(nodeId, idMap);
+    const result = traverseUpstream(startId);
+
+    // Remove duplicates and sort
+    const uniqueObjects = new Map<string, ObjectDescriptor>();
+    for (const obj of result) {
+      uniqueObjects.set(obj.id, obj);
+    }
+
+    return Array.from(uniqueObjects.values()).sort((a, b) => 
+      a.displayName.localeCompare(b.displayName)
+    );
   }
+
+  // Process merge node with port priority (matches backend logic)
+  private processMergeNode(objectsByPort: Map<string, ObjectDescriptor[]>): ObjectDescriptor[] {
+    const mergedObjects = new Map<string, ObjectDescriptor>();
+    
+    // Process ports in reverse order so Port 1 (input1) has highest priority
+    const portNames = Array.from(objectsByPort.keys()).sort((a, b) => {
+      const aNum = parseInt(a.replace('input', '')) || 0;
+      const bNum = parseInt(b.replace('input', '')) || 0;
+      return bNum - aNum; // Reverse order
+    });
+    
+    for (const portName of portNames) {
+      const objects = objectsByPort.get(portName) || [];
+      
+      for (const obj of objects) {
+        const existingObject = mergedObjects.get(obj.id);
+        if (existingObject) {
+          // Conflict resolution: current port overwrites (lower port number = higher priority)
+          console.debug(`[FlowTracker] Object ID conflict resolved: ${obj.id} from ${portName} overwrites previous`);
+        }
+        mergedObjects.set(obj.id, obj);
+      }
+    }
+    
+    return Array.from(mergedObjects.values());
+  }
+
+
 
   // Registry-aware node category validation
   isGeometryNode(nodeType: string): boolean {

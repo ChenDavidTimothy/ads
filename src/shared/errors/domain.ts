@@ -14,7 +14,9 @@ export type DomainErrorCode =
   | 'ERR_UNKNOWN_NODE_TYPE'
   | 'ERR_USER_JOB_LIMIT'
   | 'ERR_NO_VALID_SCENES'
-  | 'ERR_MULTIPLE_RESULT_VALUES';
+  | 'ERR_MULTIPLE_RESULT_VALUES'
+  | 'ERR_DUPLICATE_NODE_ERROR'
+  | 'ERR_DUPLICATE_COUNT_EXCEEDED';
 
 export interface DomainErrorDetails {
   nodeId?: string;
@@ -158,6 +160,34 @@ export class MultipleResultValuesError extends DomainError {
       { nodeName, info: { sourceNames } }
     );
     this.name = 'MultipleResultValuesError';
+  }
+}
+
+export class DuplicateNodeError extends DomainError {
+  constructor(
+    public readonly nodeId: string,
+    public readonly nodeDisplayName: string,
+    message: string,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(`Duplicate node '${nodeDisplayName}' (${nodeId}): ${message}`, 'ERR_DUPLICATE_NODE_ERROR', { 
+      nodeId, 
+      nodeName: nodeDisplayName,
+      info: details 
+    });
+    this.name = 'DuplicateNodeError';
+  }
+}
+
+export class DuplicateCountExceededError extends DuplicateNodeError {
+  constructor(nodeId: string, nodeDisplayName: string, requestedCount: number, maxCount: number) {
+    super(
+      nodeId,
+      nodeDisplayName,
+      `Requested count ${requestedCount} exceeds maximum ${maxCount}`,
+      { requestedCount, maxCount }
+    );
+    this.name = 'DuplicateCountExceededError';
   }
 }
 

@@ -32,7 +32,8 @@ function getNodeShortId(nodeType: NodeType): string {
     compare: 'cmp',
     if_else: 'ife',
     boolean_op: 'bop',
-    math_op: 'mat'
+    math_op: 'mat',
+    duplicate: 'dup'
   };
   return prefixes[nodeType];
 }
