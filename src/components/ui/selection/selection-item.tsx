@@ -29,12 +29,12 @@ export function SelectionItem({
   ].join(' ');
 
   const selectedClasses = selected ? [
-    'bg-[rgba(192,132,252,0.08)] border-[var(--accent-primary)]',
+    'bg-[var(--purple-shadow-subtle)] border-[var(--accent-primary)]',
     'shadow-[0_0_0_1px_var(--ring-color)]'
   ].join(' ') : '';
 
   const multiSelectedClasses = mode === 'multi' && selected ? [
-    'bg-[rgba(192,132,252,0.12)] border-[var(--accent-primary)]',
+    'bg-[var(--purple-shadow-medium)] border-[var(--accent-primary)]',
     'border-2 shadow-[0_0_0_1px_var(--ring-color)]'
   ].join(' ') : '';
 

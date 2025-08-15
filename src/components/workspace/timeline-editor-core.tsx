@@ -380,7 +380,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                         return trackColors[track.type] ?? "bg-[var(--surface-interactive)]";
                       })(),
                       selectedTrackId === track.identifier.id 
-                        ? "border-[var(--accent-primary)] shadow-[0_0_20px_rgba(192,132,252,0.6),0_4px_12px_rgba(192,132,252,0.4)]" 
+                        ? "border-[var(--accent-primary)] shadow-[0_0_20px_var(--purple-shadow-medium),0_4px_12px_var(--purple-shadow-subtle)]" 
                         : "hover:brightness-110 hover:border-[var(--border-accent)]",
                       dragState?.trackId === track.identifier.id ? "opacity-80" : "",
                     )}

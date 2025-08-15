@@ -59,11 +59,21 @@
   --danger-600: #dc2626;
 
   /* Node category colors - Much lighter for visibility */
-  --node-animation: #c084fc;    /* Light purple */
+  --node-animation: #6d28d9;    /* Dark premium purple - was #c084fc */
   --node-logic: #60a5fa;        /* Light blue */  
   --node-data: #22d3ee;         /* Light cyan */
   --node-geometry: #f472b6;     /* Light pink */
   --node-output: #a78bfa;       /* Light purple */
+
+  /* Purple-derived shadow colors for consistency */
+  --purple-shadow-subtle: color-mix(in srgb, var(--node-animation) 30%, transparent);
+  --purple-shadow-medium: color-mix(in srgb, var(--node-animation) 85%, transparent);
+  --purple-shadow-strong: color-mix(in srgb, var(--node-animation) 95%, transparent);
+  
+  /* Edge-specific colors for maximum visibility */
+  --edge-stroke: var(--purple-shadow-medium);
+  --edge-stroke-hover: var(--purple-shadow-strong);
+  --edge-stroke-selected: var(--node-animation);
 
   /* Glass-like effects */
   --glass-bg: rgba(255, 255, 255, 0.02);
@@ -111,7 +121,7 @@
   --duration-slow: 250ms;
 
   /* Focus states */
-  --ring-color: rgba(192, 132, 252, 0.4);
+  --ring-color: var(--purple-shadow-medium);
   --ring-width: 1px;
   --ring-offset: var(--surface-0);
 }
@@ -168,11 +178,21 @@
   --danger-600: #dc2626;
 
   /* Node category colors - Much lighter for visibility */
-  --node-animation: #c084fc;    /* Light purple */
+  --node-animation: #6d28d9;    /* Dark premium purple - was #c084fc */
   --node-logic: #60a5fa;        /* Light blue */  
   --node-data: #22d3ee;         /* Light cyan */
   --node-geometry: #f472b6;     /* Light pink */
   --node-output: #a78bfa;       /* Light purple */
+
+  /* Purple-derived shadow colors for consistency */
+  --purple-shadow-subtle: color-mix(in srgb, var(--node-animation) 30%, transparent);
+  --purple-shadow-medium: color-mix(in srgb, var(--node-animation) 85%, transparent);
+  --purple-shadow-strong: color-mix(in srgb, var(--node-animation) 95%, transparent);
+  
+  /* Edge-specific colors for maximum visibility */
+  --edge-stroke: var(--purple-shadow-medium);
+  --edge-stroke-hover: var(--purple-shadow-strong);
+  --edge-stroke-selected: var(--node-animation);
 
   /* Glass-like effects */
   --glass-bg: rgba(255, 255, 255, 0.02);
@@ -220,7 +240,7 @@
   --duration-slow: 250ms;
 
   /* Focus states */
-  --ring-color: rgba(192, 132, 252, 0.4);
+  --ring-color: var(--purple-shadow-medium);
   --ring-width: 1px;
   --ring-offset: var(--surface-0);
 }
