@@ -223,34 +223,7 @@ export class ExecutionEngine {
     const totalObjects = Array.from(context.sceneObjectsByScene.values())
       .reduce((total, sceneObjects) => total + sceneObjects.length, 0);
     
-    // DEBUG: Log final scene animations and metadata
-    console.log('[Scene] Final animation assignment:', {
-      totalAnimationsReceived: context.sceneAnimations.length,
-      sceneAnimations: context.sceneAnimations.map(anim => ({
-        objectId: anim.objectId,
-        trackId: anim.id,
-        trackType: anim.type,
-        startTime: anim.startTime,
-        duration: anim.duration
-      }))
-    });
 
-    // DEBUG: Check metadata from all node outputs
-    console.log('[Scene] Node outputs metadata check:', {
-      nodeOutputs: Array.from(context.nodeOutputs.entries())
-        .filter(([key, output]) => output.type === 'object_stream')
-        .map(([key, output]) => ({
-          nodeKey: key,
-          hasMetadata: !!output.metadata,
-          hasAnimations: !!(output.metadata as any)?.perObjectAnimations,
-          animationKeys: Object.keys((output.metadata as any)?.perObjectAnimations || {}),
-          animationCounts: Object.entries((output.metadata as any)?.perObjectAnimations || {})
-            .map(([objId, tracks]) => ({
-              objectId: objId,
-              trackCount: (tracks as any[])?.length || 0
-            }))
-        }))
-    });
     
     logger.info('Final context', { 
       objects: totalObjects, 

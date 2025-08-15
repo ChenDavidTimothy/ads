@@ -49,28 +49,7 @@ export function partitionObjectsByScenes(
       // This handles direct animation->scene connections that bypass merge nodes
       const incomingEdges = edges.filter(edge => edge.target === sceneId);
       
-      // DEBUG: Log metadata flow during scene partitioning
-      console.log(`[ScenePartitioner] Scene ${sceneNode.data.identifier.displayName} (${sceneId}) metadata check:`, {
-        incomingEdges: incomingEdges.map(edge => ({
-          source: edge.source,
-          sourceHandle: edge.sourceHandle,
-          target: edge.target
-        })),
-        edgeMetadata: incomingEdges.map(edge => {
-          const sourceOutput = context.nodeOutputs.get(`${edge.source}.${edge.sourceHandle ?? 'output'}`);
-          return {
-            edge: `${edge.source}.${edge.sourceHandle ?? 'output'}`,
-            hasMetadata: !!sourceOutput?.metadata,
-            hasAnimations: !!(sourceOutput?.metadata as any)?.perObjectAnimations,
-            animationKeys: Object.keys((sourceOutput?.metadata as any)?.perObjectAnimations || {}),
-            animationCounts: Object.entries((sourceOutput?.metadata as any)?.perObjectAnimations || {})
-              .map(([objId, tracks]) => ({
-                objectId: objId,
-                trackCount: (tracks as any[])?.length || 0
-              }))
-          };
-        })
-      });
+
       
       for (const edge of incomingEdges) {
         const sourceOutput = context.nodeOutputs.get(`${edge.source}.${edge.sourceHandle ?? 'output'}`);
@@ -95,25 +74,7 @@ export function partitionObjectsByScenes(
       sceneAnimations = assignedAnimations;
     }
     
-    // DEBUG: Log final scene animations after metadata processing
-    console.log(`[ScenePartitioner] Scene ${sceneNode.data.identifier.displayName} (${sceneId}) final animations:`, {
-      sceneId,
-      objectCount: sceneObjects.length,
-      animationCount: sceneAnimations.length,
-      objectIds: sceneObjects.map(obj => obj.id),
-      sceneAnimations: sceneAnimations.map(anim => ({
-        objectId: anim.objectId,
-        trackId: anim.id,
-        trackType: anim.type,
-        startTime: anim.startTime,
-        duration: anim.duration
-      })),
-      objectProperties: sceneObjects.map(obj => ({ 
-        id: obj.id, 
-        type: obj.type,
-        hasAnimations: sceneAnimations.filter(anim => anim.objectId === obj.id).length > 0
-      }))
-    });
+
     
     logger.debug(`Scene ${sceneNode.data.identifier.displayName}`, {
       sceneId,

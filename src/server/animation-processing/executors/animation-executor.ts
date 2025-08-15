@@ -27,25 +27,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       'input'
     );
 
-    // DEBUG: Log input animations at start
-    const inputAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[]);
-    console.log(`[${node.data.identifier.displayName}] INPUT ANIMATIONS:`, {
-      nodeId: node.data.identifier.id,
-      inputAnimations: Object.entries(inputAnimations)
-        .map(([objId, tracks]) => ({
-          objectId: objId,
-          trackCount: tracks.length,
-          trackIds: tracks.map(t => t.id),
-          trackTypes: tracks.map(t => t.type)
-        }))
-    });
 
-    // DEBUG: Check if Animation1 node actually has tracks defined
-    const tracks = (data.tracks as AnimationTrack[]) || [];
-    console.log(`[${node.data.identifier.displayName}] Track count: ${tracks.length}`);
-    if (tracks.length === 0) {
-      console.log(`[${node.data.identifier.displayName}] ERROR: No tracks defined on this animation node!`);
-    }
 
     // Resolve variable bindings from upstream Result nodes
     const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
@@ -230,20 +212,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       passThoughObjects,
       { perObjectTimeCursor: outputCursorMap, perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations), perObjectAssignments: mergedAssignments }
     );
-
-    // DEBUG: Log output metadata at end
-    console.log(`[${node.data.identifier.displayName}] OUTPUT METADATA:`, {
-      nodeId: node.data.identifier.id,
-      perObjectTimeCursor: outputCursorMap,
-      perObjectAnimations: Object.entries(this.clonePerObjectAnimations(perObjectAnimations))
-        .map(([objId, tracks]) => ({
-          objectId: objId,
-          trackCount: tracks.length,
-          trackIds: tracks.map(t => t.id),
-          trackTypes: tracks.map(t => t.type)
-        })),
-      perObjectAssignments: mergedAssignments
-    });
   }
 
   private clonePerObjectAnimations(map: Record<string, SceneAnimationTrack[]>): Record<string, SceneAnimationTrack[]> {
