@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { applyNodeChanges, applyEdgeChanges, type NodeTypes, type NodeChange, type EdgeChange } from 'reactflow';
+import { type NodeTypes } from 'reactflow';
 import { FlowCanvas } from './flow/components/flow-canvas';
 import { NodePalette } from './node-palette';
 import { ActionsToolbar } from './flow/components/actions-toolbar';
@@ -17,10 +17,8 @@ import { useDebugExecution } from './flow/hooks/use-debug-execution';
 import { DebugProvider } from './flow/debug-context';
 import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
 import type { Node, Edge } from 'reactflow';
-import type { NodeType } from '@/shared/types/definitions';
 import { useWorkspace } from './workspace-context';
 import { generateTransformIdentifier } from '@/lib/defaults/transforms';
-import { getDefaultNodeData } from '@/lib/defaults/nodes';
 
 export function FlowEditorTab() {
 	const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
@@ -45,50 +43,20 @@ export function FlowEditorTab() {
 		flowTracker,
 	} = useFlowGraph();
 
-	// Sync workspace context with flow graph state
+	// Initialize local state from context on mount (load saved nodes)
 	useEffect(() => {
-		setNodes(ctxNodes as unknown as Node<NodeData>[]);
-	}, [ctxNodes, setNodes]);
+		if (ctxNodes.length > 0 && nodes.length === 0) {
+			setNodes(ctxNodes as unknown as Node<NodeData>[]);
+		}
+		if (ctxEdges.length > 0 && edges.length === 0) {
+			setEdges(ctxEdges);
+		}
+	}, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
 
+	// Sync local state to context when it changes (single source of truth)
 	useEffect(() => {
-		setEdges(ctxEdges);
-	}, [ctxEdges, setEdges]);
-
-	// Keep refs in sync for property panel updates
-	const latestLocalNodesRef = useRef<Node<NodeData>[]>(nodes);
-	const latestLocalEdgesRef = useRef<Edge[]>(edges);
-	const pendingPropertySyncRef = useRef(false);
-
-	// Update refs when local state changes
-	useEffect(() => {
-		latestLocalNodesRef.current = nodes;
-		latestLocalEdgesRef.current = edges;
-	}, [nodes, edges]);
-
-
-
-	// After property-panel updates mutate local nodes/edges, push the latest to context once
-	useEffect(() => {
-		if (!pendingPropertySyncRef.current) return;
-		updateFlow({
-			nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[],
-			edges: latestLocalEdgesRef.current as Edge[],
-		});
-		pendingPropertySyncRef.current = false;
+		updateFlow({ nodes: nodes as unknown as Node<NodeData>[], edges });
 	}, [nodes, edges, updateFlow]);
-
-	// Flush any pending property-panel sync on unmount or tab switch
-	useEffect(() => {
-		return () => {
-			if (pendingPropertySyncRef.current) {
-				updateFlow({
-					nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[],
-					edges: latestLocalEdgesRef.current as Edge[],
-				});
-				pendingPropertySyncRef.current = false;
-			}
-		};
-	}, [updateFlow]);
 
 	const {
 		resultLogModalState,
@@ -243,8 +211,7 @@ export function FlowEditorTab() {
 							onNodesDelete={onNodesDelete}
 							onEdgesDelete={onEdgesDelete}
 							onNodeDragStop={() => {
-								// Sync nodes to context once at the end of a drag gesture
-								updateFlow({ nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[] });
+								// Context sync happens automatically via useEffect when nodes change
 							}}
 							onSelectionChange={handleSelectionChange}
 							disableDeletion={resultLogModalState.isOpen}
@@ -267,25 +234,12 @@ export function FlowEditorTab() {
 					allEdges={edges}
 					onChange={(newData: Partial<NodeData>) => {
 						if (!selectedNode) return;
-						const nextNodes = updateNodeData(selectedNode.data.identifier.id, newData);
-						// Keep latest refs in sync and persist to context immediately to avoid reversion
-						latestLocalNodesRef.current = nextNodes as unknown as Node<NodeData>[];
-						pendingPropertySyncRef.current = false;
-						updateFlow({
-							nodes: nextNodes as unknown as Node<NodeData>[],
-							edges: (latestLocalEdgesRef.current as Edge[]),
-						});
+						// updateNodeData already updates local state, context sync happens automatically
+						updateNodeData(selectedNode.data.identifier.id, newData);
 					}}
 					onDisplayNameChange={(nodeId: string, newDisplayName: string) => {
-						const nextNodes = updateDisplayName(nodeId, newDisplayName);
-						if (!nextNodes) return false;
-						latestLocalNodesRef.current = nextNodes as unknown as Node<NodeData>[];
-						pendingPropertySyncRef.current = false;
-						updateFlow({
-							nodes: nextNodes as unknown as Node<NodeData>[],
-							edges: (latestLocalEdgesRef.current as Edge[]),
-						});
-						return true;
+						// updateDisplayName already updates local state, context sync happens automatically
+						return updateDisplayName(nodeId, newDisplayName) !== null;
 					}}
 					validateDisplayName={validateDisplayName}
 					flowTracker={flowTracker}
