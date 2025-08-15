@@ -129,7 +129,7 @@ export function ResultLogModal({
   const getValueTypeColor = (type: string): string => {
     switch (type) {
       case 'string': return 'text-[var(--success-500)]';
-      case 'number': return 'text-[var(--accent-600)]';
+      case 'number': return 'text-[var(--accent-primary)]';
       case 'boolean': return 'text-[var(--warning-600)]';
       case 'array': return 'text-[var(--node-logic)]';
       case 'object': return 'text-[var(--text-primary)]';

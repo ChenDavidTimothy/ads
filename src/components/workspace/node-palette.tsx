@@ -38,7 +38,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 							size="md"
 						>
 							{/* Category color indicator */}
-							<span className={`inline-block w-1.5 h-4 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-500)]'}`} />
+							                <span className={`inline-block w-1.5 h-4 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-primary)]'}`} />
 							{/* Placeholder for future icon system; keep label tight */}
 							<span className="text-[13px]">{node.label}</span>
 						</Button>

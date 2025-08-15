@@ -363,7 +363,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                       })()} {track.type}
                     </span>
                     {selectedTrackId === track.identifier.id && (
-                      <span className="text-xs bg-[var(--accent-600)] text-[var(--text-primary)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] font-medium">SELECTED</span>
+                      <span className="text-xs bg-[var(--accent-primary)] text-[var(--text-primary)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] font-medium">SELECTED</span>
                     )}
                   </div>
                   <Button onClick={() => deleteTrack(track.identifier.id)} variant="danger" size="sm" className="text-xs">
@@ -380,7 +380,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                         return trackColors[track.type] ?? "bg-[var(--surface-interactive)]";
                       })(),
                       selectedTrackId === track.identifier.id 
-                        ? "border-[var(--accent-500)] shadow-[0_0_20px_rgba(139,92,246,0.6),0_4px_12px_rgba(139,92,246,0.4)]" 
+                        ? "border-[var(--accent-primary)] shadow-[0_0_20px_rgba(192,132,252,0.6),0_4px_12px_rgba(192,132,252,0.4)]" 
                         : "hover:brightness-110 hover:border-[var(--border-accent)]",
                       dragState?.trackId === track.identifier.id ? "opacity-80" : "",
                     )}
@@ -395,12 +395,12 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
                   </div>
 
                   <div
-                    className="absolute w-1 h-6 cursor-w-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-500)] rounded-l-[var(--radius-sm)] z-10 transition-colors"
+                    className="absolute w-1 h-6 cursor-w-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-primary)] rounded-l-[var(--radius-sm)] z-10 transition-colors"
                     style={{ left: `${(track.startTime / duration) * 100}%`, top: "1px" }}
                     onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-start")}
                   />
                   <div
-                    className="absolute w-1 h-6 cursor-e-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-500)] rounded-r-[var(--radius-sm)] z-10 transition-colors"
+                    className="absolute w-1 h-6 cursor-e-resize bg-[var(--surface-1)] border border-[var(--border-primary)] hover:bg-[var(--surface-interactive)] hover:border-[var(--accent-primary)] rounded-r-[var(--radius-sm)] z-10 transition-colors"
                     style={{ left: `${((track.startTime + track.duration) / duration) * 100 - (4 / TIMELINE_WIDTH) * 100}%`, top: "1px" }}
                     onMouseDown={(e) => handleMouseDown(e, track.identifier.id, "resize-end")}
                   />
@@ -571,7 +571,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
   };
 
   const ToggleBinding = ({ keyName }: { keyName: string }) => (
-    <button className="text-[10px] text-[var(--text-secondary)] underline hover:text-[var(--text-primary)] transition-colors ml-2" onClick={() => clearBinding(keyName)}>Use manual</button>
+    <Button variant="ghost" size="xs" className="underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</Button>
   );
 
   const handleSaveDisplayName = () => {
@@ -601,7 +601,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             {editingName ? (
               <>
                 <input
-                  className="bg-[var(--surface-1)] text-[var(--text-primary)] text-sm px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] w-full border border-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)] focus:border-[var(--accent-500)] transition-colors"
+                  className="glass-input w-full focus:ring-2 focus:ring-[var(--accent-primary)]"
                   value={tempDisplayName}
                   onChange={(e) => setTempDisplayName(e.target.value)}
                   placeholder="Enter transform name"

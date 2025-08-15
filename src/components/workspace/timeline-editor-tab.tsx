@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useWorkspace } from './workspace-context';
 import { TimelineEditorCore } from './timeline-editor-core';
+import { Button } from '@/components/ui/button';
 import type { TimelineEditorData } from '@/types/workspace-state';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { NodeData } from '@/shared/types';
@@ -222,9 +223,9 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
               </select>
             </div>
           </div>
-          <button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
+          <Button variant="ghost" size="sm" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
             Back to Flow
-          </button>
+          </Button>
         </div>
 
         {/* Timeline Editor Core */}

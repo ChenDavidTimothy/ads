@@ -15,7 +15,7 @@ interface SaveStatusProps {
 export function SaveStatus({ lastSaved, hasUnsavedChanges, isSaving, isOnline = true, hasBackup = false, hasMultipleTabs = false }: SaveStatusProps) {
 	const status = (() => {
 		if (!isOnline) return { icon: WifiOff, label: 'Offline', className: 'text-[var(--warning-600)]' };
-		if (isSaving) return { icon: HardDriveDownload, label: 'Saving…', className: 'text-[var(--accent-500)] animate-pulse' };
+		    if (isSaving) return { icon: HardDriveDownload, label: 'Saving…', className: 'text-[var(--accent-primary)] animate-pulse' };
 		if (hasUnsavedChanges) return { icon: Clock4, label: 'Unsaved changes', className: 'text-[var(--warning-600)]' };
 		return { icon: CheckCircle2, label: lastSaved ? `Saved ${formatAgo(lastSaved)}` : 'Saved', className: 'text-[var(--success-500)]' };
 	})();

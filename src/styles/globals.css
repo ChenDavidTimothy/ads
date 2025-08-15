@@ -33,6 +33,23 @@
   --accent-900: #1e3a8a;
   --accent-100: rgba(59, 130, 246, 0.08);
 
+  /* New button accent variants - replacing jarring blue */
+  --accent-primary: var(--node-animation);     /* Purple #c084fc */
+  --accent-secondary: var(--node-data);        /* Cyan #22d3ee */
+  --accent-success: var(--success-500);        /* Green #22c55e */
+  --accent-ghost: transparent;
+
+  /* Transform color standardization - unified system */
+  --transform-move: var(--node-animation);     /* Purple */
+  --transform-rotate: var(--node-logic);       /* Blue */
+  --transform-scale: var(--node-geometry);     /* Pink */
+  --transform-fade: var(--warning-500);        /* Orange */
+  --transform-color: var(--accent-secondary);  /* Cyan */
+
+  /* Button interaction states */
+  --button-ghost-hover: var(--surface-2);
+  --button-ghost-active: var(--surface-interactive);
+
   /* Semantic colors */
   --success-500: #22c55e;
   --success-600: #16a34a;
@@ -94,7 +111,7 @@
   --duration-slow: 250ms;
 
   /* Focus states */
-  --ring-color: rgba(59, 130, 246, 0.4);
+  --ring-color: rgba(192, 132, 252, 0.4);
   --ring-width: 1px;
   --ring-offset: var(--surface-0);
 }
@@ -125,6 +142,23 @@
   --accent-900: #1e3a8a;
   --accent-100: rgba(59, 130, 246, 0.08);
 
+  /* New button accent variants - replacing jarring blue */
+  --accent-primary: var(--node-animation);     /* Purple #c084fc */
+  --accent-secondary: var(--node-data);        /* Cyan #22d3ee */
+  --accent-success: var(--success-500);        /* Green #22c55e */
+  --accent-ghost: transparent;
+
+  /* Transform color standardization - unified system */
+  --transform-move: var(--node-animation);     /* Purple */
+  --transform-rotate: var(--node-logic);       /* Blue */
+  --transform-scale: var(--node-geometry);     /* Pink */
+  --transform-fade: var(--warning-500);        /* Orange */
+  --transform-color: var(--accent-secondary);  /* Cyan */
+
+  /* Button interaction states */
+  --button-ghost-hover: var(--surface-2);
+  --button-ghost-active: var(--surface-interactive);
+
   /* Semantic colors */
   --success-500: #22c55e;
   --success-600: #16a34a;
@@ -186,7 +220,7 @@
   --duration-slow: 250ms;
 
   /* Focus states */
-  --ring-color: rgba(59, 130, 246, 0.4);
+  --ring-color: rgba(192, 132, 252, 0.4);
   --ring-width: 1px;
   --ring-offset: var(--surface-0);
 }
@@ -220,7 +254,7 @@
 
 .glass-input:focus {
   background: rgba(255, 255, 255, 0.04);
-  border-color: var(--accent-500);
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 var(--ring-width) var(--ring-color);
 }
 
@@ -289,7 +323,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: var(--accent-500);
+  background: var(--accent-primary);
 }
 
 ::-webkit-scrollbar-corner {

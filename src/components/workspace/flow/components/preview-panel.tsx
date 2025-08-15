@@ -139,21 +139,18 @@ export function PreviewPanel({
               const isCompleted = img.status === 'completed' && img.imageUrl;
               const isActive = isCompleted && completedImages.indexOf(img) === activeImageIndex;
               return (
-                <div
+                <Button
                   key={img.jobId}
-                  className={`flex items-center justify-between p-[var(--space-2)] rounded-[var(--radius-sm)] text-xs cursor-pointer transition-colors ${
-                    isActive 
-                      ? 'bg-[var(--accent-600)] text-[var(--text-primary)]' 
-                      : isCompleted 
-                        ? 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]' 
-                        : 'bg-[var(--surface-0)] text-[var(--text-tertiary)]'
-                  }`}
+                  variant={isActive ? "primary" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
                   onClick={() => {
                     if (isCompleted) {
                       const idx = completedImages.indexOf(img);
                       if (idx >= 0) setActiveImageIndex(idx);
                     }
                   }}
+                  disabled={!isCompleted}
                 >
                   <div className="flex items-center gap-[var(--space-2)]">
                     <div className={`w-2 h-2 rounded-full ${
@@ -179,13 +176,12 @@ export function PreviewPanel({
                         }}
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-1 text-xs"
                       >
                         ⬇️
                       </Button>
                     )}
                   </div>
-                </div>
+                </Button>
               );
             })}
           </div>
@@ -241,21 +237,18 @@ export function PreviewPanel({
               const isCompleted = video.status === 'completed' && video.videoUrl;
               const isActive = isCompleted && completedVideos.indexOf(video) === activeVideoIndex;
               return (
-                <div
+                <Button
                   key={video.jobId}
-                  className={`flex items-center justify-between p-[var(--space-2)] rounded-[var(--radius-sm)] text-xs cursor-pointer transition-colors ${
-                    isActive 
-                      ? 'bg-[var(--accent-600)] text-[var(--text-primary)]' 
-                      : isCompleted 
-                        ? 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]' 
-                        : 'bg-[var(--surface-0)] text-[var(--text-tertiary)]'
-                  }`}
+                  variant={isActive ? "primary" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
                   onClick={() => {
                     if (isCompleted) {
                       const idx = completedVideos.indexOf(video);
                       if (idx >= 0) setActiveVideoIndex(idx);
                     }
                   }}
+                  disabled={!isCompleted}
                 >
                   <div className="flex items-center gap-[var(--space-2)]">
                     <div className={`w-2 h-2 rounded-full ${
@@ -281,13 +274,12 @@ export function PreviewPanel({
                         }}
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-1 text-xs"
                       >
                         ⬇️
                       </Button>
                     )}
                   </div>
-                </div>
+                </Button>
               );
             })}
           </div>
@@ -308,7 +300,7 @@ export function PreviewPanel({
             {processingVideos.length > 0 ? 'Processing videos...' : 'Waiting for videos...'}
           </div>
           <div className="flex justify-center">
-            <div className="w-4 h-4 bg-[var(--accent-500)] rounded-full animate-pulse" />
+            <div className="w-4 h-4 bg-[var(--accent-primary)] rounded-full animate-pulse" />
           </div>
         </div>
       )}
@@ -319,7 +311,7 @@ export function PreviewPanel({
             {processingImages.length > 0 ? 'Processing images...' : 'Waiting for images...'}
           </div>
           <div className="flex justify-center">
-            <div className="w-4 h-4 bg-[var(--accent-500)] rounded-full animate-pulse" />
+            <div className="w-4 h-4 bg-[var(--accent-primary)] rounded-full animate-pulse" />
           </div>
         </div>
       )}

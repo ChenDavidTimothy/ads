@@ -81,8 +81,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '▲',
       colors: {
-        primary: 'bg-red-600',
-        handle: '!bg-red-500',
+        primary: 'bg-[var(--node-geometry)]',
+        handle: '!bg-[var(--node-geometry)]',
       }
     },
     defaults: {
@@ -120,8 +120,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '●',
       colors: {
-        primary: 'bg-blue-600',
-        handle: '!bg-blue-500',
+        primary: 'bg-[var(--node-geometry)]',
+        handle: '!bg-[var(--node-geometry)]',
       }
     },
     defaults: {
@@ -160,8 +160,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '▬',
       colors: {
-        primary: 'bg-green-600',
-        handle: '!bg-green-500',
+        primary: 'bg-[var(--node-geometry)]',
+        handle: '!bg-[var(--node-geometry)]',
       }
     },
     defaults: {
@@ -198,8 +198,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '⏰',
       colors: {
-        primary: 'bg-orange-600',
-        handle: '!bg-orange-500',
+        primary: 'bg-[var(--transform-fade)]',
+        handle: '!bg-[var(--transform-fade)]',
       }
     },
     defaults: {
@@ -229,8 +229,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '⏷',
       colors: {
-        primary: 'bg-violet-600',
-        handle: '!bg-violet-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {
@@ -274,8 +274,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '⊕',
       colors: {
-        primary: 'bg-teal-600',
-        handle: '!bg-teal-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {
@@ -333,8 +333,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🔢',
       colors: {
-        primary: 'bg-cyan-600',
-        handle: '!bg-cyan-500',
+        primary: 'bg-[var(--node-data)]',
+        handle: '!bg-[var(--node-data)]',
       }
     },
     defaults: {
@@ -370,8 +370,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🎯',
       colors: {
-        primary: 'bg-blue-600',
-        handle: '!bg-blue-500',
+        primary: 'bg-[var(--node-output)]',
+        handle: '!bg-[var(--node-output)]',
       }
     },
     defaults: {
@@ -403,8 +403,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🎬',
       colors: {
-        primary: 'bg-purple-600',
-        handle: '!bg-purple-500',
+        primary: 'bg-[var(--node-animation)]',
+        handle: '!bg-[var(--node-animation)]',
       }
     },
     defaults: {
@@ -453,8 +453,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🎭',
       colors: {
-        primary: 'bg-gray-600',
-        handle: '!bg-gray-500',
+        primary: 'bg-[var(--node-output)]',
+        handle: '!bg-[var(--node-output)]',
       }
     },
     defaults: {
@@ -498,8 +498,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🖼️',
       colors: {
-        primary: 'bg-fuchsia-600',
-        handle: '!bg-fuchsia-500',
+        primary: 'bg-[var(--node-animation)]',
+        handle: '!bg-[var(--node-animation)]',
       }
     },
     defaults: {
@@ -548,8 +548,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🖨️',
       colors: {
-        primary: 'bg-slate-600',
-        handle: '!bg-slate-500',
+        primary: 'bg-[var(--node-output)]',
+        handle: '!bg-[var(--node-output)]',
       }
     },
     defaults: {
@@ -599,8 +599,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '≷',
       colors: {
-        primary: 'bg-purple-600',
-        handle: '!bg-purple-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {
@@ -632,8 +632,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🔀',
       colors: {
-        primary: 'bg-indigo-600',
-        handle: '!bg-indigo-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {}
@@ -675,8 +675,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '⊙',
       colors: {
-        primary: 'bg-amber-600',
-        handle: '!bg-amber-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {
@@ -730,8 +730,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🧮',
       colors: {
-        primary: 'bg-emerald-600',
-        handle: '!bg-emerald-500',
+        primary: 'bg-[var(--node-logic)]',
+        handle: '!bg-[var(--node-logic)]',
       }
     },
     defaults: {

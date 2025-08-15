@@ -3,7 +3,7 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { TRACK_COLORS, TRACK_ICONS } from "@/shared/registry/registry-utils";
+import { getTrackColors, TRACK_ICONS } from "@/shared/registry/registry-utils";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { AnimationNodeData } from "@/shared/types/nodes";
 import { Clapperboard } from "lucide-react";
@@ -72,7 +72,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
             {uniqueTypes.map((type) => (
               <span
                 key={type}
-                className={`text-xs px-2 py-1 rounded ${TRACK_COLORS[type]} text-[var(--text-primary)]`}
+                className={`text-xs px-2 py-1 rounded ${getTrackColors()[type]} text-[var(--text-primary)]`}
               >
                 {TRACK_ICONS[type]} {type}
               </span>

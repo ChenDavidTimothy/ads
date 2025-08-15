@@ -39,7 +39,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card className={`p-[var(--card-padding)] min-w-[var(--node-min-width)] ${getNodeHeight()} ${selected ? 'ring-2 ring-[var(--accent-500)]' : ''}`}>
+            <Card className={`p-[var(--card-padding)] min-w-[var(--node-min-width)] ${getNodeHeight()} ${selected ? 'ring-2 ring-[var(--accent-primary)]' : ''}`}>
       {/* Dynamic input ports */}
       {inputPorts.map((port, index) => (
         <Handle
@@ -69,7 +69,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
           <span className="text-xs text-[var(--text-primary)] font-medium">{portCount}</span>
         </div>
         
-        <div className="text-xs text-[var(--accent-600)]">
+                        <div className="text-xs text-[var(--accent-primary)]">
           Port 1 has merge priority
         </div>
 

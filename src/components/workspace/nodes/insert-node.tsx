@@ -41,7 +41,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         {data.appearanceTime === 0 ? (
           <div className="text-[var(--success-500)]">Instant presence</div>
         ) : (
-          <div className="text-[var(--accent-600)]">Delayed presence</div>
+                          <div className="text-[var(--accent-primary)]">Delayed presence</div>
         )}
       </CardContent>
 

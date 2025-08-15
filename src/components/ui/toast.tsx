@@ -9,7 +9,7 @@ const TOAST_STYLES = {
 	success: "bg-[var(--surface-2)] border-[var(--success-600)] text-[var(--text-secondary)]",
 	error: "bg-[var(--surface-2)] border-[var(--danger-600)] text-[var(--text-secondary)]",  
 	warning: "bg-[var(--surface-2)] border-[var(--warning-600)] text-[var(--text-secondary)]",
-	info: "bg-[var(--surface-2)] border-[var(--accent-600)] text-[var(--text-secondary)]",
+	      info: "bg-[var(--surface-2)] border-[var(--accent-primary)] text-[var(--text-secondary)]",
 } as const;
 
 const TOAST_ICONS = {

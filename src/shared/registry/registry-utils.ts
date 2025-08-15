@@ -51,7 +51,7 @@ function getCategoryTokenClass(category: NodeDefinition['execution']['category']
     case 'output':
       return { primary: 'bg-[var(--node-output)]', handle: '!bg-[var(--node-output)]' };
     default:
-      return { primary: 'bg-[var(--accent-500)]', handle: '!bg-[var(--accent-500)]' };
+      return { primary: 'bg-[var(--accent-primary)]', handle: '!bg-[var(--accent-primary)]' };
   }
 }
 
@@ -69,13 +69,16 @@ export function generateNodeColors() {
 }
 
 // Generate track colors and icons from transform definitions
-export const TRACK_COLORS = {
-  move: "bg-[var(--node-animation)]",
-  rotate: "bg-[var(--node-logic)]", 
-  scale: "bg-[var(--node-geometry)]",
-  fade: "bg-[var(--warning-600)]",
-  color: "bg-[var(--accent-600)]",
-} as const;
+export function getTrackColors(): Record<string, string> {
+  const colors: Record<string, string> = {};
+  // Use CSS variables for consistent colors
+  colors.move = "bg-[var(--transform-move)]";
+  colors.rotate = "bg-[var(--transform-rotate)]";
+  colors.scale = "bg-[var(--transform-scale)]";
+  colors.fade = "bg-[var(--transform-fade)]";
+  colors.color = "bg-[var(--transform-color)]";
+  return colors;
+}
 
 export const TRACK_ICONS = {
   move: "→",

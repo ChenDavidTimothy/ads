@@ -23,7 +23,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             // Minimal variant
             "minimal": "bg-transparent border border-[var(--border-primary)] rounded-[var(--radius-sharp)]"
           }[variant],
-          selected ? "border-[var(--accent-500)] shadow-[0_0_0_1px_rgba(59,130,246,0.3)]" : "",
+          selected ? "border-[var(--accent-primary)] shadow-[0_0_0_1px_rgba(192,132,252,0.3)]" : "",
           className
         )}
         {...props}
