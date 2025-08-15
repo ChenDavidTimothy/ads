@@ -139,18 +139,19 @@ export function PreviewPanel({
               const isCompleted = img.status === 'completed' && img.imageUrl;
               const isActive = isCompleted && completedImages.indexOf(img) === activeImageIndex;
               return (
-                <Button
+                <div
                   key={img.jobId}
-                  variant={isActive ? "primary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-between"
+                  className={`flex items-center justify-between p-[var(--space-2)] rounded-[var(--radius-sm)] border cursor-pointer transition-colors ${
+                    isActive 
+                      ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-foreground)] border-[var(--accent-primary)]' 
+                      : 'bg-transparent hover:bg-[var(--surface-2)] border-[var(--border-secondary)]'
+                  } ${!isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => {
                     if (isCompleted) {
                       const idx = completedImages.indexOf(img);
                       if (idx >= 0) setActiveImageIndex(idx);
                     }
                   }}
-                  disabled={!isCompleted}
                 >
                   <div className="flex items-center gap-[var(--space-2)]">
                     <div className={`w-2 h-2 rounded-full ${
@@ -181,7 +182,7 @@ export function PreviewPanel({
                       </Button>
                     )}
                   </div>
-                </Button>
+                </div>
               );
             })}
           </div>
@@ -237,18 +238,19 @@ export function PreviewPanel({
               const isCompleted = video.status === 'completed' && video.videoUrl;
               const isActive = isCompleted && completedVideos.indexOf(video) === activeVideoIndex;
               return (
-                <Button
+                <div
                   key={video.jobId}
-                  variant={isActive ? "primary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-between"
+                  className={`flex items-center justify-between p-[var(--space-2)] rounded-[var(--radius-sm)] border cursor-pointer transition-colors ${
+                    isActive 
+                      ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-foreground)] border-[var(--accent-primary)]' 
+                      : 'bg-transparent hover:bg-[var(--surface-2)] border-[var(--border-secondary)]'
+                  } ${!isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => {
                     if (isCompleted) {
                       const idx = completedVideos.indexOf(video);
                       if (idx >= 0) setActiveVideoIndex(idx);
                     }
                   }}
-                  disabled={!isCompleted}
                 >
                   <div className="flex items-center gap-[var(--space-2)]">
                     <div className={`w-2 h-2 rounded-full ${
@@ -279,7 +281,7 @@ export function PreviewPanel({
                       </Button>
                     )}
                   </div>
-                </Button>
+                </div>
               );
             })}
           </div>
