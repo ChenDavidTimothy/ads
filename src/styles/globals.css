@@ -8,16 +8,16 @@
 :root {
   color-scheme: dark;
   
-  /* Surface hierarchy - More subtle distinctions */
+  /* Enhanced steel-inspired surface hierarchy */
   --surface-0: #0a0a0a;
-  --surface-1: #121212;
-  --surface-2: #181818;
-  --surface-interactive: #1e1e1e;
+  --surface-1: #1a1a1a;        /* Was #121212 - increased contrast */
+  --surface-2: #242424;        /* Was #181818 - more distinct */
+  --surface-interactive: #2a2a2a; /* Was #1e1e1e - clearer interaction */
 
-  /* Ultra-thin borders for glass-like precision */
-  --border-primary: #2a2a2a;
-  --border-secondary: #333333;
-  --border-accent: rgba(59, 130, 246, 0.3);
+  /* Steel-toned borders with premium feel */
+  --border-primary: #404040;    /* Was #2a2a2a - much more visible */
+  --border-secondary: #4a4a4a;  /* Was #333333 - refined steel tone */
+  --border-accent: rgba(100, 116, 139, 0.4); /* Steel blue accent */
 
   /* Text hierarchy - More refined contrast */
   --text-primary: #ffffff;
@@ -127,16 +127,16 @@
 }
 
 :root[data-theme="dark"] {
-  /* Surface hierarchy - More subtle distinctions */
+  /* Enhanced steel-inspired surface hierarchy */
   --surface-0: #0a0a0a;
-  --surface-1: #121212;
-  --surface-2: #181818;
-  --surface-interactive: #1e1e1e;
+  --surface-1: #1a1a1a;        /* Was #121212 - increased contrast */
+  --surface-2: #242424;        /* Was #181818 - more distinct */
+  --surface-interactive: #2a2a2a; /* Was #1e1e1e - clearer interaction */
 
-  /* Ultra-thin borders for glass-like precision */
-  --border-primary: #2a2a2a;
-  --border-secondary: #333333;
-  --border-accent: rgba(59, 130, 246, 0.3);
+  /* Steel-toned borders with premium feel */
+  --border-primary: #404040;    /* Was #2a2a2a - much more visible */
+  --border-secondary: #4a4a4a;  /* Was #333333 - refined steel tone */
+  --border-accent: rgba(100, 116, 139, 0.4); /* Steel blue accent */
 
   /* Text hierarchy - More refined contrast */
   --text-primary: #ffffff;
