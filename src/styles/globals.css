@@ -7,154 +7,251 @@
 
 :root {
   color-scheme: dark;
-  /* default to dark variables to avoid FOUC before hydration */
-  --surface-0: #0a0a0b;
-  --surface-1: #141418;
-  --surface-2: #1c1c21;
-  --surface-interactive: #242429;
+  
+  /* Surface hierarchy - More subtle distinctions */
+  --surface-0: #0a0a0a;
+  --surface-1: #121212;
+  --surface-2: #181818;
+  --surface-interactive: #1e1e1e;
 
-  --border-primary: #2a2a2f;
-  --border-secondary: #35353c;
+  /* Ultra-thin borders for glass-like precision */
+  --border-primary: #2a2a2a;
+  --border-secondary: #333333;
+  --border-accent: rgba(59, 130, 246, 0.3);
 
-  --text-primary: #f8f9fa;
-  --text-secondary: #e1e5e9;
-  --text-tertiary: #9ca3af;
-  --text-muted: #6b7280;
-  --text-disabled: #4b5563;
+  /* Text hierarchy - More refined contrast */
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-tertiary: #a1a1a1;
+  --text-muted: #737373;
+  --text-disabled: #525252;
 
+  /* Accent colors */
   --accent-500: #3b82f6;
   --accent-600: #2563eb;
   --accent-700: #1d4ed8;
   --accent-900: #1e3a8a;
-  /* Added lighter accent tint for chips/badges */
-  --accent-100: rgba(59, 130, 246, 0.15);
+  --accent-100: rgba(59, 130, 246, 0.08);
 
-  --success-500: #10b981;
-  --success-600: #059669;
-  --success-700: #047857;
-
+  /* Semantic colors */
+  --success-500: #22c55e;
+  --success-600: #16a34a;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
-
   --danger-500: #ef4444;
   --danger-600: #dc2626;
 
-  --node-animation: #8b5cf6;
-  --node-logic: #a855f7;
-  --node-data: #06b6d4;
-  --node-geometry: #ec4899;
-  --node-output: #64748b;
+  /* Node category colors - Much lighter for visibility */
+  --node-animation: #c084fc;    /* Light purple */
+  --node-logic: #60a5fa;        /* Light blue */  
+  --node-data: #22d3ee;         /* Light cyan */
+  --node-geometry: #f472b6;     /* Light pink */
+  --node-output: #a78bfa;       /* Light purple */
 
-  --ring-color: var(--accent-500);
-  --ring-offset: var(--surface-0);
+  /* Glass-like effects */
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
 
-  /* Tightened radii for professional feel */
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Ultra-sharp radii for crisp edges */
+  --radius-sharp: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
 
-  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 150ms;
-  --duration-medium: 200ms;
-
-  --header-height: 56px;
-  /* Unified/widened sidebar width */
-  --sidebar-width: 20rem; /* 320px */
-
-  /* Spacing system */
+  /* Refined spacing system - Much tighter */
   --space-0: 0px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
+  --space-half: 2px;
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 9px;
+  --space-4: 12px;
+  --space-5: 15px;
+  --space-6: 18px;
+  --space-8: 24px;
 
-  /* Component sizing tokens */
-  --node-min-width: 20rem;
-  --tab-max-width: 20rem;
+  /* Component sizing - Ultra-compact */
+  --node-min-width: 18rem;
+  --tab-max-width: 16rem;
+  --sidebar-width: 18rem;
+  --header-height: 48px;
 
-  /* Component paddings */
-  --card-padding: var(--space-4);
-  --button-padding-sm: var(--space-1) var(--space-2);
+  /* Refined component paddings */
+  --card-padding: var(--space-3);
+  --card-padding-sm: var(--space-2);
+  --button-padding-sm: var(--space-1) var(--space-3);
   --button-padding-md: var(--space-2) var(--space-4);
-  --button-padding-lg: var(--space-3) var(--space-6);
+  --button-padding-lg: var(--space-3) var(--space-5);
+  --input-padding: var(--space-2) var(--space-3);
+
+  /* Animation and easing */
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-enter: cubic-bezier(0, 0, 0.2, 1);
+  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-medium: 180ms;
+  --duration-slow: 250ms;
+
+  /* Focus states */
+  --ring-color: rgba(59, 130, 246, 0.4);
+  --ring-width: 1px;
+  --ring-offset: var(--surface-0);
 }
 
 :root[data-theme="dark"] {
-  --surface-0: #0a0a0b;
-  --surface-1: #141418;
-  --surface-2: #1c1c21;
-  --surface-interactive: #242429;
+  /* Surface hierarchy - More subtle distinctions */
+  --surface-0: #0a0a0a;
+  --surface-1: #121212;
+  --surface-2: #181818;
+  --surface-interactive: #1e1e1e;
 
-  --border-primary: #2a2a2f;
-  --border-secondary: #35353c;
+  /* Ultra-thin borders for glass-like precision */
+  --border-primary: #2a2a2a;
+  --border-secondary: #333333;
+  --border-accent: rgba(59, 130, 246, 0.3);
 
-  --text-primary: #f8f9fa;
-  --text-secondary: #e1e5e9;
-  --text-tertiary: #9ca3af;
-  --text-muted: #6b7280;
-  --text-disabled: #4b5563;
+  /* Text hierarchy - More refined contrast */
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-tertiary: #a1a1a1;
+  --text-muted: #737373;
+  --text-disabled: #525252;
 
+  /* Accent colors */
   --accent-500: #3b82f6;
   --accent-600: #2563eb;
   --accent-700: #1d4ed8;
   --accent-900: #1e3a8a;
-  /* Mirror light accent tint in dark theme */
-  --accent-100: rgba(59, 130, 246, 0.15);
+  --accent-100: rgba(59, 130, 246, 0.08);
 
-  --success-500: #10b981;
-  --success-600: #059669;
-  --success-700: #047857;
-
+  /* Semantic colors */
+  --success-500: #22c55e;
+  --success-600: #16a34a;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
-
   --danger-500: #ef4444;
   --danger-600: #dc2626;
 
-  --node-animation: #8b5cf6;
-  --node-logic: #a855f7;
-  --node-data: #06b6d4;
-  --node-geometry: #ec4899;
-  --node-output: #64748b;
+  /* Node category colors - Much lighter for visibility */
+  --node-animation: #c084fc;    /* Light purple */
+  --node-logic: #60a5fa;        /* Light blue */  
+  --node-data: #22d3ee;         /* Light cyan */
+  --node-geometry: #f472b6;     /* Light pink */
+  --node-output: #a78bfa;       /* Light purple */
 
-  --ring-color: var(--accent-500);
-  --ring-offset: var(--surface-0);
+  /* Glass-like effects */
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
 
-  /* Tightened radii for professional feel */
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Ultra-sharp radii for crisp edges */
+  --radius-sharp: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
 
-  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 150ms;
-  --duration-medium: 200ms;
-
-  --header-height: 56px;
-  /* Unified/widened sidebar width */
-  --sidebar-width: 20rem;
-
-  /* Spacing system */
+  /* Refined spacing system - Much tighter */
   --space-0: 0px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
+  --space-half: 2px;
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 9px;
+  --space-4: 12px;
+  --space-5: 15px;
+  --space-6: 18px;
+  --space-8: 24px;
 
-  /* Component sizing tokens */
-  --node-min-width: 20rem;
-  --tab-max-width: 20rem;
+  /* Component sizing - Ultra-compact */
+  --node-min-width: 18rem;
+  --tab-max-width: 16rem;
+  --sidebar-width: 18rem;
+  --header-height: 48px;
 
-  /* Component paddings */
-  --card-padding: var(--space-4);
-  --button-padding-sm: var(--space-1) var(--space-2);
+  /* Refined component paddings */
+  --card-padding: var(--space-3);
+  --card-padding-sm: var(--space-2);
+  --button-padding-sm: var(--space-1) var(--space-3);
   --button-padding-md: var(--space-2) var(--space-4);
-  --button-padding-lg: var(--space-3) var(--space-6);
+  --button-padding-lg: var(--space-3) var(--space-5);
+  --input-padding: var(--space-2) var(--space-3);
+
+  /* Animation and easing */
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-enter: cubic-bezier(0, 0, 0.2, 1);
+  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-medium: 180ms;
+  --duration-slow: 250ms;
+
+  /* Focus states */
+  --ring-color: rgba(59, 130, 246, 0.4);
+  --ring-width: 1px;
+  --ring-offset: var(--surface-0);
+}
+
+/* Glass-like component base classes */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  transition: all var(--duration-fast) var(--easing-standard);
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 var(--ring-width) var(--ring-color);
+}
+
+/* Refined typography */
+.text-refined {
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+}
+
+.text-refined-medium {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* Ultra-thin borders */
+.border-glass {
+  border: 1px solid var(--glass-border);
+}
+
+.border-refined {
+  border: 1px solid var(--border-primary);
+}
+
+/* Subtle shadows for depth */
+.shadow-glass {
+  box-shadow: var(--glass-shadow);
+}
+
+.shadow-glass-lg {
+  box-shadow: var(--glass-shadow-lg);
 }
 
 html {
@@ -168,4 +265,63 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Elegant Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--easing-standard);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--accent-500);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--surface-1);
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) var(--surface-1);
+}
+
+/* Custom scrollbar for specific containers */
+.scrollbar-elegant {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) var(--surface-1);
+}
+
+.scrollbar-elegant::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-elegant::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-elegant::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: var(--radius-sharp);
+}
+
+.scrollbar-elegant::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
 }
