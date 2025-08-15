@@ -50,7 +50,7 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
         <div className="flex items-center justify-between">
           <span>Resolution:</span>
           <span className="text-[var(--text-primary)] font-medium">
-            {getResolutionLabel(data.width, data.height)} ({data.width}×{data.height})
+            {getResolutionLabel(data.width || 1920, data.height || 1080)} ({data.width || 1920}×{data.height || 1080})
           </span>
         </div>
 
@@ -59,23 +59,23 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
           <div className="flex items-center gap-[var(--space-2)]">
             <div
               className="w-4 h-4 rounded border border-[var(--border-primary)]"
-              style={{ backgroundColor: data.backgroundColor }}
+              style={{ backgroundColor: data.backgroundColor || '#000000' }}
             />
             <span className="text-[var(--text-primary)] font-medium text-xs">
-              {data.backgroundColor.toUpperCase()}
+              {data.backgroundColor?.toUpperCase() || '#000000'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center justify-between">
           <span>Format:</span>
-          <span className="text-[var(--text-primary)] font-medium uppercase">{data.format}</span>
+          <span className="text-[var(--text-primary)] font-medium uppercase">{data.format || 'png'}</span>
         </div>
 
-        {data.format === 'jpeg' && (
+        {(data.format || 'png') === 'jpeg' && (
           <div className="flex items-center justify-between">
             <span>Quality:</span>
-            <span className="text-[var(--text-primary)] font-medium">{data.quality}</span>
+            <span className="text-[var(--text-primary)] font-medium">{data.quality || 90}</span>
           </div>
         )}
 

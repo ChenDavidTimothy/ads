@@ -12,6 +12,13 @@ function getTransformShortId(transformType: string): string {
     fade: 'fad',
     color: 'col',
   };
+  
+  // Add null safety check
+  if (!transformType || typeof transformType !== 'string') {
+    console.warn('getTransformShortId called with invalid transformType:', transformType);
+    return 'unk';
+  }
+  
   return prefixes[transformType] ?? transformType.slice(0, 3);
 }
 

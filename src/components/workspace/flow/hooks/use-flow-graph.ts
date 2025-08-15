@@ -1,11 +1,12 @@
 // src/components/workspace/flow/hooks/useFlowGraph.ts - Fixed React render errors
-import { useCallback, useMemo, useState } from 'react';
-import { useEdgesState, useNodesState, type Edge, type Node } from 'reactflow';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useEdgesState, useNodesState, type Edge, type Node, type NodeChange, type EdgeChange } from 'reactflow';
 import { getDefaultNodeData } from '@/lib/defaults/nodes';
 import { getNodeDefinition, getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import type { NodeData, NodeType } from '@/shared/types';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { useNotifications } from '@/hooks/use-notifications';
+import { applyNodeChanges, applyEdgeChanges } from 'reactflow';
 
 export function useFlowGraph() {
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
@@ -13,6 +14,17 @@ export function useFlowGraph() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [flowTracker] = useState(() => new FlowTracker());
   const { toast } = useNotifications();
+
+  // Keep refs in sync for property panel updates
+  const latestLocalNodesRef = useRef<Node<NodeData>[]>(nodes);
+  const latestLocalEdgesRef = useRef<Edge[]>(edges);
+  const pendingPropertySyncRef = useRef(false);
+
+  // Update refs when local state changes
+  useEffect(() => {
+    latestLocalNodesRef.current = nodes;
+    latestLocalEdgesRef.current = edges;
+  }, [nodes, edges]);
 
   // Unified edge validation function for nodes with dynamic ports
   const cleanupInvalidDynamicEdges = useCallback((currentNodes: Node<NodeData>[], currentEdges: Edge[]) => {
@@ -210,16 +222,32 @@ export function useFlowGraph() {
   }, []);
 
   const onNodesDelete = useCallback((deletedNodes: Node<NodeData>[]) => {
+    // Remove from flow tracker
     deletedNodes.forEach((node: Node<NodeData>) => {
       flowTracker.removeNode(node.data.identifier.id);
     });
-  }, [flowTracker]);
+    
+    // Remove from React state
+    setNodes((currentNodes) => 
+      currentNodes.filter((node) => 
+        !deletedNodes.some((deletedNode) => deletedNode.id === node.id)
+      )
+    );
+  }, [flowTracker, setNodes]);
 
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    // Remove from flow tracker
     deletedEdges.forEach((edge: Edge) => {
       flowTracker.removeConnection(edge.id);
     });
-  }, [flowTracker]);
+    
+    // Remove from React state
+    setEdges((currentEdges) => 
+      currentEdges.filter((edge) => 
+        !deletedEdges.some((deletedEdge) => deletedEdge.id === edge.id)
+      )
+    );
+  }, [flowTracker, setEdges]);
 
   const handleAddNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
     if (nodeType === 'scene') {
@@ -249,6 +277,63 @@ export function useFlowGraph() {
     setNodes((nds) => [...nds, newNode]);
   }, [nodes, setNodes, flowTracker, toast]);
 
+  const onNodeAdd = useCallback(
+    (nodeType: string, position: { x: number; y: number }) => {
+      // Use the existing handleAddNode from useFlowGraph hook
+      // This ensures proper node data structure with all required properties
+      const nodeData = getDefaultNodeData(nodeType as NodeType, nodes);
+      const newNode: Node<NodeData> = {
+        id: nodeData.identifier.id,
+        type: nodeType,
+        position,
+        data: nodeData,
+      };
+
+      const newNodes = [...nodes, newNode];
+      setNodes(newNodes);
+      return newNodes;
+    },
+    [nodes, setNodes]
+  );
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const updatedNodes = applyNodeChanges(changes, nodes);
+      setNodes(updatedNodes);
+      onNodesChange(changes);
+      return updatedNodes;
+    },
+    [nodes, setNodes, onNodesChange]
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      const updatedEdges = applyEdgeChanges(changes, edges);
+      setEdges(updatedEdges);
+      onEdgesChange(changes);
+      return updatedEdges;
+    },
+    [edges, setEdges, onEdgesChange]
+  );
+
+  // Property sync utilities
+  const syncToContext = useCallback((updateFlow: (flow: any) => void) => {
+    updateFlow({
+      nodes: latestLocalNodesRef.current as unknown as Node<NodeData>[],
+      edges: latestLocalEdgesRef.current as Edge[],
+    });
+  }, []);
+
+  const markPropertySyncPending = useCallback(() => {
+    pendingPropertySyncRef.current = true;
+  }, []);
+
+  const flushPropertySync = useCallback((updateFlow: (flow: any) => void) => {
+    if (!pendingPropertySyncRef.current) return;
+    syncToContext(updateFlow);
+    pendingPropertySyncRef.current = false;
+  }, [pendingPropertySyncRef, syncToContext]);
+
   return {
     nodes,
     edges,
@@ -268,5 +353,8 @@ export function useFlowGraph() {
     handleAddNode,
     flowTracker,
     cleanupInvalidDynamicEdges,
+    // New functions
+    onNodeAdd,
+    handleNodesChange,
   } as const;
 }

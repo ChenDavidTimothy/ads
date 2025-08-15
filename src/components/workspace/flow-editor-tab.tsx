@@ -1,3 +1,4 @@
+// src/components/workspace/flow-editor-tab.tsx - Updated to use collapsible right sidebar
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -5,7 +6,6 @@ import { applyNodeChanges, applyEdgeChanges, type NodeTypes, type NodeChange, ty
 import { FlowCanvas } from './flow/components/flow-canvas';
 import { NodePalette } from './node-palette';
 import { ActionsToolbar } from './flow/components/actions-toolbar';
-import { VideoPreview } from './flow/components/preview';
 import { RightSidebar } from './flow/components/right-sidebar';
 import { ResultLogModal } from './result-log-modal';
 import { createNodeTypes } from './flow/node-types';
@@ -17,8 +17,10 @@ import { useDebugExecution } from './flow/hooks/use-debug-execution';
 import { DebugProvider } from './flow/debug-context';
 import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
 import type { Node, Edge } from 'reactflow';
+import type { NodeType } from '@/shared/types/definitions';
 import { useWorkspace } from './workspace-context';
 import { generateTransformIdentifier } from '@/lib/defaults/transforms';
+import { getDefaultNodeData } from '@/lib/defaults/nodes';
 
 export function FlowEditorTab() {
 	const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
@@ -39,43 +41,36 @@ export function FlowEditorTab() {
 		onPaneClick,
 		onNodesDelete,
 		onEdgesDelete,
-		handleAddNode,
 		flowTracker,
 	} = useFlowGraph();
 
-	// Keep a mutable ref to the latest local nodes to avoid spamming context during drag
-	const latestLocalNodesRef = useRef<Node<NodeData>[]>([]);
-	useEffect(() => {
-		latestLocalNodesRef.current = nodes as unknown as Node<NodeData>[];
-	}, [nodes]);
-
-	// Also keep latest local edges for robust syncing when property changes prune edges
-	const latestLocalEdgesRef = useRef<Edge[]>([]);
-	useEffect(() => {
-		latestLocalEdgesRef.current = edges as Edge[];
-	}, [edges]);
-
-	// Sync local graph from context: split effects so edge updates don't reset local node deletions
+	// Sync workspace context with flow graph state
 	useEffect(() => {
 		setNodes(ctxNodes as unknown as Node<NodeData>[]);
 	}, [ctxNodes, setNodes]);
+
 	useEffect(() => {
-		setEdges(ctxEdges as Edge[]);
+		setEdges(ctxEdges);
 	}, [ctxEdges, setEdges]);
 
-	// Track when a property-panel originated change occurs, so we can persist to context after local state updates
+	// Keep refs in sync for property panel updates
+	const latestLocalNodesRef = useRef<Node<NodeData>[]>(nodes);
+	const latestLocalEdgesRef = useRef<Edge[]>(edges);
 	const pendingPropertySyncRef = useRef(false);
+
+	// Update refs when local state changes
+	useEffect(() => {
+		latestLocalNodesRef.current = nodes;
+		latestLocalEdgesRef.current = edges;
+	}, [nodes, edges]);
 
 	const handleNodesChange = useCallback(
 		(changes: NodeChange[]) => {
 			const updatedNodes = applyNodeChanges(changes, nodes);
-			setNodes(updatedNodes as unknown as Node<NodeData>[]);
-			// Do NOT push to context here to avoid heavy snapshotting during drag
+			setNodes(updatedNodes);
+			// For most node changes, sync immediately to prevent data loss
+			updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
 			onNodesChange(changes);
-			// But if nodes were removed, immediately sync nodes to context so they don't get rehydrated by edge updates
-			if (changes.some((c) => c.type === 'remove')) {
-				updateFlow({ nodes: updatedNodes as unknown as Node<NodeData>[] });
-			}
 		},
 		[nodes, setNodes, onNodesChange, updateFlow]
 	);
@@ -278,32 +273,40 @@ export function FlowEditorTab() {
 
 	const { leftSidebarCollapsed, rightSidebarCollapsed } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean };
 
+	const onNodeAdd = useCallback(
+		(nodeType: string, position: { x: number; y: number }) => {
+			// Use the existing handleAddNode from useFlowGraph hook
+			// This ensures proper node data structure with all required properties
+			const nodeData = getDefaultNodeData(nodeType as NodeType, nodes);
+			const newNode: Node<NodeData> = {
+				id: nodeData.identifier.id,
+				type: nodeType,
+				position,
+				data: nodeData,
+			};
+
+			const newNodes = [...nodes, newNode];
+			setNodes(newNodes);
+			updateFlow({ nodes: newNodes as unknown as Node<NodeData>[] });
+		},
+		[nodes, setNodes, updateFlow]
+	);
+
 	return (
 		<div className="flex h-full">
-			{!leftSidebarCollapsed && <NodePalette onAddNode={handleAddNode} />}
+			{!leftSidebarCollapsed && <NodePalette onAddNode={onNodeAdd} />}
 			<div className="flex-1 flex flex-col">
 				<div className="h-12 flex items-center px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
 					<ActionsToolbar
 						onGenerate={handleGenerateScene}
 						canGenerate={canGenerate}
 						isGenerating={isGenerating}
-						onDownload={videoUrl ? handleDownload : undefined}
-						hasVideo={Boolean(videoUrl)}
-						videos={videos}
-						onDownloadAll={completedVideos.length > 1 ? handleDownloadAll : undefined}
-						// image
+						// Remove all download props - these move to sidebar
+						// video
 						onGenerateImage={handleGenerateImage}
 						canGenerateImage={canGenerateImage}
 						isGeneratingImage={isGeneratingImage}
-						onDownloadImage={imageUrl ? () => {
-							const link = document.createElement('a');
-							link.href = imageUrl!;
-							link.download = `frame_${Date.now()}.${imageUrl.includes('.jpeg') || imageUrl.includes('.jpg') ? 'jpg' : 'png'}`;
-							document.body.appendChild(link);
-							link.click();
-							document.body.removeChild(link);
-						} : undefined}
-						hasImage={hasImage}
+						// shared
 						lastError={lastError}
 						onResetGeneration={resetGeneration}
 						validationSummary={validationSummary}
@@ -337,21 +340,11 @@ export function FlowEditorTab() {
 							nodeLabel={getResultNodeData().label}
 						/>
 					</DebugProvider>
-
-					<VideoPreview
-						videoUrl={videoUrl}
-						videos={videos}
-						onDownloadVideo={handleDownloadVideo}
-						onDownloadAll={handleDownloadAll}
-						imageUrl={imageUrl}
-						images={images}
-						onDownloadImage={handleDownloadImage}
-						onDownloadAllImages={handleDownloadAllImages}
-					/>
 				</div>
 			</div>
 			{!rightSidebarCollapsed && (
 				<RightSidebar
+					// Property panel props (existing functionality preserved)
 					node={selectedNode}
 					allNodes={nodes}
 					allEdges={edges}
@@ -379,6 +372,16 @@ export function FlowEditorTab() {
 					}}
 					validateDisplayName={validateDisplayName}
 					flowTracker={flowTracker}
+
+					// Preview panel props (moved from floating preview)
+					videoUrl={videoUrl}
+					videos={videos}
+					onDownloadVideo={handleDownloadVideo}
+					onDownloadAll={handleDownloadAll}
+					imageUrl={imageUrl}
+					images={images}
+					onDownloadImage={handleDownloadImage}
+					onDownloadAllImages={handleDownloadAllImages}
 				/>
 			)}
 		</div>

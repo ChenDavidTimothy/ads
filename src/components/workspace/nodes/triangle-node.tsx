@@ -16,7 +16,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
         <div className="flex items-center gap-[var(--space-2)]">
           <div 
             className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: data.color }}
+            style={{ backgroundColor: data.color || '#ff4444' }}
           >
             <TriangleIcon size={12} />
           </div>
@@ -27,13 +27,13 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
       </CardHeader>
 
       <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
-        <div>Size: {data.size}px</div>
-        <div>Position: ({data.position.x}, {data.position.y})</div>
+        <div>Size: {data.size || 80}px</div>
+        <div>Position: ({data.position?.x || 960}, {data.position?.y || 540})</div>
         <div className="flex items-center gap-[var(--space-2)]">
           <span>Color:</span>
           <div 
             className="w-4 h-4 rounded border border-[var(--border-primary)]"
-            style={{ backgroundColor: data.color }}
+            style={{ backgroundColor: data.color || '#ff4444' }}
           />
         </div>
       </CardContent>
