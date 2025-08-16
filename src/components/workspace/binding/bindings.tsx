@@ -43,15 +43,67 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 		updateFlow({
 			nodes: state.flow.nodes.map((n) => {
 				if (((n as any).data?.identifier?.id) !== nodeId) return n;
+				
+				const nextData: any = { ...(n as any).data };
+				
+				// 1) Set the binding (existing logic)
 				if (objectId) {
-					const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+					const prevAll = (nextData.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
 					const prev = prevAll[objectId] ?? {};
 					const nextObj = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
-					return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: nextObj } } } as any;
+					nextData.variableBindingsByObject = { ...prevAll, [objectId]: nextObj };
+				} else {
+					const prev = (nextData.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+					nextData.variableBindings = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
 				}
-				const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
-				const next = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
-				return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
+				
+				// 2) Clear corresponding override assignments (NEW LOGIC)
+				if (nextData.identifier?.type === 'animation' && objectId) {
+					const trackPrefix = 'track.';
+					if (key.startsWith(trackPrefix)) {
+						const [, trackId, ...rest] = key.split('.');
+						const subPath = rest.join('.');
+						
+						// Helper: prune empty nested objects
+						const pruneEmpty = (obj: any): any => {
+							if (!obj || typeof obj !== 'object') return obj;
+							
+							for (const k of Object.keys(obj)) {
+								if (obj[k] && typeof obj[k] === 'object') {
+									obj[k] = pruneEmpty(obj[k]); // ✅ ASSIGN THE RESULT BACK
+									if (Object.keys(obj[k]).length === 0) {
+										delete obj[k]; // ✅ CLEAN UP EMPTY OBJECTS
+									}
+								}
+							}
+							return obj;
+						};
+						
+						const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
+						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
+						const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
+						const idx = tracks.findIndex(t => t.trackId === trackId);
+						
+						if (idx >= 0) {
+							const t = { ...tracks[idx] } as TrackOverride;
+							const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
+							const dot = subPath.indexOf('.');
+							const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
+							deleteByPath(props as Record<string, unknown>, propPath);
+							
+							const prunedProps = pruneEmpty(props);
+							if (Object.keys(prunedProps).length === 0) delete (t as any).properties; 
+							else (t as any).properties = prunedProps;
+							
+							tracks[idx] = t;
+							(entry as any).tracks = tracks;
+							poa[objectId] = entry;
+							nextData.perObjectAssignments = poa;
+						}
+					}
+				}
+				
+				return { ...n, data: nextData } as any;
 			})
 		});
 	};
