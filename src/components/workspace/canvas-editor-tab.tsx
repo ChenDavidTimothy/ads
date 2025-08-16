@@ -258,9 +258,15 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		strokeWidth?: number;
 	};
 
-	const { state, updateFlow } = useWorkspace();
-	// Base node defaults for display fallbacks
-	const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
+	const def = (getNodeDefinition('canvas')?.defaults as Record<string, unknown> & {
+		position?: { x: number; y: number };
+		scale?: { x: number; y: number };
+		rotation?: number;
+		opacity?: number;
+		fillColor?: string;
+		strokeColor?: string;
+		strokeWidth?: number;
+	}) ?? {};
 	const base = (node?.data ?? {}) as Record<string, unknown> & {
 		position?: { x: number; y: number };
 		scale?: { x: number; y: number };
@@ -307,12 +313,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position X", "position.x")} <BindingTag keyName="position.x" /></label>
-					<NumberField label="" value={(initial.position?.x as number) ?? (base.position?.x as number) ?? 0} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
+					<NumberField label="" value={(initial.position?.x as number) ?? (base.position?.x as number) ?? (def.position?.x as number) ?? 0} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} disabled={isBound('position.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position Y", "position.y")} <BindingTag keyName="position.y" /></label>
-					<NumberField label="" value={(initial.position?.y as number) ?? (base.position?.y as number) ?? 0} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
+					<NumberField label="" value={(initial.position?.y as number) ?? (base.position?.y as number) ?? (def.position?.y as number) ?? 0} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} disabled={isBound('position.y')} />
 				</div>
 			</div>
@@ -320,12 +326,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")}</label>
-					<NumberField label="" value={(initial.scale?.x as number) ?? (base.scale?.x as number) ?? 1} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
+					<NumberField label="" value={(initial.scale?.x as number) ?? (base.scale?.x as number) ?? (def.scale?.x as number) ?? 1} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} disabled={isBound('scale.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")}</label>
-					<NumberField label="" value={(initial.scale?.y as number) ?? (base.scale?.y as number) ?? 1} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
+					<NumberField label="" value={(initial.scale?.y as number) ?? (base.scale?.y as number) ?? (def.scale?.y as number) ?? 1} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} disabled={isBound('scale.y')} />
 				</div>
 			</div>
@@ -333,29 +339,29 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Rotation", "rotation")} <BindingTag keyName="rotation" /></label>
-					<NumberField label="" value={(initial.rotation as number) ?? (base.rotation as number) ?? 0} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
+					<NumberField label="" value={(initial.rotation as number) ?? (base.rotation as number) ?? (def.rotation as number) ?? 0} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} disabled={isBound('rotation')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Opacity", "opacity")} <BindingTag keyName="opacity" /></label>
-					<NumberField label="" value={(initial.opacity as number) ?? (base.opacity as number) ?? 1} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
+					<NumberField label="" value={(initial.opacity as number) ?? (base.opacity as number) ?? (def.opacity as number) ?? 1} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} disabled={isBound('opacity')} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
+					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? (def.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} />
 					<div className="text-[10px] mt-1"><BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
-					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
+					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? (def.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} />
 					<div className="text-[10px] mt-1"><BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
-					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? (def.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} />
 					<div className="text-[10px] mt-1"><BindingTag keyName="strokeWidth" /></div>
 				</div>
