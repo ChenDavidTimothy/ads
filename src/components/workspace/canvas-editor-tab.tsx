@@ -217,7 +217,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const leftBorderClass = (key: string) => (isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '');
 
 	return (
-		<div className="space-y-[var(--space-2)]">
+		<div className="space-y-[var(--space-3)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
@@ -229,8 +229,12 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<CanvasBindingBadge nodeId={nodeId} keyName="position.x" />
-				<CanvasBindingBadge nodeId={nodeId} keyName="position.y" />
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="position.x" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="position.y" />
+				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
@@ -243,8 +247,12 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" />
-				<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" />
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" />
+				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
@@ -257,8 +265,12 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<CanvasBindingBadge nodeId={nodeId} keyName="rotation" />
-				<CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="rotation" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
+				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
@@ -272,9 +284,15 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
-				<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
-				<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+				</div>
 			</div>
 		</div>
 	);
