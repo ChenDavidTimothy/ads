@@ -136,10 +136,19 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     return debugResults.get(nodeId) ?? [];
   }, [debugResults]);
 
+  const clearDebugResults = useCallback((nodeId: string) => {
+    setDebugResults(prevResults => {
+      const newResults = new Map(prevResults);
+      newResults.delete(nodeId);
+      return newResults;
+    });
+  }, []);
+
   return {
     runToNode,
     getDebugResult,
     getAllDebugResults,
+    clearDebugResults,
     isDebugging: debugToNode.isPending,
   };
 }

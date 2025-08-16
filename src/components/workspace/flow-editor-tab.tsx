@@ -154,7 +154,7 @@ export function FlowEditorTab() {
 		flowTracker,
 		(newEdges: Edge[]) => updateFlow({ edges: newEdges })
 	);
-	const { runToNode, getDebugResult, getAllDebugResults, isDebugging } = useDebugExecution(nodes, edges);
+	const { runToNode, getDebugResult, getAllDebugResults, clearDebugResults, isDebugging } = useDebugExecution(nodes, edges);
 
 	const {
 		videoUrl,
@@ -207,7 +207,7 @@ export function FlowEditorTab() {
 					/>
 				</div>
 				<div className="flex-1 relative">
-					<DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, isDebugging }}>
+					<DebugProvider value={{ runToNode, getDebugResult, getAllDebugResults, clearDebugResults, isDebugging }}>
 						<FlowCanvas
 							nodes={nodes}
 							edges={edges}

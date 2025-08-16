@@ -195,42 +195,43 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 				{isBound && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-primary)] rounded-full" />}
 			</button>
 
-			<Modal isOpen={open} onClose={() => setOpen(false)} title="Bind to Result" size="xl" variant="solid">
-				<div className="p-[var(--space-4)] space-y-[var(--space-4)] h-full flex flex-col">
+			<Modal isOpen={open} onClose={() => setOpen(false)} title="Bind to Result" size="sm" variant="glass">
+				<div className="p-[var(--space-3)] space-y-[var(--space-3)] h-full flex flex-col">
 					<div className="relative">
 						<Input
 							placeholder="Search results..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
-							className="pl-8 text-sm h-10"
+							className="pl-8 text-sm h-8 glass-input"
 						/>
-						<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+						<Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
 					</div>
-					<div className="flex-1 overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)] min-h-[400px]">
+					<div className="flex-1 overflow-auto scrollbar-elegant">
 						{filtered.length === 0 ? (
-							<div className="px-4 py-6 text-sm text-[var(--text-tertiary)] text-center">
-								{query.trim() ? 'No results found for your search' : 'No connected Result variables available'}
+							<div className="px-[var(--space-3)] py-[var(--space-6)] text-sm text-[var(--text-tertiary)] text-center">
+								{query.trim() ? 'No results found' : 'No Result variables available'}
 							</div>
 						) : (
-							filtered.map(v => (
-								<button
-									key={v.id}
-									onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
-									className="w-full text-left px-4 py-3 text-sm hover:bg-[var(--surface-interactive)] transition-colors focus:bg-[var(--surface-interactive)] focus:outline-none"
-								>
-									<div className="font-medium text-[var(--text-primary)]">{v.name}</div>
-									{v.id !== v.name && (
-										<div className="text-xs text-[var(--text-tertiary)] mt-1">ID: {v.id}</div>
-									)}
-								</button>
-							))
+							<div className="space-y-[var(--space-1)]">
+								{filtered.map(v => (
+									<button
+										key={v.id}
+										onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
+										className="w-full text-left px-[var(--space-3)] py-[var(--space-2)] text-sm rounded-[var(--radius-sm)] hover:bg-[var(--surface-interactive)] transition-colors duration-[var(--duration-fast)] focus:bg-[var(--surface-interactive)] focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)]"
+									>
+										<div className="font-medium text-[var(--text-primary)] text-refined">{v.name}</div>
+									</button>
+								))}
+							</div>
 						)}
 					</div>
-					<div className="flex items-center justify-end pt-2 border-t border-[var(--border-primary)]">
-						<div className="text-sm text-[var(--text-tertiary)]">
-							{filtered.length} {filtered.length === 1 ? 'option' : 'options'}
+					{filtered.length > 0 && (
+						<div className="flex items-center justify-center pt-[var(--space-2)] border-t border-[var(--border-primary)]">
+							<div className="text-xs text-[var(--text-muted)] text-refined">
+								{filtered.length} {filtered.length === 1 ? 'result' : 'results'}
+							</div>
 						</div>
-					</div>
+					)}
 				</div>
 			</Modal>
 		</div>

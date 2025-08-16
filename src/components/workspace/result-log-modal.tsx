@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { DraggableModal } from "@/components/ui/draggable-modal";
+import { Modal } from "@/components/ui/modal";
 import { useDebugContext } from "./flow/debug-context";
 import { cn } from "@/lib/utils";
 import { 
@@ -40,10 +40,6 @@ export function ResultLogModal({
   nodeLabel
 }: ResultLogModalProps) {
   const [logs, setLogs] = useState<ResultLogEntry[]>([]);
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
-  
-  const logsEndRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const debugContext = useDebugContext();
 
@@ -71,20 +67,7 @@ export function ResultLogModal({
     return '[Complex Type]';
   }, []);
 
-  // Auto-scroll functionality
-  useEffect(() => {
-    if (isAutoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs, isAutoScroll]);
 
-  const handleScroll = useCallback(() => {
-    if (!scrollContainerRef.current) return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
-    setIsAutoScroll(isAtBottom);
-  }, []);
 
   // Load and refresh logs
   useEffect(() => {
@@ -106,7 +89,6 @@ export function ResultLogModal({
     };
 
     refreshLogs();
-    setIsAutoScroll(true);
 
     // Poll for updates
     const interval = setInterval(refreshLogs, 2000);
@@ -153,43 +135,37 @@ export function ResultLogModal({
   };
 
   return (
-    <DraggableModal
+    <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={nodeName}
-      width="w-[32rem]"
-      height="h-[32rem]"
-      collapsible={true}
-      headerIcon={
-        <div className="w-6 h-6 bg-[var(--node-output)] flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]">
-          <Target size={12} />
+      title={
+        <div className="flex items-center gap-[var(--space-3)]">
+          <div className="w-5 h-5 bg-[var(--node-output)] flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]">
+            <Target size={10} />
+          </div>
+          <div>
+            <div className="text-[13px] font-medium text-[var(--text-primary)] text-refined-medium">
+              {nodeName}
+            </div>
+            <div className="text-[10px] text-[var(--text-tertiary)]">
+              {nodeLabel} • {logs.length} entries
+            </div>
+          </div>
         </div>
       }
-      headerActions={
-        <div className="text-[11px] text-[var(--text-tertiary)]">
-          {nodeLabel} • {logs.length} entries
-        </div>
-      }
+      size="md"
+      variant="glass"
     >
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-2)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className={cn(
-            "w-2 h-2 rounded-full",
-            isAutoScroll ? "bg-[var(--success-500)]" : "bg-[var(--warning-500)]"
-          )} />
-          <span className="text-[11px] text-[var(--text-tertiary)]">
-            {isAutoScroll ? "Auto-scroll" : "Manual scroll"}
-          </span>
-        </div>
+      <div className="flex items-center justify-end py-[var(--space-2)] px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)] flex-shrink-0">
         
         <div className="flex items-center gap-[var(--space-1)]">
           <Button
-            onClick={() => setLogs([])}
+            onClick={() => debugContext?.clearDebugResults(nodeId)}
             variant="minimal"
             size="xs"
             disabled={logs.length === 0}
-            className="text-[10px]"
+            className="text-[10px] h-6"
           >
             <Trash2 size={10} className="mr-1" />
             Clear
@@ -199,7 +175,7 @@ export function ResultLogModal({
             variant="minimal"
             size="xs"
             disabled={logs.length === 0}
-            className="text-[10px]"
+            className="text-[10px] h-6"
           >
             <Download size={10} className="mr-1" />
             Export
@@ -208,29 +184,25 @@ export function ResultLogModal({
       </div>
 
       {/* Logs Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 p-[var(--space-3)]">
         {logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-[var(--space-6)] text-center">
-            <div className="w-12 h-12 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-[var(--space-3)]">
-              <Target size={20} className="text-[var(--text-tertiary)]" />
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-10 h-10 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-[var(--space-3)]">
+              <Target size={16} className="text-[var(--text-tertiary)]" />
             </div>
-            <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-[var(--space-2)]">
+            <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-[var(--space-2)] text-refined-medium">
               No Debug Output
             </h3>
-            <p className="text-[11px] text-[var(--text-tertiary)] mb-[var(--space-3)] max-w-[20rem]">
+            <p className="text-[11px] text-[var(--text-tertiary)] mb-[var(--space-3)] max-w-[18rem] text-refined">
               Run your flow to capture values at this node. Results will appear here in real-time.
             </p>
-            <div className="text-[10px] text-[var(--text-tertiary)] space-y-[var(--space-1)]">
+            <div className="text-[10px] text-[var(--text-muted)] space-y-[var(--space-1)] text-refined">
               <p>• Values are captured when data flows through</p>
               <p>• Perfect for debugging complex logic</p>
             </div>
           </div>
         ) : (
-          <div 
-            ref={scrollContainerRef}
-            onScroll={handleScroll}
-            className="h-full overflow-y-auto scrollbar-elegant p-[var(--space-3)] space-y-[var(--space-2)]"
-          >
+          <div className="space-y-[var(--space-2)]">
             {logs.map((log, index) => (
               <div 
                 key={index} 
@@ -289,10 +261,10 @@ export function ResultLogModal({
                 )}
               </div>
             ))}
-            <div ref={logsEndRef} />
+
           </div>
         )}
       </div>
-    </DraggableModal>
+    </Modal>
   );
 }

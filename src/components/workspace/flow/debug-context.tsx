@@ -14,6 +14,7 @@ interface DebugContextValue {
   runToNode: (nodeId: string) => Promise<void>;
   getDebugResult: (nodeId: string) => DebugResult | null;
   getAllDebugResults: (nodeId: string) => DebugResult[];
+  clearDebugResults: (nodeId: string) => void;
   isDebugging: boolean;
 }
 
