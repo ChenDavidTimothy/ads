@@ -97,17 +97,22 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 				}
 
 				// Helper: prune empty nested objects
-				const pruneEmpty = (obj: any) => {
+				const pruneEmpty = (obj: any): any => {
 					if (!obj || typeof obj !== 'object') return obj;
+					
 					for (const k of Object.keys(obj)) {
-						if (obj[k] && typeof obj[k] === 'object') pruneEmpty(obj[k]);
-						if (obj[k] && typeof obj[k] === 'object' && Object.keys(obj[k]).length === 0) delete obj[k];
+						if (obj[k] && typeof obj[k] === 'object') {
+							obj[k] = pruneEmpty(obj[k]); // ✅ ASSIGN THE RESULT BACK
+							if (Object.keys(obj[k]).length === 0) {
+								delete obj[k]; // ✅ CLEAN UP EMPTY OBJECTS
+							}
+						}
 					}
 					return obj;
 				};
 
 				// 2) Clear manual overrides and fall back to the node's own defaults
-				if (data.type === 'canvas') {
+				if (data.identifier.type === 'canvas') {
 					const key = rawKey; // e.g., 'position.x', 'fillColor'
 					if (objectId) {
 						const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
@@ -125,7 +130,7 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 					} else {
 						// Node-level canvas value is the node's default; do not change it here
 					}
-				} else if (data.type === 'animation') {
+				} else if (data.identifier.type === 'animation') {
 					const trackPrefix = 'track.';
 					if (rawKey.startsWith(trackPrefix)) {
 						// track.<id>.<subPath>
