@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link as LinkIcon, Search, Undo2 } from 'lucide-react';
+import { Link as LinkIcon, Search } from 'lucide-react';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { deleteByPath } from '@/shared/utils/object-path';
@@ -170,7 +170,7 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 }
 
 export function BindButton({ nodeId, bindingKey, objectId, className }: BindButtonProps) {
-	const { variables, getBinding, getBoundName, bind, resetToDefault } = useVariableBinding(nodeId, objectId);
+	const { variables, getBinding, getBoundName, bind } = useVariableBinding(nodeId, objectId);
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState('');
 	const boundId = getBinding(bindingKey);
@@ -226,13 +226,7 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 							))
 						)}
 					</div>
-					<div className="flex items-center justify-between pt-2 border-t border-[var(--border-primary)]">
-						<button
-							onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
-							className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
-						>
-							<Undo2 size={12} /> Reset to default
-						</button>
+					<div className="flex items-center justify-end pt-2 border-t border-[var(--border-primary)]">
 						<div className="text-sm text-[var(--text-tertiary)]">
 							{filtered.length} {filtered.length === 1 ? 'option' : 'options'}
 						</div>
