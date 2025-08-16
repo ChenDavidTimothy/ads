@@ -134,37 +134,7 @@ export default function DashboardPage() {
     }
   ];
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 'n':
-            e.preventDefault();
-            setShowCreateForm(true);
-            break;
-          case 'k':
-            e.preventDefault();
-            searchInputRef.current?.focus();
-            break;
-          case 'r':
-            e.preventDefault();
-            refetch();
-            break;
-        }
-      }
-      
-      // Escape key to close forms and menus
-      if (e.key === 'Escape') {
-        setShowCreateForm(false);
-        setShowWorkspaceMenu(false);
-        setSelectedWorkspace(null);
-      }
-    };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [refetch]);
 
   // Click outside to close menus
   useEffect(() => {
@@ -471,7 +441,7 @@ export default function DashboardPage() {
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search workspaces... (Ctrl+K)"
+                placeholder="Search workspaces..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -485,7 +455,7 @@ export default function DashboardPage() {
               onClick={() => refetch()}
               disabled={isLoading}
             >
-              Refresh (Ctrl+R)
+              Refresh
             </Button>
             
             <Button
@@ -493,7 +463,7 @@ export default function DashboardPage() {
               className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] hover:opacity-90"
             >
               <Plus className="w-4 h-4 mr-2" />
-              New Workspace (Ctrl+N)
+              New Workspace
             </Button>
           </div>
         </div>
@@ -934,14 +904,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Keyboard Shortcuts Help */}
-      <div className="fixed bottom-4 right-4 bg-[var(--surface-1)] border border-[var(--border-primary)] rounded-lg p-3 text-xs text-[var(--text-tertiary)]">
-        <div className="font-medium mb-2">Keyboard Shortcuts</div>
-        <div>Ctrl+N: New Workspace</div>
-        <div>Ctrl+K: Search</div>
-        <div>Ctrl+R: Refresh</div>
-        <div>Esc: Close</div>
-      </div>
+
     </div>
   );
 }
