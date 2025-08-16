@@ -44,6 +44,7 @@ interface NumberFieldProps {
 	defaultValue?: number;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	disabled?: boolean;
 }
 
 export function NumberField({
@@ -57,7 +58,8 @@ export function NumberField({
 	step,
 	defaultValue,
 	className,
-	bindAdornment
+	bindAdornment,
+	disabled
 }: NumberFieldProps) {
 	const [inputValue, setInputValue] = useState(value === undefined ? "" : value.toString());
 	const [internalError, setInternalError] = useState<string>("");
@@ -135,6 +137,7 @@ export function NumberField({
 					max={max}
 					step={step}
 					className={bindAdornment ? 'pr-9' : undefined}
+					disabled={disabled}
 				/>
 				{bindAdornment && (
 					<div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -154,6 +157,7 @@ interface ColorFieldProps {
 	error?: string;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	disabled?: boolean;
 }
 
 export function ColorField({
@@ -163,7 +167,8 @@ export function ColorField({
 	required = true,
 	error,
 	className,
-	bindAdornment
+	bindAdornment,
+	disabled
 }: ColorFieldProps) {
 	return (
 		<FormField label={label} required={required} error={error} className={className}>
@@ -174,6 +179,7 @@ export function ColorField({
 					onChange={(e) => onChange(e.target.value)}
 					error={!!error}
 					className={`h-12 ${bindAdornment ? 'pr-9' : ''}`}
+					disabled={disabled}
 				/>
 				{bindAdornment && (
 					<div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -194,6 +200,7 @@ interface SelectFieldProps {
 	error?: string;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	disabled?: boolean;
 }
 
 export function SelectField({
@@ -204,7 +211,8 @@ export function SelectField({
 	required = true,
 	error,
 	className,
-	bindAdornment
+	bindAdornment,
+	disabled
 }: SelectFieldProps) {
 	return (
 		<FormField label={label} required={required} error={error} className={className}>
@@ -213,6 +221,7 @@ export function SelectField({
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					className={bindAdornment ? 'pr-9' : undefined}
+					disabled={disabled}
 				>
 					{options.map(option => (
 						<option key={option.value} value={option.value}>
@@ -241,6 +250,7 @@ interface TextFieldProps {
 	bindAdornment?: React.ReactNode;
 	onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 	autoFocus?: boolean;
+	disabled?: boolean;
 }
 
 export function TextField({
@@ -253,7 +263,8 @@ export function TextField({
 	placeholder,
 	bindAdornment,
 	onKeyDown,
-	autoFocus
+	autoFocus,
+	disabled
 }: TextFieldProps) {
 	return (
 		<FormField label={label} required={required} error={error} className={className}>
@@ -267,6 +278,7 @@ export function TextField({
 					autoFocus={autoFocus}
 					error={!!error}
 					className={bindAdornment ? 'pr-9' : undefined}
+					disabled={disabled}
 				/>
 				{bindAdornment && (
 					<div className="absolute right-2 top-1/2 -translate-y-1/2">

@@ -106,8 +106,7 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 					return obj;
 				};
 
-				// 2) Clear manual overrides
-				// Canvas node: per-object overrides live in perObjectAssignments[objectId].initial
+				// 2) Clear manual overrides and fall back to the node's own defaults
 				if (data.type === 'canvas') {
 					const key = rawKey; // e.g., 'position.x', 'fillColor'
 					if (objectId) {
@@ -124,87 +123,44 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 						}
 						nextData.perObjectAssignments = poa;
 					} else {
-						// Node-level canvas defaults stored directly on node data
-						deleteByPath(nextData as unknown as Record<string, unknown>, key);
+						// Node-level canvas value is the node's default; do not change it here
 					}
 				} else if (data.type === 'animation') {
-					// Animation node: per-object track overrides or global track defaults
 					const trackPrefix = 'track.';
 					if (rawKey.startsWith(trackPrefix)) {
 						// track.<id>.<subPath>
 						const [, trackId, ...rest] = rawKey.split('.');
-						const subPath = rest.join('.'); // e.g., 'move.from.x' or 'easing' etc.
-						const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-						if (!objectId) return { ...n, data: nextData } as any;
-						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-						const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
-						const idx = tracks.findIndex(t => t.trackId === trackId);
-						if (idx >= 0) {
-							const t = { ...tracks[idx] } as TrackOverride;
-							const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
-							// Strip type prefix if present (e.g., 'move.from.x' -> 'from.x')
-							const dot = subPath.indexOf('.');
-							const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
-							deleteByPath(props as Record<string, unknown>, propPath);
-							const prunedProps = pruneEmpty(props);
-							if (Object.keys(prunedProps).length === 0) delete (t as any).properties; else (t as any).properties = prunedProps;
-							// Also allow clearing scalar timing/easing keys
-							if (propPath === 'easing' || propPath === 'duration' || propPath === 'startTime') delete (t as any)[propPath];
-							const hasProps = !!t.properties && Object.keys(t.properties as Record<string, unknown>).length > 0;
-							const hasMeta = (t as any).easing !== undefined || (t as any).startTime !== undefined || (t as any).duration !== undefined;
-							if (!hasProps && !hasMeta) tracks.splice(idx, 1); else tracks[idx] = t;
-							(entry as any).tracks = tracks;
-							if ((!entry.initial || Object.keys(entry.initial as any).length === 0) && (!tracks || tracks.length === 0)) {
-								delete poa[objectId];
-							} else {
-								poa[objectId] = entry;
+						const subPath = rest.join('.');
+						if (!objectId) {
+							// Global binding: default is the base track value; nothing to change beyond clearing binding
+						} else {
+							const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
+							const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
+							const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
+							const idx = tracks.findIndex(t => t.trackId === trackId);
+							if (idx >= 0) {
+								const t = { ...tracks[idx] } as TrackOverride;
+								const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
+								const dot = subPath.indexOf('.');
+								const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
+								deleteByPath(props as Record<string, unknown>, propPath);
+								const prunedProps = pruneEmpty(props);
+								if (Object.keys(prunedProps).length === 0) delete (t as any).properties; else (t as any).properties = prunedProps;
+								if (propPath === 'easing' || propPath === 'duration' || propPath === 'startTime') delete (t as any)[propPath];
+								const hasProps = !!t.properties && Object.keys(t.properties as Record<string, unknown>).length > 0;
+								const hasMeta = (t as any).easing !== undefined || (t as any).startTime !== undefined || (t as any).duration !== undefined;
+								if (!hasProps && !hasMeta) tracks.splice(idx, 1); else tracks[idx] = t;
+								(entry as any).tracks = tracks;
+								if ((!entry.initial || Object.keys(entry.initial as any).length === 0) && (!tracks || tracks.length === 0)) {
+									delete poa[objectId];
+								} else {
+									poa[objectId] = entry;
+								}
+								nextData.perObjectAssignments = poa;
 							}
-							nextData.perObjectAssignments = poa;
 						}
 					} else {
-						// Global track defaults: reset the base track properties in timeline editor data
-						// subPath like 'duration' or '<type>.<prop>...'
-						const subPath = rawKey;
-						const tracks: AnimationTrack[] = Array.isArray((nextData as any).tracks) ? ([...(nextData as any).tracks] as AnimationTrack[]) : [];
-						const dot = subPath.indexOf('.');
-						if (subPath === 'duration') {
-							(nextData as any).duration = (transformFactory.getTransformDefinition ? undefined : undefined); // duration default handled elsewhere; keep editor state owner to reset via timeline flow
-						} else if (dot >= 0) {
-							const type = subPath.slice(0, dot);
-							const propPath = subPath.slice(dot + 1);
-							const defaults = transformFactory.getDefaultProperties(type) ?? {};
-							const getDefaultByPath = (obj: any, path: string): any => {
-								const parts = path.split('.');
-								let cur = obj;
-								for (const p of parts) {
-									if (!cur || typeof cur !== 'object') return undefined;
-									cur = cur[p];
-								}
-								return cur;
-							};
-							const defaultVal = getDefaultByPath(defaults, propPath);
-							(nextData as any).tracks = tracks.map((t) => {
-								if ((t as any).type !== type) return t;
-								const copy = { ...(t as any), properties: { ...(t as any).properties } };
-								if (defaultVal === undefined) {
-									deleteByPath(copy.properties as Record<string, unknown>, propPath);
-								} else {
-									// set to default
-									const assignByPath = (obj: any, path: string, val: any) => {
-										const parts = path.split('.');
-										let cursor = obj;
-										for (let i = 0; i < parts.length - 1; i++) {
-											const k = parts[i]!;
-											if (!cursor[k] || typeof cursor[k] !== 'object') cursor[k] = {};
-											cursor = cursor[k];
-										}
-										cursor[parts[parts.length - 1]!] = val;
-									};
-									assignByPath(copy.properties, propPath, defaultVal);
-								}
-								return copy as AnimationTrack;
-							});
-						}
+						// Global scalar like 'duration': just clearing binding is sufficient
 					}
 				}
 
@@ -251,25 +207,15 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 							))}
 						</div>
 					)}
-					{boundId && (
-						<>
-							<div className="h-px bg-[var(--border-primary)]" />
-							<div
-								className="px-3 py-2 text-xs text-[var(--danger-400)] hover:bg-[var(--surface-interactive)] cursor-pointer"
-								onClick={() => { clear(bindingKey); setOpen(false); }}
-							>
-								Clear binding
-							</div>
-						<div
-							className="px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] cursor-pointer"
-							onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
-						>
-							Reset to default
-						</div>
- 						</>
- 					)}
- 				</div>
- 			)}
- 		</div>
- 	);
- }
+					<div className="h-px bg-[var(--border-primary)]" />
+					<div
+						className="px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] cursor-pointer"
+						onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
+					>
+						Reset to default
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
