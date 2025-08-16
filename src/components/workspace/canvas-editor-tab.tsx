@@ -296,19 +296,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		const isBound = !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
 		return (isBound || isOverridden(key)) ? `${baseLabel} (override)` : baseLabel;
 	};
-	const ToggleBinding = ({ keyName }: { keyName: string }) => (
-		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => {
-			updateFlow({
-				nodes: state.flow.nodes.map((n) => {
-					if (((n as any).data?.identifier?.id) !== nodeId) return n;
-					const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-					const prev = { ...(prevAll[objectId] ?? {}) };
-					delete prev[keyName];
-					return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
-				})
-			});
-		}}>Use manual</button>
-	);
+	// Legacy ToggleBinding UI removed in favor of centralized reset in Bind menu
 
 	return (
 		<div className="space-y-[var(--space-3)]">
@@ -355,17 +343,17 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 				<div>
 					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
+					<div className="text-[10px] mt-1"><BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
 					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
+					<div className="text-[10px] mt-1"><BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
 					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
+					<div className="text-[10px] mt-1"><BindingTag keyName="strokeWidth" /></div>
 				</div>
 			</div>
 		</div>
