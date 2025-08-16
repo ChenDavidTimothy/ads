@@ -713,6 +713,10 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
                 inputClassName={leftBorderClass('move.from.y')}
               />
             </div>
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+              <FieldBadges keyName="move.from.x" />
+              <FieldBadges keyName="move.from.y" />
+            </div>
             
           </div>
 
@@ -892,5 +896,3 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     </div>
   );
 }
-
-

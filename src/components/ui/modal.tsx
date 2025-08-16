@@ -10,6 +10,7 @@ interface ModalProps {
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  variant?: "glass" | "solid";
 }
 
 export function Modal({ 
@@ -18,7 +19,8 @@ export function Modal({
   title, 
   children, 
   size = "lg",
-  className 
+  className,
+  variant = "glass"
 }: ModalProps) {
   if (!isOpen) return null;
 
@@ -26,7 +28,9 @@ export function Modal({
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
       <div 
         className={cn(
-          "glass-panel flex flex-col outline-none shadow-glass-lg",
+          variant === "glass" 
+            ? "glass-panel flex flex-col outline-none shadow-glass-lg" 
+            : "bg-[var(--surface-1)] border border-[var(--border-primary)] flex flex-col outline-none shadow-glass-lg",
           {
             "w-[28rem] max-h-[32rem]": size === "sm",
             "w-[40rem] max-h-[36rem]": size === "md", 
