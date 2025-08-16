@@ -3,8 +3,7 @@ import { Link as LinkIcon } from 'lucide-react';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { deleteByPath } from '@/shared/utils/object-path';
-import { transformFactory } from '@/shared/registry/transforms';
-import type { AnimationTrack, NodeData } from '@/shared/types/nodes';
+import type { NodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 
 interface BindButtonProps {
@@ -39,6 +38,52 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 		return node?.data?.identifier?.displayName as string | undefined;
 	};
 
+	// Helper: prune empty nested objects
+	const pruneEmpty = (obj: any): any => {
+		if (!obj || typeof obj !== 'object') return obj;
+		
+		for (const k of Object.keys(obj)) {
+			if (obj[k] && typeof obj[k] === 'object') {
+				obj[k] = pruneEmpty(obj[k]); // ✅ ASSIGN THE RESULT BACK
+				if (Object.keys(obj[k]).length === 0) {
+					delete obj[k]; // ✅ CLEAN UP EMPTY OBJECTS
+				}
+			}
+		}
+		return obj;
+	};
+
+	// Helper: clear animation track override for a specific property
+	const clearTrackOverride = (nextData: any, objectId: string, key: string) => {
+		const trackPrefix = 'track.';
+		if (!key.startsWith(trackPrefix)) return;
+		
+		const [, trackId, ...rest] = key.split('.');
+		const subPath = rest.join('.');
+		
+		const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
+		const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
+		const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
+		const idx = tracks.findIndex(t => t.trackId === trackId);
+		
+		if (idx >= 0) {
+			const t = { ...tracks[idx] } as TrackOverride;
+			const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
+			const dot = subPath.indexOf('.');
+			const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
+			deleteByPath(props as Record<string, unknown>, propPath);
+			
+			const prunedProps = pruneEmpty(props);
+			if (Object.keys(prunedProps).length === 0) delete (t as any).properties; 
+			else (t as any).properties = prunedProps;
+			
+			tracks[idx] = t;
+			(entry as any).tracks = tracks;
+			poa[objectId] = entry;
+			nextData.perObjectAssignments = poa;
+		}
+	};
+
 	const bind = (key: string, resultNodeId: string) => {
 		updateFlow({
 			nodes: state.flow.nodes.map((n) => {
@@ -59,69 +104,10 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 				
 				// 2) Clear corresponding override assignments (NEW LOGIC)
 				if (nextData.identifier?.type === 'animation' && objectId) {
-					const trackPrefix = 'track.';
-					if (key.startsWith(trackPrefix)) {
-						const [, trackId, ...rest] = key.split('.');
-						const subPath = rest.join('.');
-						
-						// Helper: prune empty nested objects
-						const pruneEmpty = (obj: any): any => {
-							if (!obj || typeof obj !== 'object') return obj;
-							
-							for (const k of Object.keys(obj)) {
-								if (obj[k] && typeof obj[k] === 'object') {
-									obj[k] = pruneEmpty(obj[k]); // ✅ ASSIGN THE RESULT BACK
-									if (Object.keys(obj[k]).length === 0) {
-										delete obj[k]; // ✅ CLEAN UP EMPTY OBJECTS
-									}
-								}
-							}
-							return obj;
-						};
-						
-						const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-						const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
-						const idx = tracks.findIndex(t => t.trackId === trackId);
-						
-						if (idx >= 0) {
-							const t = { ...tracks[idx] } as TrackOverride;
-							const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
-							const dot = subPath.indexOf('.');
-							const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
-							deleteByPath(props as Record<string, unknown>, propPath);
-							
-							const prunedProps = pruneEmpty(props);
-							if (Object.keys(prunedProps).length === 0) delete (t as any).properties; 
-							else (t as any).properties = prunedProps;
-							
-							tracks[idx] = t;
-							(entry as any).tracks = tracks;
-							poa[objectId] = entry;
-							nextData.perObjectAssignments = poa;
-						}
-					}
+					clearTrackOverride(nextData, objectId, key);
 				}
 				
 				return { ...n, data: nextData } as any;
-			})
-		});
-	};
-
-	const clear = (key: string) => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				if (((n as any).data?.identifier?.id) !== nodeId) return n;
-				if (objectId) {
-					const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-					const prev = { ...(prevAll[objectId] ?? {}) };
-					delete prev[key];
-					return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
-				}
-				const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
-				const next = { ...prev } as typeof prev;
-				delete next[key];
-				return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
 			})
 		});
 	};
@@ -148,21 +134,6 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 					nextData.variableBindings = vb;
 				}
 
-				// Helper: prune empty nested objects
-				const pruneEmpty = (obj: any): any => {
-					if (!obj || typeof obj !== 'object') return obj;
-					
-					for (const k of Object.keys(obj)) {
-						if (obj[k] && typeof obj[k] === 'object') {
-							obj[k] = pruneEmpty(obj[k]); // ✅ ASSIGN THE RESULT BACK
-							if (Object.keys(obj[k]).length === 0) {
-								delete obj[k]; // ✅ CLEAN UP EMPTY OBJECTS
-							}
-						}
-					}
-					return obj;
-				};
-
 				// 2) Clear manual overrides and fall back to the node's own defaults
 				if (data.identifier.type === 'canvas') {
 					const key = rawKey; // e.g., 'position.x', 'fillColor'
@@ -183,41 +154,8 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 						// Node-level canvas value is the node's default; do not change it here
 					}
 				} else if (data.identifier.type === 'animation') {
-					const trackPrefix = 'track.';
-					if (rawKey.startsWith(trackPrefix)) {
-						// track.<id>.<subPath>
-						const [, trackId, ...rest] = rawKey.split('.');
-						const subPath = rest.join('.');
-						if (!objectId) {
-							// Global binding: default is the base track value; nothing to change beyond clearing binding
-						} else {
-							const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-							const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-							const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
-							const idx = tracks.findIndex(t => t.trackId === trackId);
-							if (idx >= 0) {
-								const t = { ...tracks[idx] } as TrackOverride;
-								const props = { ...(t.properties ?? {}) } as Record<string, unknown>;
-								const dot = subPath.indexOf('.');
-								const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
-								deleteByPath(props as Record<string, unknown>, propPath);
-								const prunedProps = pruneEmpty(props);
-								if (Object.keys(prunedProps).length === 0) delete (t as any).properties; else (t as any).properties = prunedProps;
-								if (propPath === 'easing' || propPath === 'duration' || propPath === 'startTime') delete (t as any)[propPath];
-								const hasProps = !!t.properties && Object.keys(t.properties as Record<string, unknown>).length > 0;
-								const hasMeta = (t as any).easing !== undefined || (t as any).startTime !== undefined || (t as any).duration !== undefined;
-								if (!hasProps && !hasMeta) tracks.splice(idx, 1); else tracks[idx] = t;
-								(entry as any).tracks = tracks;
-								if ((!entry.initial || Object.keys(entry.initial as any).length === 0) && (!tracks || tracks.length === 0)) {
-									delete poa[objectId];
-								} else {
-									poa[objectId] = entry;
-								}
-								nextData.perObjectAssignments = poa;
-							}
-						}
-					} else {
-						// Global scalar like 'duration': just clearing binding is sufficient
+					if (objectId) {
+						clearTrackOverride(nextData, objectId, rawKey);
 					}
 				}
 
@@ -226,11 +164,11 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 		});
 	};
 
-	return { variables, getBinding, getBoundName, bind, clear, resetToDefault } as const;
+	return { variables, getBinding, getBoundName, bind, resetToDefault } as const;
 }
 
 export function BindButton({ nodeId, bindingKey, objectId, className }: BindButtonProps) {
-	const { variables, getBinding, getBoundName, bind, clear, resetToDefault } = useVariableBinding(nodeId, objectId);
+	const { variables, getBinding, getBoundName, bind, resetToDefault } = useVariableBinding(nodeId, objectId);
 	const [open, setOpen] = useState(false);
 	const boundId = getBinding(bindingKey);
 	const boundName = getBoundName(boundId);
