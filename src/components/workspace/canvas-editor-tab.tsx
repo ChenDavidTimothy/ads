@@ -247,6 +247,8 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	onChange: (updates: Record<string, unknown>) => void;
 	onClear: () => void;
 }) {
+	const { state } = useWorkspace();
+	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
 	const selectedOverrides = assignments[objectId];
 	const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
 		position?: { x: number; y: number };
