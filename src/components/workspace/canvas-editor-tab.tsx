@@ -358,12 +358,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")}</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")} <BindingTag keyName="scale.x" /></label>
 					<NumberField label="" value={getValue('scale.x', 1)} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} disabled={isBound('scale.x')} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")}</label>
+					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")} <BindingTag keyName="scale.y" /></label>
 					<NumberField label="" value={getValue('scale.y', 1)} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} disabled={isBound('scale.y')} />
 				</div>
@@ -384,19 +384,34 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label={labelWithOverride("Fill", "fillColor")} value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
+					<ColorField label={labelWithOverride("Fill", "fillColor") + " " + (() => {
+						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+						const bound = vbAll?.[objectId]?.['fillColor']?.boundResultNodeId;
+						if (!bound) return "";
+						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+						return `(bound: ${name ?? bound})`;
+					})()} value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} />
-					<div className="text-[10px] mt-1"><BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
-					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
+					<ColorField label={labelWithOverride("Stroke", "strokeColor") + " " + (() => {
+						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+						const bound = vbAll?.[objectId]?.['strokeColor']?.boundResultNodeId;
+						if (!bound) return "";
+						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+						return `(bound: ${name ?? bound})`;
+					})()} value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} />
-					<div className="text-[10px] mt-1"><BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
-					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+					<NumberField label={labelWithOverride("Stroke W", "strokeWidth") + " " + (() => {
+						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+						const bound = vbAll?.[objectId]?.['strokeWidth']?.boundResultNodeId;
+						if (!bound) return "";
+						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+						return `(bound: ${name ?? bound})`;
+					})()} value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} />
-					<div className="text-[10px] mt-1"><BindingTag keyName="strokeWidth" /></div>
 				</div>
 			</div>
 		</div>
