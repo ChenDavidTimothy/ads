@@ -7,6 +7,7 @@ import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps }
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
+import { deleteByPath } from "@/shared/utils/object-path";
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -180,12 +181,61 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const objectReader = readVarForObject(objectId);
         const resolvedForObject = objectId ? resolvedTracks.map((t) => applyBindingsToTrack(t, objectBindingKeys, objectReader)) : resolvedTracks;
 
+        // Build a masked per-object assignment so bound keys take precedence over manual overrides
+        const maskedAssignmentsForObject = (() => {
+          if (!objectId) return undefined;
+          const base = mergedAssignments?.[objectId];
+          if (!base) return undefined;
+          const keys = [...globalBindingKeys, ...objectBindingKeys];
+          const next: any = { ...base };
+          const prunedTracks: any[] = [];
+          const tracks: any[] = Array.isArray(base.tracks) ? base.tracks.map(t => ({ ...t, properties: t.properties ? JSON.parse(JSON.stringify(t.properties)) : undefined })) : [];
+          for (const t of tracks) {
+            // Remove overrides for any bound keys that apply to this track
+            for (const key of keys) {
+              const trackPrefix = `track.${t.trackId}.`;
+              if (key.startsWith(trackPrefix)) {
+                const sub = key.slice(trackPrefix.length);
+                if (sub === 'duration' || sub === 'startTime' || sub === 'easing') {
+                  delete (t as any)[sub];
+                  continue;
+                }
+                const typePrefix = `${t.type}.`;
+                if (sub.startsWith(typePrefix)) {
+                  const propPath = sub.slice(typePrefix.length);
+                  if (propPath === 'duration' || propPath === 'startTime' || propPath === 'easing') {
+                    delete (t as any)[propPath as 'duration' | 'startTime' | 'easing'];
+                  } else if (t.properties) {
+                    deleteByPath(t.properties as any, propPath);
+                  }
+                }
+                continue;
+              }
+              const typePrefix = `${t.type}.`;
+              if (key.startsWith(typePrefix)) {
+                const subPath = key.slice(typePrefix.length);
+                if (subPath === 'duration' || subPath === 'startTime' || subPath === 'easing') {
+                  delete (t as any)[subPath as 'duration' | 'startTime' | 'easing'];
+                } else if (t.properties) {
+                  deleteByPath(t.properties as any, subPath);
+                }
+              }
+            }
+            const hasProps = t.properties && Object.keys(t.properties as Record<string, unknown>).length > 0;
+            const hasMeta = (t as any).easing !== undefined || (t as any).startTime !== undefined || (t as any).duration !== undefined;
+            if (hasProps || hasMeta) prunedTracks.push(t);
+          }
+          if (prunedTracks.length > 0) (next as any).tracks = prunedTracks;
+          else delete (next as any).tracks;
+          return { [objectId]: next } as PerObjectAssignments;
+        })();
+
         const animations = convertTracksToSceneAnimations(
           resolvedForObject,
           objectId ?? '',
           baseline,
           priorForObject,
-          mergedAssignments
+          maskedAssignmentsForObject
         );
 
         if (objectId) {

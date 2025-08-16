@@ -21,6 +21,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             "glass": "glass-input rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
             "minimal": "bg-transparent border-0 border-b border-[var(--border-primary)] rounded-none px-0 py-[var(--space-1)]"
           }[variant],
+          props.disabled ? "opacity-60" : undefined,
           className
         )}
         {...props}

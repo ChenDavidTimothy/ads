@@ -25,6 +25,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           error
             ? "border-[var(--danger-500)] focus:outline-none focus:ring-1 focus:ring-[var(--danger-500)]"
             : "focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)]",
+          props.disabled ? "opacity-60" : undefined,
           className
         )}
         {...props}

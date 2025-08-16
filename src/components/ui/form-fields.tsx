@@ -140,9 +140,12 @@ export function NumberField({
 					disabled={disabled}
 				/>
 				{bindAdornment && (
-					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+					<div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
 						{bindAdornment}
 					</div>
+				)}
+				{disabled && (
+					<div className="absolute inset-0 bg-[var(--surface-3)] rounded-[var(--radius-sm)] z-10" />
 				)}
 			</div>
 		</FormField>
@@ -182,9 +185,12 @@ export function ColorField({
 					disabled={disabled}
 				/>
 				{bindAdornment && (
-					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+					<div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
 						{bindAdornment}
 					</div>
+				)}
+				{disabled && (
+					<div className="absolute inset-0 bg-[var(--surface-3)] rounded-[var(--radius-sm)] z-10" />
 				)}
 			</div>
 		</FormField>
@@ -230,9 +236,12 @@ export function SelectField({
 					))}
 				</Select>
 				{bindAdornment && (
-					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+					<div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
 						{bindAdornment}
 					</div>
+				)}
+				{disabled && (
+					<div className="absolute inset-0 bg-[var(--surface-3)] rounded-[var(--radius-sm)] z-10" />
 				)}
 			</div>
 		</FormField>
@@ -281,9 +290,12 @@ export function TextField({
 					disabled={disabled}
 				/>
 				{bindAdornment && (
-					<div className="absolute right-2 top-1/2 -translate-y-1/2">
+					<div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
 						{bindAdornment}
 					</div>
+				)}
+				{disabled && (
+					<div className="absolute inset-0 bg-[var(--surface-3)] rounded-[var(--radius-sm)] z-10" />
 				)}
 			</div>
 		</FormField>
