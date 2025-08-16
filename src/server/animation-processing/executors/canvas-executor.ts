@@ -8,6 +8,7 @@ import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
+import { deleteByPath } from "@/shared/utils/object-path";
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
@@ -103,10 +104,47 @@ export class CanvasNodeExecutor extends BaseExecutor {
           }
 
           const assignmentsForObject = mergedAssignments?.[objectId];
+          const maskedAssignmentsForObject = (() => {
+            if (!assignmentsForObject) return undefined;
+            const keys = [...globalKeys, ...objectKeys];
+            const next: any = { ...assignmentsForObject };
+            const initial = { ...(next.initial ?? {}) } as Record<string, unknown>;
+            for (const key of keys) {
+              switch (key) {
+                case 'position.x': deleteByPath(initial as any, 'position.x'); break;
+                case 'position.y': deleteByPath(initial as any, 'position.y'); break;
+                case 'scale.x': deleteByPath(initial as any, 'scale.x'); break;
+                case 'scale.y': deleteByPath(initial as any, 'scale.y'); break;
+                case 'rotation': delete (initial as any).rotation; break;
+                case 'opacity': delete (initial as any).opacity; break;
+                case 'fillColor': delete (initial as any).fillColor; break;
+                case 'strokeColor': delete (initial as any).strokeColor; break;
+                case 'strokeWidth': delete (initial as any).strokeWidth; break;
+                default: break;
+              }
+            }
+            const prunedInitial = (() => {
+              const obj = JSON.parse(JSON.stringify(initial));
+              const prune = (o: any) => {
+                if (!o || typeof o !== 'object') return o;
+                for (const k of Object.keys(o)) {
+                  if (o[k] && typeof o[k] === 'object') {
+                    o[k] = prune(o[k]);
+                    if (Object.keys(o[k]).length === 0) delete o[k];
+                  }
+                }
+                return o;
+              };
+              return prune(obj);
+            })();
+            if (Object.keys(prunedInitial).length > 0) next.initial = prunedInitial; else delete next.initial;
+            return next as ObjectAssignments;
+          })();
+
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
             original as unknown as SceneObject,
             objectOverrides,
-            assignmentsForObject
+            maskedAssignmentsForObject
           );
 
           const styled: Record<string, unknown> = {
