@@ -291,35 +291,42 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			default: return false;
 		}
 	};
-	const labelWithOverride = (baseLabel: string, key: string) => {
+	const getFieldLabel = (baseLabel: string, key: string) => {
+		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+		const boundId = vbAll?.[objectId]?.[key]?.boundResultNodeId;
+		
+		if (boundId) {
+			const boundNode = state.flow.nodes.find(n => (n as any).data?.identifier?.id === boundId);
+			const boundName = boundNode?.data?.identifier?.displayName || boundId;
+			return `${baseLabel} (bound: ${boundName})`;
+		}
+		
+		if (isOverridden(key)) {
+			return `${baseLabel} (manual)`;
+		}
+		
+		return baseLabel;
+	};
+
+	const getFieldStateColor = (key: string) => {
 		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
 		const isBound = !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-		return (isBound || isOverridden(key)) ? `${baseLabel} (override)` : baseLabel;
+		
+		if (isBound) return 'text-[#3b82f6]';
+		if (isOverridden(key)) return 'text-[#f59e0b]';
+		return 'text-[var(--text-tertiary)]';
 	};
-	const ToggleBinding = ({ keyName }: { keyName: string }) => (
-		<button className="text-[10px] text-[var(--text-secondary)] underline ml-2" onClick={() => {
-			updateFlow({
-				nodes: state.flow.nodes.map((n) => {
-					if (((n as any).data?.identifier?.id) !== nodeId) return n;
-					const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-					const prev = { ...(prevAll[objectId] ?? {}) };
-					delete prev[keyName];
-					return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [objectId]: prev } } } as any;
-				})
-			});
-		}}>Use manual</button>
-	);
 
 	return (
 		<div className="space-y-[var(--space-3)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position X", "position.x")} <BindingTag keyName="position.x" /></label>
+					<label className={`block text-xs ${getFieldStateColor("position.x")}`}>{getFieldLabel("Position X", "position.x")}</label>
 					<NumberField label="" value={(initial.position?.x as number) ?? (base.position?.x as number) ?? 0} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position Y", "position.y")} <BindingTag keyName="position.y" /></label>
+					<label className={`block text-xs ${getFieldStateColor("position.y")}`}>{getFieldLabel("Position Y", "position.y")}</label>
 					<NumberField label="" value={(initial.position?.y as number) ?? (base.position?.y as number) ?? 0} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} />
 				</div>
@@ -327,12 +334,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")}</label>
+					<label className={`block text-xs ${getFieldStateColor("scale.x")}`}>{getFieldLabel("Scale X", "scale.x")}</label>
 					<NumberField label="" value={(initial.scale?.x as number) ?? (base.scale?.x as number) ?? 1} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")}</label>
+					<label className={`block text-xs ${getFieldStateColor("scale.y")}`}>{getFieldLabel("Scale Y", "scale.y")}</label>
 					<NumberField label="" value={(initial.scale?.y as number) ?? (base.scale?.y as number) ?? 1} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} />
 				</div>
@@ -340,12 +347,12 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Rotation", "rotation")} <BindingTag keyName="rotation" /></label>
+					<label className={`block text-xs ${getFieldStateColor("rotation")}`}>{getFieldLabel("Rotation", "rotation")}</label>
 					<NumberField label="" value={(initial.rotation as number) ?? (base.rotation as number) ?? 0} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Opacity", "opacity")} <BindingTag keyName="opacity" /></label>
+					<label className={`block text-xs ${getFieldStateColor("opacity")}`}>{getFieldLabel("Opacity", "opacity")}</label>
 					<NumberField label="" value={(initial.opacity as number) ?? (base.opacity as number) ?? 1} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} />
 				</div>
@@ -353,19 +360,16 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label={labelWithOverride("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
+					<ColorField label={getFieldLabel("Fill", "fillColor")} value={(initial.fillColor as string) ?? (base.fillColor as string) ?? ''} onChange={(fillColor) => onChange({ fillColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="fillColor" /> <BindingTag keyName="fillColor" /></div>
 				</div>
 				<div>
-					<ColorField label={labelWithOverride("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
+					<ColorField label={getFieldLabel("Stroke", "strokeColor")} value={(initial.strokeColor as string) ?? (base.strokeColor as string) ?? ''} onChange={(strokeColor) => onChange({ strokeColor })} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeColor" /> <BindingTag keyName="strokeColor" /></div>
 				</div>
 				<div>
-					<NumberField label={labelWithOverride("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+					<NumberField label={getFieldLabel("Stroke W", "strokeWidth")} value={(initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? 1} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} />
-					<div className="text-[10px] mt-1"><ToggleBinding keyName="strokeWidth" /> <BindingTag keyName="strokeWidth" /></div>
 				</div>
 			</div>
 		</div>
