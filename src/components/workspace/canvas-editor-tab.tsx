@@ -381,11 +381,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('position.x') && <OverrideBadge />}
+					{isOverridden('position.x') && !isBound('position.x') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
 				</div>
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('position.y') && <OverrideBadge />}
+					{isOverridden('position.y') && !isBound('position.y') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
 				</div>
 			</div>
@@ -404,11 +404,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('scale.x') && <OverrideBadge />}
+					{isOverridden('scale.x') && !isBound('scale.x') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
 				</div>
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('scale.y') && <OverrideBadge />}
+					{isOverridden('scale.y') && !isBound('scale.y') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
 				</div>
 			</div>
@@ -427,11 +427,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('rotation') && <OverrideBadge />}
+					{isOverridden('rotation') && !isBound('rotation') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
 				</div>
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('opacity') && <OverrideBadge />}
+					{isOverridden('opacity') && !isBound('opacity') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
 				</div>
 			</div>
@@ -452,15 +452,15 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('fillColor') && <OverrideBadge />}
+					{isOverridden('fillColor') && !isBound('fillColor') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
 				</div>
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('strokeColor') && <OverrideBadge />}
+					{isOverridden('strokeColor') && !isBound('strokeColor') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
 				</div>
 				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('strokeWidth') && <OverrideBadge />}
+					{isOverridden('strokeWidth') && !isBound('strokeWidth') && <OverrideBadge />}
 					<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
 				</div>
 			</div>
