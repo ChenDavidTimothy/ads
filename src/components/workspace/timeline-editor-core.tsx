@@ -27,71 +27,6 @@ import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/as
 import { useWorkspace } from './workspace-context';
 import { BindButton } from '@/components/workspace/binding/bindings';
 
-// ADD this new hook after the existing imports:
-function useTimelineOverrides(animationNodeId: string, trackId: string, selectedObjectId?: string) {
-  const { state, updateFlow } = useWorkspace();
-
-  const isFieldOverridden = useCallback((key: string): boolean => {
-    const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
-    if (!node || !selectedObjectId) return false;
-    
-    const assignments = node.data?.perObjectAssignments?.[selectedObjectId]?.tracks;
-    const trackOverride = assignments?.find((t: any) => t.trackId === trackId);
-    return getByPath(trackOverride?.properties, key) !== undefined;
-  }, [animationNodeId, trackId, selectedObjectId, state.flow.nodes]);
-
-  const clearManualOverride = useCallback((key: string) => {
-    if (!selectedObjectId) return;
-    
-    updateFlow({
-      nodes: state.flow.nodes.map((n) => {
-        if (((n as any).data?.identifier?.id) !== animationNodeId) return n;
-        
-        const assignments = { ...((n as any).data?.perObjectAssignments ?? {}) };
-        if (assignments[selectedObjectId]?.tracks) {
-          const tracks = [...assignments[selectedObjectId].tracks];
-          const trackIndex = tracks.findIndex((t: any) => t.trackId === trackId);
-          
-          if (trackIndex >= 0) {
-            const track = { ...tracks[trackIndex] };
-            const properties = { ...track.properties };
-            removeByPath(properties, key);
-            
-            if (Object.keys(properties).length === 0) {
-              tracks.splice(trackIndex, 1);
-            } else {
-              track.properties = properties;
-              tracks[trackIndex] = track;
-            }
-            
-            assignments[selectedObjectId] = { ...assignments[selectedObjectId], tracks };
-          }
-        }
-        
-        return { ...n, data: { ...(n as any).data, perObjectAssignments: assignments } };
-      })
-    });
-  }, [animationNodeId, trackId, selectedObjectId, updateFlow]);
-
-  return { isFieldOverridden, clearManualOverride };
-}
-
-function getByPath(obj: any, path: string): unknown {
-  if (!obj) return undefined;
-  return path.split('.').reduce((current, segment) => current?.[segment], obj);
-}
-
-function removeByPath(obj: any, path: string): void {
-  if (!obj) return;
-  const segments = path.split('.');
-  const last = segments.pop()!;
-  const target = segments.reduce((current, segment) => {
-    if (!current[segment]) return {};
-    return current[segment];
-  }, obj);
-  delete target[last];
-}
-
 function BindingTag({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
   const { state } = useWorkspace();
   const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
@@ -502,9 +437,6 @@ interface TrackPropertiesProps {
 }
 
 export function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
-  // ADD this line:
-  const { isFieldOverridden } = useTimelineOverrides(animationNodeId, track.identifier.id, selectedObjectId);
-  
   const [editingName, setEditingName] = useState(false);
   const [tempDisplayName, setTempDisplayName] = useState(track.identifier.displayName);
 
@@ -587,44 +519,35 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     return <BindButton nodeId={animationNodeId} bindingKey={specific} objectId={selectedObjectId} />;
   };
 
-
+  // Helpers to compute per-field override/bound state for labels
+  const isFieldOverridden = (key: string): boolean => {
+    const p = (override?.properties as any) ?? {};
+    switch (key) {
+      case 'move.from.x': return p?.from?.x !== undefined;
+      case 'move.from.y': return p?.from?.y !== undefined;
+      case 'move.to.x': return p?.to?.x !== undefined;
+      case 'move.to.y': return p?.to?.y !== undefined;
+      case 'rotate.from': return p?.from !== undefined;
+      case 'rotate.to': return p?.to !== undefined;
+      case 'scale.from': return p?.from !== undefined;
+      case 'scale.to': return p?.to !== undefined;
+      case 'fade.from': return p?.from !== undefined;
+      case 'fade.to': return p?.to !== undefined;
+      case 'color.property': return p?.property !== undefined;
+      case 'color.from': return p?.from !== undefined;
+      case 'color.to': return p?.to !== undefined;
+      default: return false;
+    }
+  };
   const isFieldBound = (key: string): boolean => {
     const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
     const scopedKey = `track.${track.identifier.id}.${key}`;
     const vb = (selectedObjectId ? (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
     return !!(vb?.[scopedKey]?.boundResultNodeId || vb?.[key]?.boundResultNodeId);
   };
-  const getFieldLabel = (base: string, key: string) => {
-    const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
-    const scopedKey = `track.${track.identifier.id}.${key}`;
-    
-    // Check binding first
-    const vb = (selectedObjectId ? (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
-    const boundId = vb?.[scopedKey]?.boundResultNodeId || vb?.[key]?.boundResultNodeId;
-    
-    if (boundId) {
-      const boundNode = state.flow.nodes.find(n => (n as any).data?.identifier?.id === boundId);
-      const boundName = boundNode?.data?.identifier?.displayName || boundId;
-      return `${base} (bound: ${boundName})`;
-    }
-    
-    // Check manual override
-    if (isFieldOverridden(key)) {
-      return `${base} (manual)`;
-    }
-    
-    return base;
-  };
-
-  const getFieldStateColor = (key: string) => {
-    const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
-    const scopedKey = `track.${track.identifier.id}.${key}`;
-    const vb = (selectedObjectId ? (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
-    const boundId = vb?.[scopedKey]?.boundResultNodeId || vb?.[key]?.boundResultNodeId;
-    
-    if (boundId) return 'text-[#3b82f6]';
-    if (isFieldOverridden(key)) return 'text-[#f59e0b]';
-    return 'text-[var(--text-tertiary)]';
+  const labelWithOverride = (base: string, key: string) => {
+    const show = isFieldOverridden(key) || isFieldBound(key);
+    return show ? `${base} (override)` : base;
   };
 
   const clearBinding = (key: string) => {
@@ -647,7 +570,9 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     });
   };
 
-
+  const ToggleBinding = ({ keyName }: { keyName: string }) => (
+    <Button variant="ghost" size="xs" className="underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</Button>
+  );
 
   const handleSaveDisplayName = () => {
     const success = onDisplayNameChange(track.identifier.id, tempDisplayName);
@@ -731,7 +656,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
       {/* Easing and Timing - Two Column Layout */}
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
         <SelectField
-          label={getFieldLabel("Easing", `${track.type}.easing`)}
+          label={labelWithOverride("Easing", `${track.type}.easing`)}
           value={(override?.easing as any) ?? track.easing}
           onChange={(easing) => onChange({ easing: easing as AnimationTrack["easing"] })}
           options={easingOptions}
@@ -751,21 +676,24 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">From Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
-                label={getFieldLabel("X", "move.from.x")}
+                label={labelWithOverride("X", "move.from.x")}
                 value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
                 onChange={(x) => updateProperties({ from: { x } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.x`)}
               />
               <NumberField
-                label={getFieldLabel("Y", "move.from.y")}
+                label={labelWithOverride("Y", "move.from.y")}
                 value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
                 onChange={(y) => updateProperties({ from: { y } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.y`)}
               />
             </div>
-
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+              <div><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
+              <div><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
+            </div>
           </div>
 
           {/* To Position - Two Column */}
@@ -773,21 +701,24 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">To Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
-                label={getFieldLabel("X", "move.to.x")}
+                label={labelWithOverride("X", "move.to.x")}
                 value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
                 onChange={(x) => updateProperties({ to: { x } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.x`)}
               />
               <NumberField
-                label={getFieldLabel("Y", "move.to.y")}
+                label={labelWithOverride("Y", "move.to.y")}
                 value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
                 onChange={(y) => updateProperties({ to: { y } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.y`)}
               />
             </div>
-
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+              <div><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
+              <div><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
+            </div>
           </div>
         </div>
       )}
@@ -797,15 +728,15 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Rotate Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-                              label={getFieldLabel("From", "rotate.from")}
-                value={(override?.properties as any)?.from ?? track.properties.from}
-                onChange={(from) => updateProperties({ from })}
-                step={0.1}
-                defaultValue={0}
-                bindAdornment={bindButton(`rotate.from`)}
-              />
+              label={labelWithOverride("From", "rotate.from")}
+              value={(override?.properties as any)?.from ?? track.properties.from}
+              onChange={(from) => updateProperties({ from })}
+              step={0.1}
+              defaultValue={0}
+              bindAdornment={bindButton(`rotate.from`)}
+            />
             <NumberField
-                label={getFieldLabel("To", "rotate.to")}
+              label={labelWithOverride("To", "rotate.to")}
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
@@ -813,7 +744,10 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`rotate.to`)}
             />
           </div>
-
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+            <div><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
+            <div><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
+          </div>
         </div>
       )}
 
@@ -822,15 +756,15 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Scale Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-                              label={getFieldLabel("From", "scale.from")}
-                value={(override?.properties as any)?.from ?? track.properties.from}
-                onChange={(from) => updateProperties({ from })}
-                step={0.1}
-                defaultValue={1}
-                bindAdornment={bindButton(`scale.from`)}
-              />
+              label={labelWithOverride("From", "scale.from")}
+              value={(override?.properties as any)?.from ?? track.properties.from}
+              onChange={(from) => updateProperties({ from })}
+              step={0.1}
+              defaultValue={1}
+              bindAdornment={bindButton(`scale.from`)}
+            />
             <NumberField
-                label={getFieldLabel("To", "scale.to")}
+              label={labelWithOverride("To", "scale.to")}
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
@@ -838,7 +772,10 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`scale.to`)}
             />
           </div>
-
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+            <div><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
+            <div><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
+          </div>
         </div>
       )}
 
@@ -847,15 +784,15 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Fade Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-                              label={getFieldLabel("From", "fade.from")}
-                value={(override?.properties as any)?.from ?? track.properties.from}
-                onChange={(from) => updateProperties({ from })}
-                step={0.05}
-                defaultValue={1}
-                bindAdornment={bindButton(`fade.from`)}
-              />
+              label={labelWithOverride("From", "fade.from")}
+              value={(override?.properties as any)?.from ?? track.properties.from}
+              onChange={(from) => updateProperties({ from })}
+              step={0.05}
+              defaultValue={1}
+              bindAdornment={bindButton(`fade.from`)}
+            />
             <NumberField
-                label={getFieldLabel("To", "fade.to")}
+              label={labelWithOverride("To", "fade.to")}
               value={(override?.properties as any)?.to ?? track.properties.to}
               onChange={(to) => updateProperties({ to })}
               step={0.05}
@@ -863,7 +800,10 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               bindAdornment={bindButton(`fade.to`)}
             />
           </div>
-
+          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+            <div><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
+            <div><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
+          </div>
         </div>
       )}
 
@@ -873,7 +813,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           
           {/* Property Selection - Full Width */}
           <SelectField
-            label={getFieldLabel("Property", "color.property")}
+            label={labelWithOverride("Property", "color.property")}
             value={(override?.properties as any)?.property ?? track.properties.property}
             onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
@@ -888,19 +828,22 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">Color Values</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <ColorField 
-                label={getFieldLabel("From", "color.from")}
+                label={labelWithOverride("From", "color.from")}
                 value={(override?.properties as any)?.from ?? track.properties.from} 
                 onChange={(from) => updateProperties({ from })} 
                 bindAdornment={bindButton(`color.from`)} 
               />
               <ColorField 
-                label={getFieldLabel("To", "color.to")}
+                label={labelWithOverride("To", "color.to")}
                 value={(override?.properties as any)?.to ?? track.properties.to} 
                 onChange={(to) => updateProperties({ to })} 
                 bindAdornment={bindButton(`color.to`)} 
               />
             </div>
-
+            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+              <div><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
+              <div><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
+            </div>
           </div>
         </div>
       )}

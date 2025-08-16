@@ -587,7 +587,7 @@ export class FlowTracker {
     allNodes: Node<NodeData>[],
     allEdges: Edge[]
   ): Array<{ id: string; name: string }>{
-    return this.getConnectedResultNodes(nodeId, allNodes, allEdges).map((n) => ({
+    return this.getUpstreamResultNodes(nodeId, allNodes, allEdges).map((n) => ({
       id: n.data.identifier.id,
       name: n.data.identifier.displayName,
     }));
