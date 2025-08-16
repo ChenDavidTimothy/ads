@@ -204,7 +204,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('401')) {
         setLastError('Authentication required');
         toast.warning('Please log in', 'Your session has expired');
-        router.push('/auth');
+        router.push('/login');
         return;
       }
       
@@ -308,7 +308,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           setIsGenerating(false);
           setLastError('Authentication expired during generation');
           toast.warning('Session expired', 'Please log in and try again');
-          router.push('/auth');
+          router.push('/login');
           return;
         }
         
@@ -401,7 +401,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
             setIsGenerating(false);
             setLastError('Authentication expired');
             toast.warning('Session expired', 'Please log in again');
-            router.push('/auth');
+            router.push('/login');
           }
           return;
         }
@@ -476,7 +476,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           setIsGenerating(false);
           setLastError('Authentication expired during generation');
           toast.warning('Session expired', 'Please log in and try again');
-          router.push('/auth');
+          router.push('/login');
           return;
         }
         
@@ -520,7 +520,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
             setIsGenerating(false);
             setLastError('Authentication expired');
             toast.warning('Session expired', 'Please log in again');
-            router.push('/auth');
+            router.push('/login');
           }
           return;
         }
@@ -566,7 +566,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       
       if (userError || !user) {
         toast.warning('Please log in', 'Authentication required to generate videos');
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
@@ -645,7 +645,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         toast.warning('Please log in', 'Authentication required to generate images');
-        router.push('/auth');
+        router.push('/login');
         return;
       }
       const backendNodes = nodes.map((node) => ({ id: node.id, type: node.type, position: node.position, data: node.data }));

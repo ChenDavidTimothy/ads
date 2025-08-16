@@ -21,7 +21,7 @@ const config = {
       },
       {
         source: '/editor',
-        destination: '/workspace-selector',
+        destination: '/dashboard',
         permanent: false,
       },
       {

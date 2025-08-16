@@ -10,7 +10,7 @@ export default async function Page({
   const { workspace: workspaceId } = (await searchParams) ?? {};
   const { nodeId } = await params;
   if (!workspaceId) {
-    redirect("/workspace-selector");
+    redirect("/dashboard");
   }
   redirect(`/workspace?workspace=${workspaceId}&tab=timeline&node=${nodeId}`);
 }

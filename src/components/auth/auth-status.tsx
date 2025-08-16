@@ -245,8 +245,8 @@ export function AuthStatus() {
 			
 			toast.success('Signed out successfully', 'Come back soon!');
 			
-			// Redirect to auth page after successful logout
-			window.location.href = '/auth';
+			// Redirect to login page after successful logout
+			window.location.href = '/login';
 		} catch (error) {
 			console.error('[AUTH] Logout error:', error);
 			toast.error('Logout failed', 'Please try again');
@@ -318,7 +318,7 @@ export function AuthStatus() {
 	// Show unauthenticated state
 	return (
 		<div className="text-sm flex items-center gap-[var(--space-2)]">
-			<Link href="/auth" className="underline hover:text-[var(--text-secondary)]">
+			<Link href="/login" className="underline hover:text-[var(--text-secondary)]">
 				Login
 			</Link>
 		</div>

@@ -1,479 +1,356 @@
-"use client";
+import Link from "next/link";
+import { api, HydrateClient } from "@/trpc/server";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { CheckCircle2, Zap, Users, Shield, ArrowRight, Play, Star } from "lucide-react";
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Play, 
-  Zap, 
-  Users, 
-  Layers, 
-  ArrowRight, 
-  Check, 
-  Star,
-  Target,
-  Workflow,
-  PaintBucket,
-  BarChart3,
-  Globe,
-  Shield,
-  Clock
-} from 'lucide-react';
-
-// Simulated components matching your existing design system
-const Button = ({ children, variant = "primary", size = "md", className = "", ...props }) => {
-  const variants = {
-    primary: "bg-[var(--accent-primary)] text-[var(--text-primary)] hover:brightness-110 border border-[var(--accent-primary)]",
-    secondary: "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)] border border-[var(--border-primary)]",
-    glass: "glass-button text-[var(--text-primary)]",
-    ghost: "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--button-ghost-hover)] hover:text-[var(--text-primary)] border border-transparent"
-  };
+export default async function LandingPage() {
+  // Check if user is already authenticated
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   
-  const sizes = {
-    sm: "px-[var(--space-3)] py-[var(--space-1)] text-[11px] h-7",
-    md: "px-[var(--space-4)] py-[var(--space-2)] text-[12px] h-8",
-    lg: "px-[var(--space-5)] py-[var(--space-3)] text-[13px] h-9"
-  };
+  // Redirect authenticated users to dashboard
+  if (user) {
+    redirect("/dashboard");
+  }
 
-  return (
-    <button
-      className={`inline-flex items-center justify-center font-medium transition-all text-refined-medium
-        duration-[var(--duration-fast)] ease-[var(--easing-standard)]
-        focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)] focus:ring-offset-1 focus:ring-offset-[var(--surface-0)]
-        disabled:opacity-40 disabled:cursor-not-allowed rounded-[var(--radius-sm)]
-        ${variants[variant]} ${sizes[size]} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
+  const hello = await api.post.hello({ text: "from GraphBatch" });
 
-const Input = ({ className = "", variant = "default", error = false, ...props }) => {
-  const variants = {
-    default: "bg-[var(--surface-2)] border border-[var(--border-primary)]",
-    glass: "glass-input"
-  };
+  const features = [
+    {
+      icon: <Zap className="w-6 h-6" />,
+      title: "No-Code Animation",
+      description: "Create stunning programmatic animations without writing a single line of code using our visual node-based editor."
+    },
+    {
+      icon: <Users className="w-6 h-6" />,
+      title: "Business-Focused",
+      description: "Built specifically for marketing professionals and business teams to create data-driven video advertisements."
+    },
+    {
+      icon: <Shield className="w-6 h-6" />,
+      title: "Enterprise Ready",
+      description: "Secure, scalable, and reliable infrastructure with enterprise-grade authentication and data protection."
+    }
+  ];
 
-  return (
-    <input
-      className={`w-full text-[var(--text-primary)] text-[12px] text-refined transition-all
-        duration-[var(--duration-fast)] ease-[var(--easing-standard)]
-        placeholder:text-[var(--text-muted)] rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]
-        ${variants[variant]}
-        ${error ? "border-[var(--danger-500)] focus:outline-none focus:ring-1 focus:ring-[var(--danger-500)]" : "focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)]"}
-        ${className}`}
-      {...props}
-    />
-  );
-};
-
-const Badge = ({ children, variant = "default", className = "" }) => {
-  const variants = {
-    default: "text-[var(--text-tertiary)] bg-transparent",
-    result: "text-[var(--text-primary)] bg-[var(--node-output)] border-transparent"
-  };
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-[var(--space-2)] py-[var(--space-half)]
-      rounded-[var(--radius-sm)] text-[10px] border border-[var(--border-primary)]
-      ${variants[variant]} ${className}`}>
-      {children}
-    </span>
-  );
-};
-
-const Card = ({ children, className = "" }) => (
-  <div className={`glass-panel rounded-[var(--radius-md)] p-[var(--space-4)] ${className}`}>
-    {children}
-  </div>
-);
-
-// Animation node visualization component
-const NodeVisualization = () => {
-  const [activeNode, setActiveNode] = useState(0);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveNode(prev => (prev + 1) % 4);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const nodes = [
-    { type: 'geometry', color: 'var(--node-geometry)', icon: '△', label: 'Shape' },
-    { type: 'data', color: 'var(--node-data)', icon: '📊', label: 'Data' },
-    { type: 'animation', color: 'var(--node-animation)', icon: '⚡', label: 'Motion' },
-    { type: 'output', color: 'var(--node-output)', icon: '🎬', label: 'Video' }
+  const benefits = [
+    "Visual node-based programming interface",
+    "Server-side rendering for optimal quality",
+    "Real-time collaboration and workspace sharing",
+    "Advanced animation and timing controls",
+    "Export to multiple video formats",
+    "Integrated data sources and logic flows"
   ];
 
   return (
-    <div className="relative flex items-center justify-center gap-[var(--space-4)] p-[var(--space-6)]">
-      {nodes.map((node, index) => (
-        <div key={index} className="flex flex-col items-center gap-[var(--space-2)]">
-          <div 
-            className={`w-12 h-12 rounded-[var(--radius-sm)] border-2 flex items-center justify-center text-sm font-bold transition-all duration-500
-              ${activeNode === index ? 'scale-110 shadow-lg' : 'scale-100'}`}
-            style={{ 
-              backgroundColor: activeNode === index ? node.color : 'var(--surface-2)',
-              borderColor: node.color,
-              boxShadow: activeNode === index ? `0 0 20px ${node.color}40` : 'none'
-            }}
-          >
-            {node.icon}
-          </div>
-          <span className="text-[10px] text-[var(--text-tertiary)]">{node.label}</span>
-          {index < nodes.length - 1 && (
-            <div className={`absolute top-6 h-0.5 w-8 transition-all duration-500 ${
-              activeNode > index ? 'bg-[var(--accent-primary)]' : 'bg-[var(--border-primary)]'
-            }`} style={{ left: `${(index + 1) * 80 - 16}px` }} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export default function Home() {
-  const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSubmitted(true);
-    // Simulate API call
-    setTimeout(() => setIsSubmitted(false), 3000);
-  };
-
-  return (
-    <div className="min-h-screen bg-[var(--surface-0)] text-[var(--text-primary)]">
-      {/* Header */}
-      <header className="glass-panel border-b border-[var(--border-primary)] sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-[var(--space-6)] py-[var(--space-3)]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-[var(--space-3)]">
-              <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-[var(--radius-sm)] flex items-center justify-center font-bold text-sm">
-                GB
+    <HydrateClient>
+      <div className="min-h-screen bg-[var(--surface-0)] text-[var(--text-primary)]">
+        {/* Header */}
+        <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
+                <Play className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-[var(--text-primary)] text-refined-medium">GraphBatch</span>
+              <span className="text-xl font-bold">GraphBatch</span>
             </div>
-            <nav className="hidden md:flex items-center gap-[var(--space-6)]">
-              <a href="#features" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[12px]">Features</a>
-              <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[12px]">Pricing</a>
-              <a href="#examples" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[12px]">Examples</a>
-              <Button variant="glass" size="sm">Sign In</Button>
-              <Button size="sm">Start Free Trial</Button>
+            
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="#features" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                Features
+              </Link>
+              <Link href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                Pricing
+              </Link>
+              <Link href="#about" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                About
+              </Link>
             </nav>
-          </div>
-        </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="relative py-[var(--space-8)] px-[var(--space-6)]">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-[var(--space-8)] items-center">
-            <div className="space-y-[var(--space-6)]">
-              <div className="space-y-[var(--space-3)]">
-                <Badge variant="result">No-Code Animation Platform</Badge>
-                <h1 className="text-4xl lg:text-5xl font-bold text-[var(--text-primary)] leading-tight">
-                  Create <span className="text-[var(--accent-primary)]">Professional Video Ads</span> Without Code
-                </h1>
-                <p className="text-lg text-[var(--text-secondary)] text-refined max-w-lg">
-                  Build sophisticated, data-driven animations with our intuitive node-based visual programming interface. 
-                  Perfect for marketers and business professionals.
-                </p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-[var(--space-3)] items-start">
-                <Button className="flex items-center gap-[var(--space-2)]">
-                  <Play size={14} />
-                  Start Creating Free
-                </Button>
-                <Button variant="ghost" className="flex items-center gap-[var(--space-2)]">
-                  <Workflow size={14} />
-                  Watch Demo
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-[var(--space-4)] pt-[var(--space-3)]">
-                <div className="flex items-center gap-[var(--space-1)]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={12} className="fill-[var(--warning-500)] text-[var(--warning-500)]" />
-                  ))}
-                </div>
-                <span className="text-[11px] text-[var(--text-tertiary)]">Trusted by 10,000+ creators</span>
-              </div>
-            </div>
-
-            <div className="relative">
-              <Card className="overflow-hidden">
-                <NodeVisualization />
-                <div className="border-t border-[var(--border-primary)] mt-[var(--space-4)] pt-[var(--space-4)]">
-                  <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                    <span>Visual Node Editor</span>
-                    <span className="text-[var(--accent-primary)]">●REC</span>
-                  </div>
-                </div>
-              </Card>
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/login"
+                className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link 
+                href="/register"
+                className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+              >
+                Get Started
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </header>
 
-      {/* Features Section */}
-      <section id="features" className="py-[var(--space-8)] px-[var(--space-6)] bg-[var(--surface-1)]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center space-y-[var(--space-4)] mb-[var(--space-8)]">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-              Everything You Need for <span className="text-[var(--accent-primary)]">Professional Video Production</span>
-            </h2>
-            <p className="text-[var(--text-secondary)] text-refined max-w-2xl mx-auto">
-              Our platform combines the power of professional animation software with the simplicity of visual programming.
+        {/* Hero Section */}
+        <section className="max-w-7xl mx-auto px-6 py-20 text-center">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
+              Create <span className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] bg-clip-text text-transparent">Dynamic</span><br />
+              Video Ads Without Code
+            </h1>
+            
+            <p className="text-xl text-[var(--text-secondary)] mb-12 leading-relaxed max-w-3xl mx-auto">
+              GraphBatch empowers business professionals to build sophisticated, data-driven video advertisements 
+              using an intuitive visual programming interface. No coding experience required.
             </p>
-          </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-[var(--space-4)]">
-            {[
-              { icon: Workflow, title: "Visual Node Programming", desc: "Connect nodes instead of writing code. Perfect for non-technical users.", color: "var(--node-animation)" },
-              { icon: Layers, title: "Data-Driven Animations", desc: "Import your data and watch it come to life with smart visualizations.", color: "var(--node-data)" },
-              { icon: PaintBucket, title: "Beautiful Templates", desc: "Start with professionally designed templates for ads, presentations, and more.", color: "var(--node-geometry)" },
-              { icon: Zap, title: "Real-Time Preview", desc: "See your changes instantly with our optimized preview engine.", color: "var(--accent-primary)" },
-              { icon: BarChart3, title: "Analytics Integration", desc: "Connect to your business data sources for dynamic content updates.", color: "var(--node-logic)" },
-              { icon: Globe, title: "Export Anywhere", desc: "Publish to social media, websites, or download in any format you need.", color: "var(--node-output)" }
-            ].map((feature, index) => (
-              <Card key={index} className="hover:scale-105 transition-transform duration-300 cursor-pointer">
-                <div className="space-y-[var(--space-3)]">
-                  <div 
-                    className="w-10 h-10 rounded-[var(--radius-sm)] flex items-center justify-center"
-                    style={{ backgroundColor: feature.color + '20', color: feature.color }}
-                  >
-                    <feature.icon size={20} />
-                  </div>
-                  <h3 className="font-semibold text-[var(--text-primary)] text-refined-medium">{feature.title}</h3>
-                  <p className="text-[11px] text-[var(--text-secondary)] text-refined leading-relaxed">{feature.desc}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+              <Link 
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg hover:opacity-90 transition-all font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                Start Creating Free <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <Link 
+                href="#demo"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[var(--glass-bg)] border border-[var(--glass-border)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-all font-semibold backdrop-blur-sm"
+              >
+                <Play className="w-5 h-5" /> Watch Demo
+              </Link>
+            </div>
 
-      {/* Social Proof */}
-      <section className="py-[var(--space-8)] px-[var(--space-6)]">
-        <div className="max-w-6xl mx-auto text-center">
-          <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-[var(--space-6)]">
-            Trusted by Industry Leaders
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-[var(--space-6)] items-center opacity-60">
-            {['TechCorp', 'DataFlow', 'VisualCo', 'CreativeInc'].map((company, index) => (
-              <div key={index} className="glass-panel p-[var(--space-3)] rounded-[var(--radius-sm)]">
-                <span className="font-semibold text-[var(--text-secondary)]">{company}</span>
+            {/* Social Proof */}
+            <div className="text-[var(--text-tertiary)] text-sm">
+              <p className="mb-4">Trusted by marketing teams at innovative companies</p>
+              <div className="flex items-center justify-center gap-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-[var(--warning-500)] text-[var(--warning-500)]" />
+                ))}
+                <span className="ml-2 text-[var(--text-secondary)]">4.9/5 from early access users</span>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Use Cases */}
-      <section className="py-[var(--space-8)] px-[var(--space-6)] bg-[var(--surface-1)]">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-[var(--text-primary)] mb-[var(--space-8)]">
-            Perfect for <span className="text-[var(--accent-primary)]">Every Use Case</span>
-          </h2>
-          
-          <div className="grid lg:grid-cols-3 gap-[var(--space-6)]">
-            {[
-              { 
-                title: "Marketing Teams", 
-                icon: Target,
-                points: ["Social media campaigns", "Product demonstrations", "Brand storytelling", "A/B testing variations"],
-                color: "var(--node-animation)"
-              },
-              { 
-                title: "Sales Professionals", 
-                icon: BarChart3,
-                points: ["Proposal presentations", "ROI visualizations", "Client onboarding", "Performance dashboards"],
-                color: "var(--node-data)"
-              },
-              { 
-                title: "Content Creators", 
-                icon: Users,
-                points: ["Educational content", "Tutorial videos", "Brand partnerships", "Audience engagement"],
-                color: "var(--node-geometry)"
-              }
-            ].map((useCase, index) => (
-              <Card key={index} className="space-y-[var(--space-4)]">
-                <div className="flex items-center gap-[var(--space-3)]">
-                  <div 
-                    className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center"
-                    style={{ backgroundColor: useCase.color + '20', color: useCase.color }}
-                  >
-                    <useCase.icon size={16} />
-                  </div>
-                  <h3 className="font-semibold text-[var(--text-primary)] text-refined-medium">{useCase.title}</h3>
-                </div>
-                <ul className="space-y-[var(--space-2)]">
-                  {useCase.points.map((point, pointIndex) => (
-                    <li key={pointIndex} className="flex items-center gap-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
-                      <Check size={12} className="text-[var(--success-500)] flex-shrink-0" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-[var(--space-8)] px-[var(--space-6)]">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center space-y-[var(--space-4)] mb-[var(--space-8)]">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-              Simple, <span className="text-[var(--accent-primary)]">Transparent Pricing</span>
-            </h2>
-            <p className="text-[var(--text-secondary)] text-refined">Choose the plan that fits your needs</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-[var(--space-4)]">
-            {[
-              {
-                name: "Starter",
-                price: "Free",
-                period: "forever",
-                features: ["5 projects", "Basic templates", "720p exports", "Community support"],
-                button: "Get Started",
-                variant: "secondary"
-              },
-              {
-                name: "Professional",
-                price: "$29",
-                period: "per month",
-                features: ["Unlimited projects", "Premium templates", "4K exports", "Priority support", "Advanced integrations"],
-                button: "Start Free Trial",
-                variant: "primary",
-                popular: true
-              },
-              {
-                name: "Enterprise",
-                price: "Custom",
-                period: "contact us",
-                features: ["Custom branding", "SSO integration", "Dedicated support", "On-premise deployment", "Custom templates"],
-                button: "Contact Sales",
-                variant: "glass"
-              }
-            ].map((plan, index) => (
-              <Card key={index} className={`relative ${plan.popular ? 'ring-2 ring-[var(--accent-primary)]' : ''}`}>
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="result">Most Popular</Badge>
-                  </div>
-                )}
-                <div className="space-y-[var(--space-4)]">
-                  <div className="text-center space-y-[var(--space-2)]">
-                    <h3 className="font-semibold text-[var(--text-primary)] text-refined-medium">{plan.name}</h3>
-                    <div className="space-y-1">
-                      <span className="text-2xl font-bold text-[var(--text-primary)]">{plan.price}</span>
-                      {plan.period && <span className="text-[11px] text-[var(--text-tertiary)]">/{plan.period}</span>}
-                    </div>
-                  </div>
-                  <ul className="space-y-[var(--space-2)]">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center gap-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
-                        <Check size={12} className="text-[var(--success-500)] flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant={plan.variant} className="w-full">
-                    {plan.button}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-[var(--space-8)] px-[var(--space-6)] bg-[var(--surface-1)]">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="space-y-[var(--space-6)]">
-            <div className="space-y-[var(--space-3)]">
-              <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-                Ready to <span className="text-[var(--accent-primary)]">Transform Your Content?</span>
-              </h2>
-              <p className="text-[var(--text-secondary)] text-refined max-w-2xl mx-auto">
-                Join thousands of creators who are already using GraphBatch to create stunning video content without any coding knowledge.
+        {/* Features Section */}
+        <section id="features" className="bg-[var(--surface-1)] border-y border-[var(--border-primary)]">
+          <div className="max-w-7xl mx-auto px-6 py-20">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-6">Powerful Features for Modern Marketing</h2>
+              <p className="text-xl text-[var(--text-secondary)] max-w-2xl mx-auto">
+                Everything you need to create professional, data-driven video content that converts.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-[var(--space-3)] max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex-1"
-                variant="glass"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && email.trim()) {
-                    handleSubmit(e);
-                  }
-                }}
-              />
-              <Button 
-                onClick={handleSubmit} 
-                disabled={isSubmitted || !email.trim()} 
-                className="flex items-center gap-[var(--space-2)]"
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              {features.map((feature, index) => (
+                <div key={index} className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg p-8 backdrop-blur-sm hover:border-[var(--accent-primary)] transition-colors">
+                  <div className="w-12 h-12 bg-[var(--accent-primary)] rounded-lg flex items-center justify-center mb-6 text-white">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-semibold mb-4">{feature.title}</h3>
+                  <p className="text-[var(--text-secondary)] leading-relaxed">{feature.description}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Benefits List */}
+            <div className="bg-[var(--surface-2)] rounded-xl p-8 border border-[var(--border-primary)]">
+              <h3 className="text-2xl font-semibold mb-8 text-center">What You Get</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {benefits.map((benefit, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--success-500)] flex-shrink-0" />
+                    <span className="text-[var(--text-secondary)]">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section id="pricing" className="max-w-7xl mx-auto px-6 py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Simple, Transparent Pricing</h2>
+            <p className="text-xl text-[var(--text-secondary)]">Start free, scale as you grow</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Free Tier */}
+            <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm">
+              <h3 className="text-xl font-semibold mb-2">Starter</h3>
+              <div className="mb-6">
+                <span className="text-3xl font-bold">Free</span>
+                <span className="text-[var(--text-tertiary)]">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8 text-[var(--text-secondary)]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Up to 3 workspaces
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Basic animation nodes
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  720p video export
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="w-full block text-center px-6 py-3 border border-[var(--border-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors"
               >
-                {isSubmitted ? (
-                  <>
-                    <Check size={14} />
-                    Sent!
-                  </>
-                ) : (
-                  <>
-                    <ArrowRight size={14} />
-                    Get Started
-                  </>
-                )}
-              </Button>
+                Get Started
+              </Link>
             </div>
 
-            <div className="flex items-center justify-center gap-[var(--space-4)] text-[10px] text-[var(--text-tertiary)]">
-              <div className="flex items-center gap-[var(--space-1)]">
-                <Shield size={12} />
-                <span>No credit card required</span>
+            {/* Pro Tier */}
+            <div className="bg-[var(--glass-bg)] border-2 border-[var(--accent-primary)] rounded-xl p-8 backdrop-blur-sm relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <span className="bg-[var(--accent-primary)] text-white px-4 py-1 rounded-full text-sm font-medium">
+                  Most Popular
+                </span>
               </div>
-              <div className="flex items-center gap-[var(--space-1)]">
-                <Clock size={12} />
-                <span>14-day free trial</span>
+              <h3 className="text-xl font-semibold mb-2">Professional</h3>
+              <div className="mb-6">
+                <span className="text-3xl font-bold">$29</span>
+                <span className="text-[var(--text-tertiary)]">/month</span>
               </div>
+              <ul className="space-y-3 mb-8 text-[var(--text-secondary)]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Unlimited workspaces
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Advanced logic nodes
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  4K video export
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Priority rendering
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="w-full block text-center px-6 py-3 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+              >
+                Start Pro Trial
+              </Link>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="py-[var(--space-6)] px-[var(--space-6)] border-t border-[var(--border-primary)]">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-[var(--space-4)]">
-            <div className="flex items-center gap-[var(--space-3)]">
-              <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-[var(--radius-sm)] flex items-center justify-center font-bold text-[10px]">
-                GB
+            {/* Enterprise Tier */}
+            <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm">
+              <h3 className="text-xl font-semibold mb-2">Enterprise</h3>
+              <div className="mb-6">
+                <span className="text-3xl font-bold">Custom</span>
               </div>
-              <span className="text-[var(--text-secondary)] text-[11px]">© 2025 GraphBatch. All rights reserved.</span>
+              <ul className="space-y-3 mb-8 text-[var(--text-secondary)]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Team collaboration
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Custom integrations
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  Dedicated support
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                  SLA guarantee
+                </li>
+              </ul>
+              <button className="w-full px-6 py-3 border border-[var(--border-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+                Contact Sales
+              </button>
             </div>
-            <nav className="flex items-center gap-[var(--space-4)] text-[11px] text-[var(--text-tertiary)]">
-              <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Terms</a>
-              <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Support</a>
-              <a href="#" className="hover:text-[var(--text-primary)] transition-colors">Documentation</a>
-            </nav>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="bg-gradient-to-r from-[var(--surface-1)] to-[var(--surface-2)] border-t border-[var(--border-primary)]">
+          <div className="max-w-4xl mx-auto px-6 py-20 text-center">
+            <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Video Marketing?</h2>
+            <p className="text-xl text-[var(--text-secondary)] mb-12">
+              Join hundreds of businesses already creating stunning video content with GraphBatch.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg hover:opacity-90 transition-all font-semibold text-lg"
+              >
+                Start Your Free Account <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <Link 
+                href="/login"
+                className="inline-flex items-center justify-center px-8 py-4 border border-[var(--border-primary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors font-semibold"
+              >
+                Already have an account?
+              </Link>
+            </div>
+
+            <div className="mt-12 text-center">
+              <p className="text-[var(--text-tertiary)]">
+                {hello ? hello.greeting : "Welcome to the future of video creation"}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-[var(--border-primary)] bg-[var(--surface-1)]">
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <div className="grid md:grid-cols-4 gap-8">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-6 h-6 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded">
+                    <Play className="w-3 h-3 text-white m-1.5" />
+                  </div>
+                  <span className="font-bold">GraphBatch</span>
+                </div>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  No-code animation platform for creating dynamic, data-driven video advertisements.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4">Product</h4>
+                <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                  <li><Link href="#features" className="hover:text-[var(--text-primary)]">Features</Link></li>
+                  <li><Link href="#pricing" className="hover:text-[var(--text-primary)]">Pricing</Link></li>
+                  <li><Link href="/login" className="hover:text-[var(--text-primary)]">Sign In</Link></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4">Company</h4>
+                <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                  <li><Link href="#about" className="hover:text-[var(--text-primary)]">About</Link></li>
+                  <li><Link href="#careers" className="hover:text-[var(--text-primary)]">Careers</Link></li>
+                  <li><Link href="#contact" className="hover:text-[var(--text-primary)]">Contact</Link></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4">Legal</h4>
+                <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                  <li><Link href="/privacy" className="hover:text-[var(--text-primary)]">Privacy Policy</Link></li>
+                  <li><Link href="/terms" className="hover:text-[var(--text-primary)]">Terms of Service</Link></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="border-t border-[var(--border-primary)] mt-8 pt-8 text-center text-sm text-[var(--text-tertiary)]">
+              <p>&copy; 2024 GraphBatch. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </HydrateClient>
   );
 }
