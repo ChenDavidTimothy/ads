@@ -136,6 +136,7 @@ export class FlowTracker {
 
     // Get all node types from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const dataNodeTypes = getNodesByCategory('data').map(def => def.type);
     const duplicateNodeTypes = ['duplicate']; // Can be expanded for other multiplier nodes
 
     const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
@@ -163,8 +164,8 @@ export class FlowTracker {
         return [];
       }
 
-      // If this is a geometry node, it creates new objects
-      if (geometryNodeTypes.includes(currentNode.type!)) {
+      // If this is a geometry or data node, it creates new objects
+      if (geometryNodeTypes.includes(currentNode.type!) || dataNodeTypes.includes(currentNode.type!)) {
         const newObject: ObjectDescriptor = {
           id: currentNode.data.identifier.id,
           nodeId: currentNode.data.identifier.id,
@@ -247,8 +248,8 @@ export class FlowTracker {
         }
       }
 
-      // If no input ports have objects and this is a geometry node, it's a source
-      if (objectsByPort.size === 0 && geometryNodeTypes.includes(currentNode.type!)) {
+      // If no input ports have objects and this is a geometry or data node, it's a source
+      if (objectsByPort.size === 0 && (geometryNodeTypes.includes(currentNode.type!) || dataNodeTypes.includes(currentNode.type!))) {
         return traceObjects(currentNodeId, new Map([['input', []]]));
       }
 
@@ -306,6 +307,11 @@ export class FlowTracker {
     return definition?.execution.category === 'geometry' || false;
   }
 
+  isDataNode(nodeType: string): boolean {
+    const definition = getNodeDefinition(nodeType);
+    return definition?.execution.category === 'data' || false;
+  }
+
   isTimingNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
     return definition?.execution.category === 'timing' || false;
@@ -335,10 +341,14 @@ export class FlowTracker {
     
     // Get node categories from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const dataNodeTypes = getNodesByCategory('data').map(def => def.type);
 
     // Validate proper flow architecture
     const geometryNodes = nodes.filter(n => geometryNodeTypes.includes(n.type!));
+    // Data nodes are sources like geometry nodes, so they follow the same validation rules
+    const dataNodes = nodes.filter(n => dataNodeTypes.includes(n.type!));
     
+    // Validate geometry nodes
     for (const geoNode of geometryNodes) {
       const isConnectedToOutput = this.isNodeConnectedToCategory(
         geoNode.data.identifier.id, 
@@ -363,6 +373,10 @@ export class FlowTracker {
         }
       }
     }
+
+    // Data nodes are sources that don't require timing validation
+    // They can be used directly by logic nodes or connected to timing nodes if needed
+    // No specific validation rules needed for data nodes as they are pure sources
 
     return { valid: errors.length === 0, errors };
   }

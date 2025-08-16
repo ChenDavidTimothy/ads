@@ -48,6 +48,8 @@ function getCategoryTokenClass(category: NodeDefinition['execution']['category']
       return { primary: 'bg-[var(--node-geometry)]', handle: '!bg-[var(--node-geometry)]' };
     case 'timing':
       return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
+    case 'data':
+      return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
     case 'output':
       return { primary: 'bg-[var(--node-output)]', handle: '!bg-[var(--node-output)]' };
     default:
@@ -103,6 +105,12 @@ export function generateNodePalette() {
     icon: def.rendering.icon
   }));
 
+  const dataNodes = getNodesByCategory('data').map(def => ({
+    type: def.type as NodeType,
+    label: def.label,
+    icon: def.rendering.icon
+  }));
+
   const timingNodes = getNodesByCategory('timing').map(def => ({
     type: def.type as NodeType,
     label: def.label,
@@ -129,6 +137,7 @@ export function generateNodePalette() {
 
   return {
     geometryNodes,
+    dataNodes,
     timingNodes,
     logicNodes,
     animationNodes,

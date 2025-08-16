@@ -13,7 +13,7 @@ export interface NodeRenderConfig {
 
 // Execution metadata for backend processing
 export interface NodeExecutionConfig {
-  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output';
+  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data';
   executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene';
   executionPriority?: number; // For future conditional execution
 }
@@ -268,7 +268,7 @@ export const NODE_DEFINITIONS = {
     label: 'Constants',
     description: 'Outputs constant values (numbers, strings, colors, booleans)',
     execution: {
-      category: 'logic',
+      category: 'data',
       executor: 'logic',
     },
     ports: {
