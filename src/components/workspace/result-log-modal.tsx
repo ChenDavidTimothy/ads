@@ -165,7 +165,6 @@ export function ResultLogModal({
             variant="minimal"
             size="xs"
             disabled={logs.length === 0}
-            className="text-[10px] h-6"
           >
             <Trash2 size={10} className="mr-1" />
             Clear
@@ -175,7 +174,6 @@ export function ResultLogModal({
             variant="minimal"
             size="xs"
             disabled={logs.length === 0}
-            className="text-[10px] h-6"
           >
             <Download size={10} className="mr-1" />
             Export

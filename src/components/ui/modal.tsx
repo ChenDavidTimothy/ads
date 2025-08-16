@@ -53,7 +53,8 @@ export function Modal({
 
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999]"
+      className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-[9999]"
+      style={{ backgroundColor: 'var(--modal-backdrop-blur)' }}
       onClick={handleBackdropClick}
     >
       <div 

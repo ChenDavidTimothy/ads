@@ -81,6 +81,10 @@
   --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
 
+  /* Modal backdrop colors for better contrast */
+  --modal-backdrop: rgba(0, 0, 0, 0.4);
+  --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
+
   /* Ultra-sharp radii for crisp edges */
   --radius-sharp: 1px;
   --radius-sm: 2px;
@@ -199,6 +203,10 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+  /* Modal backdrop colors for better contrast */
+  --modal-backdrop: rgba(0, 0, 0, 0.4);
+  --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
 
   /* Ultra-sharp radii for crisp edges */
   --radius-sharp: 1px;
