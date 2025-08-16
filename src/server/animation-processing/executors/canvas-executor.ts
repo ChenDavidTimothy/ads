@@ -106,7 +106,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
           const assignmentsForObject = mergedAssignments?.[objectId];
           const maskedAssignmentsForObject = (() => {
             if (!assignmentsForObject) return undefined;
-            const keys = [...globalKeys, ...objectKeys];
+            const keys = objectKeys; // ✅ Only use per-object bindings, not global keys
             const next: any = { ...assignmentsForObject };
             const initial = { ...(next.initial ?? {}) } as Record<string, unknown>;
             for (const key of keys) {

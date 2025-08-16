@@ -535,6 +535,12 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     return !!(vb?.[scoped]?.boundResultNodeId || vb?.[fieldKey]?.boundResultNodeId);
   };
 
+  // Helper to get value for bound fields - blank if bound, normal value if not
+  const getTrackFieldValue = (fieldKey: string, overrideValue: any, defaultValue: any) => {
+    if (isBound(fieldKey)) return undefined; // Blank when bound
+    return overrideValue ?? defaultValue;
+  };
+
   // Helpers to compute per-field override/bound state for labels
   const isFieldOverridden = (key: string): boolean => {
     const p = (override?.properties as any) ?? {};
@@ -691,7 +697,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label={labelWithOverride("X", "move.from.x")}
-                value={(override?.properties as any)?.from?.x ?? track.properties.from.x}
+                value={getTrackFieldValue("move.from.x", (override?.properties as any)?.from?.x, track.properties.from.x)}
                 onChange={(x) => updateProperties({ from: { x } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.x`)}
@@ -699,7 +705,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
               <NumberField
                 label={labelWithOverride("Y", "move.from.y")}
-                value={(override?.properties as any)?.from?.y ?? track.properties.from.y}
+                value={getTrackFieldValue("move.from.y", (override?.properties as any)?.from?.y, track.properties.from.y)}
                 onChange={(y) => updateProperties({ from: { y } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.y`)}
@@ -718,7 +724,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label={labelWithOverride("X", "move.to.x")}
-                value={(override?.properties as any)?.to?.x ?? track.properties.to.x}
+                value={getTrackFieldValue("move.to.x", (override?.properties as any)?.to?.x, track.properties.to.x)}
                 onChange={(x) => updateProperties({ to: { x } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.x`)}
@@ -726,7 +732,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
               <NumberField
                 label={labelWithOverride("Y", "move.to.y")}
-                value={(override?.properties as any)?.to?.y ?? track.properties.to.y}
+                value={getTrackFieldValue("move.to.y", (override?.properties as any)?.to?.y, track.properties.to.y)}
                 onChange={(y) => updateProperties({ to: { y } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.y`)}
@@ -747,7 +753,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From", "rotate.from")}
-              value={(override?.properties as any)?.from ?? track.properties.from}
+              value={getTrackFieldValue("rotate.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
@@ -756,7 +762,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To", "rotate.to")}
-              value={(override?.properties as any)?.to ?? track.properties.to}
+              value={getTrackFieldValue("rotate.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
@@ -777,7 +783,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From", "scale.from")}
-              value={(override?.properties as any)?.from ?? track.properties.from}
+              value={getTrackFieldValue("scale.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={1}
@@ -786,7 +792,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To", "scale.to")}
-              value={(override?.properties as any)?.to ?? track.properties.to}
+              value={getTrackFieldValue("scale.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={2}
@@ -807,7 +813,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From", "fade.from")}
-              value={(override?.properties as any)?.from ?? track.properties.from}
+              value={getTrackFieldValue("fade.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.05}
               defaultValue={1}
@@ -816,7 +822,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To", "fade.to")}
-              value={(override?.properties as any)?.to ?? track.properties.to}
+              value={getTrackFieldValue("fade.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.05}
               defaultValue={0}
@@ -838,7 +844,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           {/* Property Selection - Full Width */}
           <SelectField
             label={labelWithOverride("Property", "color.property")}
-            value={(override?.properties as any)?.property ?? track.properties.property}
+            value={getTrackFieldValue("color.property", (override?.properties as any)?.property, track.properties.property)}
             onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
               { value: "fill", label: "Fill" },
@@ -854,14 +860,14 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <ColorField 
                 label={labelWithOverride("From", "color.from")}
-                value={(override?.properties as any)?.from ?? track.properties.from} 
+                value={getTrackFieldValue("color.from", (override?.properties as any)?.from, track.properties.from)} 
                 onChange={(from) => updateProperties({ from })} 
                 bindAdornment={bindButton(`color.from`)} 
                 disabled={isBound('color.from')}
               />
               <ColorField 
                 label={labelWithOverride("To", "color.to")}
-                value={(override?.properties as any)?.to ?? track.properties.to} 
+                value={getTrackFieldValue("color.to", (override?.properties as any)?.to, track.properties.to)} 
                 onChange={(to) => updateProperties({ to })} 
                 bindAdornment={bindButton(`color.to`)} 
                 disabled={isBound('color.to')}

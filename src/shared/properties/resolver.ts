@@ -109,10 +109,10 @@ export function resolveInitialObject(
   sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : 'canvas';
 
   return {
-    initialPosition: assignments?.initial?.position ?? effectiveCanvas.position,
-    initialRotation: assignments?.initial?.rotation ?? effectiveCanvas.rotation,
-    initialScale: assignments?.initial?.scale ?? effectiveCanvas.scale,
-    initialOpacity: assignments?.initial?.opacity ?? effectiveCanvas.opacity,
+    initialPosition,
+    initialRotation,
+    initialScale,
+    initialOpacity,
     properties,
     sources
   };
