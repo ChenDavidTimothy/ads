@@ -196,39 +196,46 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 			</button>
 
 			<Modal isOpen={open} onClose={() => setOpen(false)} title="Bind to Result" size="xl" variant="solid">
-				<div className="p-[var(--space-3)] space-y-[var(--space-3)]">
+				<div className="p-[var(--space-4)] space-y-[var(--space-4)] h-full flex flex-col">
 					<div className="relative">
 						<Input
 							placeholder="Search results..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
-							className="pl-7"
+							className="pl-8 text-sm h-10"
 						/>
-						<Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+						<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
 					</div>
-					<div className="max-h-[60vh] overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)]">
+					<div className="flex-1 overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)] min-h-[400px]">
 						{filtered.length === 0 ? (
-							<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+							<div className="px-4 py-6 text-sm text-[var(--text-tertiary)] text-center">
+								{query.trim() ? 'No results found for your search' : 'No connected Result variables available'}
+							</div>
 						) : (
 							filtered.map(v => (
 								<button
 									key={v.id}
 									onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
-									className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--surface-interactive)]"
+									className="w-full text-left px-4 py-3 text-sm hover:bg-[var(--surface-interactive)] transition-colors focus:bg-[var(--surface-interactive)] focus:outline-none"
 								>
-									{v.name}
+									<div className="font-medium text-[var(--text-primary)]">{v.name}</div>
+									{v.id !== v.name && (
+										<div className="text-xs text-[var(--text-tertiary)] mt-1">ID: {v.id}</div>
+									)}
 								</button>
 							))
 						)}
 					</div>
-					<div className="flex items-center justify-between pt-[var(--space-2)]">
+					<div className="flex items-center justify-between pt-2 border-t border-[var(--border-primary)]">
 						<button
 							onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
-							className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+							className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
 						>
-							<Undo2 size={10} /> Reset to default
+							<Undo2 size={12} /> Reset to default
 						</button>
-						<div className="text-[10px] text-[var(--text-tertiary)]">{filtered.length} options</div>
+						<div className="text-sm text-[var(--text-tertiary)]">
+							{filtered.length} {filtered.length === 1 ? 'option' : 'options'}
+						</div>
 					</div>
 				</div>
 			</Modal>

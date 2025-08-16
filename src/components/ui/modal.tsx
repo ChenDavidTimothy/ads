@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -22,10 +24,38 @@ export function Modal({
   className,
   variant = "glass"
 }: ModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !mounted) return null;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999]"
+      onClick={handleBackdropClick}
+    >
       <div 
         className={cn(
           variant === "glass" 
@@ -35,12 +65,13 @@ export function Modal({
             "w-[28rem] max-h-[32rem]": size === "sm",
             "w-[40rem] max-h-[36rem]": size === "md", 
             "w-[56rem] max-h-[44rem]": size === "lg",
-            "w-[72rem] max-h-[52rem]": size === "xl",
+            "w-[72rem] max-h-[80vh]": size === "xl",
           },
           "max-w-[95vw] max-h-[90vh] rounded-[var(--radius-md)]",
           className
         )}
         tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="flex items-center justify-between p-[var(--space-4)] border-b border-[var(--border-primary)]">
@@ -56,4 +87,6 @@ export function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
