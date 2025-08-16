@@ -191,14 +191,14 @@ export function ResultLogModal({
               <Target size={16} className="text-[var(--text-tertiary)]" />
             </div>
             <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-[var(--space-2)] text-refined-medium">
-              No Debug Output
+              No Results Available
             </h3>
             <p className="text-[11px] text-[var(--text-tertiary)] mb-[var(--space-3)] max-w-[18rem] text-refined">
               Run your flow to capture values at this node. Results will appear here in real-time.
             </p>
             <div className="text-[10px] text-[var(--text-muted)] space-y-[var(--space-1)] text-refined">
               <p>• Values are captured when data flows through</p>
-              <p>• Perfect for debugging complex logic</p>
+              <p>• Monitor data flow and node outputs</p>
             </div>
           </div>
         ) : (
@@ -235,30 +235,7 @@ export function ResultLogModal({
                   </div>
                 </div>
 
-                {/* Execution Info */}
-                {(log.flowState || log.hasConnections !== undefined) && (
-                  <div className="mt-[var(--space-2)] pt-[var(--space-2)] border-t border-[var(--border-secondary)] flex items-center gap-[var(--space-4)] text-[10px]">
-                    {log.flowState && (
-                      <div>
-                        <span className="text-[var(--text-tertiary)]">State:</span>
-                        <span className="ml-[var(--space-1)] text-[var(--text-primary)]">
-                          {log.flowState}
-                        </span>
-                      </div>
-                    )}
-                    {log.hasConnections !== undefined && (
-                      <div>
-                        <span className="text-[var(--text-tertiary)]">Connected:</span>
-                        <span className={cn(
-                          "ml-[var(--space-1)]",
-                          log.hasConnections ? "text-[var(--success-500)]" : "text-[var(--warning-600)]"
-                        )}>
-                          {log.hasConnections ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+
               </div>
             ))}
 

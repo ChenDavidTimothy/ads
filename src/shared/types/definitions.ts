@@ -324,7 +324,7 @@ export const NODE_DEFINITIONS = {
 
   result: {
     type: 'result',
-    label: 'Result Display',
+    label: 'Result',
     description: 'Displays final calculated result from logic operations',
     execution: {
       category: 'output',

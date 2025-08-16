@@ -83,9 +83,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
             <div className="font-semibold text-[var(--text-primary)] truncate">
               {data.identifier.displayName}
             </div>
-            <div className="mt-[var(--space-half)]">
-              <Badge variant="result">{data.label}</Badge>
-            </div>
+
           </div>
         </div>
       </CardHeader>
@@ -101,9 +99,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
           {isRunning ? 'Running...' : 'Run to Here'}
         </Button>
 
-        <div className="bg-[var(--surface-2)] p-[var(--space-3)] rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-center">
-          <div className="text-xs text-[var(--text-secondary)]">Debug / Variable Output</div>
-        </div>
+
       </CardContent>
     </Card>
   );
