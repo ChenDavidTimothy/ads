@@ -570,9 +570,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     });
   };
 
-  const ToggleBinding = ({ keyName }: { keyName: string }) => (
-    <Button variant="ghost" size="xs" className="underline ml-2" onClick={() => clearBinding(keyName)}>Use manual</Button>
-  );
+  // Legacy ToggleBinding UI removed in favor of centralized reset in Bind menu
 
   const handleSaveDisplayName = () => {
     const success = onDisplayNameChange(track.identifier.id, tempDisplayName);
@@ -691,8 +689,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><ToggleBinding keyName="move.from.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
-              <div><ToggleBinding keyName="move.from.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
             </div>
           </div>
 
@@ -716,8 +714,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><ToggleBinding keyName="move.to.x" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
-              <div><ToggleBinding keyName="move.to.y" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
             </div>
           </div>
         </div>
@@ -745,8 +743,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><ToggleBinding keyName="rotate.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
-            <div><ToggleBinding keyName="rotate.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -773,8 +771,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><ToggleBinding keyName="scale.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
-            <div><ToggleBinding keyName="scale.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -801,8 +799,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><ToggleBinding keyName="fade.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
-            <div><ToggleBinding keyName="fade.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
+            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
           </div>
         </div>
       )}
@@ -841,8 +839,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><ToggleBinding keyName="color.from" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
-              <div><ToggleBinding keyName="color.to" /> <BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
+              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
             </div>
           </div>
         </div>
