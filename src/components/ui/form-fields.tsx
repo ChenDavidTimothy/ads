@@ -6,10 +6,11 @@ import { Select } from "./select";
 import { cn } from "@/lib/utils";
 
 interface FormFieldProps {
-	label: string;
+	label: React.ReactNode;
 	required?: boolean;
 	error?: string;
 	className?: string;
+	labelRight?: React.ReactNode;
 	children: React.ReactNode;
 }
 
@@ -17,12 +18,20 @@ export function FormField({
 	label, 
 	error, 
 	className, 
+	labelRight,
 	children 
 }: FormFieldProps) {
 	return (
 		<div className={cn("space-y-1", className)}>
-			<label className="block text-sm font-medium text-[var(--text-secondary)]">
-				{label}
+			<label className="block">
+				<div className="flex items-center justify-between text-sm font-medium text-[var(--text-secondary)]">
+					<span className="truncate">{label}</span>
+					{labelRight && (
+						<div className="flex items-center gap-[var(--space-1)] ml-[var(--space-2)] shrink-0">
+							{labelRight}
+						</div>
+					)}
+				</div>
 			</label>
 			{children}
 			{error && (
@@ -33,7 +42,7 @@ export function FormField({
 }
 
 interface NumberFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: number | string | undefined;
 	onChange: (value: number) => void;
 	required?: boolean;
@@ -44,6 +53,7 @@ interface NumberFieldProps {
 	defaultValue?: number;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	inputClassName?: string;
 	disabled?: boolean;
 }
 
@@ -59,6 +69,7 @@ export function NumberField({
 	defaultValue,
 	className,
 	bindAdornment,
+	inputClassName,
 	disabled
 }: NumberFieldProps) {
 	const [inputValue, setInputValue] = useState(value === undefined ? "" : value.toString());
@@ -136,7 +147,7 @@ export function NumberField({
 					min={min}
 					max={max}
 					step={step}
-					className={bindAdornment ? 'pr-9' : undefined}
+					className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
 					disabled={disabled}
 				/>
 				{bindAdornment && (
@@ -153,13 +164,14 @@ export function NumberField({
 }
 
 interface ColorFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: string;
 	onChange: (value: string) => void;
 	required?: boolean;
 	error?: string;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	inputClassName?: string;
 	disabled?: boolean;
 }
 
@@ -171,6 +183,7 @@ export function ColorField({
 	error,
 	className,
 	bindAdornment,
+	inputClassName,
 	disabled
 }: ColorFieldProps) {
 	return (
@@ -181,7 +194,7 @@ export function ColorField({
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					error={!!error}
-					className={`h-12 ${bindAdornment ? 'pr-9' : ''}`}
+					className={cn("h-12", bindAdornment ? 'pr-9' : '', inputClassName)}
 					disabled={disabled}
 				/>
 				{bindAdornment && (
@@ -198,7 +211,7 @@ export function ColorField({
 }
 
 interface SelectFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: string;
 	onChange: (value: string) => void;
 	options: Array<{ value: string; label: string }>;
@@ -206,6 +219,7 @@ interface SelectFieldProps {
 	error?: string;
 	className?: string;
 	bindAdornment?: React.ReactNode;
+	inputClassName?: string;
 	disabled?: boolean;
 }
 
@@ -218,6 +232,7 @@ export function SelectField({
 	error,
 	className,
 	bindAdornment,
+	inputClassName,
 	disabled
 }: SelectFieldProps) {
 	return (
@@ -226,7 +241,7 @@ export function SelectField({
 				<Select
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
-					className={bindAdornment ? 'pr-9' : undefined}
+					className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
 					disabled={disabled}
 				>
 					{options.map(option => (
@@ -249,7 +264,7 @@ export function SelectField({
 }
 
 interface TextFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: string;
 	onChange: (value: string) => void;
 	required?: boolean;
@@ -259,6 +274,7 @@ interface TextFieldProps {
 	bindAdornment?: React.ReactNode;
 	onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 	autoFocus?: boolean;
+	inputClassName?: string;
 	disabled?: boolean;
 }
 
@@ -273,6 +289,7 @@ export function TextField({
 	bindAdornment,
 	onKeyDown,
 	autoFocus,
+	inputClassName,
 	disabled
 }: TextFieldProps) {
 	return (
@@ -286,7 +303,7 @@ export function TextField({
 					onKeyDown={onKeyDown}
 					autoFocus={autoFocus}
 					error={!!error}
-					className={bindAdornment ? 'pr-9' : undefined}
+					className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
 					disabled={disabled}
 				/>
 				{bindAdornment && (
@@ -303,7 +320,7 @@ export function TextField({
 }
 
 interface RangeFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: number;
 	onChange: (value: number) => void;
 	min?: number;
@@ -355,7 +372,7 @@ export function RangeField({
 }
 
 interface BooleanFieldProps {
-	label: string;
+	label: React.ReactNode;
 	value: boolean;
 	onChange: (value: boolean) => void;
 	className?: string;

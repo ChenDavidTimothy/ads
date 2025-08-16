@@ -26,15 +26,24 @@ import {
 import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { useWorkspace } from './workspace-context';
 import { BindButton } from '@/components/workspace/binding/bindings';
+import { Badge } from "@/components/ui/badge";
 
-function BindingTag({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+function BindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
   const { state } = useWorkspace();
   const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
   const vb = (objectId ? (node?.data?.variableBindingsByObject?.[objectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
   const bound = vb?.[keyName]?.boundResultNodeId;
   if (!bound) return null;
   const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
-  return <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">(bound: {name ?? bound})</span>;
+  return (
+    <Badge variant="bound">{name ? `Bound: ${name}` : 'Bound'}</Badge>
+  );
+}
+
+function OverrideBadge() {
+  return (
+    <Badge variant="manual">Manual</Badge>
+  );
 }
 
 interface TimelineEditorCoreProps {
@@ -88,8 +97,7 @@ function isFadeDefaults(value: unknown): value is FadeTrackProperties {
 
 function isColorDefaults(value: unknown): value is ColorTrackProperties {
   const v = value as Partial<ColorTrackProperties>;
-  return !!v && typeof v.from === 'string' && typeof v.to === 'string' &&
-    (v.property === 'fill' || v.property === 'stroke');
+  return !!v && typeof v.property === 'string' && typeof v.from === 'string' && typeof v.to === 'string';
 }
 
 function getDefaultTrackProperties(
@@ -567,30 +575,20 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
     const vb = (selectedObjectId ? (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
     return !!(vb?.[scopedKey]?.boundResultNodeId || vb?.[key]?.boundResultNodeId);
   };
-  const labelWithOverride = (base: string, key: string) => {
-    const show = isFieldOverridden(key) || isFieldBound(key);
-    return show ? `${base} (override)` : base;
+  const labelWithOverride = (base: string) => {
+    return base;
   };
 
-  const clearBinding = (key: string) => {
-    updateFlow({
-      nodes: state.flow.nodes.map((n) => {
-        if (((n as any).data?.identifier?.id) !== animationNodeId) return n;
-        if (override && selectedObjectId) {
-          const prevAll = ((n as any).data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-          const prev = { ...(prevAll[selectedObjectId] ?? {}) };
-          delete prev[`track.${track.identifier.id}.${key}`];
-          delete prev[key];
-          return { ...n, data: { ...(n as any).data, variableBindingsByObject: { ...prevAll, [selectedObjectId]: prev } } } as any;
-        }
-        const prev = ((n as any).data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
-        const next = { ...prev } as typeof prev;
-        delete next[`track.${track.identifier.id}.${key}`];
-        delete next[key];
-        return { ...n, data: { ...(n as any).data, variableBindings: next } } as any;
-      })
-    });
-  };
+  const FieldBadges = ({ keyName }: { keyName: string }) => (
+    <div className="flex items-center gap-[var(--space-1)]">
+      {isFieldOverridden(keyName) && <OverrideBadge />}
+      <BindingBadge nodeId={animationNodeId} keyName={`track.${track.identifier.id}.${keyName}`} objectId={selectedObjectId} />
+    </div>
+  );
+
+  const leftBorderClass = (keyName: string) => (
+    isFieldBound(keyName) ? 'border-l-2 border-[var(--accent-secondary)]' : (isFieldOverridden(keyName) ? 'border-l-2 border-[var(--warning-600)]' : '')
+  );
 
   // Legacy ToggleBinding UI removed in favor of centralized reset in Bind menu
 
@@ -676,7 +674,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
       {/* Easing and Timing - Two Column Layout */}
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
         <SelectField
-          label={labelWithOverride("Easing", `${track.type}.easing`)}
+          label={labelWithOverride("Easing")}
           value={(override?.easing as any) ?? track.easing}
           onChange={(easing) => onChange({ easing: easing as AnimationTrack["easing"] })}
           options={easingOptions}
@@ -696,26 +694,26 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">From Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
-                label={labelWithOverride("X", "move.from.x")}
+                label={labelWithOverride("X")}
                 value={getTrackFieldValue("move.from.x", (override?.properties as any)?.from?.x, track.properties.from.x)}
                 onChange={(x) => updateProperties({ from: { x } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.x`)}
                 disabled={isBound('move.from.x')}
+                inputClassName={leftBorderClass('move.from.x')}
+                className=""
               />
               <NumberField
-                label={labelWithOverride("Y", "move.from.y")}
+                label={labelWithOverride("Y")}
                 value={getTrackFieldValue("move.from.y", (override?.properties as any)?.from?.y, track.properties.from.y)}
                 onChange={(y) => updateProperties({ from: { y } } as any)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.y`)}
                 disabled={isBound('move.from.y')}
+                inputClassName={leftBorderClass('move.from.y')}
               />
             </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.x`} objectId={selectedObjectId} /></div>
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.from.y`} objectId={selectedObjectId} /></div>
-            </div>
+            
           </div>
 
           {/* To Position - Two Column */}
@@ -723,25 +721,27 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">To Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
-                label={labelWithOverride("X", "move.to.x")}
+                label={labelWithOverride("X")}
                 value={getTrackFieldValue("move.to.x", (override?.properties as any)?.to?.x, track.properties.to.x)}
                 onChange={(x) => updateProperties({ to: { x } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.x`)}
                 disabled={isBound('move.to.x')}
+                inputClassName={leftBorderClass('move.to.x')}
               />
               <NumberField
-                label={labelWithOverride("Y", "move.to.y")}
+                label={labelWithOverride("Y")}
                 value={getTrackFieldValue("move.to.y", (override?.properties as any)?.to?.y, track.properties.to.y)}
                 onChange={(y) => updateProperties({ to: { y } } as any)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.y`)}
                 disabled={isBound('move.to.y')}
+                inputClassName={leftBorderClass('move.to.y')}
               />
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.x`} objectId={selectedObjectId} /></div>
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.move.to.y`} objectId={selectedObjectId} /></div>
+              <FieldBadges keyName="move.to.x" />
+              <FieldBadges keyName="move.to.y" />
             </div>
           </div>
         </div>
@@ -752,27 +752,29 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Rotate Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-              label={labelWithOverride("From", "rotate.from")}
+              label={labelWithOverride("From")}
               value={getTrackFieldValue("rotate.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
               bindAdornment={bindButton(`rotate.from`)}
               disabled={isBound('rotate.from')}
+              inputClassName={leftBorderClass('rotate.from')}
             />
             <NumberField
-              label={labelWithOverride("To", "rotate.to")}
+              label={labelWithOverride("To")}
               value={getTrackFieldValue("rotate.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
               bindAdornment={bindButton(`rotate.to`)}
               disabled={isBound('rotate.to')}
+              inputClassName={leftBorderClass('rotate.to')}
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.from`} objectId={selectedObjectId} /></div>
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.rotate.to`} objectId={selectedObjectId} /></div>
+            <FieldBadges keyName="rotate.from" />
+            <FieldBadges keyName="rotate.to" />
           </div>
         </div>
       )}
@@ -782,27 +784,29 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Scale Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-              label={labelWithOverride("From", "scale.from")}
+              label={labelWithOverride("From")}
               value={getTrackFieldValue("scale.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={1}
               bindAdornment={bindButton(`scale.from`)}
               disabled={isBound('scale.from')}
+              inputClassName={leftBorderClass('scale.from')}
             />
             <NumberField
-              label={labelWithOverride("To", "scale.to")}
+              label={labelWithOverride("To")}
               value={getTrackFieldValue("scale.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={2}
               bindAdornment={bindButton(`scale.to`)}
               disabled={isBound('scale.to')}
+              inputClassName={leftBorderClass('scale.to')}
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.from`} objectId={selectedObjectId} /></div>
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.scale.to`} objectId={selectedObjectId} /></div>
+            <FieldBadges keyName="scale.from" />
+            <FieldBadges keyName="scale.to" />
           </div>
         </div>
       )}
@@ -812,27 +816,29 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Fade Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
-              label={labelWithOverride("From", "fade.from")}
+              label={labelWithOverride("From")}
               value={getTrackFieldValue("fade.from", (override?.properties as any)?.from, track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.05}
               defaultValue={1}
               bindAdornment={bindButton(`fade.from`)}
               disabled={isBound('fade.from')}
+              inputClassName={leftBorderClass('fade.from')}
             />
             <NumberField
-              label={labelWithOverride("To", "fade.to")}
+              label={labelWithOverride("To")}
               value={getTrackFieldValue("fade.to", (override?.properties as any)?.to, track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.05}
               defaultValue={0}
               bindAdornment={bindButton(`fade.to`)}
               disabled={isBound('fade.to')}
+              inputClassName={leftBorderClass('fade.to')}
             />
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.from`} objectId={selectedObjectId} /></div>
-            <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.fade.to`} objectId={selectedObjectId} /></div>
+            <FieldBadges keyName="fade.from" />
+            <FieldBadges keyName="fade.to" />
           </div>
         </div>
       )}
@@ -843,7 +849,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           
           {/* Property Selection - Full Width */}
           <SelectField
-            label={labelWithOverride("Property", "color.property")}
+            label={labelWithOverride("Property")}
             value={getTrackFieldValue("color.property", (override?.properties as any)?.property, track.properties.property)}
             onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
@@ -852,6 +858,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             ]}
             bindAdornment={bindButton(`color.property`)}
             disabled={isBound('color.property')}
+            inputClassName={leftBorderClass('color.property')}
           />
           
           {/* Color Fields - Two Column */}
@@ -859,23 +866,25 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="text-xs text-[var(--text-secondary)] font-medium">Color Values</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <ColorField 
-                label={labelWithOverride("From", "color.from")}
+                label={labelWithOverride("From")}
                 value={getTrackFieldValue("color.from", (override?.properties as any)?.from, track.properties.from)} 
                 onChange={(from) => updateProperties({ from })} 
                 bindAdornment={bindButton(`color.from`)} 
                 disabled={isBound('color.from')}
+                inputClassName={leftBorderClass('color.from')}
               />
               <ColorField 
-                label={labelWithOverride("To", "color.to")}
+                label={labelWithOverride("To")}
                 value={getTrackFieldValue("color.to", (override?.properties as any)?.to, track.properties.to)} 
                 onChange={(to) => updateProperties({ to })} 
                 bindAdornment={bindButton(`color.to`)} 
                 disabled={isBound('color.to')}
+                inputClassName={leftBorderClass('color.to')}
               />
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.from`} objectId={selectedObjectId} /></div>
-              <div><BindingTag nodeId={animationNodeId} keyName={`track.${track.identifier.id}.color.to`} objectId={selectedObjectId} /></div>
+              <FieldBadges keyName="color.from" />
+              <FieldBadges keyName="color.to" />
             </div>
           </div>
         </div>

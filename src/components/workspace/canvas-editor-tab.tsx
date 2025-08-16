@@ -152,8 +152,6 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	);
 }
 
-
-
 function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const { state, updateFlow } = useWorkspace();
 	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
@@ -189,57 +187,53 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const strokeWidth = (data.strokeWidth as number) ?? (def.strokeWidth as number) ?? 1;
 
 	const isBound = (key: string) => !!bindings?.[key]?.boundResultNodeId;
+	const leftBorderClass = (key: string) => (isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '');
 
 	return (
 		<div className="space-y-[var(--space-2)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
-					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, x } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} disabled={isBound('position.x')} />
+					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, x } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
-					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, y } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} disabled={isBound('position.y')} />
+					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, y } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
-					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, x } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} disabled={isBound('scale.x')} />
+					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, x } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
-					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, y } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} disabled={isBound('scale.y')} />
+					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, y } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
-					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} disabled={isBound('rotation')} />
+					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
-					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} disabled={isBound('opacity')} />
+					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} />
+					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
 				</div>
 				<div>
-					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} />
+					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
 				</div>
 				<div>
-					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} />
+					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
 				</div>
 			</div>
 		</div>
 	);
-}
-
-// Show a small configured marker for per-object overrides
-function ConfiguredLabel() {
-	return <span className="ml-1 text-[var(--text-tertiary)]">(configured)</span>;
 }
 
 function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, onClear }: {
@@ -280,13 +274,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		strokeColor?: string;
 		strokeWidth?: number;
 	};
-	const BindingTag = ({ keyName }: { keyName: string }) => {
-		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
-		const bound = vbAll?.[objectId]?.[keyName]?.boundResultNodeId;
-		if (!bound) return null;
-		const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
-		return <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">(bound: {name ?? bound})</span>;
-	};
+
 	const isBound = (key: string) => {
 		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
 		return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
@@ -305,7 +293,11 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 			default: return false;
 		}
 	};
-	// Helper to get value for bound fields - blank if bound, normal value if not
+	const leftBorderClass = (key: string) => (
+		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : (isOverridden(key) ? 'border-l-2 border-[var(--warning-600)]' : '')
+	);
+
+	// Helper to get value for bound fields - blank if bound
 	const getValue = (key: string, fallbackValue: number | string) => {
 		if (isBound(key)) return undefined; // Blank when bound
 		
@@ -334,84 +326,59 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		}
 	};
 
-	const labelWithOverride = (baseLabel: string, key: string) => {
-		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
-		const isBound = !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-		return (isBound || isOverridden(key)) ? `${baseLabel} (override)` : baseLabel;
-	};
-	// Legacy ToggleBinding UI removed in favor of centralized reset in Bind menu
-
 	return (
 		<div className="space-y-[var(--space-3)]">
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position X", "position.x")} <BindingTag keyName="position.x" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
 					<NumberField label="" value={getValue('position.x', 0)} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} disabled={isBound('position.x')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Position Y", "position.y")} <BindingTag keyName="position.y" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
 					<NumberField label="" value={getValue('position.y', 0)} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} disabled={isBound('position.y')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale X", "scale.x")} <BindingTag keyName="scale.x" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
 					<NumberField label="" value={getValue('scale.x', 1)} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} disabled={isBound('scale.x')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Scale Y", "scale.y")} <BindingTag keyName="scale.y" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
 					<NumberField label="" value={getValue('scale.y', 1)} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} disabled={isBound('scale.y')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Rotation", "rotation")} <BindingTag keyName="rotation" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
 					<NumberField label="" value={getValue('rotation', 0)} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} disabled={isBound('rotation')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
 				</div>
 				<div>
-					<label className="block text-xs text-[var(--text-tertiary)]">{labelWithOverride("Opacity", "opacity")} <BindingTag keyName="opacity" /></label>
+					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
 					<NumberField label="" value={getValue('opacity', 1)} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} disabled={isBound('opacity')} />
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
 				</div>
 			</div>
 
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label={labelWithOverride("Fill", "fillColor") + " " + (() => {
-						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
-						const bound = vbAll?.[objectId]?.['fillColor']?.boundResultNodeId;
-						if (!bound) return "";
-						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
-						return `(bound: ${name ?? bound})`;
-					})()} value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} />
+					<ColorField label="Fill" value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
 				</div>
 				<div>
-					<ColorField label={labelWithOverride("Stroke", "strokeColor") + " " + (() => {
-						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
-						const bound = vbAll?.[objectId]?.['strokeColor']?.boundResultNodeId;
-						if (!bound) return "";
-						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
-						return `(bound: ${name ?? bound})`;
-					})()} value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} />
+					<ColorField label="Stroke" value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
 				</div>
 				<div>
-					<NumberField label={labelWithOverride("Stroke W", "strokeWidth") + " " + (() => {
-						const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
-						const bound = vbAll?.[objectId]?.['strokeWidth']?.boundResultNodeId;
-						if (!bound) return "";
-						const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
-						return `(bound: ${name ?? bound})`;
-					})()} value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} />
+					<NumberField label="Stroke W" value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
 				</div>
 			</div>
 		</div>
