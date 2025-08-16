@@ -10,6 +10,7 @@ import type { ResultNodeData } from "@/shared/types/nodes";
 import { useDebugContext } from "../flow/debug-context";
 import { logger } from "@/lib/logger";
 import { Target } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;
@@ -82,8 +83,8 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
             <div className="font-semibold text-[var(--text-primary)] truncate">
               {data.identifier.displayName}
             </div>
-            <div className="text-xs text-[var(--text-tertiary)]">
-              {data.label}
+            <div className="mt-[var(--space-half)]">
+              <Badge variant="result">{data.label}</Badge>
             </div>
           </div>
         </div>

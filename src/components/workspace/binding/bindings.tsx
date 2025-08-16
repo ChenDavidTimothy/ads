@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Link as LinkIcon } from 'lucide-react';
+import { Link as LinkIcon, Search, Undo2 } from 'lucide-react';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { deleteByPath } from '@/shared/utils/object-path';
 import type { NodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
 
 interface BindButtonProps {
 	nodeId: string;
@@ -170,47 +172,66 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 export function BindButton({ nodeId, bindingKey, objectId, className }: BindButtonProps) {
 	const { variables, getBinding, getBoundName, bind, resetToDefault } = useVariableBinding(nodeId, objectId);
 	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState('');
 	const boundId = getBinding(bindingKey);
 	const boundName = getBoundName(boundId);
 	const isBound = !!boundId;
+
+	const filtered = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return variables;
+		return variables.filter(v => v.name.toLowerCase().includes(q));
+	}, [variables, query]);
 
 	return (
 		<div className={`relative ${className ?? ''}`}>
 			<button
 				type="button"
 				title={boundId ? `Bound to ${boundName ?? boundId}` : 'Bind to Result variable'}
-				onClick={() => setOpen(v => !v)}
-				                className={`relative p-1 rounded hover:bg-[var(--surface-interactive)] ${isBound ? 'text-[var(--accent-primary)]' : ''}`}
+				onClick={() => setOpen(true)}
+				className={`relative p-1 rounded hover:bg-[var(--surface-interactive)] ${isBound ? 'text-[var(--accent-primary)]' : ''}`}
 			>
 				<LinkIcon size={14} />
-				                {isBound && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-primary)] rounded-full" />}
+				{isBound && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-primary)] rounded-full" />}
 			</button>
-			{open && (
-				<div className="absolute right-0 z-50 mt-1 bg-[var(--surface-2)] border border-[var(--border-primary)] rounded shadow-md min-w-[180px]">
-					{variables.length === 0 ? (
-						<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
-					) : (
-						<div className="max-h-56 overflow-auto">
-							{variables.map(v => (
-								<div
+
+			<Modal isOpen={open} onClose={() => setOpen(false)} title="Bind to Result" size="md">
+				<div className="p-[var(--space-3)] space-y-[var(--space-3)]">
+					<div className="relative">
+						<Input
+							placeholder="Search results..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="pl-7"
+						/>
+						<Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+					</div>
+					<div className="max-h-80 overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)]">
+						{filtered.length === 0 ? (
+							<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+						) : (
+							filtered.map(v => (
+								<button
 									key={v.id}
-									className="px-3 py-2 text-xs hover:bg-[var(--surface-interactive)] cursor-pointer"
 									onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
+									className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--surface-interactive)]"
 								>
 									{v.name}
-								</div>
-							))}
-						</div>
-					)}
-					<div className="h-px bg-[var(--border-primary)]" />
-					<div
-						className="px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] cursor-pointer"
-						onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
-					>
-						Reset to default
+								</button>
+							))
+						)}
+					</div>
+					<div className="flex items-center justify-between pt-[var(--space-2)]">
+						<button
+							onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
+							className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+						>
+							<Undo2 size={10} /> Reset to default
+						</button>
+						<div className="text-[10px] text-[var(--text-tertiary)]">{filtered.length} options</div>
 					</div>
 				</div>
-			)}
+			</Modal>
 		</div>
 	);
 }
