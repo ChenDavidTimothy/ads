@@ -104,24 +104,9 @@ function useVariableBinding(nodeId: string, objectId?: string) {
 					nextData.variableBindings = { ...prev, [key]: { target: key, boundResultNodeId: resultNodeId } };
 				}
 				
-				// 2) Clear corresponding override assignments
+				// 2) Clear corresponding override assignments (NEW LOGIC)
 				if (nextData.identifier?.type === 'animation' && objectId) {
 					clearTrackOverride(nextData, objectId, key);
-				}
-				// Canvas per-object: remove manual overrides for this key to avoid dual badges
-				if (nextData.identifier?.type === 'canvas' && objectId) {
-					const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-					const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-					const initial = { ...(entry.initial ?? {}) } as Record<string, unknown>;
-					deleteByPath(initial as Record<string, unknown>, key);
-					const prunedInitial = pruneEmpty(initial);
-					if (Object.keys(prunedInitial).length === 0) delete (entry as any).initial; else (entry as any).initial = prunedInitial;
-					if ((entry.initial === undefined) && (!entry.tracks || entry.tracks.length === 0)) {
-						delete poa[objectId];
-					} else {
-						poa[objectId] = entry;
-					}
-					nextData.perObjectAssignments = poa;
 				}
 				
 				return { ...n, data: nextData } as any;
@@ -210,52 +195,43 @@ export function BindButton({ nodeId, bindingKey, objectId, className }: BindButt
 				{isBound && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-primary)] rounded-full" />}
 			</button>
 
-		{open && (
-			<div className="fixed inset-0 z-[100]">
-				<div className="absolute inset-0 bg-black/70" onClick={() => setOpen(false)} />
-				<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[72rem] max-w-[95vw] max-h-[90vh] bg-[var(--surface-1)] border border-[var(--border-primary)] rounded-[var(--radius-md)] shadow-glass-lg flex flex-col">
-					<div className="flex items-center justify-between p-[var(--space-4)] border-b border-[var(--border-primary)]">
-						<h2 className="text-[14px] font-medium text-[var(--text-primary)] text-refined-medium">Bind to Result</h2>
-						<button className="text-[var(--text-secondary)]" onClick={() => setOpen(false)} aria-label="Close modal">✕</button>
+			<Modal isOpen={open} onClose={() => setOpen(false)} title="Bind to Result" size="xl" variant="solid">
+				<div className="p-[var(--space-3)] space-y-[var(--space-3)]">
+					<div className="relative">
+						<Input
+							placeholder="Search results..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="pl-7"
+						/>
+						<Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
 					</div>
-					<div className="p-[var(--space-3)] space-y-[var(--space-3)] overflow-hidden">
-						<div className="relative">
-							<Input
-								placeholder="Search results..."
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								className="pl-7"
-							/>
-							<Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-						</div>
-						<div className="max-h-[60vh] overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)]">
-							{filtered.length === 0 ? (
-								<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
-							) : (
-								filtered.map(v => (
-									<button
-										key={v.id}
-										onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
-										className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--surface-interactive)]"
-									>
-										{v.name}
-										</button>
-								))
-							)}
-						</div>
-						<div className="flex items-center justify-between pt-[var(--space-2)]">
-							<button
-								onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
-								className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
-							>
-								<Undo2 size={10} /> Reset to default
-							</button>
-							<div className="text-[10px] text-[var(--text-tertiary)]">{filtered.length} options</div>
-						</div>
+					<div className="max-h-[60vh] overflow-auto border border-[var(--border-primary)] rounded-[var(--radius-sm)] divide-y divide-[var(--border-primary)]">
+						{filtered.length === 0 ? (
+							<div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">No connected Result variables</div>
+						) : (
+							filtered.map(v => (
+								<button
+									key={v.id}
+									onClick={() => { bind(bindingKey, v.id); setOpen(false); }}
+									className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--surface-interactive)]"
+								>
+									{v.name}
+								</button>
+							))
+						)}
+					</div>
+					<div className="flex items-center justify-between pt-[var(--space-2)]">
+						<button
+							onClick={() => { resetToDefault(bindingKey); setOpen(false); }}
+							className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+						>
+							<Undo2 size={10} /> Reset to default
+						</button>
+						<div className="text-[10px] text-[var(--text-tertiary)]">{filtered.length} options</div>
 					</div>
 				</div>
-			</div>
-		)}
+			</Modal>
 		</div>
 	);
 }
