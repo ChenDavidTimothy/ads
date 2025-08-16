@@ -15,7 +15,7 @@ interface BindButtonProps {
 	className?: string;
 }
 
-function useVariableBinding(nodeId: string, objectId?: string) {
+export function useVariableBinding(nodeId: string, objectId?: string) {
 	const { state, updateFlow } = useWorkspace();
 
 	const variables = useMemo(() => {

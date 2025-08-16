@@ -9,13 +9,14 @@ import type { PerObjectAssignments, ObjectAssignments } from '@/shared/propertie
 import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
 import { Link as LinkIcon } from 'lucide-react';
-import { BindButton } from '@/components/workspace/binding/bindings';
+import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import { Badge } from '@/components/ui/badge';
-import { deleteByPath } from '@/shared/utils/object-path';
 
 function CanvasBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
-	const { state, updateFlow } = useWorkspace();
+	const { state } = useWorkspace();
+	const { resetToDefault } = useVariableBinding(nodeId, objectId);
+	
 	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
 	if (!node) return null;
 	let bound: string | undefined;
@@ -27,118 +28,15 @@ function CanvasBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; key
 	if (!bound) return null;
 	const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
 	
-	const resetToDefault = () => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				const data = (n as any).data as NodeData | undefined;
-				if (!data || data.identifier?.id !== nodeId) return n;
-
-				const nextData: any = { ...data };
-
-				// Clear binding for this key (supports per-object and global)
-				if (objectId) {
-					const all = { ...(nextData.variableBindingsByObject ?? {}) } as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
-					const obj = { ...(all[objectId] ?? {}) };
-					delete obj[keyName];
-					all[objectId] = obj;
-					nextData.variableBindingsByObject = all;
-				} else {
-					const vb = { ...(nextData.variableBindings ?? {}) } as Record<string, { target?: string; boundResultNodeId?: string }>;
-					delete vb[keyName];
-					nextData.variableBindings = vb;
-				}
-
-				// Clear manual overrides and fall back to the node's own defaults
-				if (data.identifier.type === 'canvas') {
-					if (objectId) {
-						const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-						const initial = { ...(entry.initial ?? {}) } as Record<string, unknown>;
-						deleteByPath(initial as Record<string, unknown>, keyName);
-						const prunedInitial = pruneEmpty(initial);
-						if (Object.keys(prunedInitial).length === 0) delete (entry as any).initial; else (entry as any).initial = prunedInitial;
-						if ((entry.initial === undefined) && (!entry.tracks || entry.tracks.length === 0)) {
-							delete poa[objectId];
-						} else {
-							poa[objectId] = entry;
-						}
-						nextData.perObjectAssignments = poa;
-					}
-				}
-
-				return { ...n, data: nextData } as any;
-			})
-		});
-	};
-
-	// Helper: prune empty nested objects
-	const pruneEmpty = (obj: any): any => {
-		if (!obj || typeof obj !== 'object') return obj;
-		
-		for (const k of Object.keys(obj)) {
-			if (obj[k] && typeof obj[k] === 'object') {
-				obj[k] = pruneEmpty(obj[k]);
-				if (Object.keys(obj[k]).length === 0) {
-					delete obj[k];
-				}
-			}
-		}
-		return obj;
-	};
-	
 	return (
-		<Badge variant="bound" onRemove={resetToDefault}>{name ? `Bound: ${name}` : 'Bound'}</Badge>
+		<Badge variant="bound" onRemove={() => resetToDefault(keyName)}>{name ? `Bound: ${name}` : 'Bound'}</Badge>
 	);
 }
 
 function OverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
-	const { state, updateFlow } = useWorkspace();
+	const { resetToDefault } = useVariableBinding(nodeId, objectId);
 	
-	const resetToDefault = () => {
-		updateFlow({
-			nodes: state.flow.nodes.map((n) => {
-				const data = (n as any).data as NodeData | undefined;
-				if (!data || data.identifier?.id !== nodeId) return n;
-
-				const nextData: any = { ...data };
-
-				// Clear manual overrides for canvas nodes
-				if (data.identifier.type === 'canvas' && objectId) {
-					const poa = { ...(nextData.perObjectAssignments as PerObjectAssignments ?? {}) };
-					const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) } as ObjectAssignments;
-					const initial = { ...(entry.initial ?? {}) } as Record<string, unknown>;
-					deleteByPath(initial as Record<string, unknown>, keyName);
-					const prunedInitial = pruneEmpty(initial);
-					if (Object.keys(prunedInitial).length === 0) delete (entry as any).initial; else (entry as any).initial = prunedInitial;
-					if ((entry.initial === undefined) && (!entry.tracks || entry.tracks.length === 0)) {
-						delete poa[objectId];
-					} else {
-						poa[objectId] = entry;
-					}
-					nextData.perObjectAssignments = poa;
-				}
-
-				return { ...n, data: nextData } as any;
-			})
-		});
-	};
-
-	// Helper: prune empty nested objects
-	const pruneEmpty = (obj: any): any => {
-		if (!obj || typeof obj !== 'object') return obj;
-		
-		for (const k of Object.keys(obj)) {
-			if (obj[k] && typeof obj[k] === 'object') {
-				obj[k] = pruneEmpty(obj[k]);
-				if (Object.keys(obj[k]).length === 0) {
-					delete obj[k];
-				}
-			}
-		}
-		return obj;
-	};
-	
-	return <Badge variant="manual" onRemove={resetToDefault}>Manual</Badge>;
+	return <Badge variant="manual" onRemove={() => resetToDefault(keyName)}>Manual</Badge>;
 }
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
