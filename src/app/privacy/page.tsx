@@ -3,7 +3,7 @@ import { ArrowLeft, Play } from "lucide-react";
 
 export const metadata = {
   title: "Privacy Policy",
-  description: "GraphBatch Privacy Policy and Data Protection Information",
+      description: "Batchion Privacy Policy and Data Protection Information",
 };
 
 export default function PrivacyPage() {
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
               <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
                 <Play className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">GraphBatch</span>
+              <span className="text-xl font-bold">Batchion</span>
             </div>
           </Link>
           
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">1. Introduction</h2>
                 <p>
-                  GraphBatch ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our no-code animation platform and services ("Service").
+                  Batchion ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our no-code animation platform and services ("Service").
                 </p>
                 <p className="mt-2">
                   Please read this Privacy Policy carefully. If you do not agree with the terms of this Privacy Policy, please do not access the Service.
@@ -260,9 +260,9 @@ export default function PrivacyPage() {
                   If you have any questions about this Privacy Policy or our data practices, please contact us:
                 </p>
                 <div className="mt-2">
-                  <p><strong>Email:</strong> privacy@graphbatch.com</p>
+                  <p><strong>Email:</strong> privacy@batchion.com</p>
                   <p><strong>Address:</strong> [Company Address]</p>
-                  <p><strong>Data Protection Officer:</strong> dpo@graphbatch.com</p>
+                  <p><strong>Data Protection Officer:</strong> dpo@batchion.com</p>
                 </div>
 
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2 mt-4">EU/UK Residents</h3>
@@ -280,7 +280,7 @@ export default function PrivacyPage() {
             <div className="mt-12 pt-8 border-t border-[var(--border-primary)]">
               <p className="text-[var(--text-tertiary)] text-sm">
                 This Privacy Policy is effective as of the last updated date. For questions or concerns about your privacy, 
-                please contact our privacy team at privacy@graphbatch.com.
+                please contact our privacy team at privacy@batchion.com.
               </p>
             </div>
           </div>

@@ -236,7 +236,7 @@ export default function SettingsPage() {
                   <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
                     <Play className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-xl font-bold">GraphBatch</span>
+                  <span className="text-xl font-bold">Batchion</span>
                 </div>
               </Link>
               

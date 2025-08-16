@@ -3,7 +3,7 @@ import { ArrowLeft, Play } from "lucide-react";
 
 export const metadata = {
   title: "Terms of Service",
-  description: "GraphBatch Terms of Service and User Agreement",
+      description: "Batchion Terms of Service and User Agreement",
 };
 
 export default function TermsPage() {
@@ -18,7 +18,7 @@ export default function TermsPage() {
               <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
                 <Play className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">GraphBatch</span>
+              <span className="text-xl font-bold">Batchion</span>
             </div>
           </Link>
           
@@ -47,14 +47,14 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">1. Acceptance of Terms</h2>
                 <p>
-                  By accessing and using GraphBatch ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                  By accessing and using Batchion ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
                 </p>
               </section>
 
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">2. Description of Service</h2>
                 <p>
-                  GraphBatch is a no-code animation platform that enables users to create dynamic, data-driven video content through a visual programming interface. The Service includes:
+                  Batchion is a no-code animation platform that enables users to create dynamic, data-driven video content through a visual programming interface. The Service includes:
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
                   <li>Visual node-based programming environment</li>
@@ -103,7 +103,7 @@ export default function TermsPage() {
                 
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2 mt-4">5.2 Our Platform</h3>
                 <p>
-                  The Service, including its software, design, text, graphics, and other content, is owned by GraphBatch and is protected by intellectual property laws. You may not copy, modify, distribute, or create derivative works without our express written permission.
+                  The Service, including its software, design, text, graphics, and other content, is owned by Batchion and is protected by intellectual property laws. You may not copy, modify, distribute, or create derivative works without our express written permission.
                 </p>
               </section>
 
@@ -118,7 +118,7 @@ export default function TermsPage() {
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">7. Subscription and Payment Terms</h2>
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">7.1 Free and Paid Plans</h3>
                 <p>
-                  GraphBatch offers both free and paid subscription plans. Free plans have limitations on features and usage. Paid plans provide additional features and higher usage limits.
+                  Batchion offers both free and paid subscription plans. Free plans have limitations on features and usage. Paid plans provide additional features and higher usage limits.
                 </p>
                 
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2 mt-4">7.2 Billing and Cancellation</h3>
@@ -137,14 +137,14 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">9. Limitation of Liability</h2>
                 <p>
-                  To the maximum extent permitted by law, GraphBatch shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses resulting from your use of the Service.
+                  To the maximum extent permitted by law, Batchion shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses resulting from your use of the Service.
                 </p>
               </section>
 
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">10. Indemnification</h2>
                 <p>
-                  You agree to defend, indemnify, and hold harmless GraphBatch from and against any claims, liabilities, damages, losses, and expenses arising out of or in any way connected with your use of the Service or violation of these Terms.
+                  You agree to defend, indemnify, and hold harmless Batchion from and against any claims, liabilities, damages, losses, and expenses arising out of or in any way connected with your use of the Service or violation of these Terms.
                 </p>
               </section>
 
@@ -175,7 +175,7 @@ export default function TermsPage() {
                   If you have any questions about these Terms, please contact us at:
                 </p>
                 <div className="mt-2">
-                  <p><strong>Email:</strong> legal@graphbatch.com</p>
+                  <p><strong>Email:</strong> legal@batchion.com</p>
                   <p><strong>Address:</strong> [Company Address]</p>
                 </div>
               </section>
@@ -191,7 +191,7 @@ export default function TermsPage() {
             <div className="mt-12 pt-8 border-t border-[var(--border-primary)]">
               <p className="text-[var(--text-tertiary)] text-sm">
                 These Terms of Service are effective as of the last updated date and replace any prior agreements. 
-                For questions or concerns, please contact our legal team at legal@graphbatch.com.
+                For questions or concerns, please contact our legal team at legal@batchion.com.
               </p>
             </div>
           </div>

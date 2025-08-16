@@ -11,10 +11,10 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 
 export const metadata: Metadata = {
   title: {
-    default: "GraphBatch - No-Code Video Animation Platform",
-    template: "%s | GraphBatch"
+    default: "Batchion - No-Code Video Animation Platform",
+    template: "%s | Batchion"
   },
-  description: "Create stunning, data-driven video advertisements without coding. GraphBatch empowers business professionals with an intuitive visual programming interface for animation creation.",
+      description: "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface for animation creation.",
   keywords: [
     "video animation",
     "no-code animation",
@@ -25,32 +25,32 @@ export const metadata: Metadata = {
     "data-driven videos",
     "node-based editor"
   ],
-  authors: [{ name: "GraphBatch Team" }],
-  creator: "GraphBatch",
-  publisher: "GraphBatch",
+      authors: [{ name: "Batchion Team" }],
+    creator: "Batchion",
+    publisher: "Batchion",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "GraphBatch - No-Code Video Animation Platform",
-    description: "Create stunning, data-driven video advertisements without coding. GraphBatch empowers business professionals with an intuitive visual programming interface.",
-    siteName: "GraphBatch",
+    title: "Batchion - No-Code Video Animation Platform",
+    description: "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface.",
+    siteName: "Batchion",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "GraphBatch - No-Code Video Animation Platform",
+        alt: "Batchion - No-Code Video Animation Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GraphBatch - No-Code Video Animation Platform",
+    title: "Batchion - No-Code Video Animation Platform",
     description: "Create stunning, data-driven video advertisements without coding.",
     images: ["/og-image.png"],
-    creator: "@graphbatch",
+    creator: "@batchion",
   },
   robots: {
     index: true,
@@ -70,11 +70,11 @@ export const metadata: Metadata = {
   category: "technology",
   classification: "Business Software",
   other: {
-    "application-name": "GraphBatch",
+    "application-name": "Batchion",
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "GraphBatch",
+    "apple-mobile-web-app-title": "Batchion",
     "msapplication-TileColor": "#6d28d9",
     "theme-color": "#6d28d9",
   },
@@ -112,11 +112,11 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         
         {/* Progressive Web App */}
-        <meta name="application-name" content="GraphBatch" />
+        <meta name="application-name" content="Batchion" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="GraphBatch" />
+        <meta name="application-name" content="Batchion" />
         <meta name="msapplication-TileColor" content="#6d28d9" />
         <meta name="theme-color" content="#6d28d9" />
       </head>

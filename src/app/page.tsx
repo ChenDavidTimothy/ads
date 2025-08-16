@@ -14,7 +14,7 @@ export default async function LandingPage() {
     redirect("/dashboard");
   }
 
-  const hello = await api.post.hello({ text: "from GraphBatch" });
+  const hello = await api.post.hello({ text: "from Batchion" });
 
   const features = [
     {
@@ -53,7 +53,7 @@ export default async function LandingPage() {
               <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
                 <Play className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">GraphBatch</span>
+              <span className="text-xl font-bold">Batchion</span>
             </div>
             
             <nav className="hidden md:flex items-center gap-8">
@@ -94,7 +94,7 @@ export default async function LandingPage() {
             </h1>
             
             <p className="text-xl text-[var(--text-secondary)] mb-12 leading-relaxed max-w-3xl mx-auto">
-              GraphBatch empowers business professionals to build sophisticated, data-driven video advertisements 
+              Batchion empowers business professionals to build sophisticated, data-driven video advertisements 
               using an intuitive visual programming interface. No coding experience required.
             </p>
 
@@ -275,7 +275,7 @@ export default async function LandingPage() {
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
             <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Video Marketing?</h2>
             <p className="text-xl text-[var(--text-secondary)] mb-12">
-              Join hundreds of businesses already creating stunning video content with GraphBatch.
+              Join hundreds of businesses already creating stunning video content with Batchion.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -311,7 +311,7 @@ export default async function LandingPage() {
                   <div className="w-6 h-6 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded">
                     <Play className="w-3 h-3 text-white m-1.5" />
                   </div>
-                  <span className="font-bold">GraphBatch</span>
+                  <span className="font-bold">Batchion</span>
                 </div>
                 <p className="text-[var(--text-secondary)] text-sm">
                   No-code animation platform for creating dynamic, data-driven video advertisements.
@@ -346,7 +346,7 @@ export default async function LandingPage() {
             </div>
             
             <div className="border-t border-[var(--border-primary)] mt-8 pt-8 text-center text-sm text-[var(--text-tertiary)]">
-              <p>&copy; 2024 GraphBatch. All rights reserved.</p>
+              <p>&copy; 2024 Batchion. All rights reserved.</p>
             </div>
           </div>
         </footer>

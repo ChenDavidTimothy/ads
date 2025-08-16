@@ -200,7 +200,7 @@ export default function LoginPage() {
               <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
                 <Play className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold">GraphBatch</span>
+              <span className="text-xl font-bold">Batchion</span>
             </div>
           </Link>
           
@@ -223,7 +223,7 @@ export default function LoginPage() {
                 Welcome back
               </h1>
               <p className="text-[var(--text-secondary)]">
-                Sign in to your GraphBatch account
+                Sign in to your Batchion account
               </p>
             </div>
 
@@ -356,7 +356,7 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
               <p className="text-center text-sm text-[var(--text-secondary)]">
-                New to GraphBatch?{" "}
+                New to Batchion?{" "}
                 <Link href="/register" className="text-[var(--accent-primary)] hover:underline font-medium transition-colors">
                   Create an account
                 </Link>
