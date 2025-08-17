@@ -77,25 +77,6 @@ export function RightSidebar({
   return (
     <div className="w-[var(--sidebar-width)] bg-[var(--surface-1)] border-l border-[var(--border-primary)] overflow-y-auto">
       
-      {/* Preview Section */}
-      <CollapsibleSection
-        title="Preview"
-        icon={<Play size={16} />}
-        defaultExpanded={hasPreviewContent}
-        persistKey="preview"
-      >
-        <PreviewPanel
-          videoUrl={videoUrl}
-          videos={videos}
-          onDownloadVideo={onDownloadVideo}
-          onDownloadAll={onDownloadAll}
-          imageUrl={imageUrl}
-          images={images}
-          onDownloadImage={onDownloadImage}
-          onDownloadAllImages={onDownloadAllImages}
-        />
-      </CollapsibleSection>
-
       {/* Properties Section - Always visible */}
       <CollapsibleSection
         title="Properties"
@@ -121,6 +102,25 @@ export function RightSidebar({
             <div className="text-xs mt-[var(--space-1)]">Select any node in the flow to edit its properties</div>
           </div>
         )}
+      </CollapsibleSection>
+
+      {/* Preview Section */}
+      <CollapsibleSection
+        title="Preview"
+        icon={<Play size={16} />}
+        defaultExpanded={hasPreviewContent}
+        persistKey="preview"
+      >
+        <PreviewPanel
+          videoUrl={videoUrl}
+          videos={videos}
+          onDownloadVideo={onDownloadVideo}
+          onDownloadAll={onDownloadAll}
+          imageUrl={imageUrl}
+          images={images}
+          onDownloadImage={onDownloadImage}
+          onDownloadAllImages={onDownloadAllImages}
+        />
       </CollapsibleSection>
 
       {/* Assets Section */}
