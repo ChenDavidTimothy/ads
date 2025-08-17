@@ -9,12 +9,12 @@ import { ExecutionEngine } from "@/server/animation-processing/execution-engine"
 import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
 import { buildZodSchemaFromProperties } from "@/shared/types/properties";
 import { arePortsCompatible } from "@/shared/types/ports";
-import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
+import type { AnimationScene, NodeData, SceneNodeData, FrameNodeData } from "@/shared/types";
 import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
 import { renderQueue, ensureWorkerReady } from "@/server/jobs/render-queue";
 import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
-import { partitionObjectsByScenes, buildAnimationSceneFromPartition } from "@/server/animation-processing/scene/scene-partitioner";
+import { partitionObjectsByScenes, buildAnimationSceneFromPartition, createSingleScenePartition, createSingleFramePartition } from "@/server/animation-processing/scene/scene-partitioner";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
@@ -66,9 +66,24 @@ const debugExecutionInputSchema = z.object({
   targetNodeId: z.string(), // Stop execution at this node
 });
 
+// New input schemas for individual generation
+const generateSingleSceneInputSchema = z.object({
+  nodes: z.array(reactFlowNodeSchema),
+  edges: z.array(reactFlowEdgeSchema), 
+  targetSceneNodeId: z.string(), // React Flow ID
+});
+
+const generateSingleFrameInputSchema = z.object({
+  nodes: z.array(reactFlowNodeSchema),
+  edges: z.array(reactFlowEdgeSchema),
+  targetFrameNodeId: z.string(), // React Flow ID
+});
+
 type GenerateSceneInput = z.infer<typeof generateSceneInputSchema>;
 type ValidateSceneInput = z.infer<typeof validateSceneInputSchema>;
 type DebugExecutionInput = z.infer<typeof debugExecutionInputSchema>;
+type GenerateSingleSceneInput = z.infer<typeof generateSingleSceneInputSchema>;
+type GenerateSingleFrameInput = z.infer<typeof generateSingleFrameInputSchema>;
 type ReactFlowNodeInput = z.infer<typeof reactFlowNodeSchema>;
 type ReactFlowEdgeInput = z.infer<typeof reactFlowEdgeSchema>;
 
@@ -335,7 +350,7 @@ export const animationRouter = createTRPCRouter({
         // Execute flow with debug stopping point
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlowDebug(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges,
           targetIdentifierId
         );
@@ -441,7 +456,7 @@ export const animationRouter = createTRPCRouter({
 
         // Comprehensive flow validation with graceful error handling
         const flowValidationResult = await validateFlowGracefully(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges
         );
         if (!flowValidationResult.success) {
@@ -455,12 +470,12 @@ export const animationRouter = createTRPCRouter({
         // If we get here, validation passed - proceed with generation
         const engine = new ExecutionEngine();
         const executionContext = await engine.executeFlow(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges,
         );
 
         // Find all scene nodes for multi-scene support
-        const sceneNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'scene') as ReactFlowNode<NodeData>[];
+        const sceneNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'scene') as unknown as ReactFlowNode<NodeData>[];
         if (sceneNodes.length === 0) {
           return {
             success: false,
@@ -674,16 +689,16 @@ export const animationRouter = createTRPCRouter({
 
         // Universal validations; do NOT require Scene node or Insert for images
         const engine = new ExecutionEngine();
-        engine.runUniversalValidation(backendNodes as ReactFlowNode<NodeData>[], backendEdges);
+        engine.runUniversalValidation(backendNodes as unknown as ReactFlowNode<NodeData>[], backendEdges);
 
         const executionContext = await engine.executeFlow(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges,
           { requireScene: false }
         );
 
         // Find all frame nodes
-        const frameNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'frame') as ReactFlowNode<NodeData>[];
+        const frameNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'frame') as unknown as ReactFlowNode<NodeData>[];
         if (frameNodes.length === 0) {
           return {
             success: false,
@@ -807,7 +822,7 @@ export const animationRouter = createTRPCRouter({
       // Flow validation
       try {
         const flowValidation = await validateFlowGracefully(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges
         );
         allErrors.push(...flowValidation.errors);
@@ -897,6 +912,419 @@ export const animationRouter = createTRPCRouter({
   getDefaultSceneConfig: publicProcedure.query(() => {
       return DEFAULT_SCENE_CONFIG;
   }),
+
+  // High-performance individual scene generation
+  generateSceneNode: protectedProcedure
+    .input(generateSingleSceneInputSchema)
+    .mutation(async ({ input, ctx }: { input: GenerateSingleSceneInput; ctx: TRPCContext }) => {
+      try {
+        // PERFORMANCE OPTIMIZATION: Convert only once, early
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return { id: n.id, type: n.type, position: n.position, data: mergedData };
+        });
+
+        // PERFORMANCE OPTIMIZATION: Build ID mapping once
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier: { id: string } }).identifier;
+            nodeIdMap.set(n.id, identifier.id);
+          }
+        });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // PERFORMANCE OPTIMIZATION: Convert target ID once
+        const targetIdentifierId = nodeIdMap.get(input.targetSceneNodeId) ?? input.targetSceneNodeId;
+
+        // PERFORMANCE OPTIMIZATION: Find target node early for fast validation
+        const targetSceneNode = backendNodes.find(n => 
+          (n.data as { identifier: { id: string } }).identifier.id === targetIdentifierId
+        ) as ReactFlowNode<NodeData> | undefined;
+
+        if (!targetSceneNode || targetSceneNode.type !== 'scene') {
+          return {
+            success: false,
+            errors: [{ 
+              type: 'error' as const, 
+              code: 'ERR_INVALID_TARGET_NODE', 
+              message: 'Target node must be a Scene node',
+              suggestions: ['Select a Scene node for video generation']
+            }],
+            canRetry: true
+          };
+        }
+
+        // PERFORMANCE OPTIMIZATION: Minimal validation - only check what's needed
+        const nodeValidation = validateInputNodesGracefully(backendNodes);
+        if (nodeValidation.errors.length > 0) {
+          return {
+            success: false,
+            errors: nodeValidation.errors,
+            canRetry: true
+          };
+        }
+
+        const connectionValidation = validateConnectionsGracefully(input.nodes, input.edges);
+        if (connectionValidation.errors.length > 0) {
+          return {
+            success: false,
+            errors: connectionValidation.errors,
+            canRetry: true
+          };
+        }
+
+        // PERFORMANCE OPTIMIZATION: Check job limits early (before expensive execution)
+        const supabase = createServiceClient();
+        const maxUserJobs = Number(process.env.MAX_USER_CONCURRENT_RENDER_JOBS ?? '3');
+        
+        const staleJobCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'failed', error: 'Job timeout - cleaned up by system' })
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing'])
+          .lt('updated_at', staleJobCutoff);
+
+        const { data: userActiveJobs } = await supabase
+          .from('render_jobs')
+          .select('id, status')
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing']);
+
+        if (userActiveJobs && userActiveJobs.length >= maxUserJobs) {
+          throw new UserJobLimitError(userActiveJobs.length, maxUserJobs);
+        }
+
+        // PERFORMANCE CORE: Execute only subgraph up to target scene
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlowToTarget(
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
+          backendEdges,
+          targetIdentifierId,
+          { requireScene: true }
+        );
+
+        // PERFORMANCE OPTIMIZATION: Create single partition directly  
+        const singleScenePartition = createSingleScenePartition(
+          executionContext, 
+          targetSceneNode, 
+          backendEdges
+        );
+
+        if (!singleScenePartition || singleScenePartition.objects.length === 0) {
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_NO_OBJECTS_IN_SCENE',
+              message: 'Target scene has no connected objects',
+              suggestions: ['Connect geometry objects to the Scene node via Insert nodes']
+            }],
+            canRetry: true
+          };
+        }
+
+        // PERFORMANCE OPTIMIZATION: Build scene config directly from target node
+        const sceneData = targetSceneNode.data as SceneNodeData;
+        const config: SceneAnimationConfig = {
+          ...DEFAULT_SCENE_CONFIG,
+          width: sceneData.width,
+          height: sceneData.height,
+          fps: sceneData.fps,
+          backgroundColor: sceneData.backgroundColor,
+          videoPreset: sceneData.videoPreset,
+          videoCrf: sceneData.videoCrf,
+        };
+
+        const scene: AnimationScene = buildAnimationSceneFromPartition(singleScenePartition);
+
+        // Frame limit validation
+        if (config.fps * scene.duration > 1800) {
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_SCENE_TOO_LONG',
+              message: `Scene exceeds frame limit (${config.fps * scene.duration} frames)`,
+              suggestions: ['Reduce scene duration or frame rate', 'Simplify animations']
+            }],
+            canRetry: true
+          };
+        }
+
+        await ensureWorkerReady();
+        const payload = { scene, config } as const;
+        
+        // PERFORMANCE OPTIMIZATION: Single job creation
+        const { data: jobRow, error: jobError } = await supabase
+          .from('render_jobs')
+          .insert({
+            user_id: ctx.user!.id,
+            status: 'queued',
+            payload
+          })
+          .select('id')
+          .single();
+
+        if (jobError || !jobRow) {
+          throw new Error('Failed to create render job');
+        }
+
+        const jobId = jobRow.id;
+        
+        // PERFORMANCE OPTIMIZATION: Single job enqueue
+        await renderQueue.enqueueOnly({
+          scene,
+          config,
+          userId: ctx.user!.id,
+          jobId,
+        });
+
+        logger.info('Individual scene generation completed', { 
+          jobId, 
+          sceneId: targetIdentifierId,
+          sceneName: targetSceneNode.data.identifier.displayName,
+          performance: {
+            nodesExecuted: executionContext.executedNodes.size,
+            objectsCreated: singleScenePartition.objects.length,
+            animationsProcessed: singleScenePartition.animations.length
+          }
+        });
+
+        // PERFORMANCE OPTIMIZATION: Wait for completion and return video URL for immediate preview
+        const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+        const parsed = Number(inlineWaitMsRaw);
+        const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+        
+        const notify = await waitForRenderJobEvent({ jobId, timeoutMs: inlineWaitMs });
+        
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return {
+            success: true,
+            videoUrl: notify.publicUrl,
+            jobId,
+            totalScenes: 1,
+          } as const;
+        }
+
+        // If not completed within timeout, return job ID for polling
+        return { success: true, jobId };
+
+      } catch (error) {
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{
+            type: 'error' as const,
+            code: isDomainError(error) ? error.code : 'ERR_UNKNOWN',
+            message: translated.message,
+            suggestions: translated.suggestions
+          }],
+          canRetry: true
+        };
+      }
+    }),
+
+  // High-performance individual frame generation
+  generateFrameNode: protectedProcedure
+    .input(generateSingleFrameInputSchema)
+    .mutation(async ({ input, ctx }: { input: GenerateSingleFrameInput; ctx: TRPCContext }) => {
+      try {
+        // PERFORMANCE OPTIMIZATION: Same conversion pattern as scene
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return { id: n.id, type: n.type, position: n.position, data: mergedData };
+        });
+
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier: { id: string } }).identifier;
+            nodeIdMap.set(n.id, identifier.id);
+          }
+        });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        const targetIdentifierId = nodeIdMap.get(input.targetFrameNodeId) ?? input.targetFrameNodeId;
+
+        // PERFORMANCE OPTIMIZATION: Early target validation
+        const targetFrameNode = backendNodes.find(n => 
+          (n.data as { identifier: { id: string } }).identifier.id === targetIdentifierId
+        ) as ReactFlowNode<NodeData> | undefined;
+
+        if (!targetFrameNode || targetFrameNode.type !== 'frame') {
+          return {
+            success: false,
+            errors: [{ 
+              type: 'error' as const, 
+              code: 'ERR_INVALID_TARGET_NODE', 
+              message: 'Target node must be a Frame node',
+              suggestions: ['Select a Frame node for image generation']
+            }],
+            canRetry: true
+          };
+        }
+
+        // PERFORMANCE OPTIMIZATION: Minimal validation for frames
+        const nodeValidation = validateInputNodesGracefully(backendNodes);
+        if (nodeValidation.errors.length > 0) {
+          return { success: false, errors: nodeValidation.errors, canRetry: true };
+        }
+
+        const connectionValidation = validateConnectionsGracefully(input.nodes, input.edges);
+        if (connectionValidation.errors.length > 0) {
+          return { success: false, errors: connectionValidation.errors, canRetry: true };
+        }
+
+        // Job limit check (same as scene)
+        const supabase = createServiceClient();
+        const maxUserJobs = Number(process.env.MAX_USER_CONCURRENT_RENDER_JOBS ?? '3');
+        
+        const staleJobCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'failed', error: 'Job timeout - cleaned up by system' })
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing'])
+          .lt('updated_at', staleJobCutoff);
+
+        const { data: userActiveJobs } = await supabase
+          .from('render_jobs')
+          .select('id, status')
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing']);
+
+        if (userActiveJobs && userActiveJobs.length >= maxUserJobs) {
+          throw new UserJobLimitError(userActiveJobs.length, maxUserJobs);
+        }
+
+        // PERFORMANCE CORE: Execute only subgraph up to target frame
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlowToTarget(
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
+          backendEdges,
+          targetIdentifierId,
+          { requireScene: false } // Frames don't need scene validation
+        );
+
+        // PERFORMANCE OPTIMIZATION: Create single frame partition directly
+        const singleFramePartition = createSingleFramePartition(
+          executionContext, 
+          targetFrameNode, 
+          backendEdges
+        );
+
+        if (!singleFramePartition || singleFramePartition.objects.length === 0) {
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_NO_OBJECTS_IN_FRAME',
+              message: 'Target frame has no connected objects',
+              suggestions: ['Connect geometry objects to the Frame node']
+            }],
+            canRetry: true
+          };
+        }
+
+        // PERFORMANCE OPTIMIZATION: Build frame config directly from target node
+        const frameData = targetFrameNode.data as FrameNodeData;
+        const config = {
+          width: Number(frameData.width || 1920),
+          height: Number(frameData.height || 1080),
+          backgroundColor: String(frameData.backgroundColor || '#000000'),
+          format: (frameData.format === 'jpeg' ? 'jpeg' : 'png') as 'png'|'jpeg',
+          quality: Number(frameData.quality ?? 90)
+        };
+
+        const scene: AnimationScene = buildAnimationSceneFromPartition(singleFramePartition);
+
+        await ensureWorkerReady();
+        const payload = { scene, config } as const;
+        
+        const { data: jobRow, error: jobError } = await supabase
+          .from('render_jobs')
+          .insert({
+            user_id: ctx.user!.id,
+            status: 'queued',
+            payload
+          })
+          .select('id')
+          .single();
+
+        if (jobError || !jobRow) {
+          throw new Error('Failed to create render job');
+        }
+
+        const jobId = jobRow.id;
+        
+        // PERFORMANCE OPTIMIZATION: Single image job enqueue
+        const { imageQueue } = await import('@/server/jobs/image-queue');
+        await imageQueue.enqueueOnly({
+          scene,
+          config: { ...config },
+          userId: ctx.user!.id,
+          jobId,
+        });
+
+        logger.info('Individual frame generation completed', { 
+          jobId, 
+          frameId: targetIdentifierId,
+          frameName: targetFrameNode.data.identifier.displayName,
+          performance: {
+            nodesExecuted: executionContext.executedNodes.size,
+            objectsCreated: singleFramePartition.objects.length
+          }
+        });
+
+        // PERFORMANCE OPTIMIZATION: Wait for completion and return image URL for immediate preview
+        const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+        const parsed = Number(inlineWaitMsRaw);
+        const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+        
+        const notify = await waitForRenderJobEvent({ jobId, timeoutMs: inlineWaitMs });
+        
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return {
+            success: true,
+            imageUrl: notify.publicUrl,
+            jobId,
+            totalFrames: 1,
+          } as const;
+        }
+
+        // If not completed within timeout, return job ID for polling
+        return { success: true, jobId };
+
+      } catch (error) {
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{
+            type: 'error' as const,
+            code: isDomainError(error) ? error.code : 'ERR_UNKNOWN',
+            message: translated.message,
+            suggestions: translated.suggestions
+          }],
+          canRetry: true
+        };
+      }
+    }),
 });
 
 // Graceful validation helper functions
