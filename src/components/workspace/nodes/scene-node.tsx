@@ -3,17 +3,12 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { SceneNodeData } from "@/shared/types/nodes";
-import { MonitorPlay, Play } from "lucide-react";
-import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
-import { usePreviewContext } from "../flow/hooks/use-preview-context";
+import { MonitorPlay } from "lucide-react";
 
-export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
+export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
   const nodeDefinition = getNodeDefinition('scene');
-  const { generateSceneNode, isGeneratingScene } = useIndividualGeneration();
-  const previewContext = usePreviewContext();
   
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
@@ -27,11 +22,6 @@ export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
     if (crf <= 18) return "High";
     if (crf <= 28) return "Medium";
     return "Low";
-  };
-
-  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID + preview context
-  const handleGenerateThis = () => {
-    generateSceneNode(id, previewContext);
   };
 
   const handleClass = "bg-[var(--node-output)]";
@@ -106,18 +96,6 @@ export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
             {data.width}×{data.height} @ {data.fps}fps
           </div>
         </div>
-
-        {/* NEW: Individual generation button (minimal addition) */}
-        <Button
-          onClick={handleGenerateThis}
-          disabled={isGeneratingScene}
-          variant="success"
-          size="sm"
-          className="w-full mt-2"
-        >
-          <Play size={12} className="mr-1" />
-          {isGeneratingScene ? 'Generating...' : 'Generate This Scene'}
-        </Button>
       </CardContent>
     </Card>
   );

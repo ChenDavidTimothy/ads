@@ -3,17 +3,12 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { FrameNodeData } from "@/shared/types/nodes";
-import { Image as ImageIcon, Camera } from "lucide-react";
-import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
-import { usePreviewContext } from "../flow/hooks/use-preview-context";
+import { Image as ImageIcon } from "lucide-react";
 
-export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
+export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
   const nodeDefinition = getNodeDefinition('frame');
-  const { generateFrameNode, isGeneratingFrame } = useIndividualGeneration();
-  const previewContext = usePreviewContext();
 
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
@@ -21,11 +16,6 @@ export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
     if (width === 3840 && height === 2160) return "4K";
     if (width === 1080 && height === 1080) return "Square";
     return "Custom";
-  };
-
-  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID + preview context
-  const handleGenerateThis = () => {
-    generateFrameNode(id, previewContext);
   };
 
   const handleClass = "bg-[var(--node-output)]";
@@ -92,18 +82,6 @@ export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
         <div className="mt-[var(--space-4)] pt-[var(--space-3)] border-t border-[var(--border-primary)] text-center text-xs text-[var(--text-tertiary)]">
           Final Image Output
         </div>
-
-        {/* NEW: Individual generation button (minimal addition) */}
-        <Button
-          onClick={handleGenerateThis}
-          disabled={isGeneratingFrame}
-          variant="success"
-          size="sm"
-          className="w-full mt-2"
-        >
-          <Camera size={12} className="mr-1" />
-          {isGeneratingFrame ? 'Generating...' : 'Generate This Frame'}
-        </Button>
       </CardContent>
     </Card>
   );

@@ -1,29 +1,24 @@
-// src/server/api/routers/animation.ts - GUARANTEED FEATURE PRESERVATION
-// REPLACE ENTIRE CONTENT OF EXISTING animation.ts FILE
+// src/server/api/routers/animation.ts - Graceful error handling with comprehensive validation + debug execution
 import { z } from "zod";
+import type { createTRPCContext } from "@/server/api/trpc";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import { DEFAULT_SCENE_CONFIG } from "@/server/rendering/renderer";
+import { logger } from "@/lib/logger";
+import { isDomainError, UserJobLimitError, NoValidScenesError } from "@/shared/errors/domain";
+import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
+import { ExecutionEngine } from "@/server/animation-processing/execution-engine";
+import { getNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
+import { buildZodSchemaFromProperties } from "@/shared/types/properties";
+import { arePortsCompatible } from "@/shared/types/ports";
+import type { AnimationScene, NodeData, SceneNodeData } from "@/shared/types";
+import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
+import { renderQueue, ensureWorkerReady } from "@/server/jobs/render-queue";
+import { waitForRenderJobEvent } from "@/server/jobs/pg-events";
 import { createServiceClient } from "@/utils/supabase/service";
-import { generationService } from "../services/generation-service";
+import { partitionObjectsByScenes, buildAnimationSceneFromPartition } from "@/server/animation-processing/scene/scene-partitioner";
 
-// ==================== PRESERVED: EXACT SCHEMAS ====================
+type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
-const reactFlowNodeSchema = z.object({
-  id: z.string(),
-  type: z.string().optional(),
-  position: z.object({ x: z.number(), y: z.number() }),
-  data: z.unknown(),
-});
-
-const reactFlowEdgeSchema = z.object({
-  id: z.string(),
-  source: z.string(),
-  target: z.string(),
-  sourceHandle: z.string().nullable().optional(),
-  targetHandle: z.string().nullable().optional(),
-});
-
+// Scene config schema (coerce types where the client might send strings)
 const sceneConfigSchema = z.object({
   width: z.coerce.number().max(1920).optional(),
   height: z.coerce.number().max(1080).optional(),
@@ -33,22 +28,30 @@ const sceneConfigSchema = z.object({
   videoCrf: z.coerce.number().min(0).max(51).optional(),
 });
 
+// Registry-aware ReactFlow Node schema
+const reactFlowNodeSchema = z.object({
+  id: z.string(),
+  type: z.string().optional(),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
+  data: z.unknown(),
+});
+
+// ReactFlow Edge schema
+const reactFlowEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+  sourceHandle: z.string().nullable().optional(),
+  targetHandle: z.string().nullable().optional(),
+});
+
 const generateSceneInputSchema = z.object({
   nodes: z.array(reactFlowNodeSchema),
   edges: z.array(reactFlowEdgeSchema),
   config: sceneConfigSchema.optional(),
-});
-
-const generateSingleSceneInputSchema = z.object({
-  nodes: z.array(reactFlowNodeSchema),
-  edges: z.array(reactFlowEdgeSchema), 
-  targetSceneNodeId: z.string(),
-});
-
-const generateSingleFrameInputSchema = z.object({
-  nodes: z.array(reactFlowNodeSchema),
-  edges: z.array(reactFlowEdgeSchema),
-  targetFrameNodeId: z.string(),
 });
 
 const validateSceneInputSchema = z.object({
@@ -56,60 +59,631 @@ const validateSceneInputSchema = z.object({
   edges: z.array(reactFlowEdgeSchema),
 });
 
-// PRESERVED: Debug execution schema
+// Debug execution schema
 const debugExecutionInputSchema = z.object({
   nodes: z.array(reactFlowNodeSchema),
   edges: z.array(reactFlowEdgeSchema),
-  targetNodeId: z.string(),
+  targetNodeId: z.string(), // Stop execution at this node
 });
 
-// ==================== ROUTER WITH GUARANTEED FEATURE PRESERVATION ====================
+type GenerateSceneInput = z.infer<typeof generateSceneInputSchema>;
+type ValidateSceneInput = z.infer<typeof validateSceneInputSchema>;
+type DebugExecutionInput = z.infer<typeof debugExecutionInputSchema>;
+type ReactFlowNodeInput = z.infer<typeof reactFlowNodeSchema>;
+type ReactFlowEdgeInput = z.infer<typeof reactFlowEdgeSchema>;
+
+// Validation result type for graceful error handling
+interface ValidationResult {
+  success: boolean;
+  errors: Array<{
+    type: 'error' | 'warning';
+    code: string;
+    message: string;
+    suggestions?: string[];
+    nodeId?: string;
+    nodeName?: string;
+  }>;
+}
+// Merge node data with registry defaults, ignoring undefined values and fixing point2d shapes
+function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknown): Record<string, unknown> {
+  const definition = nodeType ? getNodeDefinition(nodeType) : undefined;
+  const defaults = (definition?.defaults as Record<string, unknown> | undefined) ?? {};
+  const data = (rawData && typeof rawData === 'object' && rawData !== null) ? (rawData as Record<string, unknown>) : {};
+
+  // Look up property schemas up-front so we can handle structured types (e.g., point2d)
+  const propertySchemas = (definition?.properties?.properties as Array<{ key: string; type: string; defaultValue?: unknown }> | undefined) ?? [];
+  const point2dKeys = new Set(propertySchemas.filter(s => s.type === 'point2d').map(s => s.key));
+
+  // Start with defaults, then override with provided values except undefined
+  const merged: Record<string, unknown> = { ...defaults };
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) continue;
+
+    // Deep-merge point2d objects so providing only x (or y) preserves the other axis from defaults
+    if (point2dKeys.has(key) && value && typeof value === 'object') {
+      const baseObj = (typeof defaults[key] === 'object' && defaults[key] !== null)
+        ? (defaults[key] as Record<string, unknown>)
+        : {};
+      merged[key] = { ...baseObj, ...(value as Record<string, unknown>) };
+    } else {
+      merged[key] = value as unknown;
+    }
+  }
+
+  // Ensure point2d properties are well-formed (x,y numbers)
+  for (const schema of propertySchemas) {
+    if (schema.type === 'point2d') {
+      // Prefer actual input, then node-level defaults, then schema defaults, then 0
+      const provided = (data[schema.key] && typeof data[schema.key] === 'object')
+        ? (data[schema.key] as Record<string, unknown>)
+        : {};
+      const nodeDef = (defaults[schema.key] && typeof defaults[schema.key] === 'object')
+        ? (defaults[schema.key] as { x?: number; y?: number })
+        : undefined;
+      const schemaDef = (schema.defaultValue as { x?: number; y?: number } | undefined) ?? undefined;
+
+      const x = typeof provided.x === 'number'
+        ? provided.x
+        : typeof (merged[schema.key] as any)?.x === 'number'
+          ? (merged[schema.key] as any).x
+          : typeof nodeDef?.x === 'number'
+            ? nodeDef.x
+            : typeof schemaDef?.x === 'number'
+              ? schemaDef.x
+              : 0;
+
+      const y = typeof provided.y === 'number'
+        ? provided.y
+        : typeof (merged[schema.key] as any)?.y === 'number'
+          ? (merged[schema.key] as any).y
+          : typeof nodeDef?.y === 'number'
+            ? nodeDef.y
+            : typeof schemaDef?.y === 'number'
+              ? schemaDef.y
+              : 0;
+
+      merged[schema.key] = { x, y } as const;
+    }
+  }
+
+  return merged;
+}
+
+
+// User-friendly error translation
+function translateDomainError(error: unknown): { message: string; suggestions: string[] } {
+  if (!isDomainError(error)) {
+    return {
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      suggestions: ['Please check your node configuration and try again']
+    };
+  }
+
+  switch (error.code) {
+    case 'ERR_SCENE_REQUIRED':
+      return {
+        message: 'A Scene node is required to generate video',
+        suggestions: [
+          'Add a Scene node from the Output section in the node palette',
+          'Connect your animation workspace to the Scene node'
+        ]
+      };
+
+    case 'ERR_TOO_MANY_SCENES':
+      const sceneCount = error.details?.info?.sceneCount as number | undefined;
+      const maxAllowed = error.details?.info?.maxAllowed as number | undefined;
+      return {
+        message: maxAllowed 
+          ? `Maximum ${maxAllowed} scenes per execution (found ${sceneCount ?? 'multiple'})`
+          : 'Too many Scene nodes in workspace',
+        suggestions: [
+          'Reduce the number of Scene nodes',
+          'Split complex workspaces into separate executions',
+          'Consider using fewer scenes for better performance'
+        ]
+      };
+
+    case 'ERR_INVALID_CONNECTION':
+      return {
+        message: error.message || 'Invalid connection detected',
+        suggestions: [
+          'Check that port types are compatible',
+          'Verify merge nodes have unique connections per input port',
+          'Ensure all connected nodes exist'
+        ]
+      };
+
+    case 'ERR_MISSING_INSERT_CONNECTION':
+      return {
+        message: error.message || 'Geometry objects need timing information',
+        suggestions: [
+          'Connect geometry nodes through Insert nodes to control when they appear',
+          'Insert nodes specify when objects become visible in the timeline'
+        ]
+      };
+
+    case 'ERR_MULTIPLE_INSERT_NODES_IN_SERIES':
+      return {
+        message: error.message || 'Multiple Insert nodes detected in the same path',
+        suggestions: [
+          'Objects can only have one appearance time',
+          'Use separate paths for different timing',
+          'Use a Merge node to combine objects with different timing'
+        ]
+      };
+
+    case 'ERR_DUPLICATE_OBJECT_IDS':
+      return {
+        message: error.message || 'Objects reach the same destination through multiple paths',
+        suggestions: [
+          'Add a Merge node to combine objects before they reach non-merge nodes',
+          'Merge nodes resolve conflicts when identical objects arrive from different paths',
+          'Check your workspace for branching that reconnects later'
+        ]
+      };
+
+    case 'ERR_NODE_VALIDATION_FAILED':
+      return {
+        message: 'Some nodes have invalid properties',
+        suggestions: [
+          'Check the Properties panel for validation errors',
+          'Verify all required fields are filled',
+          'Ensure numeric values are within valid ranges'
+        ]
+      };
+
+    case 'ERR_SCENE_VALIDATION_FAILED':
+      return {
+        message: 'Scene configuration has issues',
+        suggestions: [
+          'Check animation duration and frame limits',
+          'Verify scene properties in the Properties panel',
+          'Ensure total frames don\'t exceed system limits'
+        ]
+      };
+
+    case 'ERR_CIRCULAR_DEPENDENCY':
+      return {
+        message: 'Circular connections detected in your node graph',
+        suggestions: [
+          'Remove connections that create loops',
+          'Ensure data flows in one direction from geometry to scene',
+          'Check for accidentally connected output back to input'
+        ]
+      };
+
+    case 'ERR_USER_JOB_LIMIT':
+      const currentJobs = error.details?.info?.currentJobs as number | undefined;
+      const maxJobs = error.details?.info?.maxJobs as number | undefined;
+      return {
+        message: maxJobs 
+          ? `Maximum ${maxJobs} concurrent render jobs per user${currentJobs ? ` (currently: ${currentJobs})` : ''}`
+          : 'Too many concurrent render jobs',
+        suggestions: [
+          'Wait for current jobs to complete before starting new ones',
+          'Check your job status to see which jobs are still running',
+          'Consider reducing the complexity of your animations'
+        ]
+      };
+
+    case 'ERR_NO_VALID_SCENES':
+      return {
+        message: 'No scenes received valid data',
+        suggestions: [
+          'Ensure your geometry objects are connected to Scene nodes',
+          'Check that Insert nodes are properly connected',
+          'Verify that your flow produces valid objects'
+        ]
+      };
+
+    case 'ERR_MULTIPLE_RESULT_VALUES':
+      return {
+        message: 'Result node received multiple values simultaneously',
+        suggestions: [
+          'Use If-Else or Boolean logic to ensure only one path executes',
+          'Check that conditional branches don\'t execute simultaneously',
+          'Verify logic workspace produces single result'
+        ]
+      };
+
+    default:
+      return {
+        message: error.message || 'Validation error occurred',
+        suggestions: ['Please review your node setup and connections']
+      };
+  }
+}
 
 export const animationRouter = createTRPCRouter({
-  
-  // ==================== PRESERVED: BULK GENERATION WITH ALL FEATURES ====================
-  
-  generateScene: protectedProcedure
-    .input(generateSceneInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      // PRESERVED: Uses shared service that contains ALL original validation and logic
-      return await generationService.generateBulkScenes(
-        input.nodes, 
-        input.edges, 
-        ctx, 
-        input.config
-      );
+  // Debug execution endpoint for "Run to Here" functionality
+  debugToNode: protectedProcedure
+    .input(debugExecutionInputSchema)
+    .mutation(async ({ input, ctx }: { input: DebugExecutionInput; ctx: TRPCContext }) => {
+      try {
+        // Convert React Flow nodes to backend format with proper ID mapping
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
+
+        // Convert React Flow edges to backend format with identifier ID mapping
+        const nodeIdMap = new Map<string, string>();
+         input.nodes.forEach(n => {
+           if (n.data && typeof n.data === 'object' && n.data !== null) {
+             const identifier = (n.data as { identifier: { id: string } }).identifier;
+             nodeIdMap.set(n.id, identifier.id);
+           }
+         });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Get target node identifier ID
+        const targetReactFlowId = input.targetNodeId;
+        const targetIdentifierId = nodeIdMap.get(targetReactFlowId) ?? targetReactFlowId;
+
+        // Execute flow with debug stopping point
+        const engine = new ExecutionEngine();
+        const executionContext = await engine.executeFlowDebug(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges,
+          targetIdentifierId
+        );
+
+        // Extract debug logs from context and format for frontend consumption
+        const executionLog = executionContext.executionLog ?? [];
+        const debugLogs = executionLog
+          .filter(entry => {
+            return entry.data && 
+                   typeof entry.data === 'object' && 
+                   entry.data !== null &&
+                   (entry.data as { type?: string }).type === 'result_output';
+          })
+          .map(entry => {
+            const entryData = entry.data as { type: string; [key: string]: unknown };
+            return {
+              nodeId: entry.nodeId,
+              timestamp: entry.timestamp,
+              action: entry.action,
+              data: entryData
+            };
+          });
+
+        return {
+          success: true,
+          executedNodeCount: executionContext.executedNodes.size,
+          debugLogs,
+          stoppedAt: targetIdentifierId
+        };
+
+      } catch (error) {
+        // Log server-side error
+        logger.domain('Debug execution failed', error, {
+          path: 'animation.debugToNode',
+          userId: ctx.user?.id,
+          targetNodeId: input.targetNodeId
+        });
+
+        // Return detailed error information using the same translation as generate video
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          error: translated.message,
+          suggestions: translated.suggestions,
+          // Add additional context for debugging
+          errorType: isDomainError(error) ? error.code : 'ERR_DEBUG_EXECUTION_FAILED'
+        };
+      }
     }),
 
-  generateImage: protectedProcedure
+  // Main scene generation with comprehensive graceful validation
+  generateScene: protectedProcedure
     .input(generateSceneInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      // PRESERVED: Specialized bulk image generation with ALL original features
+    .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
-        const { backendNodes, backendEdges } = generationService.preprocessInput(input.nodes, input.edges);
-        
-        // PRESERVED: Complete validation pipeline
-        const validation = await generationService.validateComplete(backendNodes, backendEdges, input.nodes, input.edges);
-        if (!validation.success) {
-          return { success: false, errors: validation.errors, canRetry: true };
+        // Convert React Flow nodes to backend format with proper ID mapping
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
+
+        // Convert React Flow edges to backend format with identifier ID mapping
+        const nodeIdMap = new Map<string, string>();
+         input.nodes.forEach(n => {
+           if (n.data && typeof n.data === 'object' && n.data !== null) {
+             const identifier = (n.data as { identifier: { id: string } }).identifier;
+             nodeIdMap.set(n.id, identifier.id);
+           }
+         });
+
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Registry-aware node validation with graceful error collection
+        const nodeValidationResult = validateInputNodesGracefully(backendNodes);
+        if (!nodeValidationResult.success) {
+          return {
+            success: false,
+            errors: nodeValidationResult.errors,
+            canRetry: true
+          };
         }
 
-        // PRESERVED: Job limit checking
-        await generationService.checkJobLimits(ctx);
+        // Connection validation with graceful error handling
+        const connectionValidationResult = validateConnectionsGracefully(input.nodes, input.edges);
+        if (!connectionValidationResult.success) {
+          return {
+            success: false,
+            errors: connectionValidationResult.errors,
+            canRetry: true
+          };
+        }
 
-        // PRESERVED: Engine execution without scene requirement for images
-        const { ExecutionEngine } = await import('@/server/animation-processing/execution-engine');
+        // Comprehensive flow validation with graceful error handling
+        const flowValidationResult = await validateFlowGracefully(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges
+        );
+        if (!flowValidationResult.success) {
+          return {
+            success: false,
+            errors: flowValidationResult.errors,
+            canRetry: true
+          };
+        }
+
+        // If we get here, validation passed - proceed with generation
         const engine = new ExecutionEngine();
-        engine.runUniversalValidation(backendNodes as any, backendEdges);
+        const executionContext = await engine.executeFlow(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges,
+        );
+
+        // Find all scene nodes for multi-scene support
+        const sceneNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'scene') as ReactFlowNode<NodeData>[];
+        if (sceneNodes.length === 0) {
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_SCENE_REQUIRED',
+              message: 'Scene node is required',
+              suggestions: ['Add a Scene node from the Output section']
+            }],
+            canRetry: true
+          };
+        }
+
+        // Check user job limits before processing
+        const supabase = createServiceClient();
+        const maxUserJobs = Number(process.env.MAX_USER_JOBS ?? '3');
+        
+        // First, clean up stale jobs (older than 10 minutes in queued/processing state)
+        const staleJobCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await supabase
+          .from('render_jobs')
+          .update({ status: 'failed', error: 'Job timeout - cleaned up by system' })
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing'])
+          .lt('updated_at', staleJobCutoff);
+
+        // Now check current active jobs
+        const { data: userActiveJobs, error: jobQueryError } = await supabase
+          .from('render_jobs')
+          .select('id, status, updated_at')
+          .eq('user_id', ctx.user!.id)
+          .in('status', ['queued', 'processing']);
+
+        if (jobQueryError) {
+          logger.error('Failed to query user jobs', { error: jobQueryError, userId: ctx.user!.id });
+          // Continue without job limit check rather than blocking the user
+        } else if (userActiveJobs && userActiveJobs.length >= maxUserJobs) {
+          logger.info('User job limit reached', { 
+            userId: ctx.user!.id, 
+            activeJobs: userActiveJobs.length, 
+            maxJobs: maxUserJobs,
+            jobs: userActiveJobs 
+          });
+          throw new UserJobLimitError(userActiveJobs.length, maxUserJobs);
+        }
+
+        // Partition objects by scenes
+        const scenePartitions = partitionObjectsByScenes(executionContext, sceneNodes, backendEdges);
+        
+        if (scenePartitions.length === 0) {
+          throw new NoValidScenesError();
+        }
+
+        // Create render jobs for each valid scene
+        const jobIds: string[] = [];
+        await ensureWorkerReady();
+
+        for (const partition of scenePartitions) {
+          const scene: AnimationScene = buildAnimationSceneFromPartition(partition);
+          const sceneData = partition.sceneNode.data as SceneNodeData;
+          
+          // Prepare scene config using registry defaults
+          const config: SceneAnimationConfig = {
+            ...DEFAULT_SCENE_CONFIG,
+            width: sceneData.width,
+            height: sceneData.height,
+            fps: sceneData.fps,
+            backgroundColor: sceneData.backgroundColor,
+            videoPreset: sceneData.videoPreset,
+            videoCrf: sceneData.videoCrf,
+            ...input.config,
+          };
+
+          // Enforce frame cap per scene
+          if (config.fps * scene.duration > 1800) {
+            logger.warn(`Scene ${partition.sceneNode.data.identifier.displayName} exceeds frame limit`, {
+              frames: config.fps * scene.duration,
+              duration: scene.duration,
+              fps: config.fps
+            });
+            continue; // Skip this scene but continue with others
+          }
+
+          // Create job row for this scene
+          const payload = { scene, config } as const;
+          const { data: jobRow, error: insErr } = await supabase
+            .from('render_jobs')
+            .insert({ user_id: ctx.user!.id, status: 'queued', payload })
+            .select('id')
+            .single();
+          
+          if (insErr || !jobRow) {
+            logger.error('Failed to create job row for scene', {
+              sceneId: partition.sceneNode.data.identifier.id,
+              error: insErr
+            });
+            continue; // Skip this scene but continue with others
+          }
+
+          // Enqueue the render job
+          await renderQueue.enqueueOnly({
+            scene,
+            config,
+            userId: ctx.user!.id,
+            jobId: jobRow.id as string,
+          });
+
+          jobIds.push(jobRow.id as string);
+        }
+
+        if (jobIds.length === 0) {
+          return {
+            success: false,
+            errors: [{
+              type: 'error' as const,
+              code: 'ERR_NO_VALID_SCENES',
+              message: 'No scenes could be processed',
+              suggestions: [
+                'Check that scenes have valid objects',
+                'Ensure scene durations are within limits',
+                'Verify scene configurations'
+              ]
+            }],
+            canRetry: true
+          };
+        }
+
+        // For single scene, maintain backward compatibility with immediate polling
+        if (jobIds.length === 1) {
+          const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+          const parsed = Number(inlineWaitMsRaw);
+          const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+          const notify = await waitForRenderJobEvent({ jobId: jobIds[0]!, timeoutMs: inlineWaitMs });
+          
+          if (notify && notify.status === 'completed' && notify.publicUrl) {
+            return {
+              success: true,
+              videoUrl: notify.publicUrl,
+              jobId: jobIds[0]!,
+              totalScenes: 1,
+            } as const;
+          }
+        }
+        
+        return {
+          success: true,
+          jobIds,
+          totalScenes: scenePartitions.length,
+        } as const;
+
+      } catch (error) {
+        // Log server-side error
+        logger.domain('Scene generation failed', error, {
+          path: 'animation.generateScene',
+          userId: ctx.user?.id
+        });
+
+        // Graceful error response
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{
+            type: 'error' as const,
+            code: isDomainError(error) ? error.code : 'ERR_UNKNOWN',
+            message: translated.message,
+            suggestions: translated.suggestions
+          }],
+          canRetry: true
+        };
+      }
+    }),
+
+  // Image generation (static) with graceful validation
+  generateImage: protectedProcedure
+    .input(generateSceneInputSchema)
+    .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
+      try {
+        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+          const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
+          return {
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: mergedData,
+          };
+        });
+        const nodeIdMap = new Map<string, string>();
+        input.nodes.forEach(n => {
+          if (n.data && typeof n.data === 'object' && n.data !== null) {
+            const identifier = (n.data as { identifier: { id: string } }).identifier;
+            nodeIdMap.set(n.id, identifier.id);
+          }
+        });
+        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+          id: e.id,
+          source: nodeIdMap.get(e.source) ?? e.source,
+          target: nodeIdMap.get(e.target) ?? e.target,
+          sourceHandle: e.sourceHandle ?? undefined,
+          targetHandle: e.targetHandle ?? undefined,
+        }));
+
+        // Basic node + connection validation as in generateScene
+        const nodeValidationResult = validateInputNodesGracefully(backendNodes);
+        if (!nodeValidationResult.success) {
+          return { success: false, errors: nodeValidationResult.errors, canRetry: true };
+        }
+        const connectionValidationResult = validateConnectionsGracefully(input.nodes, input.edges);
+        if (!connectionValidationResult.success) {
+          return { success: false, errors: connectionValidationResult.errors, canRetry: true };
+        }
+
+        // Universal validations; do NOT require Scene node or Insert for images
+        const engine = new ExecutionEngine();
+        engine.runUniversalValidation(backendNodes as ReactFlowNode<NodeData>[], backendEdges);
 
         const executionContext = await engine.executeFlow(
-          backendNodes as any,
+          backendNodes as ReactFlowNode<NodeData>[],
           backendEdges,
           { requireScene: false }
         );
 
-        // PRESERVED: Frame node validation and processing
-        const frameNodes = backendNodes.filter((node) => node.type === 'frame') as any[];
+        // Find all frame nodes
+        const frameNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'frame') as ReactFlowNode<NodeData>[];
         if (frameNodes.length === 0) {
           return {
             success: false,
@@ -118,28 +692,21 @@ export const animationRouter = createTRPCRouter({
           };
         }
 
-        // PRESERVED: Scene partitioning for frames
-        const { partitionObjectsByScenes, buildAnimationSceneFromPartition } = await import('@/server/animation-processing/scene/scene-partitioner');
+        // Partition using scene partitioner (works with frame since we reuse scene executor per-scene storage)
         const scenePartitions = partitionObjectsByScenes(executionContext, frameNodes, backendEdges);
         if (scenePartitions.length === 0) {
-          return {
-            success: false,
-            errors: [{ type: 'error' as const, code: 'ERR_NO_VALID_FRAMES', message: 'No frames could be processed' }],
-            canRetry: true
-          };
+          throw new NoValidScenesError();
         }
 
-        // PRESERVED: Worker readiness and job creation
-        const { ensureWorkerReady } = await import('@/server/jobs/render-queue');
-        await ensureWorkerReady();
+        // Enqueue image jobs
         const supabase = createServiceClient();
         const jobIds: string[] = [];
+        await ensureWorkerReady();
+        const { imageQueue } = await import('@/server/jobs/image-queue');
 
         for (const partition of scenePartitions) {
-          const scene = buildAnimationSceneFromPartition(partition);
-          const frameData = partition.sceneNode.data as any;
-          
-          // PRESERVED: Frame configuration building
+          const scene: AnimationScene = buildAnimationSceneFromPartition(partition);
+          const frameData = partition.sceneNode.data as unknown as { width: number; height: number; backgroundColor: string; format: 'png'|'jpeg'; quality: number };
           const config = {
             width: Number(frameData.width),
             height: Number(frameData.height),
@@ -156,8 +723,6 @@ export const animationRouter = createTRPCRouter({
             .single();
           if (insErr || !jobRow) continue;
 
-          // PRESERVED: Image queue usage
-          const { imageQueue } = await import('@/server/jobs/image-queue');
           await imageQueue.enqueueOnly({
             scene,
             config: { ...config },
@@ -176,96 +741,152 @@ export const animationRouter = createTRPCRouter({
           };
         }
 
-        // PRESERVED: Single job inline wait
+        // Optionally short-wait for single job
         if (jobIds.length === 1) {
-          const waitResult = await generationService.waitForJobCompletion(jobIds[0]!);
-          if (waitResult.completed) {
-            return { success: true, imageUrl: waitResult.publicUrl, jobId: jobIds[0]!, totalFrames: 1 };
+          const inlineWaitMsRaw = process.env.RENDER_JOB_INLINE_WAIT_MS ?? '500';
+          const parsed = Number(inlineWaitMsRaw);
+          const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
+          const notify = await waitForRenderJobEvent({ jobId: jobIds[0]!, timeoutMs: inlineWaitMs });
+          if (notify && notify.status === 'completed' && notify.publicUrl) {
+            return { success: true, imageUrl: notify.publicUrl, jobId: jobIds[0]!, totalScenes: 1 } as const;
           }
         }
 
-        return { success: true, jobIds, totalFrames: scenePartitions.length };
-        
+        return { success: true, jobIds, totalScenes: scenePartitions.length } as const;
       } catch (error) {
-        return generationService.createErrorResponse(error);
+        logger.domain('Image generation failed', error, {
+          path: 'animation.generateImage',
+          userId: ctx.user?.id
+        });
+        const translated = translateDomainError(error);
+        return {
+          success: false,
+          errors: [{ type: 'error' as const, code: isDomainError(error) ? error.code : 'ERR_UNKNOWN', message: translated.message, suggestions: translated.suggestions }],
+          canRetry: true,
+        };
       }
     }),
 
-  // ==================== PRESERVED: INDIVIDUAL GENERATION (PERFORMANCE OPTIMIZED) ====================
-  
-  generateSceneNode: protectedProcedure
-    .input(generateSingleSceneInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      // PRESERVED: All validation, job limits, performance optimizations via shared service
-      return await generationService.generateSingleScene(
-        input.nodes,
-        input.edges,
-        input.targetSceneNodeId,
-        ctx
-      );
-    }),
-
-  generateFrameNode: protectedProcedure
-    .input(generateSingleFrameInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      // PRESERVED: All validation, minimal frame validation, performance optimizations via shared service
-      return await generationService.generateSingleFrame(
-        input.nodes,
-        input.edges,
-        input.targetFrameNodeId,
-        ctx
-      );
-    }),
-
-  // ==================== PRESERVED: VALIDATION & UTILITIES ====================
-  
+  // Enhanced validation endpoint with graceful error reporting
   validateScene: protectedProcedure
     .input(validateSceneInputSchema)
-    .query(async ({ input }) => {
-      // PRESERVED: Complete validation pipeline
-      const { backendNodes, backendEdges } = generationService.preprocessInput(input.nodes, input.edges);
-      const validation = await generationService.validateComplete(backendNodes, backendEdges, input.nodes, input.edges);
-      return validation;
+    .query(async ({ input }: { input: ValidateSceneInput }) => {
+      const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: mergeNodeDataWithDefaults(n.type, n.data),
+      }));
+
+      const nodeIdMap = new Map<string, string>();
+       input.nodes.forEach(n => {
+         if (n.data && typeof n.data === 'object' && n.data !== null) {
+           const identifier = (n.data as { identifier: { id: string } }).identifier;
+           nodeIdMap.set(n.id, identifier.id);
+         }
+       });
+
+      const backendEdges = input.edges.map((e) => ({
+        id: e.id,
+        source: nodeIdMap.get(e.source) ?? e.source,
+        target: nodeIdMap.get(e.target) ?? e.target,
+        sourceHandle: e.sourceHandle ?? undefined,
+        targetHandle: e.targetHandle ?? undefined,
+      }));
+
+      const allErrors: ValidationResult['errors'] = [];
+
+      // Node validation
+      const nodeValidation = validateInputNodesGracefully(backendNodes);
+      allErrors.push(...nodeValidation.errors);
+
+      // Connection validation
+      const connectionValidation = validateConnectionsGracefully(input.nodes, input.edges);
+      allErrors.push(...connectionValidation.errors);
+
+      // Flow validation
+      try {
+        const flowValidation = await validateFlowGracefully(
+          backendNodes as ReactFlowNode<NodeData>[],
+          backendEdges
+        );
+        allErrors.push(...flowValidation.errors);
+      } catch (error) {
+        const translated = translateDomainError(error);
+        allErrors.push({
+          type: 'error',
+          code: isDomainError(error) ? error.code : 'ERR_VALIDATION_FAILED',
+          message: translated.message,
+          suggestions: translated.suggestions
+        });
+      }
+
+      return {
+        valid: allErrors.filter(e => e.type === 'error').length === 0,
+        errors: allErrors
+      };
     }),
 
-  // PRESERVED: Debug execution capability
-  debugExecution: protectedProcedure
-    .input(debugExecutionInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const { backendNodes, backendEdges } = generationService.preprocessInput(input.nodes, input.edges);
-        
-        // PRESERVED: Debug execution with exact original logic
-        const { ExecutionEngine } = await import('@/server/animation-processing/execution-engine');
-        const engine = new ExecutionEngine();
-        
-        const targetIdentifierId = backendNodes.find(n => n.id === input.targetNodeId)?.data?.identifier?.id ?? input.targetNodeId;
-        
-        const debugContext = await engine.executeFlowDebug(
-          backendNodes as any,
-          backendEdges,
-          targetIdentifierId
-        );
+  // Registry information endpoints (unchanged)
+  getNodeDefinitions: publicProcedure.query(() => {
+    const geometryNodes = getNodesByCategory('geometry');
+    const timingNodes = getNodesByCategory('timing');
+    const logicNodes = getNodesByCategory('logic');
+    const animationNodes = getNodesByCategory('animation');
+    const outputNodes = getNodesByCategory('output');
+    
+    return {
+      geometry: geometryNodes,
+      timing: timingNodes,
+      logic: logicNodes,
+      animation: animationNodes,
+      output: outputNodes,
+    };
+  }),
 
-        return {
-          success: true,
-          executionLog: debugContext.executionLog ?? [],
-          nodeOutputs: Array.from(debugContext.nodeOutputs.entries()).map(([key, output]) => ({
-            nodeId: key.split('.')[0]!,
-            portId: key.split('.')[1] ?? 'output',
-            type: output.type,
-            data: output.data,
-          })),
-        };
-      } catch (error) {
-        return generationService.createErrorResponse(error);
+  getRenderJobStatus: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .query(async ({ input, ctx }: { input: { jobId: string }; ctx: TRPCContext }) => {
+      const supabase = createServiceClient();
+      const { data, error } = await supabase
+        .from('render_jobs')
+        .select('status, output_url, error')
+        .eq('id', input.jobId)
+        .eq('user_id', ctx.user!.id)
+        .single();
+      if (error) {
+        throw new Error(error.message);
       }
+      
+      // If not completed yet, wait briefly for a NOTIFY; then re-check DB before returning
+      let current = data;
+      if (current?.status !== 'completed' || !current?.output_url) {
+        const notify = await waitForRenderJobEvent({ jobId: input.jobId, timeoutMs: 25000 });
+        if (notify && notify.status === 'completed' && notify.publicUrl) {
+          return { status: 'completed', videoUrl: notify.publicUrl, error: null } as const;
+        }
+        // Fallback: job may have completed during the wait but event was missed; re-query DB
+        const { data: latest, error: latestError } = await supabase
+          .from('render_jobs')
+          .select('status, output_url, error')
+          .eq('id', input.jobId)
+          .eq('user_id', ctx.user!.id)
+          .single();
+        if (!latestError && latest) {
+          current = latest;
+        }
+      }
+
+      return { 
+        status: (current?.status as string) ?? 'unknown', 
+        videoUrl: (current?.output_url as string) ?? null, 
+        error: (current?.error as string) ?? null 
+      } as const;
     }),
 
   getNodeDefinition: publicProcedure
     .input(z.object({ nodeType: z.string() }))
-    .query(({ input }) => {
-      // PRESERVED: Node definition lookup
+    .query(({ input }: { input: { nodeType: string } }) => {
       const definition = getNodeDefinition(input.nodeType);
       if (!definition) {
         throw new Error(`Unknown node type: ${input.nodeType}`);
@@ -274,32 +895,129 @@ export const animationRouter = createTRPCRouter({
     }),
 
   getDefaultSceneConfig: publicProcedure.query(() => {
-    // PRESERVED: Default scene configuration
-    return DEFAULT_SCENE_CONFIG;
+      return DEFAULT_SCENE_CONFIG;
   }),
-
-  // ==================== PRESERVED: JOB STATUS & MONITORING ====================
-  
-  getRenderJobStatus: protectedProcedure
-    .input(z.object({ jobId: z.string() }))
-    .query(async ({ input, ctx }) => {
-      // PRESERVED: Job status checking with user ownership validation
-      const supabase = createServiceClient();
-      const { data: current } = await supabase
-        .from('render_jobs')
-        .select('id, status, output_url, error')
-        .eq('id', input.jobId)
-        .eq('user_id', ctx.user.id)
-        .single();
-      
-      const currentData = current as { id: string; status: string; output_url: string | null; error: string | null } | null;
-
-      return { 
-        jobId: input.jobId, 
-        status: (currentData?.status as 'queued' | 'processing' | 'completed' | 'failed') ?? 'unknown', 
-        videoUrl: (currentData?.output_url as string) ?? null, 
-        error: (currentData?.error as string) ?? null 
-      } as const;
-    }),
 });
+
+// Graceful validation helper functions
+function validateInputNodesGracefully(
+  nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: unknown }>
+): ValidationResult {
+  const errors: ValidationResult['errors'] = [];
+  
+  for (const node of nodes) {
+    if (!node.type) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_MISSING_NODE_TYPE',
+        message: `Node ${node.id} has no type specified`,
+        nodeId: node.id
+      });
+      continue;
+    }
+    
+    const definition = getNodeDefinition(node.type);
+    if (!definition) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_UNKNOWN_NODE_TYPE',
+        message: `Unknown node type: ${node.type}`,
+        nodeId: node.id
+      });
+      continue;
+    }
+    
+    const schema = buildZodSchemaFromProperties(definition.properties.properties);
+    const result = schema.safeParse(node.data);
+    if (!result.success) {
+      const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+      errors.push({
+        type: 'error',
+        code: 'ERR_NODE_PROPERTY_VALIDATION',
+        message: `Node property validation failed: ${issues}`,
+        nodeId: node.id,
+        suggestions: ['Check the Properties panel for this node', 'Verify all required fields are filled']
+      });
+    }
+  }
+  
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
+}
+
+function validateConnectionsGracefully(
+  nodes: ReactFlowNodeInput[], 
+  edges: ReactFlowEdgeInput[]
+): ValidationResult {
+  const errors: ValidationResult['errors'] = [];
+  
+  for (const edge of edges) {
+    const source = nodes.find((n) => n.id === edge.source);
+    const target = nodes.find((n) => n.id === edge.target);
+    
+    if (!source || !target) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Connection references non-existent nodes: ${edge.source} -> ${edge.target}`,
+        suggestions: ['Remove invalid connections', 'Ensure all connected nodes exist']
+      });
+      continue;
+    }
+    
+    const sourceDef = getNodeDefinition(source.type ?? "");
+    const targetDef = getNodeDefinition(target.type ?? "");
+    
+    if (!sourceDef || !targetDef) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Unknown node types in connection: ${source.type} -> ${target.type}`,
+        suggestions: ['Check node types are valid']
+      });
+      continue;
+    }
+    
+    if ((edge as { kind?: 'data' | 'control' }).kind === 'control') continue;
+    
+    const sourcePort = sourceDef.ports.outputs.find(p => p.id === edge.sourceHandle);
+    const targetPort = targetDef.ports.inputs.find(p => p.id === edge.targetHandle);
+    
+    if (sourcePort && targetPort && !arePortsCompatible(sourcePort.type, targetPort.type)) {
+      errors.push({
+        type: 'error',
+        code: 'ERR_INVALID_CONNECTION',
+        message: `Port types incompatible: ${sourcePort.type} → ${targetPort.type}`,
+        suggestions: [
+          'Connect compatible port types',
+          'Check the node documentation for port compatibility'
+        ]
+      });
+    }
+  }
+  
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
+}
+
+async function validateFlowGracefully(
+  nodes: ReactFlowNode<NodeData>[],
+  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>
+): Promise<ValidationResult> {
+  const errors: ValidationResult['errors'] = [];
+  
+  try {
+    const engine = new ExecutionEngine();
+    // Use universal validation only - don't require Scene node for general validation
+    engine.runUniversalValidation(nodes, edges);
+  } catch (error) {
+    const translated = translateDomainError(error);
+    errors.push({
+      type: 'error',
+      code: isDomainError(error) ? error.code : 'ERR_FLOW_VALIDATION_FAILED',
+      message: translated.message,
+      suggestions: translated.suggestions
+    });
+  }
+  
+  return { success: errors.filter(e => e.type === 'error').length === 0, errors };
+}
 
