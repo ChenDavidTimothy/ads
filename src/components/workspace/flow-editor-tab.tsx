@@ -184,15 +184,24 @@ export function FlowEditorTab() {
 		addImageJob,
 		updateVideoJob,
 		updateImageJob,
+		// NEW: Preview state setters for individual generation
+		setVideoUrl,
+		setImageUrl,
 	} = useSceneGeneration(nodes, edges);
 
 	const validationSummary = getValidationSummary();
 
 	const { leftSidebarCollapsed, rightSidebarCollapsed } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean };
 
-	// NEW: Preview context value for individual generation
-	const previewContextValue = { addVideoJob, addImageJob, updateVideoJob, updateImageJob };
-
+	// NEW: Preview context value for individual generation - now includes preview state setters
+	const previewContextValue = { 
+		addVideoJob, 
+		addImageJob, 
+		updateVideoJob, 
+		updateImageJob,
+		setVideoUrl,  // ✅ Bridge preview state
+		setImageUrl   // ✅ Bridge preview state
+	};
 
 
 	return (

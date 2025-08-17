@@ -8,10 +8,12 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { FrameNodeData } from "@/shared/types/nodes";
 import { Image as ImageIcon, Camera } from "lucide-react";
 import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
+import { usePreviewContext } from "../flow/hooks/use-preview-context";
 
 export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
   const nodeDefinition = getNodeDefinition('frame');
   const { generateFrameNode, isGeneratingFrame } = useIndividualGeneration();
+  const previewContext = usePreviewContext();
 
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
@@ -21,9 +23,9 @@ export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
     return "Custom";
   };
 
-  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID
+  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID + preview context
   const handleGenerateThis = () => {
-    generateFrameNode(id);
+    generateFrameNode(id, previewContext);
   };
 
   const handleClass = "bg-[var(--node-output)]";

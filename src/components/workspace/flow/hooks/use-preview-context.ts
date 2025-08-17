@@ -6,6 +6,9 @@ interface PreviewContext {
   addImageJob: (job: ImageJob) => void;
   updateVideoJob: (jobId: string, updates: Partial<VideoJob>) => void;
   updateImageJob: (jobId: string, updates: Partial<ImageJob>) => void;
+  // NEW: Preview state setters for individual generation
+  setVideoUrl: (url: string) => void;
+  setImageUrl: (url: string) => void;
 }
 
 export const PreviewContext = createContext<PreviewContext | null>(null);

@@ -106,36 +106,110 @@ export function useIndividualGeneration() {
 
   // ==================== OPTIMIZED GENERATION FUNCTIONS ====================
   
-  const generateSceneNode = useCallback(async (reactFlowNodeId: string) => {
+  const generateSceneNode = useCallback(async (
+    reactFlowNodeId: string,
+    previewContext?: {
+      addVideoJob: (job: any) => void;
+      updateVideoJob: (jobId: string, updates: any) => void;
+      setVideoUrl: (url: string) => void;
+    }
+  ) => {
     try {
       const authenticated = await checkAuth();
       if (!authenticated) return;
 
       const { nodes, edges } = preprocessFlow();
       
-      await generateSceneMutation.mutateAsync({
+      // Create preview job immediately if preview context is provided
+      let tempJobId = `temp_${Date.now()}`;
+      if (previewContext) {
+        previewContext.addVideoJob({
+          jobId: tempJobId,
+          sceneName: `Scene ${reactFlowNodeId.slice(0,8)}`,
+          sceneId: reactFlowNodeId,
+          status: 'pending'
+        });
+      }
+      
+      const result = await generateSceneMutation.mutateAsync({
         nodes,
         edges,
         targetSceneNodeId: reactFlowNodeId,
       });
+      
+      // Update preview on completion if preview context is provided
+      if (previewContext && result.success) {
+        const finalJobId = result.jobId || tempJobId;
+        if (result.videoUrl) {
+          previewContext.updateVideoJob(finalJobId, { 
+            status: 'completed', 
+            videoUrl: result.videoUrl,
+            jobId: finalJobId
+          });
+          previewContext.setVideoUrl(result.videoUrl); // Set as primary video for preview
+        } else if (result.jobId) {
+          // Job is processing, update status
+          previewContext.updateVideoJob(finalJobId, { 
+            status: 'processing',
+            jobId: finalJobId
+          });
+        }
+      }
       
     } catch (error) {
       handleGenerationError(error, 'Scene generation');
     }
   }, [checkAuth, preprocessFlow, generateSceneMutation, handleGenerationError]);
 
-  const generateFrameNode = useCallback(async (reactFlowNodeId: string) => {
+  const generateFrameNode = useCallback(async (
+    reactFlowNodeId: string,
+    previewContext?: {
+      addImageJob: (job: any) => void;
+      updateImageJob: (jobId: string, updates: any) => void;
+      setImageUrl: (url: string) => void;
+    }
+  ) => {
     try {
       const authenticated = await checkAuth();
       if (!authenticated) return;
 
       const { nodes, edges } = preprocessFlow();
       
-      await generateFrameMutation.mutateAsync({
+      // Create preview job immediately if preview context is provided
+      let tempJobId = `temp_${Date.now()}`;
+      if (previewContext) {
+        previewContext.addImageJob({
+          jobId: tempJobId,
+          frameName: `Frame ${reactFlowNodeId.slice(0,8)}`,
+          frameId: reactFlowNodeId,
+          status: 'pending'
+        });
+      }
+      
+      const result = await generateFrameMutation.mutateAsync({
         nodes,
         edges,
         targetFrameNodeId: reactFlowNodeId,
       });
+      
+      // Update preview on completion if preview context is provided
+      if (previewContext && result.success) {
+        const finalJobId = result.jobId || tempJobId;
+        if (result.imageUrl) {
+          previewContext.updateImageJob(finalJobId, { 
+            status: 'completed', 
+            imageUrl: result.imageUrl,
+            jobId: finalJobId
+          });
+          previewContext.setImageUrl(result.imageUrl); // Set as primary image for preview
+        } else if (result.jobId) {
+          // Job is processing, update status
+          previewContext.updateImageJob(finalJobId, { 
+            status: 'processing',
+            jobId: finalJobId
+          });
+        }
+      }
       
     } catch (error) {
       handleGenerationError(error, 'Frame generation');

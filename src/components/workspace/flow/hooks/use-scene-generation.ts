@@ -102,11 +102,11 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if (!data.success) {
         console.log(`[GENERATION] Validation errors detected:`, data.errors);
         setIsGenerating(false);
-        setValidationErrors(data.errors);
+        setValidationErrors(data.errors || []);
         
         // Show user-friendly error notifications
-        const errorMessages = data.errors.filter(e => e.type === 'error');
-        const warningMessages = data.errors.filter(e => e.type === 'warning');
+        const errorMessages = (data.errors || []).filter(e => e.type === 'error');
+        const warningMessages = (data.errors || []).filter(e => e.type === 'warning');
         
         if (errorMessages.length > 0) {
           const primaryError = errorMessages[0];
@@ -234,11 +234,11 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     onSuccess: async (data) => {
       if (!data.success) {
         setIsGeneratingImage(false);
-        setValidationErrors(data.errors);
+        setValidationErrors(data.errors || []);
         
         // Show user-friendly error notifications
-        const errorMessages = data.errors.filter(e => e.type === 'error');
-        const warningMessages = data.errors.filter(e => e.type === 'warning');
+        const errorMessages = (data.errors || []).filter(e => e.type === 'error');
+        const warningMessages = (data.errors || []).filter(e => e.type === 'warning');
         
         if (errorMessages.length > 0) {
           const primaryError = errorMessages[0];
@@ -317,10 +317,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           try {
             await utils.animation.getRenderJobStatus.invalidate({ jobId });
             const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
-            return { jobId, ...res };
+            return { ...res, jobId };
           } catch (error) {
             console.error(`[GENERATION] Failed to poll job ${jobId}:`, error);
-            return { jobId, status: 'failed', error: 'Failed to check status' };
+            return { status: 'failed', error: 'Failed to check status', jobId };
           }
         });
         
@@ -430,9 +430,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           try {
             await utils.animation.getRenderJobStatus.invalidate({ jobId });
             const status = await utils.animation.getRenderJobStatus.fetch({ jobId });
-            return { jobId, ...status };
+            return { ...status, jobId };
           } catch {
-            return { jobId, status: 'failed' as const };
+            return { status: 'failed' as const, jobId };
           }
         }));
         setImages(prev => prev.map(img => {
@@ -821,6 +821,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     updateImageJob: useCallback((jobId: string, updates: Partial<ImageJob>) => {
       setImages(prev => prev.map(job => job.jobId === jobId ? { ...job, ...updates } : job));
     }, []),
+    
+    // NEW: Expose preview state setters for individual generation
+    setVideoUrl,
+    setImageUrl,
   } as const;
 }
 

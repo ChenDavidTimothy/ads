@@ -8,10 +8,12 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { SceneNodeData } from "@/shared/types/nodes";
 import { MonitorPlay, Play } from "lucide-react";
 import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
+import { usePreviewContext } from "../flow/hooks/use-preview-context";
 
 export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
   const nodeDefinition = getNodeDefinition('scene');
   const { generateSceneNode, isGeneratingScene } = useIndividualGeneration();
+  const previewContext = usePreviewContext();
   
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return "FHD";
@@ -27,9 +29,9 @@ export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
     return "Low";
   };
 
-  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID
+  // PERFORMANCE OPTIMIZATION: Direct call with React Flow ID + preview context
   const handleGenerateThis = () => {
-    generateSceneNode(id);
+    generateSceneNode(id, previewContext);
   };
 
   const handleClass = "bg-[var(--node-output)]";
