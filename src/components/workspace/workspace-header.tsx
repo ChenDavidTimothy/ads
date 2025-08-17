@@ -7,7 +7,8 @@ import { SaveButton } from './save-button';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMultiTabDetection } from '@/hooks/use-multi-tab-detection';
 import { Button } from '@/components/ui/button';
-import { PanelLeft, PanelRight, Play } from 'lucide-react';
+import { PanelLeft, PanelRight } from 'lucide-react';
+import Logo from '@/components/ui/logo';
 import { AuthStatus } from '@/components/auth/auth-status';
 import Link from 'next/link';
 
@@ -21,10 +22,7 @@ export function WorkspaceHeader() {
 			<div className="flex items-center gap-[var(--space-4)]">
 				{/* Brand Logo - Links back to dashboard */}
 				<Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
-					<div className="w-6 h-6 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-md flex items-center justify-center">
-						<Play className="w-3 h-3 text-white" />
-					</div>
-					        <span className="text-sm font-semibold text-[var(--text-primary)]">Batchion</span>
+					<Logo className="w-24 h-6" />
 				</Link>
 				
 				{/* Left Sidebar Toggle */}

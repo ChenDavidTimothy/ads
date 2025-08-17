@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 export const metadata = {
   title: "Privacy Policy",
@@ -15,10 +16,7 @@ export default function PrivacyPage() {
           <Link href="/" className="flex items-center gap-3">
             <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold">Batchion</span>
+              <Logo className="w-32 h-8" />
             </div>
           </Link>
           

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2, Play, AlertCircle, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function LoginPage() {
   const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Get redirect URL from search params
-  const redirectTo = searchParams.get('redirectTo');
+  const redirectTo = searchParams?.get('redirectTo');
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -197,10 +198,7 @@ export default function LoginPage() {
           <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold">Batchion</span>
+              <Logo className="w-32 h-8" />
             </div>
           </Link>
           

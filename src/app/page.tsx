@@ -3,6 +3,7 @@ import { api, HydrateClient } from "@/trpc/server";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Zap, Users, Shield, ArrowRight, Play, Star } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 export default async function LandingPage() {
   // Check if user is already authenticated
@@ -50,10 +51,7 @@ export default async function LandingPage() {
         <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold">Batchion</span>
+              <Logo className="w-64 h-16" />
             </div>
             
             <nav className="hidden md:flex items-center gap-8">
@@ -308,10 +306,7 @@ export default async function LandingPage() {
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded">
-                    <Play className="w-3 h-3 text-white m-1.5" />
-                  </div>
-                  <span className="font-bold">Batchion</span>
+                  <Logo className="w-48 h-12" />
                 </div>
                 <p className="text-[var(--text-secondary)] text-sm">
                   No-code animation platform for creating dynamic, data-driven video advertisements.

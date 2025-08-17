@@ -40,6 +40,7 @@ import {
   AlertCircle,
   Info
 } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 type Workspace = RouterOutputs["workspace"]["list"][number];
 
@@ -331,10 +332,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold">Batchion</span>
+              <Logo className="w-32 h-8" />
             </Link>
 
             {/* Navigation */}

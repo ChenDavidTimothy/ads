@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
-import { Mail, ArrowLeft, Loader2, Play, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 export default function ForgotPasswordPage() {
   const supabase = createBrowserClient();
@@ -83,10 +84,7 @@ export default function ForgotPasswordPage() {
             <Link href="/login" className="flex items-center gap-3">
               <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                  <Play className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-xl font-bold">Batchion</span>
+                <Logo className="w-32 h-8" />
               </div>
             </Link>
           </div>
@@ -154,10 +152,7 @@ export default function ForgotPasswordPage() {
           <Link href="/login" className="flex items-center gap-3">
             <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold">Batchion</span>
+                              <Logo className="w-32 h-8" />
             </div>
           </Link>
           
