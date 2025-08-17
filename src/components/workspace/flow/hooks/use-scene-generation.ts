@@ -811,6 +811,16 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     isGenerating,
     validationErrors,
     getValidationSummary,
+    
+    // NEW: Individual job management
+    addVideoJob: useCallback((job: VideoJob) => setVideos(prev => [...prev, job]), []),
+    addImageJob: useCallback((job: ImageJob) => setImages(prev => [...prev, job]), []),
+    updateVideoJob: useCallback((jobId: string, updates: Partial<VideoJob>) => {
+      setVideos(prev => prev.map(job => job.jobId === jobId ? { ...job, ...updates } : job));
+    }, []),
+    updateImageJob: useCallback((jobId: string, updates: Partial<ImageJob>) => {
+      setImages(prev => prev.map(job => job.jobId === jobId ? { ...job, ...updates } : job));
+    }, []),
   } as const;
 }
 

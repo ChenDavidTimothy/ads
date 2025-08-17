@@ -15,6 +15,7 @@ import { useResultLogViewer } from './flow/hooks/use-result-log-viewer';
 import { useSceneGeneration } from './flow/hooks/use-scene-generation';
 import { useDebugExecution } from './flow/hooks/use-debug-execution';
 import { DebugProvider } from './flow/debug-context';
+import { PreviewContext } from './flow/hooks/use-preview-context';
 import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
 import type { Node, Edge } from 'reactflow';
 import { useWorkspace } from './workspace-context';
@@ -178,18 +179,27 @@ export function FlowEditorTab() {
 		images,
 		handleDownloadAllImages,
 		handleDownloadImage,
+		// NEW: Individual job management
+		addVideoJob,
+		addImageJob,
+		updateVideoJob,
+		updateImageJob,
 	} = useSceneGeneration(nodes, edges);
 
 	const validationSummary = getValidationSummary();
 
 	const { leftSidebarCollapsed, rightSidebarCollapsed } = state.ui as { leftSidebarCollapsed?: boolean; rightSidebarCollapsed?: boolean };
 
+	// NEW: Preview context value for individual generation
+	const previewContextValue = { addVideoJob, addImageJob, updateVideoJob, updateImageJob };
+
 
 
 	return (
-		<div className="flex h-full">
-			{!leftSidebarCollapsed && <NodePalette onAddNode={handleAddNode} />}
-			<div className="flex-1 flex flex-col">
+		<PreviewContext.Provider value={previewContextValue}>
+			<div className="flex h-full">
+				{!leftSidebarCollapsed && <NodePalette onAddNode={handleAddNode} />}
+				<div className="flex-1 flex flex-col">
 				<div className="h-12 flex items-center px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
 					<ActionsToolbar
 						onGenerate={handleGenerateScene}
@@ -265,5 +275,6 @@ export function FlowEditorTab() {
 				/>
 			)}
 		</div>
+		</PreviewContext.Provider>
 	);
 }

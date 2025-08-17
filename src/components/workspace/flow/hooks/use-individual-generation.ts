@@ -5,6 +5,8 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/utils/supabase/client';
 import type { NodeData } from '@/shared/types';
+import { usePreviewContext } from './use-preview-context';
+import type { VideoJob, ImageJob } from '@/shared/types/jobs';
 
 // Minimal types (reuse pattern from existing hooks)
 type RFEdge = { 
@@ -28,10 +30,18 @@ export function useIndividualGeneration() {
   
   // PERFORMANCE OPTIMIZATION: Reuse existing polling infrastructure
   const utils = api.useUtils();
+  const { addVideoJob, addImageJob, updateVideoJob, updateImageJob } = usePreviewContext();
+  
+  // Helper to get node display name
+  const getNodeDisplayName = useCallback((nodeId: string) => {
+    const nodes = getNodes();
+    const node = nodes.find(n => n.id === nodeId);
+    return (node?.data as any)?.identifier?.displayName || 'Unknown Node';
+  }, [getNodes]);
 
   // High-performance scene generation mutation
   const generateSceneMutation = api.animation.generateSceneNode.useMutation({
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       if (!data.success) {
         const errorMessages = data.errors?.filter(e => e.type === 'error') ?? [];
         if (errorMessages.length > 0) {
@@ -42,13 +52,23 @@ export function useIndividualGeneration() {
       }
       
       if ('videoUrl' in data && data.videoUrl) {
-        // Immediate preview available
-        toast.success('Scene generated successfully!', 'Opening preview...');
-        
-        // PERFORMANCE OPTIMIZATION: Show preview in new tab instead of auto-download
-        window.open(data.videoUrl, '_blank');
+        // CHANGE: Add to preview instead of opening new tab
+        addVideoJob({
+          jobId: data.jobId || `completed-${Date.now()}`,
+          sceneName: getNodeDisplayName(variables.targetSceneNodeId),
+          sceneId: variables.targetSceneNodeId,
+          status: 'completed',
+          videoUrl: data.videoUrl,
+        });
+        toast.success('Scene generated successfully!');
       } else if ('jobId' in data && data.jobId) {
-        // Job is still processing, start polling
+        // CHANGE: Add pending job to preview
+        addVideoJob({
+          jobId: data.jobId,
+          sceneName: getNodeDisplayName(variables.targetSceneNodeId),
+          sceneId: variables.targetSceneNodeId,
+          status: 'pending',
+        });
         toast.success('Scene generation started', 'Processing your video...');
         startIndividualJobPolling(data.jobId, 'scene');
       }
@@ -66,7 +86,7 @@ export function useIndividualGeneration() {
 
   // High-performance frame generation mutation
   const generateFrameMutation = api.animation.generateFrameNode.useMutation({
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       if (!data.success) {
         const errorMessages = data.errors?.filter(e => e.type === 'error') ?? [];
         if (errorMessages.length > 0) {
@@ -77,13 +97,23 @@ export function useIndividualGeneration() {
       }
       
       if ('imageUrl' in data && data.imageUrl) {
-        // Immediate preview available
-        toast.success('Frame generated successfully!', 'Opening preview...');
-        
-        // PERFORMANCE OPTIMIZATION: Show preview in new tab instead of auto-download
-        window.open(data.imageUrl, '_blank');
+        // CHANGE: Add to preview instead of opening new tab
+        addImageJob({
+          jobId: data.jobId || `completed-${Date.now()}`,
+          frameName: getNodeDisplayName(variables.targetFrameNodeId),
+          frameId: variables.targetFrameNodeId,
+          status: 'completed',
+          imageUrl: data.imageUrl,
+        });
+        toast.success('Frame generated successfully!');
       } else if ('jobId' in data && data.jobId) {
-        // Job is still processing, start polling
+        // CHANGE: Add pending job to preview
+        addImageJob({
+          jobId: data.jobId,
+          frameName: getNodeDisplayName(variables.targetFrameNodeId),
+          frameId: variables.targetFrameNodeId,
+          status: 'pending',
+        });
         toast.success('Frame generation started', 'Processing your image...');
         startIndividualJobPolling(data.jobId, 'frame');
       }
@@ -121,21 +151,24 @@ export function useIndividualGeneration() {
         const res = await utils.animation.getRenderJobStatus.fetch({ jobId });
         
         if (res.status === 'completed' && res.videoUrl) {
-          toast.success(
-            `${nodeType === 'scene' ? 'Scene' : 'Frame'} generated successfully!`,
-            'Opening preview...'
-          );
-          
-          // PERFORMANCE OPTIMIZATION: Show preview in new tab instead of auto-download
-          window.open(res.videoUrl, '_blank');
+          // CHANGE: Update preview state instead of opening new tab
+          if (nodeType === 'scene') {
+            updateVideoJob(jobId, { status: 'completed', videoUrl: res.videoUrl });
+          } else {
+            updateImageJob(jobId, { status: 'completed', imageUrl: res.videoUrl });
+          }
+          toast.success(`${nodeType === 'scene' ? 'Scene' : 'Frame'} generated successfully!`);
           return;
         }
         
         if (res.status === 'failed') {
-          toast.error(
-            `${nodeType === 'scene' ? 'Scene' : 'Frame'} generation failed`,
-            res.error ?? 'Unknown error occurred'
-          );
+          // CHANGE: Update preview state
+          if (nodeType === 'scene') {
+            updateVideoJob(jobId, { status: 'failed', error: res.error || 'Generation failed' });
+          } else {
+            updateImageJob(jobId, { status: 'failed', error: res.error || 'Generation failed' });
+          }
+          toast.error(`${nodeType === 'scene' ? 'Scene' : 'Frame'} generation failed`, res.error);
           return;
         }
         
@@ -159,7 +192,7 @@ export function useIndividualGeneration() {
     
     // Start polling with short delay
     setTimeout(poll, 500);
-  }, [utils.animation.getRenderJobStatus, toast, router]);
+  }, [updateVideoJob, updateImageJob, utils.animation.getRenderJobStatus, toast, router]);
 
   // PERFORMANCE OPTIMIZATION: Efficient scene generation function
   const generateSceneNode = useCallback(async (reactFlowNodeId: string) => {
