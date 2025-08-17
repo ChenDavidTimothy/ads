@@ -165,7 +165,7 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
         message: 'A Scene node is required to generate video',
         suggestions: [
           'Add a Scene node from the Output section in the node palette',
-          'Connect your animation flow to the Scene node'
+          'Connect your animation workspace to the Scene node'
         ]
       };
 
@@ -178,7 +178,7 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
           : 'Too many Scene nodes in workspace',
         suggestions: [
           'Reduce the number of Scene nodes',
-          'Split complex flows into separate executions',
+          'Split complex workspaces into separate executions',
           'Consider using fewer scenes for better performance'
         ]
       };
@@ -218,7 +218,7 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
         suggestions: [
           'Add a Merge node to combine objects before they reach non-merge nodes',
           'Merge nodes resolve conflicts when identical objects arrive from different paths',
-          'Check your flow for branching that reconnects later'
+          'Check your workspace for branching that reconnects later'
         ]
       };
 
@@ -282,7 +282,7 @@ function translateDomainError(error: unknown): { message: string; suggestions: s
         suggestions: [
           'Use If-Else or Boolean logic to ensure only one path executes',
           'Check that conditional branches don\'t execute simultaneously',
-          'Verify logic flow produces single result'
+          'Verify logic workspace produces single result'
         ]
       };
 

@@ -228,7 +228,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
             <div className="text-[var(--text-primary)] font-medium">Timeline</div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
-            Back to Flow
+            Back to Workspace
           </Button>
         </div>
 

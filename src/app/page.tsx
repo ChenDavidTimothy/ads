@@ -41,7 +41,7 @@ export default async function LandingPage() {
     "Real-time collaboration and workspace sharing",
     "Advanced animation and timing controls",
     "Export to multiple video formats",
-    "Integrated data sources and logic flows"
+    "Integrated data sources and logic workspaces"
   ];
 
   return (

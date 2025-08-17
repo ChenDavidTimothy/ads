@@ -1,50 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 :root {
   color-scheme: dark;
   
-  /* Enhanced steel-inspired surface hierarchy */
-  --surface-0: #0a0a0a;
-  --surface-1: #1a1a1a;        /* Was #121212 - increased contrast */
-  --surface-2: #242424;        /* Was #181818 - more distinct */
-  --surface-interactive: #2a2a2a; /* Was #1e1e1e - clearer interaction */
+  /* Logo-inspired surface hierarchy */
+  --surface-0: #000000;
+  --surface-1: #0a0a0a;
+  --surface-2: #1a1a1a;
+  --surface-interactive: #242424;
 
-  /* Steel-toned borders with premium feel */
-  --border-primary: #404040;    /* Was #2a2a2a - much more visible */
-  --border-secondary: #4a4a4a;  /* Was #333333 - refined steel tone */
-  --border-accent: rgba(100, 116, 139, 0.4); /* Steel blue accent */
+  /* Logo-inspired borders */
+  --border-primary: #404040;
+  --border-secondary: #4a4a4a;
+  --border-accent: rgba(124, 58, 237, 0.4); /* Logo purple accent */
 
-  /* Text hierarchy - More refined contrast */
-  --text-primary: #ffffff;
-  --text-secondary: #d4d4d4;
-  --text-tertiary: #a1a1a1;
-  --text-muted: #737373;
-  --text-disabled: #525252;
+  /* Text hierarchy - Logo-inspired */
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-tertiary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
 
-  /* Accent colors */
-  --accent-500: #3b82f6;
-  --accent-600: #2563eb;
-  --accent-700: #1d4ed8;
-  --accent-900: #1e3a8a;
-  --accent-100: rgba(59, 130, 246, 0.08);
+  /* Logo color scheme - Blue gradient */
+  --accent-500: #2563eb;
+  --accent-600: #1d4ed8;
+  --accent-700: #1e3a8a;
+  --accent-900: #1e40af;
+  --accent-100: rgba(37, 99, 235, 0.08);
 
-  /* New button accent variants - replacing jarring blue */
-  --accent-primary: var(--node-animation);     /* Purple #c084fc */
-  --accent-secondary: var(--node-data);        /* Cyan #22d3ee */
-  --accent-success: var(--success-500);        /* Green #22c55e */
+  /* Logo-inspired accent variants */
+  --accent-primary: #7c3aed;     /* Logo purple */
+  --accent-secondary: #2563eb;   /* Logo blue */
+  --accent-success: #22c55e;
   --accent-ghost: transparent;
 
-  /* Transform color standardization - unified system */
-  --transform-move: var(--node-animation);     /* Purple */
-  --transform-rotate: var(--node-logic);       /* Blue */
-  --transform-scale: var(--node-geometry);     /* Pink */
-  --transform-fade: var(--warning-500);        /* Orange */
-  --transform-color: var(--accent-secondary);  /* Cyan */
+  /* Transform color standardization - Logo theme */
+  --transform-move: var(--accent-primary);     /* Purple */
+  --transform-rotate: var(--accent-secondary); /* Blue */
+  --transform-scale: #f472b6;                  /* Pink */
+  --transform-fade: #f59e0b;                   /* Orange */
+  --transform-color: #22d3ee;                  /* Cyan */
 
   /* Button interaction states */
   --button-ghost-hover: var(--surface-2);
@@ -58,22 +58,22 @@
   --danger-500: #ef4444;
   --danger-600: #dc2626;
 
-  /* Node category colors - Much lighter for visibility */
-  --node-animation: #6d28d9;    /* Dark premium purple - was #c084fc */
-  --node-logic: #60a5fa;        /* Light blue */  
-  --node-data: #22d3ee;         /* Light cyan */
-  --node-geometry: #f472b6;     /* Light pink */
+  /* Node category colors - Logo theme */
+  --node-animation: #7c3aed;    /* Logo purple */
+  --node-logic: #2563eb;        /* Logo blue */  
+  --node-data: #22d3ee;         /* Cyan */
+  --node-geometry: #f472b6;     /* Pink */
   --node-output: #a78bfa;       /* Light purple */
 
-  /* Purple-derived shadow colors for consistency */
-  --purple-shadow-subtle: color-mix(in srgb, var(--node-animation) 30%, transparent);
-  --purple-shadow-medium: color-mix(in srgb, var(--node-animation) 85%, transparent);
-  --purple-shadow-strong: color-mix(in srgb, var(--node-animation) 95%, transparent);
+  /* Logo purple-derived shadow colors */
+  --purple-shadow-subtle: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  --purple-shadow-medium: color-mix(in srgb, var(--accent-primary) 85%, transparent);
+  --purple-shadow-strong: color-mix(in srgb, var(--accent-primary) 95%, transparent);
   
-  /* Edge-specific colors for maximum visibility */
+  /* Edge-specific colors */
   --edge-stroke: var(--purple-shadow-medium);
   --edge-stroke-hover: var(--purple-shadow-strong);
-  --edge-stroke-selected: var(--node-animation);
+  --edge-stroke-selected: var(--accent-primary);
 
   /* Glass-like effects */
   --glass-bg: rgba(255, 255, 255, 0.02);
@@ -81,7 +81,7 @@
   --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
 
-  /* Modal backdrop colors for better contrast */
+  /* Modal backdrop colors */
   --modal-backdrop: rgba(0, 0, 0, 0.4);
   --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
 
@@ -91,7 +91,7 @@
   --radius-md: 3px;
   --radius-lg: 4px;
 
-  /* Refined spacing system - Much tighter */
+  /* Refined spacing system */
   --space-0: 0px;
   --space-half: 2px;
   --space-1: 3px;
@@ -102,7 +102,7 @@
   --space-6: 18px;
   --space-8: 24px;
 
-  /* Component sizing - Ultra-compact */
+  /* Component sizing */
   --node-min-width: 14rem;
   --tab-max-width: 16rem;
   --sidebar-width: 18rem;
@@ -112,7 +112,6 @@
   --card-padding: var(--space-3);
   --card-padding-sm: var(--space-2);
   --button-padding-sm: var(--space-1) var(--space-3);
-  --button-padding-md: var(--space-2) var(--space-4);
   --button-padding-lg: var(--space-3) var(--space-5);
   --input-padding: var(--space-2) var(--space-3);
 
@@ -131,43 +130,43 @@
 }
 
 :root[data-theme="dark"] {
-  /* Enhanced steel-inspired surface hierarchy */
-  --surface-0: #0a0a0a;
-  --surface-1: #1a1a1a;        /* Was #121212 - increased contrast */
-  --surface-2: #242424;        /* Was #181818 - more distinct */
-  --surface-interactive: #2a2a2a; /* Was #1e1e1e - clearer interaction */
+  /* Logo-inspired surface hierarchy */
+  --surface-0: #000000;
+  --surface-1: #0a0a0a;
+  --surface-2: #1a1a1a;
+  --surface-interactive: #242424;
 
-  /* Steel-toned borders with premium feel */
-  --border-primary: #404040;    /* Was #2a2a2a - much more visible */
-  --border-secondary: #4a4a4a;  /* Was #333333 - refined steel tone */
-  --border-accent: rgba(100, 116, 139, 0.4); /* Steel blue accent */
+  /* Logo-inspired borders */
+  --border-primary: #404040;
+  --border-secondary: #4a4a4a;
+  --border-accent: rgba(124, 58, 237, 0.4); /* Logo purple accent */
 
-  /* Text hierarchy - More refined contrast */
-  --text-primary: #ffffff;
-  --text-secondary: #d4d4d4;
-  --text-tertiary: #a1a1a1;
-  --text-muted: #737373;
-  --text-disabled: #525252;
+  /* Text hierarchy - Logo-inspired */
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-tertiary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
 
-  /* Accent colors */
-  --accent-500: #3b82f6;
-  --accent-600: #2563eb;
-  --accent-700: #1d4ed8;
-  --accent-900: #1e3a8a;
-  --accent-100: rgba(59, 130, 246, 0.08);
+  /* Logo color scheme - Blue gradient */
+  --accent-500: #2563eb;
+  --accent-600: #1d4ed8;
+  --accent-700: #1e3a8a;
+  --accent-900: #1e40af;
+  --accent-100: rgba(37, 99, 235, 0.08);
 
-  /* New button accent variants - replacing jarring blue */
-  --accent-primary: var(--node-animation);     /* Purple #c084fc */
-  --accent-secondary: var(--node-data);        /* Cyan #22d3ee */
-  --accent-success: var(--success-500);        /* Green #22c55e */
+  /* Logo-inspired accent variants */
+  --accent-primary: #7c3aed;     /* Logo purple */
+  --accent-secondary: #2563eb;   /* Logo blue */
+  --accent-success: #22c55e;
   --accent-ghost: transparent;
 
-  /* Transform color standardization - unified system */
-  --transform-move: var(--node-animation);     /* Purple */
-  --transform-rotate: var(--node-logic);       /* Blue */
-  --transform-scale: var(--node-geometry);     /* Pink */
-  --transform-fade: var(--warning-500);        /* Orange */
-  --transform-color: var(--accent-secondary);  /* Cyan */
+  /* Transform color standardization - Logo theme */
+  --transform-move: var(--accent-primary);     /* Purple */
+  --transform-rotate: var(--accent-secondary); /* Blue */
+  --transform-scale: #f472b6;                  /* Pink */
+  --transform-fade: #f59e0b;                   /* Orange */
+  --transform-color: #22d3ee;                  /* Cyan */
 
   /* Button interaction states */
   --button-ghost-hover: var(--surface-2);
@@ -181,22 +180,22 @@
   --danger-500: #ef4444;
   --danger-600: #dc2626;
 
-  /* Node category colors - Much lighter for visibility */
-  --node-animation: #6d28d9;    /* Dark premium purple - was #c084fc */
-  --node-logic: #60a5fa;        /* Light blue */  
-  --node-data: #22d3ee;         /* Light cyan */
-  --node-geometry: #f472b6;     /* Light pink */
+  /* Node category colors - Logo theme */
+  --node-animation: #7c3aed;    /* Logo purple */
+  --node-logic: #2563eb;        /* Logo blue */  
+  --node-data: #22d3ee;         /* Cyan */
+  --node-geometry: #f472b6;     /* Pink */
   --node-output: #a78bfa;       /* Light purple */
 
-  /* Purple-derived shadow colors for consistency */
-  --purple-shadow-subtle: color-mix(in srgb, var(--node-animation) 30%, transparent);
-  --purple-shadow-medium: color-mix(in srgb, var(--node-animation) 85%, transparent);
-  --purple-shadow-strong: color-mix(in srgb, var(--node-animation) 95%, transparent);
+  /* Logo purple-derived shadow colors */
+  --purple-shadow-subtle: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  --purple-shadow-medium: color-mix(in srgb, var(--accent-primary) 85%, transparent);
+  --purple-shadow-strong: color-mix(in srgb, var(--accent-primary) 95%, transparent);
   
-  /* Edge-specific colors for maximum visibility */
+  /* Edge-specific colors */
   --edge-stroke: var(--purple-shadow-medium);
   --edge-stroke-hover: var(--purple-shadow-strong);
-  --edge-stroke-selected: var(--node-animation);
+  --edge-stroke-selected: var(--accent-primary);
 
   /* Glass-like effects */
   --glass-bg: rgba(255, 255, 255, 0.02);
@@ -204,7 +203,7 @@
   --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
 
-  /* Modal backdrop colors for better contrast */
+  /* Modal backdrop colors */
   --modal-backdrop: rgba(0, 0, 0, 0.4);
   --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
 
@@ -214,7 +213,7 @@
   --radius-md: 3px;
   --radius-lg: 4px;
 
-  /* Refined spacing system - Much tighter */
+  /* Refined spacing system */
   --space-0: 0px;
   --space-half: 2px;
   --space-1: 3px;
@@ -225,7 +224,7 @@
   --space-6: 18px;
   --space-8: 24px;
 
-  /* Component sizing - Ultra-compact */
+  /* Component sizing */
   --node-min-width: 14rem;
   --tab-max-width: 16rem;
   --sidebar-width: 18rem;
@@ -235,7 +234,6 @@
   --card-padding: var(--space-3);
   --card-padding-sm: var(--space-2);
   --button-padding-sm: var(--space-1) var(--space-3);
-  --button-padding-md: var(--space-2) var(--space-4);
   --button-padding-lg: var(--space-3) var(--space-5);
   --input-padding: var(--space-2) var(--space-3);
 

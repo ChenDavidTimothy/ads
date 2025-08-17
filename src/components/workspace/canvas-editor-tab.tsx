@@ -42,7 +42,7 @@ function OverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName:
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
 
-	// Find the canvas node in the flow and its current assignments
+	// Find the canvas node in the workspace and its current assignments
 	const canvasNode = useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
 	const assignments: PerObjectAssignments = (canvasNode?.data?.perObjectAssignments as PerObjectAssignments) ?? {};
 
@@ -148,7 +148,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 						<div className="text-[var(--text-primary)] font-medium">Canvas</div>
 					</div>
 					<button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
-						Back to Flow
+						Back to Workspace
 					</button>
 				</div>
 

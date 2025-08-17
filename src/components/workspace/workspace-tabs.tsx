@@ -39,7 +39,7 @@ export function WorkspaceTabs() {
 
   return (
     <div className="flex items-center gap-1">
-      <TabButton active={activeTab === 'flow'} onClick={() => handleTabChange('flow')} icon={<Layers3 size={16} />} label="Flow" />
+      <TabButton active={activeTab === 'flow'} onClick={() => handleTabChange('flow')} icon={<Layers3 size={16} />} label="Workspace" />
       {EDITOR_TABS.map((tab) => {
         const canShow = selectedNodeId && selectedNodeType === tab.requiredNodeType;
         if (!canShow) return null;

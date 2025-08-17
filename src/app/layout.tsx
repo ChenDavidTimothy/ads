@@ -2,7 +2,7 @@
 import "@/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Montserrat } from "next/font/google";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { NotificationProvider } from "@/hooks/use-notifications";
@@ -75,8 +75,8 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
     "apple-mobile-web-app-title": "Batchion",
-    "msapplication-TileColor": "#6d28d9",
-    "theme-color": "#6d28d9",
+    "msapplication-TileColor": "#7c3aed",
+    "theme-color": "#7c3aed",
   },
   icons: [
     { rel: "icon", url: "/favicon.ico" },
@@ -86,9 +86,9 @@ export const metadata: Metadata = {
   ],
 };
 
-const geist = Geist({
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-montserrat",
   display: "swap",
   preload: true,
 });
@@ -97,7 +97,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`} data-theme="dark">
+    <html lang="en" className={`${montserrat.variable}`} data-theme="dark">
       <head>
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -117,8 +117,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="application-name" content="Batchion" />
-        <meta name="msapplication-TileColor" content="#6d28d9" />
-        <meta name="theme-color" content="#6d28d9" />
+        <meta name="msapplication-TileColor" content="#7c3aed" />
+        <meta name="theme-color" content="#7c3aed" />
       </head>
       <body className="bg-[var(--surface-0)] text-[var(--text-primary)] antialiased">
         <NotificationProvider>

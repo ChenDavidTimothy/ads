@@ -20,11 +20,6 @@ export function WorkspaceHeader() {
 	return (
 		<div className="h-14 bg-[var(--surface-1)] border-b border-[var(--border-primary)] flex items-center justify-between px-[var(--space-4)]">
 			<div className="flex items-center gap-[var(--space-4)]">
-				{/* Brand Logo - Links back to dashboard */}
-				<Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
-					<Logo className="w-24 h-6" />
-				</Link>
-				
 				{/* Left Sidebar Toggle */}
 				<Button
 					variant="ghost"
@@ -34,6 +29,11 @@ export function WorkspaceHeader() {
 				>
 					<PanelLeft size={16} />
 				</Button>
+				
+				{/* Brand Logo - Links back to dashboard */}
+				<Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
+					<Logo className="w-24 h-6" />
+				</Link>
 				
 				{/* Workspace Tabs */}
 				<WorkspaceTabs />
