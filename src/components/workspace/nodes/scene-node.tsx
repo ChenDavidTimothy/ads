@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { SceneNodeData } from "@/shared/types/nodes";
 import { MonitorPlay, Play } from "lucide-react";
-import { useIndividualGeneration } from "../flow/hooks/use-individual-generation";
+import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
 
 export function SceneNode({ data, selected, id }: NodeProps<SceneNodeData>) {
   const nodeDefinition = getNodeDefinition('scene');

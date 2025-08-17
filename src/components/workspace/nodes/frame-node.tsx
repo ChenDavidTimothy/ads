@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { FrameNodeData } from "@/shared/types/nodes";
 import { Image as ImageIcon, Camera } from "lucide-react";
-import { useIndividualGeneration } from "../flow/hooks/use-individual-generation";
+import { useIndividualGeneration } from "../flow/hooks/use-generation-service";
 
 export function FrameNode({ data, selected, id }: NodeProps<FrameNodeData>) {
   const nodeDefinition = getNodeDefinition('frame');
