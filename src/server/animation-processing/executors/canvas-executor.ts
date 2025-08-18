@@ -5,10 +5,55 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
 import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import type { PerObjectAssignments, ObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, isObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
+
+// Helper types for better type safety
+interface VariableBinding {
+  target?: string;
+  boundResultNodeId?: string;
+}
+
+interface NodeDataWithBindings {
+  position?: { x: number; y: number };
+  rotation?: number;
+  scale?: { x: number; y: number };
+  opacity?: number;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  variableBindings?: Record<string, VariableBinding>;
+  variableBindingsByObject?: Record<string, Record<string, VariableBinding>>;
+  perObjectAssignments?: PerObjectAssignments;
+}
+
+interface InputWithMetadata {
+  data: unknown;
+  metadata?: {
+    perObjectTimeCursor?: Record<string, number>;
+    perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+    perObjectAssignments?: PerObjectAssignments;
+  };
+}
+
+// Type guard for scene objects
+function isSceneObject(obj: unknown): obj is SceneObject {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'type' in obj &&
+    'properties' in obj &&
+    'initialPosition' in obj
+  );
+}
+
+// Type guard for valid object with id
+function hasId(obj: unknown): obj is { id: string } {
+  return typeof obj === 'object' && obj !== null && 'id' in obj && typeof (obj as { id: unknown }).id === 'string';
+}
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
@@ -20,17 +65,17 @@ export class CanvasNodeExecutor extends BaseExecutor {
     context: ExecutionContext,
     connections: ReactFlowEdge[]
   ): Promise<void> {
-    const data = node.data as unknown as Record<string, unknown>;
+    const data = node.data as unknown as NodeDataWithBindings;
     const inputs = getConnectedInputs(
       context,
       connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
       node.data.identifier.id,
       'input'
-    );
+    ) as InputWithMetadata[];
 
     // Resolve variable bindings (Result nodes) at node level
-    const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
-    const bindingsByObject = (data.variableBindingsByObject as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>> | undefined) ?? {};
+    const bindings = data.variableBindings ?? {};
+    const bindingsByObject = data.variableBindingsByObject ?? {};
     const readVarGlobal = (key: string): unknown => {
       const rid = bindings[key]?.boundResultNodeId;
       if (!rid) return undefined;
@@ -46,13 +91,13 @@ export class CanvasNodeExecutor extends BaseExecutor {
 
     // Start with node defaults as overrides
     const baseOverrides: CanvasOverrides = {
-      position: data.position as { x: number; y: number } | undefined,
-      rotation: data.rotation as number | undefined,
-      scale: data.scale as { x: number; y: number } | undefined,
-      opacity: data.opacity as number | undefined,
-      fillColor: data.fillColor as string | undefined,
-      strokeColor: data.strokeColor as string | undefined,
-      strokeWidth: data.strokeWidth as number | undefined,
+      position: data.position,
+      rotation: data.rotation,
+      scale: data.scale,
+      opacity: data.opacity,
+      fillColor: data.fillColor,
+      strokeColor: data.strokeColor,
+      strokeWidth: data.strokeWidth,
     };
 
     // Apply all global binding keys generically into baseOverrides
@@ -61,7 +106,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
     for (const key of globalKeys) {
       const val = readVarGlobal(key);
       if (val === undefined) continue;
-      setByPath(nodeOverrides as unknown as Record<string, unknown>, key, val);
+      setByPath(nodeOverrides as Record<string, unknown>, key, val);
     }
 
     const passThrough: unknown[] = [];
@@ -69,7 +114,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
     // Read optional per-object assignments metadata (from upstream)
     const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
     // Read node-level assignments stored on the Canvas node itself
-    const nodeAssignments: PerObjectAssignments | undefined = (data.perObjectAssignments as PerObjectAssignments | undefined);
+    const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments;
 
     // Merge upstream + node-level; node-level takes precedence per object
     const mergedAssignments: PerObjectAssignments | undefined = (() => {
@@ -83,7 +128,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
         const base = upstreamAssignments?.[objectId];
         const overrides = nodeAssignments?.[objectId];
         const merged = mergeObjectAssignments(base, overrides);
-        if (merged) result[objectId] = merged as ObjectAssignments;
+        if (merged) result[objectId] = merged;
       }
       return result;
     })();
@@ -91,63 +136,73 @@ export class CanvasNodeExecutor extends BaseExecutor {
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
-        if (typeof obj === 'object' && obj !== null && 'id' in obj) {
-          const original = obj as SceneObject as unknown as Record<string, unknown>;
-          const objectId = (original as { id: string }).id;
+        if (isSceneObject(obj)) {
+          const original = obj;
+          const objectId = original.id;
           const reader = readVarForObject(objectId);
           const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides));
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
           for (const key of objectKeys) {
             const val = reader(key);
             if (val === undefined) continue;
-            setByPath(objectOverrides as unknown as Record<string, unknown>, key, val);
+            setByPath(objectOverrides as Record<string, unknown>, key, val);
           }
 
           const assignmentsForObject = mergedAssignments?.[objectId];
           const maskedAssignmentsForObject = (() => {
             if (!assignmentsForObject) return undefined;
             const keys = objectKeys; // ✅ Only use per-object bindings, not global keys
-            const next: any = { ...assignmentsForObject };
+            const next: ObjectAssignments = { ...assignmentsForObject };
             const initial = { ...(next.initial ?? {}) } as Record<string, unknown>;
+            
+            // Remove properties that are bound by variables
             for (const key of keys) {
               switch (key) {
-                case 'position.x': deleteByPath(initial as any, 'position.x'); break;
-                case 'position.y': deleteByPath(initial as any, 'position.y'); break;
-                case 'scale.x': deleteByPath(initial as any, 'scale.x'); break;
-                case 'scale.y': deleteByPath(initial as any, 'scale.y'); break;
-                case 'rotation': delete (initial as any).rotation; break;
-                case 'opacity': delete (initial as any).opacity; break;
-                case 'fillColor': delete (initial as any).fillColor; break;
-                case 'strokeColor': delete (initial as any).strokeColor; break;
-                case 'strokeWidth': delete (initial as any).strokeWidth; break;
+                case 'position.x': deleteByPath(initial, 'position.x'); break;
+                case 'position.y': deleteByPath(initial, 'position.y'); break;
+                case 'scale.x': deleteByPath(initial, 'scale.x'); break;
+                case 'scale.y': deleteByPath(initial, 'scale.y'); break;
+                case 'rotation': delete initial.rotation; break;
+                case 'opacity': delete initial.opacity; break;
+                case 'fillColor': delete initial.fillColor; break;
+                case 'strokeColor': delete initial.strokeColor; break;
+                case 'strokeWidth': delete initial.strokeWidth; break;
                 default: break;
               }
             }
+            
+            // Prune empty objects recursively
             const prunedInitial = (() => {
-              const obj = JSON.parse(JSON.stringify(initial));
-              const prune = (o: any) => {
-                if (!o || typeof o !== 'object') return o;
+              const obj = JSON.parse(JSON.stringify(initial)) as Record<string, unknown>;
+              const prune = (o: Record<string, unknown>): Record<string, unknown> => {
                 for (const k of Object.keys(o)) {
-                  if (o[k] && typeof o[k] === 'object') {
-                    o[k] = prune(o[k]);
-                    if (Object.keys(o[k]).length === 0) delete o[k];
+                  if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) {
+                    o[k] = prune(o[k] as Record<string, unknown>);
+                    if (Object.keys(o[k] as Record<string, unknown>).length === 0) {
+                      delete o[k];
+                    }
                   }
                 }
                 return o;
               };
               return prune(obj);
             })();
-            if (Object.keys(prunedInitial).length > 0) next.initial = prunedInitial; else delete next.initial;
-            return next as ObjectAssignments;
+            
+            if (Object.keys(prunedInitial).length > 0) {
+              next.initial = prunedInitial;
+            } else {
+              delete next.initial;
+            }
+            return next;
           })();
 
           const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
-            original as unknown as SceneObject,
+            original,
             objectOverrides,
             maskedAssignmentsForObject
           );
 
-          const styled: Record<string, unknown> = {
+          const styled: SceneObject = {
             ...original,
             initialPosition,
             initialRotation,
@@ -163,7 +218,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
     }
 
     // Pass through existing per-object animations/cursors and the merged assignments
-    const firstMeta = inputs[0]?.metadata as { perObjectTimeCursor?: Record<string, number>; perObjectAnimations?: Record<string, SceneAnimationTrack[]>; perObjectAssignments?: PerObjectAssignments } | undefined;
+    const firstMeta = inputs[0]?.metadata;
 
     setNodeOutput(
       context,
@@ -179,17 +234,18 @@ export class CanvasNodeExecutor extends BaseExecutor {
     );
   }
 
-  private extractPerObjectAssignments(inputs: Array<{ metadata?: unknown }>): PerObjectAssignments | undefined {
+  private extractPerObjectAssignments(inputs: InputWithMetadata[]): PerObjectAssignments | undefined {
     const merged: PerObjectAssignments = {};
     let found = false;
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      const fromMeta = input.metadata?.perObjectAssignments;
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        if (!isObjectAssignments(assignment)) continue;
         found = true;
         const base = merged[objectId];
-        const combined = mergeObjectAssignments(base, assignment as any);
-        if (combined) merged[objectId] = combined as ObjectAssignments;
+        const combined = mergeObjectAssignments(base, assignment);
+        if (combined) merged[objectId] = combined;
       }
     }
     return found ? merged : undefined;

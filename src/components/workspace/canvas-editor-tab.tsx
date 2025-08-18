@@ -4,11 +4,10 @@ import React, { useMemo, useState, useCallback } from 'react';
 import type { Node, Edge } from 'reactflow';
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
-import type { NodeData } from '@/shared/types/nodes';
+import type { NodeData, CanvasNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
 import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
-import { Link as LinkIcon } from 'lucide-react';
 import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import { Badge } from '@/components/ui/badge';
@@ -17,16 +16,16 @@ function CanvasBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; key
 	const { state } = useWorkspace();
 	const { resetToDefault } = useVariableBinding(nodeId, objectId);
 	
-	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined;
 	if (!node) return null;
 	let bound: string | undefined;
 	if (objectId) {
-		bound = (node?.data?.variableBindingsByObject?.[objectId]?.[keyName]?.boundResultNodeId) as string | undefined;
+		bound = node.data?.variableBindingsByObject?.[objectId]?.[keyName]?.boundResultNodeId;
 	} else {
-		bound = (node?.data?.variableBindings?.[keyName]?.boundResultNodeId) as string | undefined;
+		bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
 	}
 	if (!bound) return null;
-	const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+	const name = state.flow.nodes.find(n => n.data?.identifier?.id === bound)?.data?.identifier?.displayName;
 	
 	return (
 		<Badge variant="bound" onRemove={() => resetToDefault(keyName)}>{name ? `Bound: ${name}` : 'Bound'}</Badge>
@@ -43,15 +42,15 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
 
 	// Find the canvas node in the workspace and its current assignments
-	const canvasNode = useMemo(() => state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any, [state.flow.nodes, nodeId]);
-	const assignments: PerObjectAssignments = (canvasNode?.data?.perObjectAssignments as PerObjectAssignments) ?? {};
+	const canvasNode = useMemo(() => state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined, [state.flow.nodes, nodeId]);
+	const assignments: PerObjectAssignments = useMemo(() => canvasNode?.data?.perObjectAssignments ?? {}, [canvasNode]);
 
 	// NEW: Use enhanced object detection that understands duplication
 	const upstreamObjects = useMemo(() => {
 		const tracker = new FlowTracker();
 		
 		// Use new duplicate-aware method
-		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes as unknown as any[], state.flow.edges as any[]);
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
 		
 		// Convert to display format expected by SelectionList
 		return objectDescriptors.map(obj => ({
@@ -93,12 +92,12 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 			mergedInitial.scale = { ...(baseInitial.scale as Record<string, unknown>), ...(updates.scale as Record<string, unknown>) };
 		}
 		const cleanedInitial = Object.fromEntries(Object.entries(mergedInitial).filter(([_, v]) => v !== undefined));
-		current.initial = cleanedInitial as any;
+		current.initial = cleanedInitial;
 		next[selectedObjectId] = current;
 		updateFlow({
 			nodes: state.flow.nodes.map((n) => {
-				if (((n as any)?.data?.identifier?.id) !== nodeId) return n;
-				return { ...n, data: { ...(n as any).data, perObjectAssignments: next } } as unknown as typeof n;
+				if (n.data?.identifier?.id !== nodeId) return n;
+				return { ...n, data: { ...n.data, perObjectAssignments: next } };
 			})
 		});
 	}, [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]);
@@ -109,8 +108,8 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 		delete next[selectedObjectId];
 		updateFlow({
 			nodes: state.flow.nodes.map((n) => {
-				if (((n as any)?.data?.identifier?.id) !== nodeId) return n;
-				return { ...n, data: { ...(n as any).data, perObjectAssignments: next } } as unknown as typeof n;
+				if (n.data?.identifier?.id !== nodeId) return n;
+				return { ...n, data: { ...n.data, perObjectAssignments: next } };
 			})
 		});
 	}, [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]);
@@ -169,7 +168,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 						objectId={selectedObjectId}
 						assignments={assignments}
 						onChange={handleUpdateAssignment}
-						onClear={handleClearAssignment}
+						_onClear={handleClearAssignment}
 					/>
 				) : (
 					<CanvasDefaultProperties nodeId={nodeId} />
@@ -181,7 +180,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 
 function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const { state, updateFlow } = useWorkspace();
-	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined;
 	const data = (node?.data ?? {}) as Record<string, unknown> & {
 		position?: { x: number; y: number };
 		scale?: { x: number; y: number };
@@ -203,15 +202,15 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 		strokeColor?: string;
 		strokeWidth?: number;
 	}) ?? {};
-	const posX = (data.position?.x as number) ?? (def.position?.x as number) ?? 0;
-	const posY = (data.position?.y as number) ?? (def.position?.y as number) ?? 0;
-	const scaleX = (data.scale?.x as number) ?? (def.scale?.x as number) ?? 1;
-	const scaleY = (data.scale?.y as number) ?? (def.scale?.y as number) ?? 1;
-	const rotation = (data.rotation as number) ?? (def.rotation as number) ?? 0;
-	const opacity = (data.opacity as number) ?? (def.opacity as number) ?? 1;
-	const fillColor = (data.fillColor as string) ?? (def.fillColor as string) ?? '';
-	const strokeColor = (data.strokeColor as string) ?? (def.strokeColor as string) ?? '';
-	const strokeWidth = (data.strokeWidth as number) ?? (def.strokeWidth as number) ?? 1;
+	const posX = data.position?.x ?? def.position?.x ?? 0;
+	const posY = data.position?.y ?? def.position?.y ?? 0;
+	const scaleX = data.scale?.x ?? def.scale?.x ?? 1;
+	const scaleY = data.scale?.y ?? def.scale?.y ?? 1;
+	const rotation = data.rotation ?? def.rotation ?? 0;
+	const opacity = data.opacity ?? def.opacity ?? 1;
+	const fillColor = data.fillColor ?? def.fillColor ?? '';
+	const strokeColor = data.strokeColor ?? def.strokeColor ?? '';
+	const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 1;
 
 	const isBound = (key: string) => !!bindings?.[key]?.boundResultNodeId;
 	const leftBorderClass = (key: string) => (isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '');
@@ -221,11 +220,11 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
-					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, x } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
+					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), position: { ...(n.data as CanvasNodeData)?.position, x } } })) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
-					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, position: { ...(n as any).data?.position, y } } } as any)) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
+					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), position: { ...(n.data as CanvasNodeData)?.position, y } } })) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
@@ -239,11 +238,11 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
-					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, x } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
+					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), scale: { ...(n.data as CanvasNodeData)?.scale, x } } })) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
-					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, scale: { ...(n as any).data?.scale, y } } } as any)) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
+					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), scale: { ...(n.data as CanvasNodeData)?.scale, y } } })) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
@@ -257,11 +256,11 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
-					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, rotation } } as any)) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
+					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, rotation } })) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
-					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, opacity } } as any)) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
+					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, opacity } })) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
@@ -274,13 +273,13 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 				<div>
-					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, fillColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
 				</div>
 				<div>
-					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeColor } } as any)) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
+					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
 				</div>
 				<div>
-					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => ((n as any).data?.identifier?.id) !== nodeId ? n : ({ ...n, data: { ...(n as any).data, strokeWidth } } as any)) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
+					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
 				</div>
 			</div>
 			<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
@@ -298,15 +297,15 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	);
 }
 
-function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, onClear }: {
+function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _onClear }: {
 	nodeId: string;
 	objectId: string;
 	assignments: PerObjectAssignments;
 	onChange: (updates: Record<string, unknown>) => void;
-	onClear: () => void;
+	_onClear: () => void;
 }) {
 	const { state } = useWorkspace();
-	const node = state.flow.nodes.find(n => (n as any)?.data?.identifier?.id === nodeId) as any;
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined;
 	const selectedOverrides = assignments[objectId];
 	const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
 		position?: { x: number; y: number };
@@ -338,7 +337,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 	};
 
 	const isBound = (key: string) => {
-		const vbAll = (node?.data?.variableBindingsByObject ?? {}) as Record<string, Record<string, { boundResultNodeId?: string }>>;
+		const vbAll = node?.data?.variableBindingsByObject ?? {};
 		return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
 	};
 	const isOverridden = (key: string) => {
@@ -364,15 +363,15 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		if (isBound(key)) return undefined; // Blank when bound
 		
 		switch (key) {
-			case 'position.x': return (initial.position?.x as number) ?? (base.position?.x as number) ?? (def.position?.x as number) ?? fallbackValue;
-			case 'position.y': return (initial.position?.y as number) ?? (base.position?.y as number) ?? (def.position?.y as number) ?? fallbackValue;
-			case 'scale.x': return (initial.scale?.x as number) ?? (base.scale?.x as number) ?? (def.scale?.x as number) ?? fallbackValue;
-			case 'scale.y': return (initial.scale?.y as number) ?? (base.scale?.y as number) ?? (def.scale?.y as number) ?? fallbackValue;
-			case 'rotation': return (initial.rotation as number) ?? (base.rotation as number) ?? (def.rotation as number) ?? fallbackValue;
-			case 'opacity': return (initial.opacity as number) ?? (base.opacity as number) ?? (def.opacity as number) ?? fallbackValue;
-			case 'fillColor': return (initial.fillColor as string) ?? (base.fillColor as string) ?? (def.fillColor as string) ?? fallbackValue;
-			case 'strokeColor': return (initial.strokeColor as string) ?? (base.strokeColor as string) ?? (def.strokeColor as string) ?? fallbackValue;
-			case 'strokeWidth': return (initial.strokeWidth as number) ?? (base.strokeWidth as number) ?? (def.strokeWidth as number) ?? fallbackValue;
+			case 'position.x': return initial.position?.x ?? base.position?.x ?? def.position?.x ?? fallbackValue;
+			case 'position.y': return initial.position?.y ?? base.position?.y ?? def.position?.y ?? fallbackValue;
+			case 'scale.x': return initial.scale?.x ?? base.scale?.x ?? def.scale?.x ?? fallbackValue;
+			case 'scale.y': return initial.scale?.y ?? base.scale?.y ?? def.scale?.y ?? fallbackValue;
+			case 'rotation': return initial.rotation ?? base.rotation ?? def.rotation ?? fallbackValue;
+			case 'opacity': return initial.opacity ?? base.opacity ?? def.opacity ?? fallbackValue;
+			case 'fillColor': return initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue;
+			case 'strokeColor': return initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? fallbackValue;
+			case 'strokeWidth': return initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? fallbackValue;
 			default: return fallbackValue;
 		}
 	};
@@ -382,8 +381,8 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, on
 		if (isBound(key)) return ''; // Empty string when bound
 		
 		switch (key) {
-			case 'fillColor': return (initial.fillColor as string) ?? (base.fillColor as string) ?? (def.fillColor as string) ?? fallbackValue;
-			case 'strokeColor': return (initial.strokeColor as string) ?? (base.strokeColor as string) ?? (def.strokeColor as string) ?? fallbackValue;
+			case 'fillColor': return initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue;
+			case 'strokeColor': return initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? fallbackValue;
 			default: return fallbackValue;
 		}
 	};

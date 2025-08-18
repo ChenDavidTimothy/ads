@@ -55,8 +55,8 @@ export function FlowEditorTab() {
 	}, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
 
 	// Debounced context sync to prevent performance issues during drag
-	const debouncedContextSync = useCallback(
-		debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
+	const debouncedContextSync = useMemo(
+		() => debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
 			updateFlow({ nodes: newNodes, edges: newEdges });
 		}, 50),
 		[updateFlow]
@@ -79,32 +79,48 @@ export function FlowEditorTab() {
 	const selectedEdgesRef = useRef<Edge[]>([]);
 
 	const handleSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
-		selectedNodesRef.current = (params.nodes as unknown as Node<NodeData>[]) ?? [];
-		selectedEdgesRef.current = (params.edges as Edge[]) ?? [];
+		selectedNodesRef.current = (params.nodes as Node<NodeData>[]) ?? [];
+		selectedEdgesRef.current = params.edges ?? [];
 	}, []);
 
 	// Use the robust deletion handlers from useFlowGraph - no custom keyboard handling needed
 
 	const ensureTimelineForNode = useCallback((nodeId: string) => {
 		if (state.editors.timeline[nodeId]) return;
-		const node = state.flow.nodes.find((n) => (n as any).id === nodeId || (n as any)?.data?.identifier?.id === nodeId) as any;
-		if (!node || node?.type !== 'animation') return;
-		const duration: number = typeof node?.data?.duration === 'number' ? node.data.duration : 3;
-		const rawTracks: AnimationTrack[] = Array.isArray(node?.data?.tracks) ? node.data.tracks : [];
-		const tracks: AnimationTrack[] = rawTracks.map((t, _, arr) => {
-			const anyT = t as any;
-			if (anyT.identifier) return t;
-			const identifier = generateTransformIdentifier(t.type, arr as AnimationTrack[]);
-			const { ...rest } = anyT as Omit<AnimationTrack, 'identifier'>;
-			return { ...(rest as object), identifier } as AnimationTrack;
+		
+		// Find node by ID or by identifier.id
+		const node = state.flow.nodes.find((n) => {
+			const flowNode = n as { id: string; type?: string; data?: { identifier?: { id: string }; duration?: number; tracks?: AnimationTrack[] } };
+			return flowNode.id === nodeId || flowNode.data?.identifier?.id === nodeId;
 		});
+		
+		if (!node || !('type' in node) || node.type !== 'animation') return;
+		
+		const animationNode = node as { data: { duration?: number; tracks?: AnimationTrack[] } };
+		const duration: number = typeof animationNode.data?.duration === 'number' ? animationNode.data.duration : 3;
+		const rawTracks: AnimationTrack[] = Array.isArray(animationNode.data?.tracks) ? animationNode.data.tracks : [];
+		
+		const tracks: AnimationTrack[] = rawTracks.map((track) => {
+			if ('identifier' in track && track.identifier) {
+				return track;
+			}
+			const identifier = generateTransformIdentifier(track.type, rawTracks);
+			return { ...track, identifier };
+		});
+		
 		updateTimeline(nodeId, { duration, tracks });
 	}, [state.editors.timeline, state.flow.nodes, updateTimeline]);
 
 	// Stable handler refs to avoid recreating nodeTypes
-	const openTimelineRef = useRef<(nodeId: string) => void>(() => {});
-	const openCanvasRef = useRef<(nodeId: string) => void>(() => {});
-	const openLogViewerRef = useRef<(nodeId: string) => void>(() => {});
+	const openTimelineRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+		console.warn('Timeline handler not initialized yet for node:', nodeId);
+	});
+	const openCanvasRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+		console.warn('Canvas handler not initialized yet for node:', nodeId);
+	});
+	const openLogViewerRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+		console.warn('Log viewer handler not initialized yet for node:', nodeId);
+	});
 
 	useEffect(() => {
 		openTimelineRef.current = (nodeId: string) => {
@@ -159,10 +175,8 @@ export function FlowEditorTab() {
 	const {
 		videoUrl,
 		videos,
-		completedVideos,
 		canGenerate,
 		handleGenerateScene,
-		handleDownload,
 		handleDownloadAll,
 		handleDownloadVideo,
 		lastError,
@@ -171,7 +185,6 @@ export function FlowEditorTab() {
 		getValidationSummary,
 		// image
 		imageUrl,
-		hasImage,
 		canGenerateImage,
 		handleGenerateImage,
 		isGeneratingImage,

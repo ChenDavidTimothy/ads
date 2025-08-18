@@ -39,24 +39,26 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 		return allNodes.filter(node => node.label.toLowerCase().includes(q));
 	}, [allNodes, query]);
 
-	const handleNodeClick = (nodeType: string) => {
-		onAddNode(nodeType, { x: 250, y: 250 });
-	};
-
 	// Reusable node button renderer
-	const renderNodeButton = useCallback((node: {type: string; label: string; icon: string}) => (
-		<Button
-			key={node.type}
-			onClick={() => handleNodeClick(node.type)}
-			className="w-full justify-start gap-[var(--space-3)] bg-[var(--surface-2)] hover:bg-[var(--surface-interactive)] border border-[var(--border-primary)]"
-			size="md"
-		>
-			{/* Category color indicator */}
-			<span className={`inline-block w-1.5 h-4 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-primary)]'}`} />
-			{/* Placeholder for future icon system; keep label tight */}
-			<span className="text-[13px]">{node.label}</span>
-		</Button>
-	), [handleNodeClick, nodeColors]);
+	const renderNodeButton = useCallback((node: {type: string; label: string; icon: string}) => {
+		const handleNodeClick = (nodeType: string) => {
+			onAddNode(nodeType, { x: 250, y: 250 });
+		};
+
+		return (
+			<Button
+				key={node.type}
+				onClick={() => handleNodeClick(node.type)}
+				className="w-full justify-start gap-[var(--space-3)] bg-[var(--surface-2)] hover:bg-[var(--surface-interactive)] border border-[var(--border-primary)]"
+				size="md"
+			>
+				{/* Category color indicator */}
+				<span className={`inline-block w-1.5 h-4 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-primary)]'}`} />
+				{/* Placeholder for future icon system; keep label tight */}
+				<span className="text-[13px]">{node.label}</span>
+			</Button>
+		);
+	}, [onAddNode, nodeColors]);
 
 	// Category section renderer using CollapsibleSection
 	const renderCategorySection = (title: string, nodes: Array<{type: string; label: string; icon: string}>, iconComponent: React.ReactNode) => {

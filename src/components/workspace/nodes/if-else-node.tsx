@@ -3,12 +3,11 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
+
 import type { IfElseNodeData } from "@/shared/types/nodes";
 import { GitBranch } from "lucide-react";
 
 export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
-  const nodeDefinition = getNodeDefinition('if_else');
 
   const handleClass = "bg-[var(--node-logic)]";
 

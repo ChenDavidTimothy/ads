@@ -19,7 +19,7 @@ import type {
   CanvasNodeData
 } from "@/shared/types/nodes";
 import type { PropertySchema } from "@/shared/types/properties";
-import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
+
 import { BindButton } from '@/components/workspace/binding/bindings';
 
 interface PropertyPanelProps {
@@ -244,7 +244,7 @@ function SchemaBasedProperties({
 
     // Only nodes that support variableBindings get the bind adornment (animation, canvas)
     const supportsBinding = nodeType === 'animation' || nodeType === 'canvas';
-    const nodeId = (data as any)?.identifier?.id as string | undefined;
+    const nodeId = data.identifier.id;
 
     switch (schema.type) {
       case 'number':
@@ -411,7 +411,7 @@ function FilterSpecialProperties({
     );
   }, [upstreamObjects, nodeId]);
 
-  const selectedIds = new Set(data.selectedObjectIds);
+
 
   const handleToggleObject = (objectId: string) => {
     const currentSelected = new Set(data.selectedObjectIds);
@@ -445,8 +445,8 @@ function FilterSpecialProperties({
             items={upstreamObjects.map(obj => ({
               id: obj.data.identifier.id,
               label: obj.data.identifier.displayName,
-              icon: getNodeDefinition(obj.type!)?.rendering.icon,
-              color: (obj.data as any)?.color
+              icon: getNodeDefinition(obj.type)?.rendering.icon,
+              color: 'color' in obj.data ? (obj.data as { color?: string }).color : undefined
             }))}
             selectedIds={data.selectedObjectIds}
             onToggle={handleToggleObject}

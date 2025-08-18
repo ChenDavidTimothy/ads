@@ -1,7 +1,7 @@
 // src/components/workspace/result-log-modal.tsx - Production-ready debug output viewer
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useDebugContext } from "./flow/debug-context";

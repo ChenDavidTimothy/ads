@@ -3,7 +3,7 @@ import type { NodeData, AnimationTrack, SceneAnimationTrack } from "@/shared/typ
 import { setNodeOutput, getConnectedInputs, type ExecutionContext, type ExecutionValue } from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
-import { convertTracksToSceneAnimations, isPerObjectCursorMap, mergeCursorMaps } from "../scene/scene-assembler";
+import { convertTracksToSceneAnimations, mergeCursorMaps } from "../scene/scene-assembler";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
@@ -72,16 +72,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const subPath = key.slice(typePrefix.length);
         const val = reader(key);
         if (val === undefined) continue;
-        if (subPath === 'easing') {
-          (next as any).easing = val as any;
+        if (subPath === 'easing' && (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')) {
+          next.easing = val;
           continue;
         }
         if (subPath === 'startTime' && typeof val === 'number') {
-          (next as any).startTime = val as number;
+          next.startTime = val;
           continue;
         }
         if (subPath === 'duration' && typeof val === 'number') {
-          (next as any).duration = val as number;
+          next.duration = val;
           continue;
         }
         setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
@@ -93,16 +93,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const subPath = key.slice(trackTypePrefix.length);
           const val = reader(key);
           if (val === undefined) continue;
-          if (subPath === 'easing') {
-            (next as any).easing = val as any;
+          if (subPath === 'easing' && (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')) {
+            next.easing = val;
             continue;
           }
           if (subPath === 'startTime' && typeof val === 'number') {
-            (next as any).startTime = val as number;
+            next.startTime = val;
             continue;
           }
           if (subPath === 'duration' && typeof val === 'number') {
-            (next as any).duration = val as number;
+            next.duration = val;
             continue;
           }
           setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
@@ -113,16 +113,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const sub = key.slice(trackScalarPrefix.length);
           const val = reader(key);
           if (val === undefined) continue;
-          if (sub === 'easing') {
-            (next as any).easing = val as any;
+          if (sub === 'easing' && (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')) {
+            next.easing = val;
             continue;
           }
           if (sub === 'startTime' && typeof val === 'number') {
-            (next as any).startTime = val as number;
+            next.startTime = val;
             continue;
           }
           if (sub === 'duration' && typeof val === 'number') {
-            (next as any).duration = val as number;
+            next.duration = val;
             continue;
           }
         }
@@ -156,7 +156,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const base = upstreamAssignments?.[objectId];
         const overrides = nodeAssignments?.[objectId];
         const merged = mergeObjectAssignments(base, overrides);
-        if (merged) result[objectId] = merged as ObjectAssignments;
+        if (merged) result[objectId] = merged;
       }
       return result;
     })();
@@ -187,46 +187,55 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const base = mergedAssignments?.[objectId];
           if (!base) return undefined;
           const keys = [...globalBindingKeys, ...objectBindingKeys];
-          const next: any = { ...base };
-          const prunedTracks: any[] = [];
-          const tracks: any[] = Array.isArray(base.tracks) ? base.tracks.map(t => ({ ...t, properties: t.properties ? JSON.parse(JSON.stringify(t.properties)) : undefined })) : [];
+          const next = { ...base };
+          const prunedTracks: Array<Record<string, unknown>> = [];
+          const tracks = Array.isArray(base.tracks) ? base.tracks.map(t => ({ ...t, properties: t.properties ? JSON.parse(JSON.stringify(t.properties)) : undefined })) : [];
           for (const t of tracks) {
             // Remove overrides for any bound keys that apply to this track
             for (const key of keys) {
-              const trackPrefix = `track.${t.trackId}.`;
+              const trackId = (t as { trackId?: string }).trackId;
+              if (!trackId) continue;
+              const trackPrefix = `track.${trackId}.`;
               if (key.startsWith(trackPrefix)) {
                 const sub = key.slice(trackPrefix.length);
                 if (sub === 'duration' || sub === 'startTime' || sub === 'easing') {
-                  delete (t as any)[sub];
+                  delete (t as Record<string, unknown>)[sub];
                   continue;
                 }
-                const typePrefix = `${t.type}.`;
+                const trackType = (t as { type?: string }).type;
+                if (!trackType) continue;
+                const typePrefix = `${trackType}.`;
                 if (sub.startsWith(typePrefix)) {
                   const propPath = sub.slice(typePrefix.length);
                   if (propPath === 'duration' || propPath === 'startTime' || propPath === 'easing') {
-                    delete (t as any)[propPath as 'duration' | 'startTime' | 'easing'];
-                  } else if (t.properties) {
-                    deleteByPath(t.properties as any, propPath);
+                    delete (t as Record<string, unknown>)[propPath];
+                  } else if ((t as { properties?: Record<string, unknown> }).properties) {
+                    deleteByPath((t as { properties: Record<string, unknown> }).properties, propPath);
                   }
                 }
                 continue;
               }
-              const typePrefix = `${t.type}.`;
+              const trackType = (t as { type?: string }).type;
+              if (!trackType) continue;
+              const typePrefix = `${trackType}.`;
               if (key.startsWith(typePrefix)) {
                 const subPath = key.slice(typePrefix.length);
                 if (subPath === 'duration' || subPath === 'startTime' || subPath === 'easing') {
-                  delete (t as any)[subPath as 'duration' | 'startTime' | 'easing'];
-                } else if (t.properties) {
-                  deleteByPath(t.properties as any, subPath);
+                  delete (t as Record<string, unknown>)[subPath];
+                } else if ((t as { properties?: Record<string, unknown> }).properties) {
+                  deleteByPath((t as { properties: Record<string, unknown> }).properties, subPath);
                 }
               }
             }
-            const hasProps = t.properties && Object.keys(t.properties as Record<string, unknown>).length > 0;
-            const hasMeta = (t as any).easing !== undefined || (t as any).startTime !== undefined || (t as any).duration !== undefined;
+            const properties = (t as { properties?: Record<string, unknown> }).properties;
+            const hasProps = properties && Object.keys(properties).length > 0;
+            const tRecord = t as Record<string, unknown>;
+            const hasMeta = tRecord.easing !== undefined || tRecord.startTime !== undefined || tRecord.duration !== undefined;
             if (hasProps || hasMeta) prunedTracks.push(t);
           }
-          if (prunedTracks.length > 0) (next as any).tracks = prunedTracks;
-          else delete (next as any).tracks;
+          const nextRecord = next as Record<string, unknown>;
+          if (prunedTracks.length > 0) nextRecord.tracks = prunedTracks;
+          else delete nextRecord.tracks;
           return { [objectId]: next } as PerObjectAssignments;
         })();
 
@@ -267,7 +276,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private clonePerObjectAnimations(map: Record<string, SceneAnimationTrack[]>): Record<string, SceneAnimationTrack[]> {
     const cloned: Record<string, SceneAnimationTrack[]> = {};
     for (const [k, v] of Object.entries(map)) {
-      cloned[k] = v.map((t) => ({ ...t, properties: JSON.parse(JSON.stringify(t.properties)) }));
+      cloned[k] = v.map((t) => ({ 
+        ...t, 
+        properties: JSON.parse(JSON.stringify(t.properties)) 
+      })) as SceneAnimationTrack[];
     }
     return cloned;
   }
@@ -304,8 +316,8 @@ export class AnimationNodeExecutor extends BaseExecutor {
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         found = true;
         const base = merged[objectId];
-        const combined = mergeObjectAssignments(base, assignment as any);
-        if (combined) merged[objectId] = combined as ObjectAssignments;
+        const combined = mergeObjectAssignments(base, assignment);
+        if (combined) merged[objectId] = combined;
       }
     }
     return found ? merged : undefined;

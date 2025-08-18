@@ -101,6 +101,16 @@ interface ValidationResult {
     nodeName?: string;
   }>;
 }
+// Convert BackendNode to ReactFlowNode with proper typing
+function convertBackendNodeToReactFlowNode(backendNode: BackendNode): ReactFlowNode<NodeData> {
+  return {
+    id: backendNode.id,
+    type: backendNode.type,
+    position: backendNode.position,
+    data: backendNode.data as unknown as NodeData
+  };
+}
+
 // Merge node data with registry defaults, ignoring undefined values and fixing point2d shapes
 function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknown): Record<string, unknown> {
   const definition = nodeType ? getNodeDefinition(nodeType) : undefined;
@@ -351,8 +361,9 @@ export const animationRouter = createTRPCRouter({
 
         // Execute flow with debug stopping point
         const engine = new ExecutionEngine();
+        const reactFlowNodes = backendNodes.map(convertBackendNodeToReactFlowNode);
         const executionContext = await engine.executeFlowDebug(
-          backendNodes as ReactFlowNode<NodeData>[],
+          reactFlowNodes,
           backendEdges,
           targetIdentifierId
         );
@@ -457,8 +468,9 @@ export const animationRouter = createTRPCRouter({
         }
 
         // Comprehensive flow validation with graceful error handling
+        const reactFlowNodesForValidation = backendNodes.map(convertBackendNodeToReactFlowNode);
         const flowValidationResult = await validateFlowGracefully(
-          backendNodes as unknown as ReactFlowNode<NodeData>[],
+          reactFlowNodesForValidation,
           backendEdges
         );
         if (!flowValidationResult.success) {
@@ -471,13 +483,14 @@ export const animationRouter = createTRPCRouter({
 
         // If we get here, validation passed - proceed with generation
         const engine = new ExecutionEngine();
+        const reactFlowNodesForExecution = backendNodes.map(convertBackendNodeToReactFlowNode);
         const executionContext = await engine.executeFlow(
-          backendNodes as ReactFlowNode<NodeData>[],
+          reactFlowNodesForExecution,
           backendEdges,
         );
 
         // Find all scene nodes for multi-scene support
-        const sceneNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'scene') as ReactFlowNode<NodeData>[];
+        const sceneNodes = reactFlowNodesForExecution.filter((node) => node.type === 'scene');
         if (sceneNodes.length === 0) {
           return {
             success: false,
@@ -701,16 +714,17 @@ export const animationRouter = createTRPCRouter({
 
         // Universal validations; do NOT require Scene node or Insert for images
         const engine = new ExecutionEngine();
-        engine.runUniversalValidation(backendNodes as ReactFlowNode<NodeData>[], backendEdges);
+        const reactFlowNodesForImageValidation = backendNodes.map(convertBackendNodeToReactFlowNode);
+        engine.runUniversalValidation(reactFlowNodesForImageValidation, backendEdges);
 
         const executionContext = await engine.executeFlow(
-          backendNodes as ReactFlowNode<NodeData>[],
+          reactFlowNodesForImageValidation,
           backendEdges,
           { requireScene: false }
         );
 
         // Find all frame nodes
-        const frameNodes = backendNodes.filter((node: ReactFlowNodeInput) => node.type === 'frame') as ReactFlowNode<NodeData>[];
+        const frameNodes = reactFlowNodesForImageValidation.filter((node) => node.type === 'frame');
         if (frameNodes.length === 0) {
           return {
             success: false,
@@ -852,8 +866,9 @@ export const animationRouter = createTRPCRouter({
 
       // Flow validation
       try {
+        const reactFlowNodesForFlowValidation = backendNodes.map(convertBackendNodeToReactFlowNode);
         const flowValidation = await validateFlowGracefully(
-          backendNodes as ReactFlowNode<NodeData>[],
+          reactFlowNodesForFlowValidation,
           backendEdges
         );
         allErrors.push(...flowValidation.errors);
@@ -1046,7 +1061,7 @@ function validateConnectionsGracefully(
 
 async function validateFlowGracefully(
   nodes: ReactFlowNode<NodeData>[],
-  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string; targetHandle?: string }>
+  edges: BackendEdge[]
 ): Promise<ValidationResult> {
   const errors: ValidationResult['errors'] = [];
   

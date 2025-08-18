@@ -1,13 +1,13 @@
 "use client";
 
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { TabButton } from './tab-button';
 import { useWorkspace } from './workspace-context';
 import { Layers3, Timer } from 'lucide-react';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface EditorTabConfig {
-  key: string;
+  key: 'timeline' | 'canvas' | 'image' | 'audio';
   label: string;
   icon: ReactNode;
   requiredNodeType?: string;
@@ -23,8 +23,8 @@ export function WorkspaceTabs() {
   const { state, updateUI } = useWorkspace();
   const { activeTab, selectedNodeId, selectedNodeType } = state.ui;
 
-  const handleTabChange = (tabKey: string) => {
-    updateUI({ activeTab: tabKey as any });
+  const handleTabChange = (tabKey: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio') => {
+    updateUI({ activeTab: tabKey });
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tabKey);
     if (selectedNodeId && tabKey !== 'flow') url.searchParams.set('node', selectedNodeId);
@@ -33,8 +33,8 @@ export function WorkspaceTabs() {
   };
 
   const getNodeDisplayName = (nodeId: string) => {
-    const node = state.flow.nodes.find((n) => (n as any)?.data?.identifier?.id === nodeId) as any;
-    return node?.data?.identifier?.displayName ?? 'Unknown';
+    const node = state.flow.nodes.find((n) => n.data.identifier.id === nodeId);
+    return node?.data.identifier.displayName ?? 'Unknown';
   };
 
   return (
@@ -50,7 +50,7 @@ export function WorkspaceTabs() {
             active={isActive}
             onClick={() => handleTabChange(tab.key)}
             icon={tab.icon}
-            label={`${tab.label} (${getNodeDisplayName(selectedNodeId!)})`}
+            label={`${tab.label} (${getNodeDisplayName(selectedNodeId)})`}
             onClose={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}
           />
         );

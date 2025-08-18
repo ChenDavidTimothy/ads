@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { NumberField, SelectField, ColorField } from "@/components/ui/form-fields";
 import { cn } from "@/lib/utils";
 import { transformFactory } from '@/shared/registry/transforms';
-import { generateTransformIdentifier, getTransformDisplayLabel, validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
+import { generateTransformIdentifier, getTransformDisplayLabel } from '@/lib/defaults/transforms';
 import { TransformTracker } from '@/lib/flow/transform-tracking';
 import type {
   AnimationTrack,
@@ -15,6 +15,7 @@ import type {
   FadeTrackProperties,
   ColorTrackProperties,
   NodeData,
+  AnimationNodeData,
 } from "@/shared/types/nodes";
 import { deepMerge } from '@/shared/utils/object-path';
 import { 
@@ -33,11 +34,15 @@ function BindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: 
   const { state } = useWorkspace();
   const { resetToDefault } = useVariableBinding(nodeId, objectId);
   
-  const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === nodeId) as any;
-  const vb = (objectId ? (node?.data?.variableBindingsByObject?.[objectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
+  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId);
+  if (!node) return null;
+  
+  const animationData = node.data as AnimationNodeData;
+  const vb = (objectId ? (animationData.variableBindingsByObject?.[objectId] ?? {}) : (animationData.variableBindings ?? {}));
   const bound = vb?.[keyName]?.boundResultNodeId;
   if (!bound) return null;
-  const name = state.flow.nodes.find(n => (n as any).data?.identifier?.id === bound)?.data?.identifier?.displayName as string | undefined;
+  const boundNode = state.flow.nodes.find(n => n.data?.identifier?.id === bound);
+  const name = boundNode?.data?.identifier?.displayName;
   
   return (
     <Badge variant="bound" onRemove={() => resetToDefault(keyName)}>{name ? `Bound: ${name}` : 'Bound'}</Badge>
@@ -117,13 +122,13 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
-export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange, selectedObjectId, perObjectAssignments, onUpdateTrackOverride, onSelectedTrackChange }: TimelineEditorCoreProps) {
+export function TimelineEditorCore({ animationNodeId, duration: controlledDuration, tracks: controlledTracks, onChange, selectedObjectId: _selectedObjectId, perObjectAssignments: _perObjectAssignments, onUpdateTrackOverride: _onUpdateTrackOverride, onSelectedTrackChange }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(controlledDuration);
   const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [localDragTracks, setLocalDragTracks] = useState<AnimationTrack[]>([]); // Local state for smooth dragging
-  const { state, updateFlow } = useWorkspace();
+  const { state } = useWorkspace();
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
@@ -213,9 +218,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
     [duration, tracks, onChange]
   );
 
-  const validateTransformDisplayName = useCallback((name: string, trackId: string) => {
-    return validateNameHelper(name, trackId, tracks);
-  }, [tracks]);
+
 
   const deleteTrack = useCallback((trackId: string) => {
     setTracks((prev) => {
@@ -328,9 +331,11 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
               className="w-32"
               bindAdornment={<BindButton nodeId={animationNodeId} bindingKey="duration" />}
               disabled={(() => {
-                const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
-                const vb = (node?.data?.variableBindings ?? {}) as Record<string, { boundResultNodeId?: string }>;
-                return !!vb?.['duration']?.boundResultNodeId;
+                const node = state.flow.nodes.find(n => n.data?.identifier?.id === animationNodeId);
+                if (!node) return false;
+                const animationData = node.data as AnimationNodeData;
+                const vb = animationData.variableBindings ?? {};
+                return !!vb?.duration?.boundResultNodeId;
               })()}
             />
           </div>
@@ -447,7 +452,6 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
 interface TrackPropertiesProps {
   track: AnimationTrack;
   onChange: (updates: Partial<AnimationTrack>) => void;
-  allTracks: AnimationTrack[];
   onDisplayNameChange: (trackId: string, newName: string) => boolean;
   validateDisplayName: (name: string, trackId: string) => string | null;
   trackOverride?: TrackOverride;
@@ -455,7 +459,7 @@ interface TrackPropertiesProps {
   selectedObjectId?: string;
 }
 
-export function TrackProperties({ track, onChange, allTracks, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
+export function TrackProperties({ track, onChange, onDisplayNameChange, validateDisplayName, trackOverride: override, animationNodeId, selectedObjectId }: TrackPropertiesProps) {
   const [editingName, setEditingName] = useState(false);
   const [tempDisplayName, setTempDisplayName] = useState(track.identifier.displayName);
 
@@ -479,45 +483,45 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
       switch (track.type) {
         case "move": {
           if (override) {
-            onChange({ properties: updates as any });
+            onChange({ properties: updates as MoveTrackProperties });
           } else {
-            const mergedProps: MoveTrackProperties = deepMerge(track.properties as MoveTrackProperties, updates as Partial<MoveTrackProperties>);
+            const mergedProps = deepMerge(track.properties, updates) as MoveTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
         case "rotate": {
           if (override) {
-            onChange({ properties: updates as any });
+            onChange({ properties: updates as RotateTrackProperties });
           } else {
-            const mergedProps: RotateTrackProperties = deepMerge(track.properties as RotateTrackProperties, updates as Partial<RotateTrackProperties>);
+            const mergedProps = deepMerge(track.properties, updates) as RotateTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
         case "scale": {
           if (override) {
-            onChange({ properties: updates as any });
+            onChange({ properties: updates as ScaleTrackProperties });
           } else {
-            const mergedProps: ScaleTrackProperties = deepMerge(track.properties as ScaleTrackProperties, updates as Partial<ScaleTrackProperties>);
+            const mergedProps = deepMerge(track.properties, updates) as ScaleTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
         case "fade": {
           if (override) {
-            onChange({ properties: updates as any });
+            onChange({ properties: updates as FadeTrackProperties });
           } else {
-            const mergedProps: FadeTrackProperties = deepMerge(track.properties as FadeTrackProperties, updates as Partial<FadeTrackProperties>);
+            const mergedProps = deepMerge(track.properties, updates) as FadeTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
         case "color": {
           if (override) {
-            onChange({ properties: updates as any });
+            onChange({ properties: updates as ColorTrackProperties });
           } else {
-            const mergedProps: ColorTrackProperties = deepMerge(track.properties as ColorTrackProperties, updates as Partial<ColorTrackProperties>);
+            const mergedProps = deepMerge(track.properties, updates) as ColorTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
@@ -530,7 +534,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
   );
 
   // Variable discovery uses animationNodeId to mirror object discovery behavior
-  const { state, updateFlow } = useWorkspace();
+  const { state } = useWorkspace();
 
   const bindButton = (fieldKey: string) => {
     // Prefer track-specific key when a track is selected
@@ -539,47 +543,72 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
   };
 
   const isBound = (fieldKey: string): boolean => {
-    const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
+    const node = state.flow.nodes.find(n => n.data?.identifier?.id === animationNodeId);
+    if (!node) return false;
+    
+    const animationData = node.data as AnimationNodeData;
     const scoped = `track.${track.identifier.id}.${fieldKey}`;
     if (selectedObjectId) {
-      const vbObj = (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) as Record<string, { boundResultNodeId?: string }>;
-      return !!(vbObj?.[scoped]?.boundResultNodeId || vbObj?.[fieldKey]?.boundResultNodeId);
+      const vbObj = (animationData.variableBindingsByObject?.[selectedObjectId] ?? {}) as Record<string, { boundResultNodeId?: string }>;
+      return !!(vbObj?.[scoped]?.boundResultNodeId ?? vbObj?.[fieldKey]?.boundResultNodeId);
     }
-    const vb = (node?.data?.variableBindings ?? {}) as Record<string, { boundResultNodeId?: string }>;
-    return !!(vb?.[scoped]?.boundResultNodeId || vb?.[fieldKey]?.boundResultNodeId);
+    const vb = (animationData.variableBindings ?? {}) as Record<string, { boundResultNodeId?: string }>;
+    return !!(vb?.[scoped]?.boundResultNodeId ?? vb?.[fieldKey]?.boundResultNodeId);
   };
 
   // Helper to get value for bound fields - blank if bound, normal value if not
-  const getTrackFieldValue = (fieldKey: string, overrideValue: any, defaultValue: any) => {
+  const getTrackFieldValue = function<T>(fieldKey: string, overrideValue: T | undefined, defaultValue: T): T | undefined {
     if (isBound(fieldKey)) return undefined; // Blank when bound
     return overrideValue ?? defaultValue;
   };
 
+  // Type-safe property accessors for overrides
+  const getOverrideProperty = function<T>(path: string): T | undefined {
+    if (!override?.properties) return undefined;
+    const props = override.properties as Record<string, unknown>;
+    
+    const parts = path.split('.');
+    let current: unknown = props;
+    
+    for (const part of parts) {
+      if (current && typeof current === 'object' && current !== null) {
+        current = (current as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
+    }
+    
+    return current as T | undefined;
+  };
+
   // Helpers to compute per-field override/bound state for labels
   const isFieldOverridden = (key: string): boolean => {
-    const p = (override?.properties as any) ?? {};
+    const p = override?.properties ?? {};
     switch (key) {
-      case 'move.from.x': return p?.from?.x !== undefined;
-      case 'move.from.y': return p?.from?.y !== undefined;
-      case 'move.to.x': return p?.to?.x !== undefined;
-      case 'move.to.y': return p?.to?.y !== undefined;
-      case 'rotate.from': return p?.from !== undefined;
-      case 'rotate.to': return p?.to !== undefined;
-      case 'scale.from': return p?.from !== undefined;
-      case 'scale.to': return p?.to !== undefined;
-      case 'fade.from': return p?.from !== undefined;
-      case 'fade.to': return p?.to !== undefined;
-      case 'color.property': return p?.property !== undefined;
-      case 'color.from': return p?.from !== undefined;
-      case 'color.to': return p?.to !== undefined;
+      case 'move.from.x': return (p?.from as { x?: number })?.x !== undefined;
+      case 'move.from.y': return (p?.from as { y?: number })?.y !== undefined;
+      case 'move.to.x': return (p?.to as { x?: number })?.x !== undefined;
+      case 'move.to.y': return (p?.to as { y?: number })?.y !== undefined;
+      case 'rotate.from': return (p?.from as number) !== undefined;
+      case 'rotate.to': return (p?.to as number) !== undefined;
+      case 'scale.from': return (p?.from as number) !== undefined;
+      case 'scale.to': return (p?.to as number) !== undefined;
+      case 'fade.from': return (p?.from as number) !== undefined;
+      case 'fade.to': return (p?.to as number) !== undefined;
+      case 'color.property': return (p?.property as string) !== undefined;
+      case 'color.from': return (p?.from as string) !== undefined;
+      case 'color.to': return (p?.to as string) !== undefined;
       default: return false;
     }
   };
   const isFieldBound = (key: string): boolean => {
-    const node = state.flow.nodes.find(n => (n as any).data?.identifier?.id === animationNodeId) as any;
+    const node = state.flow.nodes.find(n => n.data?.identifier?.id === animationNodeId);
+    if (!node) return false;
+    
+    const animationData = node.data as AnimationNodeData;
     const scopedKey = `track.${track.identifier.id}.${key}`;
-    const vb = (selectedObjectId ? (node?.data?.variableBindingsByObject?.[selectedObjectId] ?? {}) : (node?.data?.variableBindings ?? {})) as Record<string, { boundResultNodeId?: string }>;
-    return !!(vb?.[scopedKey]?.boundResultNodeId || vb?.[key]?.boundResultNodeId);
+    const vb = selectedObjectId ? (animationData.variableBindingsByObject?.[selectedObjectId] ?? {}) : (animationData.variableBindings ?? {});
+    return !!(vb?.[scopedKey]?.boundResultNodeId ?? vb?.[key]?.boundResultNodeId);
   };
   const labelWithOverride = (base: string) => {
     return base;
@@ -681,7 +710,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
         <SelectField
           label={labelWithOverride("Easing")}
-          value={(override?.easing as any) ?? track.easing}
+          value={override?.easing ?? track.easing}
           onChange={(easing) => onChange({ easing: easing as AnimationTrack["easing"] })}
           options={easingOptions}
         />
@@ -701,8 +730,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label={labelWithOverride("X")}
-                value={getTrackFieldValue("move.from.x", (override?.properties as any)?.from?.x, track.properties.from.x)}
-                onChange={(x) => updateProperties({ from: { x } } as any)}
+                value={getTrackFieldValue("move.from.x", getOverrideProperty<number>("from.x"), track.properties.from.x)}
+                onChange={(x) => updateProperties({ from: { x } } as Partial<MoveTrackProperties>)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.x`)}
                 disabled={isBound('move.from.x')}
@@ -711,8 +740,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
               <NumberField
                 label={labelWithOverride("Y")}
-                value={getTrackFieldValue("move.from.y", (override?.properties as any)?.from?.y, track.properties.from.y)}
-                onChange={(y) => updateProperties({ from: { y } } as any)}
+                value={getTrackFieldValue("move.from.y", getOverrideProperty<number>("from.y"), track.properties.from.y)}
+                onChange={(y) => updateProperties({ from: { y } } as Partial<MoveTrackProperties>)}
                 defaultValue={0}
                 bindAdornment={bindButton(`move.from.y`)}
                 disabled={isBound('move.from.y')}
@@ -732,8 +761,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label={labelWithOverride("X")}
-                value={getTrackFieldValue("move.to.x", (override?.properties as any)?.to?.x, track.properties.to.x)}
-                onChange={(x) => updateProperties({ to: { x } } as any)}
+                value={getTrackFieldValue("move.to.x", getOverrideProperty<number>("to.x"), track.properties.to.x)}
+                onChange={(x) => updateProperties({ to: { x } } as Partial<MoveTrackProperties>)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.x`)}
                 disabled={isBound('move.to.x')}
@@ -741,8 +770,8 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
               <NumberField
                 label={labelWithOverride("Y")}
-                value={getTrackFieldValue("move.to.y", (override?.properties as any)?.to?.y, track.properties.to.y)}
-                onChange={(y) => updateProperties({ to: { y } } as any)}
+                value={getTrackFieldValue("move.to.y", getOverrideProperty<number>("to.y"), track.properties.to.y)}
+                onChange={(y) => updateProperties({ to: { y } } as Partial<MoveTrackProperties>)}
                 defaultValue={100}
                 bindAdornment={bindButton(`move.to.y`)}
                 disabled={isBound('move.to.y')}
@@ -763,7 +792,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From")}
-              value={getTrackFieldValue("rotate.from", (override?.properties as any)?.from, track.properties.from)}
+              value={getTrackFieldValue("rotate.from", getOverrideProperty<number>("from"), track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={0}
@@ -773,7 +802,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To")}
-              value={getTrackFieldValue("rotate.to", (override?.properties as any)?.to, track.properties.to)}
+              value={getTrackFieldValue("rotate.to", getOverrideProperty<number>("to"), track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={1}
@@ -795,7 +824,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From")}
-              value={getTrackFieldValue("scale.from", (override?.properties as any)?.from, track.properties.from)}
+              value={getTrackFieldValue("scale.from", getOverrideProperty<number>("from"), track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.1}
               defaultValue={1}
@@ -805,7 +834,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To")}
-              value={getTrackFieldValue("scale.to", (override?.properties as any)?.to, track.properties.to)}
+              value={getTrackFieldValue("scale.to", getOverrideProperty<number>("to"), track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.1}
               defaultValue={2}
@@ -827,7 +856,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <NumberField
               label={labelWithOverride("From")}
-              value={getTrackFieldValue("fade.from", (override?.properties as any)?.from, track.properties.from)}
+              value={getTrackFieldValue("fade.from", getOverrideProperty<number>("from"), track.properties.from)}
               onChange={(from) => updateProperties({ from })}
               step={0.05}
               defaultValue={1}
@@ -837,7 +866,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             />
             <NumberField
               label={labelWithOverride("To")}
-              value={getTrackFieldValue("fade.to", (override?.properties as any)?.to, track.properties.to)}
+              value={getTrackFieldValue("fade.to", getOverrideProperty<number>("to"), track.properties.to)}
               onChange={(to) => updateProperties({ to })}
               step={0.05}
               defaultValue={0}
@@ -860,7 +889,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
           {/* Property Selection - Full Width */}
           <SelectField
             label={labelWithOverride("Property")}
-            value={getTrackFieldValue("color.property", (override?.properties as any)?.property, track.properties.property)}
+            value={getTrackFieldValue("color.property", getOverrideProperty<string>("property"), track.properties.property) ?? track.properties.property}
             onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
               { value: "fill", label: "Fill" },
@@ -877,7 +906,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <ColorField 
                 label={labelWithOverride("From")}
-                value={getTrackFieldValue("color.from", (override?.properties as any)?.from, track.properties.from)} 
+                value={getTrackFieldValue("color.from", getOverrideProperty<string>("from"), track.properties.from) ?? track.properties.from} 
                 onChange={(from) => updateProperties({ from })} 
                 bindAdornment={bindButton(`color.from`)} 
                 disabled={isBound('color.from')}
@@ -885,7 +914,7 @@ export function TrackProperties({ track, onChange, allTracks, onDisplayNameChang
               />
               <ColorField 
                 label={labelWithOverride("To")}
-                value={getTrackFieldValue("color.to", (override?.properties as any)?.to, track.properties.to)} 
+                value={getTrackFieldValue("color.to", getOverrideProperty<string>("to"), track.properties.to) ?? track.properties.to} 
                 onChange={(to) => updateProperties({ to })} 
                 bindAdornment={bindButton(`color.to`)} 
                 disabled={isBound('color.to')}

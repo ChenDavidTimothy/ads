@@ -2,11 +2,10 @@
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
+
 import type { MergeNodeData } from "@/shared/types/nodes";
 
 export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
-  const nodeDefinition = getNodeDefinition('merge');
   const portCount = data.inputPortCount || 2;
   
   // Generate dynamic input ports

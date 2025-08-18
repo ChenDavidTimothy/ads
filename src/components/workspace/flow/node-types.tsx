@@ -2,6 +2,7 @@
 import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
 import { AnimationNode, ResultNode, CanvasNode } from "../nodes";
+import type { NodeData } from '@/shared/types/nodes';
 
 export function createNodeTypes(
   handleOpenTimelineEditor: (nodeId: string) => void,
@@ -18,8 +19,8 @@ export function createNodeTypes(
       );
     } else if (nodeType === 'canvas') {
       nodeTypes[nodeType] = (props: Parameters<typeof CanvasNode>[0]) => (
-        <CanvasNode {...(props as any)} onOpenCanvas={() => {
-          const nodeId = (props as any).data.identifier.id as string;
+        <CanvasNode {...props} onOpenCanvas={() => {
+          const nodeId = (props.data as NodeData).identifier.id;
           // Defer to FlowEditorTab wiring; URL push handled there
           const event = new CustomEvent('open-canvas-editor', { detail: { nodeId } });
           window.dispatchEvent(event);

@@ -10,7 +10,7 @@ import type { ResultNodeData } from "@/shared/types/nodes";
 import { useDebugContext } from "../flow/debug-context";
 import { logger } from "@/lib/logger";
 import { Target } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+
 
 interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;

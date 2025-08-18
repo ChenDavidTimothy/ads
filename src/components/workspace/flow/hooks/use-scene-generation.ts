@@ -10,18 +10,7 @@ import { createBrowserClient } from '@/utils/supabase/client';
 type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
 type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
 
-// Type definitions for API responses
-type GenerateSceneResponse = 
-  | { success: false; errors: Array<{ type: 'error' | 'warning'; code: string; message: string; suggestions?: string[] }>; canRetry: boolean }
-  | { success: true; immediateResult: { jobId: string; contentUrl: string; nodeId: string; nodeName: string; nodeType: 'scene' } }
-  | { success: true; jobs: Array<{ jobId: string; nodeId: string; nodeName: string; nodeType: 'scene' }>; totalNodes: number; generationType: 'batch' }
-  | { success: true; videoUrl?: string; jobId?: string; jobIds?: string[] }; // Legacy format
 
-type GenerateImageResponse = 
-  | { success: false; errors: Array<{ type: 'error' | 'warning'; code: string; message: string; suggestions?: string[] }>; canRetry: boolean }
-  | { success: true; immediateResult: { jobId: string; contentUrl: string; nodeId: string; nodeName: string; nodeType: 'frame' } }
-  | { success: true; jobs: Array<{ jobId: string; nodeId: string; nodeName: string; nodeType: 'frame' }>; totalNodes: number; generationType: 'batch' }
-  | { success: true; imageUrl?: string; jobId?: string; jobIds?: string[] }; // Legacy format
 
 // Backend graceful error response type
 interface ValidationError {
@@ -178,7 +167,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         console.warn('[GENERATION] Using legacy response format - migration incomplete');
         const sceneNodes = nodes.filter(n => n.type === 'scene');
         const videoJobs: VideoJob[] = data.jobIds.map((jobId: string, index: number) => {
-          const sceneNode = sceneNodes[index] as RFNode<NodeData>;
+          const sceneNode = sceneNodes[index]!;
           const idData = sceneNode ? 
             (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier :
             { id: `legacy-${index}`, displayName: `Scene ${index + 1}` };
@@ -191,7 +180,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         });
         
         setVideos(videoJobs);
-        startMultiJobPolling(data.jobIds, currentAttempt);
+        startMultiJobPolling(data.jobIds as string[], currentAttempt);
         return;
       }
       
@@ -272,7 +261,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         if (errorMessages.length > 0) {
           const primaryError = errorMessages[0];
-          if (primaryError && primaryError.message) {
+          if (primaryError?.message) {
             toast.error('Cannot generate image', primaryError.message);
             setLastError(primaryError.message);
           }
@@ -327,7 +316,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         const jobIds = (data as unknown as { jobIds?: string[] }).jobIds ?? [];
         if (jobIds.length > 0) {
           setImages(jobIds.map((jobId, index) => {
-            const frameNode = nodes.filter(n => n.type === 'frame')[index] as RFNode<NodeData>;
+            const frameNode = nodes.filter(n => n.type === 'frame')[index]!;
             const idData = frameNode ? 
               (frameNode.data as { identifier: { id: string; displayName: string } }).identifier :
               { id: `legacy-${index}`, displayName: `Frame ${index + 1}` };
@@ -342,7 +331,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     },
     onError: (error) => {
       setIsGeneratingImage(false);
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = error instanceof Error ? error.message : `Image generation failed: ${String(error)}`;
       setLastError(msg);
       toast.error('Image generation failed', msg);
     }
@@ -601,19 +590,25 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           const s = res.find(r => r.jobId === img.jobId);
           if (!s) return img;
           const newStatus = (s.status === 'completed' ? 'completed' : s.status === 'failed' ? 'failed' : s.status) as ImageJob['status'];
-          if (newStatus === 'completed' && 'videoUrl' in s && (s as any).videoUrl) {
-            // ignore videoUrl for images
-          }
-          return { ...img, status: newStatus, imageUrl: (s as any).videoUrl ?? img.imageUrl, error: (s as any).error ?? img.error };
+          
+          // Handle response with proper typing
+          const responseWithUrl = s as typeof s & { videoUrl?: string; error?: string };
+          
+          return { 
+            ...img, 
+            status: newStatus, 
+            imageUrl: responseWithUrl.videoUrl ?? img.imageUrl, 
+            error: responseWithUrl.error ?? img.error 
+          };
         }));
         res.forEach(s => { if (s.status === 'completed' || s.status === 'failed') pending.delete(s.jobId); });
-        if (pending.size > 0) setTimeout(poll, 1000);
+        if (pending.size > 0) setTimeout(() => void poll(), 1000);
         else setIsGeneratingImage(false);
       } catch {
         setIsGeneratingImage(false);
       }
     };
-    setTimeout(poll, 500);
+    setTimeout(() => void poll(), 500);
   }, [utils.animation.getRenderJobStatus]);
 
   // Extract polling logic into a separate function (legacy single job)
