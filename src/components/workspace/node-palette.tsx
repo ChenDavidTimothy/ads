@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { type XYPosition } from "reactflow";
-import { Search, Shapes, Clock, Cpu, Play, Monitor, Database, Type } from 'lucide-react';
+import { Search, Shapes, Clock, Cpu, Play, Monitor, Database, Type, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CollapsibleSection } from './flow/components/collapsible-section';
@@ -120,7 +120,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 					{renderCategorySection("Data", palette.dataNodes, <Database size={16} />)}
 					{renderCategorySection("Timing", palette.timingNodes, <Clock size={16} />)}
 					{renderCategorySection("Logic", palette.logicNodes, <Cpu size={16} />)}
-					{renderCategorySection("Animation", palette.animationNodes, <Play size={16} />)}
+					{renderCategorySection("Editor", palette.animationNodes, <Edit size={16} />)}
 					{renderCategorySection("Output", palette.outputNodes, <Monitor size={16} />)}
 				</>
 			)}

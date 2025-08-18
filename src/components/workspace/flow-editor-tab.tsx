@@ -151,6 +151,24 @@ export function FlowEditorTab() {
 	}, [updateUI]);
 
 	useEffect(() => {
+		const openTextStyleRef = (nodeId: string) => {
+			updateUI({ activeTab: 'textstyle', selectedNodeId: nodeId, selectedNodeType: 'textstyle' });
+			const url = new URL(window.location.href);
+			url.searchParams.set('tab', 'textstyle');
+			url.searchParams.set('node', nodeId);
+			window.history.pushState({}, '', url.toString());
+		};
+
+		const handler = (e: Event) => {
+			const detail = (e as CustomEvent<{ nodeId: string }>).detail;
+			if (detail?.nodeId) openTextStyleRef(detail.nodeId);
+		};
+		
+		window.addEventListener('open-textstyle-editor', handler as EventListener);
+		return () => window.removeEventListener('open-textstyle-editor', handler as EventListener);
+	}, [updateUI]);
+
+	useEffect(() => {
 		openLogViewerRef.current = (nodeId: string) => {
 			handleOpenResultLogViewer(nodeId);
 		};
