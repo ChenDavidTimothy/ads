@@ -4,7 +4,7 @@ import { setNodeOutput, getConnectedInputs, type ExecutionContext, type Executio
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, mergeCursorMaps } from "../scene/scene-assembler";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import type { PerObjectAssignments, ObjectAssignments } from "@/shared/properties/assignments";
 import { mergeObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
@@ -361,7 +361,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     return found ? merged : undefined;
   }
 
-  // Add new method (follows Canvas pattern exactly)
   private async executeTextStyle(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
@@ -394,8 +393,8 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return readVarGlobal(key);
     };
 
-    // Build text style overrides
-    const nodeOverrides: {
+    // Build text style overrides with proper defaults
+    const baseOverrides: {
       fontFamily?: string;
       fontWeight?: string;
       textAlign?: string;
@@ -409,37 +408,56 @@ export class AnimationNodeExecutor extends BaseExecutor {
       letterSpacing: data.letterSpacing as number,
     };
 
-    // Apply global variable bindings
+    // Apply all global binding keys generically into baseOverrides
     const globalKeys = Object.keys(bindings);
+    const nodeOverrides = JSON.parse(JSON.stringify(baseOverrides)) as typeof baseOverrides;
     for (const key of globalKeys) {
       const val = readVarGlobal(key);
-      if (val !== undefined) {
-        switch (key) {
-          case 'fontFamily':
-            if (typeof val === 'string') nodeOverrides.fontFamily = val;
-            break;
-          case 'fontWeight':
-            if (typeof val === 'string') nodeOverrides.fontWeight = val;
-            break;
-          case 'textAlign':
-            if (typeof val === 'string') nodeOverrides.textAlign = val;
-            break;
-          case 'lineHeight':
-            if (typeof val === 'number') nodeOverrides.lineHeight = val;
-            break;
-          case 'letterSpacing':
-            if (typeof val === 'number') nodeOverrides.letterSpacing = val;
-            break;
-        }
+      if (val === undefined) continue;
+      
+      // Type-safe property setting for TextStyle overrides
+      switch (key) {
+        case 'fontFamily':
+          if (typeof val === 'string') nodeOverrides.fontFamily = val;
+          break;
+        case 'fontWeight':
+          if (typeof val === 'string') nodeOverrides.fontWeight = val;
+          break;
+        case 'textAlign':
+          if (typeof val === 'string') nodeOverrides.textAlign = val;
+          break;
+        case 'lineHeight':
+          if (typeof val === 'number') nodeOverrides.lineHeight = val;
+          break;
+        case 'letterSpacing':
+          if (typeof val === 'number') nodeOverrides.letterSpacing = val;
+          break;
       }
     }
 
-    // Process assignments (identical to Canvas pattern)
-    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(inputs);
-    const nodeAssignments = data.perObjectAssignments as PerObjectAssignments | undefined;
-    const mergedAssignments = this.mergeAssignments(upstreamAssignments, nodeAssignments);
-
     const processedObjects: unknown[] = [];
+
+    // Read optional per-object assignments metadata (from upstream)
+    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs);
+    // Read node-level assignments stored on the TextStyle node itself
+    const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments as PerObjectAssignments | undefined;
+
+    // Merge upstream + node-level; node-level takes precedence per object
+    const mergedAssignments: PerObjectAssignments | undefined = (() => {
+      if (!upstreamAssignments && !nodeAssignments) return undefined;
+      const result: PerObjectAssignments = {};
+      const objectIds = new Set<string>([
+        ...Object.keys(upstreamAssignments ?? {}),
+        ...Object.keys(nodeAssignments ?? {}),
+      ]);
+      for (const objectId of objectIds) {
+        const base = upstreamAssignments?.[objectId];
+        const overrides = nodeAssignments?.[objectId];
+        const merged = mergeObjectAssignments(base, overrides);
+        if (merged) result[objectId] = merged;
+      }
+      return result;
+    })();
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -530,16 +548,64 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Apply per-object assignments
+    // Apply per-object assignments (masking bound properties)
     const assignmentsForObject = assignments?.[objectId];
-    if (assignmentsForObject?.initial) {
-      Object.assign(objectOverrides, assignmentsForObject.initial);
-    }
+    const maskedAssignmentsForObject = (() => {
+      if (!assignmentsForObject) return undefined;
+      const keys = objectKeys; // Only use per-object bindings
+      const next: ObjectAssignments = { ...assignmentsForObject };
+      const initial = { ...(next.initial ?? {}) } as Record<string, unknown>;
+      
+      // Remove properties that are bound by variables
+      for (const key of keys) {
+        switch (key) {
+          case 'fontFamily': delete initial.fontFamily; break;
+          case 'fontWeight': delete initial.fontWeight; break;
+          case 'textAlign': delete initial.textAlign; break;
+          case 'lineHeight': delete initial.lineHeight; break;
+          case 'letterSpacing': delete initial.letterSpacing; break;
+          default: break;
+        }
+      }
+      
+      // Prune empty objects recursively
+      const prunedInitial = (() => {
+        const obj = JSON.parse(JSON.stringify(initial)) as Record<string, unknown>;
+        const prune = (o: Record<string, unknown>): Record<string, unknown> => {
+          for (const k of Object.keys(o)) {
+            if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) {
+              o[k] = prune(o[k] as Record<string, unknown>);
+              if (Object.keys(o[k] as Record<string, unknown>).length === 0) {
+                delete o[k];
+              }
+            }
+          }
+          return o;
+        };
+        return prune(obj);
+      })();
+      
+      if (Object.keys(prunedInitial).length > 0) {
+        next.initial = prunedInitial;
+      } else {
+        delete next.initial;
+      }
+      return next;
+    })();
 
-    // Return object with text style applied directly
+    // Apply text styling from assignments
+    const finalTextStyle = {
+      fontFamily: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontFamily as string ?? objectOverrides.fontFamily,
+      fontWeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontWeight as string ?? objectOverrides.fontWeight,
+      textAlign: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textAlign as string ?? objectOverrides.textAlign,
+      lineHeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.lineHeight as number ?? objectOverrides.lineHeight,
+      letterSpacing: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.letterSpacing as number ?? objectOverrides.letterSpacing,
+    };
+
+    // Return object with applied text styling
     return {
       ...obj,
-      textStyle: objectOverrides
+      textStyle: finalTextStyle
     };
   }
 

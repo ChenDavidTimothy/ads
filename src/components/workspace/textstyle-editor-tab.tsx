@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import type { Node } from 'reactflow';
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { TextStyleNodeData } from '@/shared/types/nodes';
+import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
 import { SelectField, NumberField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
 import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
@@ -12,221 +13,492 @@ import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import { Badge } from '@/components/ui/badge';
 import { Type } from 'lucide-react';
 
+// Badge Components
+function TextStyleBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+	const { state } = useWorkspace();
+	const { resetToDefault } = useVariableBinding(nodeId, objectId);
+	
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+	if (!node) return null;
+	let bound: string | undefined;
+	if (objectId) {
+		bound = node.data?.variableBindingsByObject?.[objectId]?.[keyName]?.boundResultNodeId;
+	} else {
+		bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
+	}
+	if (!bound) return null;
+	const name = state.flow.nodes.find(n => n.data?.identifier?.id === bound)?.data?.identifier?.displayName;
+	
+	return (
+		<Badge variant="bound" onRemove={() => resetToDefault(keyName)}>{name ? `Bound: ${name}` : 'Bound'}</Badge>
+	);
+}
+
+
+
+// Default Properties Component (Center Panel)
+function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
+	const { state, updateFlow } = useWorkspace();
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+	const data = (node?.data ?? {}) as Record<string, unknown> & {
+		fontFamily?: string;
+		fontWeight?: string;
+		textAlign?: string;
+		lineHeight?: number;
+		letterSpacing?: number;
+		variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+	};
+	const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+
+	const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+		fontFamily?: string;
+		fontWeight?: string;
+		textAlign?: string;
+		lineHeight?: number;
+		letterSpacing?: number;
+	}) ?? {};
+
+	const fontFamily = data.fontFamily ?? def.fontFamily ?? 'Arial';
+	const fontWeight = data.fontWeight ?? def.fontWeight ?? 'normal';
+	const textAlign = data.textAlign ?? def.textAlign ?? 'center';
+	const lineHeight = data.lineHeight ?? def.lineHeight ?? 1.2;
+	const letterSpacing = data.letterSpacing ?? def.letterSpacing ?? 0;
+
+	const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+	const leftBorderClass = (key: string) => (
+		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
+	);
+
+	return (
+		<div className="space-y-[var(--space-4)]">
+			<div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+				Global Text Style Defaults
+			</div>
+			<div className="space-y-[var(--space-4)]">
+				{/* Typography */}
+				<div className="space-y-[var(--space-3)]">
+					<div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
+					<div className="grid grid-cols-2 gap-[var(--space-3)]">
+						<div>
+							<SelectField
+								label="Font Family"
+								value={fontFamily}
+								onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
+								options={[
+									{ value: 'Arial', label: 'Arial' },
+									{ value: 'Helvetica', label: 'Helvetica' },
+									{ value: 'Times New Roman', label: 'Times New Roman' },
+									{ value: 'Courier New', label: 'Courier New' },
+									{ value: 'Georgia', label: 'Georgia' },
+									{ value: 'Verdana', label: 'Verdana' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
+								disabled={isBound('fontFamily')}
+								inputClassName={leftBorderClass('fontFamily')}
+							/>
+						</div>
+						<div>
+							<SelectField
+								label="Font Weight"
+								value={fontWeight}
+								onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
+								options={[
+									{ value: 'normal', label: 'Normal (400)' },
+									{ value: 'bold', label: 'Bold (700)' },
+									{ value: '100', label: 'Thin (100)' },
+									{ value: '300', label: 'Light (300)' },
+									{ value: '500', label: 'Medium (500)' },
+									{ value: '600', label: 'Semi Bold (600)' },
+									{ value: '800', label: 'Extra Bold (800)' },
+									{ value: '900', label: 'Black (900)' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
+								disabled={isBound('fontWeight')}
+								inputClassName={leftBorderClass('fontWeight')}
+							/>
+						</div>
+					</div>
+				</div>
+
+				{/* Alignment and Spacing */}
+				<div className="space-y-[var(--space-3)]">
+					<div className="text-sm font-medium text-[var(--text-primary)]">Alignment & Spacing</div>
+					<div className="grid grid-cols-1 gap-[var(--space-3)]">
+						<div>
+							<SelectField
+								label="Text Alignment"
+								value={textAlign}
+								onChange={(textAlign) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, textAlign } })) })}
+								options={[
+									{ value: 'left', label: 'Left' },
+									{ value: 'center', label: 'Center' },
+									{ value: 'right', label: 'Right' },
+									{ value: 'justify', label: 'Justify' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" />}
+								disabled={isBound('textAlign')}
+								inputClassName={leftBorderClass('textAlign')}
+							/>
+						</div>
+						<div>
+							<NumberField
+								label="Line Height"
+								value={lineHeight}
+								onChange={(lineHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, lineHeight } })) })}
+								min={0.5}
+								max={5}
+								step={0.1}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" />}
+								disabled={isBound('lineHeight')}
+								inputClassName={leftBorderClass('lineHeight')}
+							/>
+						</div>
+						<div>
+							<NumberField
+								label="Letter Spacing (px)"
+								value={letterSpacing}
+								onChange={(letterSpacing) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, letterSpacing } })) })}
+								min={-5}
+								max={20}
+								step={0.1}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" />}
+								disabled={isBound('letterSpacing')}
+								inputClassName={leftBorderClass('letterSpacing')}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Binding Status Badges */}
+			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Per-Object Properties Component (Right Panel)
+function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange, _onClear }: {
+	nodeId: string;
+	objectId: string;
+	assignments: PerObjectAssignments;
+	onChange: (updates: Record<string, unknown>) => void;
+	_onClear: () => void;
+}) {
+	const { state } = useWorkspace();
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+	const selectedOverrides = assignments[objectId];
+	const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
+		fontFamily?: string;
+		fontWeight?: string;
+		textAlign?: string;
+		lineHeight?: number;
+		letterSpacing?: number;
+	};
+
+	const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+		fontFamily?: string;
+		fontWeight?: string;
+		textAlign?: string;
+		lineHeight?: number;
+		letterSpacing?: number;
+	}) ?? {};
+	const base = (node?.data ?? {}) as Record<string, unknown> & {
+		fontFamily?: string;
+		fontWeight?: string;
+		textAlign?: string;
+		lineHeight?: number;
+		letterSpacing?: number;
+	};
+
+	const isBound = (key: string) => {
+		const vbAll = node?.data?.variableBindingsByObject ?? {};
+		return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
+	};
+
+	const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
+	const fontWeight = initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? 'normal';
+	const textAlign = initial.textAlign ?? base.textAlign ?? def.textAlign ?? 'center';
+	const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
+	const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
+
+	const leftBorderClass = (key: string) => (
+		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
+	);
+
+	return (
+		<div className="space-y-[var(--space-4)]">
+			<div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+				Per-Object Text Style Overrides
+			</div>
+			<div className="space-y-[var(--space-4)]">
+				{/* Typography */}
+				<div className="space-y-[var(--space-3)]">
+					<div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
+					<div className="grid grid-cols-2 gap-[var(--space-3)]">
+						<div>
+							<SelectField
+								label="Font Family"
+								value={fontFamily}
+								onChange={(fontFamily) => onChange({ fontFamily })}
+								options={[
+									{ value: 'Arial', label: 'Arial' },
+									{ value: 'Helvetica', label: 'Helvetica' },
+									{ value: 'Times New Roman', label: 'Times New Roman' },
+									{ value: 'Courier New', label: 'Courier New' },
+									{ value: 'Georgia', label: 'Georgia' },
+									{ value: 'Verdana', label: 'Verdana' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
+								disabled={isBound('fontFamily')}
+								inputClassName={leftBorderClass('fontFamily')}
+							/>
+						</div>
+						<div>
+							<SelectField
+								label="Font Weight"
+								value={fontWeight}
+								onChange={(fontWeight) => onChange({ fontWeight })}
+								options={[
+									{ value: 'normal', label: 'Normal (400)' },
+									{ value: 'bold', label: 'Bold (700)' },
+									{ value: '100', label: 'Thin (100)' },
+									{ value: '300', label: 'Light (300)' },
+									{ value: '500', label: 'Medium (500)' },
+									{ value: '600', label: 'Semi Bold (600)' },
+									{ value: '800', label: 'Extra Bold (800)' },
+									{ value: '900', label: 'Black (900)' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
+								disabled={isBound('fontWeight')}
+								inputClassName={leftBorderClass('fontWeight')}
+							/>
+						</div>
+					</div>
+				</div>
+
+				{/* Alignment and Spacing */}
+				<div className="space-y-[var(--space-3)]">
+					<div className="text-sm font-medium text-[var(--text-primary)]">Alignment & Spacing</div>
+					<div className="grid grid-cols-1 gap-[var(--space-3)]">
+						<div>
+							<SelectField
+								label="Text Alignment"
+								value={textAlign}
+								onChange={(textAlign) => onChange({ textAlign })}
+								options={[
+									{ value: 'left', label: 'Left' },
+									{ value: 'center', label: 'Center' },
+									{ value: 'right', label: 'Right' },
+									{ value: 'justify', label: 'Justify' }
+								]}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" objectId={objectId} />}
+								disabled={isBound('textAlign')}
+								inputClassName={leftBorderClass('textAlign')}
+							/>
+						</div>
+						<div>
+							<NumberField
+								label="Line Height"
+								value={lineHeight}
+								onChange={(lineHeight) => onChange({ lineHeight })}
+								min={0.5}
+								max={5}
+								step={0.1}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" objectId={objectId} />}
+								disabled={isBound('lineHeight')}
+								inputClassName={leftBorderClass('lineHeight')}
+							/>
+						</div>
+						<div>
+							<NumberField
+								label="Letter Spacing (px)"
+								value={letterSpacing}
+								onChange={(letterSpacing) => onChange({ letterSpacing })}
+								min={-5}
+								max={20}
+								step={0.1}
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" objectId={objectId} />}
+								disabled={isBound('letterSpacing')}
+								inputClassName={leftBorderClass('letterSpacing')}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Binding Status Badges */}
+			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />
+				</div>
+				<div className="flex items-center gap-[var(--space-1)]">
+					<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Main Editor Component
 export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
-  const { state, updateFlow } = useWorkspace();
-  
-  // Variable binding hooks - must be called before any early returns
-  const { 
-    variables,
-    getBinding
-  } = useVariableBinding(nodeId);
-  
-  // State for property editing - must be called before any early returns
-  const [localData, setLocalData] = useState<TextStyleNodeData | null>(null);
-  
-  // Handle property changes - must be called before any early returns
-  const handlePropertyChange = useCallback((key: string, value: unknown) => {
-    if (!localData) return;
-    
-    const updated = { ...localData, [key]: value };
-    setLocalData(updated);
-    
-    // Update the node in the flow
-    const updatedNodes = state.flow.nodes.map(n => 
-      n.data.identifier.id === nodeId 
-        ? { ...n, data: updated }
-        : n
-    );
-    updateFlow({ nodes: updatedNodes });
-  }, [localData, nodeId, updateFlow, state.flow.nodes]);
-  
-  const node = state.flow.nodes.find(n => n.data.identifier.id === nodeId) as Node<TextStyleNodeData>;
-  
-  if (!node) {
-    return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Node not found</div>;
-  }
+	const { state, updateUI, updateFlow } = useWorkspace();
 
-  const data = node.data;
-  const nodeDefinition = getNodeDefinition('textstyle');
-  
-  if (!nodeDefinition) {
-    return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Node definition not found</div>;
-  }
-  
-  // Initialize local data if not set
-  if (!localData) {
-    setLocalData(data);
-    return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Loading...</div>;
-  }
+	// Find the TextStyle node in the workspace and its current assignments
+	const textStyleNode = useMemo(() => state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined, [state.flow.nodes, nodeId]);
+	const assignments: PerObjectAssignments = useMemo(() => textStyleNode?.data?.perObjectAssignments ?? {}, [textStyleNode]);
 
-  // Get upstream objects for binding
-  const tracker = new FlowTracker();
-  const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+	// Use enhanced object detection that understands duplication
+	const upstreamObjects = useMemo(() => {
+		const tracker = new FlowTracker();
+		
+		// Use duplicate-aware method to find all text objects
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+		
+		// Filter for text objects only and convert to display format expected by SelectionList
+		return objectDescriptors
+			.filter(obj => obj.type === 'text')
+			.map(obj => ({
+				data: {
+					identifier: {
+						id: obj.id,
+						displayName: obj.displayName,
+						type: obj.type
+					}
+				},
+				type: obj.type
+			}));
+	}, [nodeId, state.flow.nodes, state.flow.edges]);
 
-  return (
-    <div className="h-full flex">
-      {/* Left Sidebar - Text Object Selection */}
-      <div className="w-64 bg-[var(--surface-1)] border-r border-[var(--border-primary)] p-4">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Text Objects</h3>
-          <div className="text-xs text-[var(--text-secondary)] mb-3">
-            Select objects to apply individual text styling
-          </div>
-        </div>
-        
-        <SelectionList
-          items={objectDescriptors.map(obj => ({
-            id: obj.id,
-            label: obj.displayName
-          }))}
-          mode="multi"
-          selectedIds={[]}
-          onToggle={() => { /* TODO: Implement selection handling */ }}
-        />
-      </div>
+	// Log for debugging
+	React.useEffect(() => {
+		console.log(`[TextStyle] Detected ${upstreamObjects.length} text objects for TextStyle node ${nodeId}:`, 
+			upstreamObjects.map(o => ({
+				id: o.data.identifier.id,
+				name: o.data.identifier.displayName,
+				type: o.data.identifier.type
+			}))
+		);
+	}, [upstreamObjects, nodeId]);
 
-      {/* Main Content - Text Style Editor */}
-      <div className="flex-1 p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-              Text Style Configuration
-            </h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Configure typography settings for text objects
-            </p>
-          </div>
+	const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
-          {/* Global Text Style Properties */}
-          <div className="space-y-4 mb-8">
-            <h3 className="text-lg font-medium text-[var(--text-primary)] flex items-center gap-2">
-              <Type size={16} />
-              Global Text Style
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <SelectField
-                label="Font Family"
-                value={localData.fontFamily || 'Arial'}
-                onChange={(value) => handlePropertyChange('fontFamily', value)}
-                options={[
-                  { value: 'Arial', label: 'Arial' },
-                  { value: 'Helvetica', label: 'Helvetica' },
-                  { value: 'Times New Roman', label: 'Times New Roman' },
-                  { value: 'Courier New', label: 'Courier New' },
-                  { value: 'Georgia', label: 'Georgia' },
-                  { value: 'Verdana', label: 'Verdana' }
-                ]}
-                bindAdornment={
-                  <BindButton 
-                    nodeId={nodeId} 
-                    bindingKey="fontFamily"
-                  />
-                }
-              />
+	const handleUpdateAssignment = useCallback((updates: Record<string, unknown>) => {
+		if (!selectedObjectId) return;
+		const next: PerObjectAssignments = { ...assignments };
+		const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) } as ObjectAssignments;
+		const baseInitial = (current.initial ?? {}) as Record<string, unknown>;
+		const mergedInitial: Record<string, unknown> = { ...baseInitial, ...updates };
+		
+		// Deep-merge any nested objects if needed (TextStyle doesn't have nested objects like position/scale)
+		const cleanedInitial = Object.fromEntries(Object.entries(mergedInitial).filter(([_, v]) => v !== undefined));
+		current.initial = cleanedInitial;
+		next[selectedObjectId] = current;
+		updateFlow({
+			nodes: state.flow.nodes.map((n) => {
+				if (n.data?.identifier?.id !== nodeId) return n;
+				return { ...n, data: { ...n.data, perObjectAssignments: next } };
+			})
+		});
+	}, [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]);
 
-              <SelectField
-                label="Font Weight"
-                value={localData.fontWeight || 'normal'}
-                onChange={(value) => handlePropertyChange('fontWeight', value)}
-                options={[
-                  { value: 'normal', label: 'Normal (400)' },
-                  { value: 'bold', label: 'Bold (700)' },
-                  { value: '100', label: 'Thin (100)' },
-                  { value: '300', label: 'Light (300)' },
-                  { value: '500', label: 'Medium (500)' },
-                  { value: '600', label: 'Semi Bold (600)' },
-                  { value: '800', label: 'Extra Bold (800)' },
-                  { value: '900', label: 'Black (900)' }
-                ]}
-                bindAdornment={
-                  <BindButton 
-                    nodeId={nodeId} 
-                    bindingKey="fontWeight"
-                  />
-                }
-              />
+	const handleClearAssignment = useCallback(() => {
+		if (!selectedObjectId) return;
+		const next: PerObjectAssignments = { ...assignments };
+		delete next[selectedObjectId];
+		updateFlow({
+			nodes: state.flow.nodes.map((n) => {
+				if (n.data?.identifier?.id !== nodeId) return n;
+				return { ...n, data: { ...n.data, perObjectAssignments: next } };
+			})
+		});
+	}, [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]);
 
-              <SelectField
-                label="Text Alignment"
-                value={localData.textAlign || 'center'}
-                onChange={(value) => handlePropertyChange('textAlign', value)}
-                options={[
-                  { value: 'left', label: 'Left' },
-                  { value: 'center', label: 'Center' },
-                  { value: 'right', label: 'Right' },
-                  { value: 'justify', label: 'Justify' }
-                ]}
-                bindAdornment={
-                  <BindButton 
-                    nodeId={nodeId} 
-                    bindingKey="textAlign"
-                  />
-                }
-              />
+	return (
+		<div className="h-full flex">
+			{/* Left Sidebar - Text Object Selection */}
+			<div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
+				<div className="space-y-[var(--space-3)]">
+					<SelectionList
+						mode="single"
+						items={upstreamObjects.map(o => ({ 
+							id: o.data.identifier.id, 
+							label: o.data.identifier.displayName 
+						}))}
+						selectedId={selectedObjectId}
+						onSelect={setSelectedObjectId}
+						showDefault={true}
+						defaultLabel="Default"
+						emptyLabel="No text objects detected"
+					/>
+					
+					{/* Show object count for debugging */}
+					<div className="text-xs text-[var(--text-tertiary)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
+						Detected: {upstreamObjects.length} text object{upstreamObjects.length !== 1 ? 's' : ''}
+					</div>
+				</div>
+			</div>
 
-              <NumberField
-                label="Line Height"
-                value={localData.lineHeight || 1.2}
-                onChange={(value) => handlePropertyChange('lineHeight', value)}
-                min={0.5}
-                max={5}
-                step={0.1}
-                bindAdornment={
-                  <BindButton 
-                    nodeId={nodeId} 
-                    bindingKey="lineHeight"
-                  />
-                }
-              />
+			{/* Main Content Area */}
+			<div className="flex-1 flex flex-col">
+				{/* Header */}
+				<div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
+					<div className="flex items-center gap-3">
+						<Type size={16} />
+						<div className="text-[var(--text-primary)] font-medium">Text Style</div>
+					</div>
+					<button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
+						Back to Workspace
+					</button>
+				</div>
 
-              <NumberField
-                label="Letter Spacing (px)"
-                value={localData.letterSpacing || 0}
-                onChange={(value) => handlePropertyChange('letterSpacing', value)}
-                min={-5}
-                max={20}
-                step={0.1}
-                bindAdornment={
-                  <BindButton 
-                    nodeId={nodeId} 
-                    bindingKey="letterSpacing"
-                  />
-                }
-              />
-            </div>
-          </div>
+				{/* Content */}
+				<div className="flex-1 p-[var(--space-4)]">
+					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
+						No timeline for TextStyle. Select Default or a text object on the left to edit its properties.
+					</div>
+				</div>
+			</div>
 
-          {/* Variable Binding Status */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">Variable Bindings</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {variables.map((variable) => (
-                <div key={variable.id} className="flex items-center gap-2">
-                  <Badge variant="default" className="text-xs">
-                    {variable.name}: {getBinding(variable.name) ? 'Bound' : 'Unbound'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Sidebar - Object-Specific Overrides */}
-      <div className="w-80 bg-[var(--surface-1)] border-l border-[var(--border-primary)] p-4">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Object Overrides</h3>
-          <div className="text-xs text-[var(--text-secondary)]">
-            Apply individual styling to specific text objects
-          </div>
-        </div>
-        
-        {/* TODO: Implement object-specific override UI */}
-        <div className="text-xs text-[var(--text-tertiary)]">
-          Object-specific overrides coming soon...
-        </div>
-      </div>
-    </div>
-  );
+			{/* Right Sidebar - Properties */}
+			<div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
+				{selectedObjectId ? (
+					<TextStylePerObjectProperties
+						nodeId={nodeId}
+						objectId={selectedObjectId}
+						assignments={assignments}
+						onChange={handleUpdateAssignment}
+						_onClear={handleClearAssignment}
+					/>
+				) : (
+					<TextStyleDefaultProperties nodeId={nodeId} />
+				)}
+			</div>
+		</div>
+	);
 }

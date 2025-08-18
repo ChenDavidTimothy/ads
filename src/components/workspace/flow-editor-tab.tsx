@@ -118,6 +118,9 @@ export function FlowEditorTab() {
 	const openCanvasRef = useRef<(nodeId: string) => void>((nodeId: string) => {
 		console.warn('Canvas handler not initialized yet for node:', nodeId);
 	});
+	const openTextStyleRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+		console.warn('TextStyle handler not initialized yet for node:', nodeId);
+	});
 	const openLogViewerRef = useRef<(nodeId: string) => void>((nodeId: string) => {
 		console.warn('Log viewer handler not initialized yet for node:', nodeId);
 	});
@@ -151,7 +154,7 @@ export function FlowEditorTab() {
 	}, [updateUI]);
 
 	useEffect(() => {
-		const openTextStyleRef = (nodeId: string) => {
+		openTextStyleRef.current = (nodeId: string) => {
 			updateUI({ activeTab: 'textstyle', selectedNodeId: nodeId, selectedNodeType: 'textstyle' });
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', 'textstyle');
@@ -161,9 +164,8 @@ export function FlowEditorTab() {
 
 		const handler = (e: Event) => {
 			const detail = (e as CustomEvent<{ nodeId: string }>).detail;
-			if (detail?.nodeId) openTextStyleRef(detail.nodeId);
+			if (detail?.nodeId) openTextStyleRef.current(detail.nodeId);
 		};
-		
 		window.addEventListener('open-textstyle-editor', handler as EventListener);
 		return () => window.removeEventListener('open-textstyle-editor', handler as EventListener);
 	}, [updateUI]);
