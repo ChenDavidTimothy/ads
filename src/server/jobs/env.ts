@@ -6,11 +6,11 @@ dotenv.config({ path: '.env.local', override: true });
 // Simple environment variable access without validation
 export const workerEnv = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_IMAGES_BUCKET: process.env.SUPABASE_IMAGES_BUCKET || 'images',
-  SUPABASE_VIDEOS_BUCKET: process.env.SUPABASE_VIDEOS_BUCKET || 'videos',
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  SUPABASE_IMAGES_BUCKET: process.env.SUPABASE_IMAGES_BUCKET ?? 'images',
+  SUPABASE_VIDEOS_BUCKET: process.env.SUPABASE_VIDEOS_BUCKET ?? 'videos',
+  NODE_ENV: process.env.NODE_ENV ?? 'development',
   FFMPEG_PATH: process.env.FFMPEG_PATH,
-  RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY || '2',
+  RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY ?? '2',
   DATABASE_URL: process.env.DATABASE_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

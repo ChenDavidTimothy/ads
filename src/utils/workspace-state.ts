@@ -18,11 +18,11 @@ export function extractWorkspaceState(workspaceData: unknown): WorkspaceState {
 
 	return {
 		flow: {
-			nodes: flowData.nodes as Node<NodeData>[],
-			edges: flowData.edges as Edge[],
+			nodes: flowData.nodes,
+			edges: flowData.edges,
 		},
 		editors: {
-			timeline: getTimelineDataFromNodes(flowData.nodes as Node<NodeData>[]),
+			timeline: getTimelineDataFromNodes(flowData.nodes),
 		},
 		ui: {
 			activeTab: 'flow',
@@ -40,12 +40,12 @@ export function extractWorkspaceState(workspaceData: unknown): WorkspaceState {
 	};
 }
 
-function normalizeFlowData(flowData: { nodes?: unknown[]; edges?: unknown[] } | null | undefined): { nodes: unknown[]; edges: unknown[] } {
+function normalizeFlowData(flowData: { nodes?: unknown[]; edges?: unknown[] } | null | undefined): { nodes: Node<NodeData>[]; edges: Edge[] } {
 	if (!flowData || typeof flowData !== 'object') {
 		return { nodes: [], edges: [] };
 	}
-	const nodes = Array.isArray(flowData.nodes) ? flowData.nodes : [];
-	const edges = Array.isArray(flowData.edges) ? flowData.edges : [];
+	const nodes = Array.isArray(flowData.nodes) ? flowData.nodes as Node<NodeData>[] : [];
+	const edges = Array.isArray(flowData.edges) ? flowData.edges as Edge[] : [];
 	return { nodes, edges };
 }
 
@@ -56,7 +56,7 @@ export function getTimelineDataFromNodes(nodes: Node<NodeData>[]): Record<string
 	nodes
 		.filter((node) => node?.type === 'animation')
 		.forEach((node) => {
-			const nodeId = (node?.data as NodeData | undefined)?.identifier?.id;
+			const nodeId = node?.data?.identifier?.id;
 			if (!nodeId) return;
 
 			const duration = (node?.data as unknown as { duration?: number })?.duration ?? 3;
@@ -73,7 +73,7 @@ function ensureTrackIdentifiers(tracks: AnimationTrack[]): AnimationTrack[] {
 	return tracks.map((t, idx, arr) => {
 		const maybe = t as unknown as { identifier?: unknown; type?: string };
 		if (maybe && maybe.identifier) return t;
-		const identifier = generateTransformIdentifier((t as AnimationTrack).type, arr as AnimationTrack[]);
+		const identifier = generateTransformIdentifier(t.type, arr);
 		const { ...rest } = t as Omit<AnimationTrack, 'identifier'> & { id?: string };
 		return { ...(rest as object), identifier } as AnimationTrack;
 	});
@@ -81,9 +81,9 @@ function ensureTrackIdentifiers(tracks: AnimationTrack[]): AnimationTrack[] {
 
 // Merge editor data back into flow nodes for backend storage
 export function mergeEditorsIntoFlow(state: WorkspaceState): { nodes: Node<NodeData>[]; edges: Edge[] } {
-	const nodes = (state.flow.nodes as Node<NodeData>[]).map((node) => {
+	const nodes = state.flow.nodes.map((node) => {
 		if (node.type === 'animation') {
-			const nodeId = (node?.data as NodeData | undefined)?.identifier?.id;
+			const nodeId = node?.data?.identifier?.id;
 			if (nodeId) {
 				const timelineData = state.editors.timeline[nodeId];
 				if (timelineData) {
@@ -101,5 +101,5 @@ export function mergeEditorsIntoFlow(state: WorkspaceState): { nodes: Node<NodeD
 		return node as Node<NodeData>;
 	});
 
-	return { nodes, edges: state.flow.edges as Edge[] };
+	return { nodes, edges: state.flow.edges };
 }

@@ -124,10 +124,16 @@ export function mergeObjectAssignments(base: ObjectAssignments | undefined, over
 			const mergedProps = deepMerge((baseT.properties ?? {}) as Record<string, unknown>, (t.properties ?? {}) as Record<string, unknown>);
 			// Special-case from/to to ensure nested partials merge even if either side is non-plain (defensive)
 			if (isPlainObject(baseT.properties?.from) && isPlainObject(t.properties?.from)) {
-				(mergedProps as any).from = deepMerge(baseT.properties!.from as Record<string, unknown>, t.properties!.from as Record<string, unknown>);
+				(mergedProps as Record<string, unknown>).from = deepMerge(
+					baseT.properties!.from as Record<string, unknown>, 
+					t.properties!.from as Record<string, unknown>
+				);
 			}
 			if (isPlainObject(baseT.properties?.to) && isPlainObject(t.properties?.to)) {
-				(mergedProps as any).to = deepMerge(baseT.properties!.to as Record<string, unknown>, t.properties!.to as Record<string, unknown>);
+				(mergedProps as Record<string, unknown>).to = deepMerge(
+					baseT.properties!.to as Record<string, unknown>, 
+					t.properties!.to as Record<string, unknown>
+				);
 			}
 			index.set(key, {
 				trackId: t.trackId ?? baseT.trackId,
@@ -135,7 +141,7 @@ export function mergeObjectAssignments(base: ObjectAssignments | undefined, over
 				properties: mergedProps,
 				startTime: t.startTime ?? baseT.startTime,
 				duration: t.duration ?? baseT.duration,
-				easing: (t.easing ?? baseT.easing) as TrackOverride['easing'],
+				easing: t.easing ?? baseT.easing,
 			});
 		} else if (key) {
 			index.set(key, t);

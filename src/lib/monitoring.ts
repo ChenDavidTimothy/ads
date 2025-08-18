@@ -81,7 +81,7 @@ class ProductionMonitor {
   private createBaseContext(): BaseErrorContext {
     return {
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env.NODE_ENV ?? 'development',
       ...(typeof window !== 'undefined' && {
         path: window.location.pathname,
         userAgent: navigator.userAgent,
@@ -196,14 +196,14 @@ class ProductionMonitor {
     this.processEvent(event);
 
     // Check if performance exceeds threshold
-    const threshold = context.threshold || this.alertThresholds.responseTime;
+    const threshold = context.threshold ?? this.alertThresholds.responseTime;
     const logLevel = value > threshold ? 'warn' : 'info';
     
     logger[logLevel](`Performance metric: ${metric}`, {
       type: 'PERFORMANCE',
       metric,
       value,
-      unit: context.unit || 'ms',
+      unit: context.unit ?? 'ms',
       threshold,
       exceedsThreshold: value > threshold,
     });
@@ -230,7 +230,7 @@ class ProductionMonitor {
     this.processEvent(monitoringEvent);
 
     // Always log security events with appropriate level
-    const logLevel = severity === 'critical' || severity === 'high' ? 'error' : 'warn';
+    const logLevel = (severity === 'critical' || severity === 'high') ? 'error' : 'warn';
     logger[logLevel](`Security event: ${event}`, {
       type: 'SECURITY_EVENT',
       event,
@@ -291,7 +291,7 @@ class ProductionMonitor {
       
       // Sentry integration
       // if (typeof Sentry !== 'undefined') {
-      //   Sentry.captureException(event.error || new Error(JSON.stringify(event)), {
+      //   Sentry.captureException(event.error ?? new Error(JSON.stringify(event)), {
       //     tags: { type: event.type },
       //     contexts: { monitoring: event.context }
       //   });
@@ -299,7 +299,7 @@ class ProductionMonitor {
 
       // LogRocket integration
       // if (typeof LogRocket !== 'undefined') {
-      //   LogRocket.captureException(event.error || new Error(JSON.stringify(event)));
+      //   LogRocket.captureException(event.error ?? new Error(JSON.stringify(event)));
       // }
 
       // Custom webhook integration
