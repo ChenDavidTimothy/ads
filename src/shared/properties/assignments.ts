@@ -121,18 +121,18 @@ export function mergeObjectAssignments(base: ObjectAssignments | undefined, over
 		if (key && index.has(key)) {
 			const baseT = index.get(key)!;
 			// Deep-merge nested properties
-			const mergedProps = deepMerge((baseT.properties ?? {}) as Record<string, unknown>, (t.properties ?? {}) as Record<string, unknown>);
+			const mergedProps = deepMerge(baseT.properties ?? {}, t.properties ?? {});
 			// Special-case from/to to ensure nested partials merge even if either side is non-plain (defensive)
 			if (isPlainObject(baseT.properties?.from) && isPlainObject(t.properties?.from)) {
-				(mergedProps as Record<string, unknown>).from = deepMerge(
-					baseT.properties!.from as Record<string, unknown>, 
-					t.properties!.from as Record<string, unknown>
+				mergedProps.from = deepMerge(
+					baseT.properties!.from, 
+					t.properties!.from
 				);
 			}
 			if (isPlainObject(baseT.properties?.to) && isPlainObject(t.properties?.to)) {
-				(mergedProps as Record<string, unknown>).to = deepMerge(
-					baseT.properties!.to as Record<string, unknown>, 
-					t.properties!.to as Record<string, unknown>
+				mergedProps.to = deepMerge(
+					baseT.properties!.to, 
+					t.properties!.to
 				);
 			}
 			index.set(key, {
