@@ -1,6 +1,6 @@
 // src/shared/properties/resolver.ts
 
-import type { GeometryProperties, SceneObject, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
+import type { GeometryProperties, SceneObject, TriangleProperties, CircleProperties, RectangleProperties, TextProperties } from '@/shared/types/scene';
 import type { PropertySourceMap } from './precedence';
 import type { ObjectAssignments } from './assignments';
 
@@ -95,6 +95,16 @@ export function resolveInitialObject(
         strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
         strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
       } as RectangleProperties & { color: string; strokeColor: string; strokeWidth: number };
+      break;
+    }
+    case 'text': {
+      const base = original.properties as TextProperties;
+      properties = {
+        ...base,
+        color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
+        strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
+        strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
+      } as TextProperties & { color: string; strokeColor: string; strokeWidth: number };
       break;
     }
     default: {

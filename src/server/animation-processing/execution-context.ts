@@ -54,7 +54,7 @@ export interface ExecutionContext {
   // Scene building - per-scene storage to preserve path-specific properties
   sceneObjectsByScene: Map<string, Array<{
     id: string;
-    type: 'triangle' | 'circle' | 'rectangle';
+    type: 'triangle' | 'circle' | 'rectangle' | 'text';
     properties: GeometryProperties;
     initialPosition: { x: number; y: number };
     initialRotation?: number;
