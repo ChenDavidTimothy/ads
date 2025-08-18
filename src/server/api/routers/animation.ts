@@ -598,17 +598,27 @@ export const animationRouter = createTRPCRouter({
           if (notify && notify.status === 'completed' && notify.publicUrl) {
             return {
               success: true,
-              videoUrl: notify.publicUrl,
-              jobId: jobIds[0]!,
-              totalScenes: 1,
+              immediateResult: {
+                jobId: jobIds[0]!,
+                contentUrl: notify.publicUrl,
+                nodeId: scenePartitions[0]!.sceneNode.data.identifier.id,
+                nodeName: scenePartitions[0]!.sceneNode.data.identifier.displayName,
+                nodeType: 'scene' as const
+              }
             } as const;
           }
         }
         
         return {
           success: true,
-          jobIds,
-          totalScenes: scenePartitions.length,
+          jobs: jobIds.map((jobId, index) => ({
+            jobId,
+            nodeId: scenePartitions[index]!.sceneNode.data.identifier.id,
+            nodeName: scenePartitions[index]!.sceneNode.data.identifier.displayName,
+            nodeType: 'scene' as const
+          })),
+          totalNodes: scenePartitions.length,
+          generationType: 'batch' as const
         } as const;
 
       } catch (error) {
@@ -748,11 +758,30 @@ export const animationRouter = createTRPCRouter({
           const inlineWaitMs = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 5000) : 500;
           const notify = await waitForRenderJobEvent({ jobId: jobIds[0]!, timeoutMs: inlineWaitMs });
           if (notify && notify.status === 'completed' && notify.publicUrl) {
-            return { success: true, imageUrl: notify.publicUrl, jobId: jobIds[0]!, totalScenes: 1 } as const;
+            return {
+              success: true,
+              immediateResult: {
+                jobId: jobIds[0]!,
+                contentUrl: notify.publicUrl,
+                nodeId: scenePartitions[0]!.sceneNode.data.identifier.id,
+                nodeName: scenePartitions[0]!.sceneNode.data.identifier.displayName,
+                nodeType: 'frame' as const
+              }
+            } as const;
           }
         }
 
-        return { success: true, jobIds, totalScenes: scenePartitions.length } as const;
+        return {
+          success: true,
+          jobs: jobIds.map((jobId, index) => ({
+            jobId,
+            nodeId: scenePartitions[index]!.sceneNode.data.identifier.id,
+            nodeName: scenePartitions[index]!.sceneNode.data.identifier.displayName,
+            nodeType: 'frame' as const
+          })),
+          totalNodes: scenePartitions.length,
+          generationType: 'batch' as const
+        } as const;
       } catch (error) {
         logger.domain('Image generation failed', error, {
           path: 'animation.generateImage',

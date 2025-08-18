@@ -178,6 +178,8 @@ export function FlowEditorTab() {
 		images,
 		handleDownloadAllImages,
 		handleDownloadImage,
+		// NEW: Selective generation
+		handleGenerateSelected,
 	} = useSceneGeneration(nodes, edges);
 
 	const validationSummary = getValidationSummary();
@@ -192,15 +194,21 @@ export function FlowEditorTab() {
 			<div className="flex-1 flex flex-col">
 				<div className="h-12 flex items-center px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60">
 					<ActionsToolbar
+						// NEW: Pass workspace nodes
+						allNodes={nodes}
+						
+						// Existing props (unchanged)
 						onGenerate={handleGenerateScene}
 						canGenerate={canGenerate}
 						isGenerating={isGenerating}
-						// Remove all download props - these move to sidebar
-						// video
 						onGenerateImage={handleGenerateImage}
 						canGenerateImage={canGenerateImage}
 						isGeneratingImage={isGeneratingImage}
-						// shared
+
+						// NEW: Selective generation
+						onGenerateSelected={handleGenerateSelected}
+
+						// Shared props (unchanged)
 						lastError={lastError}
 						onResetGeneration={resetGeneration}
 						validationSummary={validationSummary}

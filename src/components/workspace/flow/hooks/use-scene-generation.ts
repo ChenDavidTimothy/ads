@@ -123,7 +123,15 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
       
-      // Handle successful generation
+      // Handle immediate result (fast completion)
+      if ('immediateResult' in data && data.immediateResult) {
+        setVideoUrl(data.immediateResult.contentUrl);
+        setIsGenerating(false);
+        toast.success('Video generated successfully!');
+        return;
+      }
+      
+      // Handle legacy videoUrl format
       if ('videoUrl' in data && data.videoUrl) {
         setVideoUrl(data.videoUrl);
         setIsGenerating(false);
@@ -131,21 +139,35 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
       
-      // Handle multi-scene response (jobIds array)
-      if ('jobIds' in data) {
-        const { jobIds, totalScenes } = data;
-        if (!jobIds || jobIds.length === 0) {
-          setIsGenerating(false);
-          setLastError('Invalid multi-scene response - no jobs created');
-          toast.error('Generation failed', 'No render jobs were created');
-          return;
+      // Handle enhanced job response format
+      if ('jobs' in data && data.jobs) {
+        const videoJobs: VideoJob[] = data.jobs.map(job => ({
+          jobId: job.jobId,
+          sceneName: job.nodeName,
+          sceneId: job.nodeId,
+          status: 'pending' as const
+        }));
+        
+        setVideos(videoJobs);
+        
+        if (data.totalNodes > 1) {
+          toast.success(`Processing ${data.totalNodes} scenes`, 'Videos will appear as they complete');
         }
         
-        // Create video job entries for tracking
+        const jobIds = data.jobs.map(job => job.jobId);
+        startMultiJobPolling(jobIds, currentAttempt);
+        return;
+      }
+      
+      // Handle multi-scene response (legacy jobIds array)
+      if ('jobIds' in data) {
+        console.warn('[GENERATION] Using legacy response format - migration incomplete');
         const sceneNodes = nodes.filter(n => n.type === 'scene');
-        const videoJobs: VideoJob[] = jobIds.map((jobId, index) => {
+        const videoJobs: VideoJob[] = data.jobIds.map((jobId, index) => {
           const sceneNode = sceneNodes[index] as RFNode<NodeData>;
-          const idData = (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier;
+          const idData = sceneNode ? 
+            (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier :
+            { id: `legacy-${index}`, displayName: `Scene ${index + 1}` };
           return {
             jobId,
             sceneName: idData.displayName,
@@ -155,13 +177,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         });
         
         setVideos(videoJobs);
-        
-        if (totalScenes && totalScenes > 1) {
-          toast.success(`Processing ${totalScenes} scenes`, 'Multiple videos will be generated');
-        }
-        
-        // Start polling all jobs
-        startMultiJobPolling(jobIds, currentAttempt);
+        startMultiJobPolling(data.jobIds, currentAttempt);
         return;
       }
       
@@ -256,18 +272,51 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         
         return;
       }
+      // Handle immediate result (fast completion)
+      if ('immediateResult' in data && data.immediateResult) {
+        setImageUrl(data.immediateResult.contentUrl);
+        setIsGeneratingImage(false);
+        toast.success('Image generated successfully!');
+        return;
+      }
+      
+      // Handle legacy imageUrl format
       if ('imageUrl' in data && data.imageUrl) {
         setImageUrl(data.imageUrl);
         setIsGeneratingImage(false);
         toast.success('Image generated successfully!');
         return;
       }
+      // Handle enhanced job response format
+      if ('jobs' in data && data.jobs) {
+        const imageJobs: ImageJob[] = data.jobs.map(job => ({
+          jobId: job.jobId,
+          frameName: job.nodeName,
+          frameId: job.nodeId,
+          status: 'pending' as const
+        }));
+        
+        setImages(imageJobs);
+        
+        if (data.totalNodes > 1) {
+          toast.success(`Processing ${data.totalNodes} frames`, 'Images will appear as they complete');
+        }
+        
+        const jobIds = data.jobs.map(job => job.jobId);
+        pollImages(jobIds);
+        return;
+      }
+      
+      // Handle legacy jobIds array format
       if ('jobIds' in data) {
+        console.warn('[GENERATION] Using legacy response format - migration incomplete');
         const jobIds = (data as unknown as { jobIds?: string[] }).jobIds ?? [];
         if (jobIds.length > 0) {
           setImages(jobIds.map((jobId, index) => {
             const frameNode = nodes.filter(n => n.type === 'frame')[index] as RFNode<NodeData>;
-            const idData = (frameNode.data as { identifier: { id: string; displayName: string } }).identifier;
+            const idData = frameNode ? 
+              (frameNode.data as { identifier: { id: string; displayName: string } }).identifier :
+              { id: `legacy-${index}`, displayName: `Frame ${index + 1}` };
             return { jobId, frameName: idData.displayName, frameId: idData.id, status: 'pending' };
           }));
           pollImages(jobIds);
@@ -284,6 +333,105 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       toast.error('Image generation failed', msg);
     }
   });
+
+  // NEW: Selective generation handler
+  const handleGenerateSelected = useCallback(async (sceneIds: string[], frameIds: string[]) => {
+    if (sceneIds.length === 0 && frameIds.length === 0) {
+      toast.warning('No content selected', 'Please select at least one scene or frame');
+      return;
+    }
+
+    try {
+      const supabase = createBrowserClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        toast.warning('Please log in', 'Authentication required to generate content');
+        router.push('/login');
+        return;
+      }
+
+      // Calculate dependencies for selected targets
+      const allSelectedIds = [...sceneIds, ...frameIds];
+      const visited = new Set<string>();
+      const requiredNodeIds = new Set<string>();
+      
+      // Traverse dependencies
+      allSelectedIds.forEach(targetId => {
+        const traverse = (nodeId: string) => {
+          if (visited.has(nodeId)) return;
+          visited.add(nodeId);
+          requiredNodeIds.add(nodeId);
+          
+          const incomingEdges = edges.filter(e => {
+            const targetNode = nodes.find(n => n.id === e.target);
+            return targetNode && targetNode.data.identifier.id === nodeId;
+          });
+          
+          incomingEdges.forEach(edge => {
+            const sourceNode = nodes.find(n => n.id === edge.source);
+            if (sourceNode) {
+              traverse(sourceNode.data.identifier.id);
+            }
+          });
+        };
+        
+        traverse(targetId);
+      });
+
+      // Filter to required nodes and edges
+      const requiredNodes = nodes.filter(n => requiredNodeIds.has(n.data.identifier.id));
+      const requiredEdges = edges.filter(e => {
+        const sourceNode = nodes.find(n => n.id === e.source);
+        const targetNode = nodes.find(n => n.id === e.target);
+        return sourceNode && targetNode && 
+               requiredNodeIds.has(sourceNode.data.identifier.id) && 
+               requiredNodeIds.has(targetNode.data.identifier.id);
+      });
+
+      console.log(`[SELECTIVE] Generating ${sceneIds.length} scenes + ${frameIds.length} frames:`, {
+        totalWorkspace: { nodes: nodes.length, edges: edges.length },
+        filtered: { nodes: requiredNodes.length, edges: requiredEdges.length }
+      });
+
+      // Convert to backend format
+      const backendNodes = requiredNodes.map((node) => ({ 
+        id: node.id, 
+        type: node.type, 
+        position: node.position, 
+        data: node.data 
+      }));
+      
+      const backendEdges = requiredEdges.map((edge) => ({ 
+        id: edge.id, 
+        source: edge.source, 
+        target: edge.target, 
+        sourceHandle: edge.sourceHandle ?? undefined, 
+        targetHandle: edge.targetHandle ?? undefined, 
+        kind: 'data' as const 
+      }));
+
+      // Execute generation
+      const promises = [];
+      
+      if (sceneIds.length > 0) {
+        promises.push(generateScene.mutateAsync({ nodes: backendNodes, edges: backendEdges }));
+      }
+      
+      if (frameIds.length > 0) {
+        promises.push(generateImage.mutateAsync({ nodes: backendNodes, edges: backendEdges }));
+      }
+
+      await Promise.all(promises);
+      
+      toast.success('Selective generation started', 
+        `Processing ${sceneIds.length + frameIds.length} selected items`);
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Selective generation failed';
+      setLastError(message);
+      toast.error('Selective generation failed', message);
+    }
+  }, [nodes, edges, generateScene, generateImage, toast, router]);
 
   // Multi-job polling for multiple videos
   const startMultiJobPolling = useCallback((jobIds: string[], currentAttempt: number) => {
@@ -811,6 +959,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     isGenerating,
     validationErrors,
     getValidationSummary,
+    
+    // NEW: Selective generation
+    handleGenerateSelected,
   } as const;
 }
 
