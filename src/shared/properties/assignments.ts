@@ -125,14 +125,14 @@ export function mergeObjectAssignments(base: ObjectAssignments | undefined, over
 			// Special-case from/to to ensure nested partials merge even if either side is non-plain (defensive)
 			if (isPlainObject(baseT.properties?.from) && isPlainObject(t.properties?.from)) {
 				mergedProps.from = deepMerge(
-					baseT.properties!.from, 
-					t.properties!.from
+					baseT.properties.from, 
+					t.properties.from
 				);
 			}
 			if (isPlainObject(baseT.properties?.to) && isPlainObject(t.properties?.to)) {
 				mergedProps.to = deepMerge(
-					baseT.properties!.to, 
-					t.properties!.to
+					baseT.properties.to, 
+					t.properties.to
 				);
 			}
 			index.set(key, {

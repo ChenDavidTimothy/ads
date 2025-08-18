@@ -17,7 +17,7 @@ export function setByPath(target: Record<string, unknown>, path: string, value: 
     if (!isPlainObject(next)) cursor[key] = {};
     cursor = cursor[key] as Record<string, unknown>;
   }
-  cursor[parts[parts.length - 1]!] = value as unknown as never;
+  cursor[parts[parts.length - 1]!] = value;
 }
 
 export function deleteByPath(target: Record<string, unknown>, path: string): void {
@@ -27,7 +27,7 @@ export function deleteByPath(target: Record<string, unknown>, path: string): voi
     const key = parts[i]!;
     const next = cursor[key];
     if (!isPlainObject(next)) return; // nothing to delete
-    cursor = next as Record<string, unknown>;
+    cursor = next;
   }
   delete cursor[parts[parts.length - 1]!];
 }

@@ -72,7 +72,7 @@ export function getTimelineDataFromNodes(nodes: Node<NodeData>[]): Record<string
 function ensureTrackIdentifiers(tracks: AnimationTrack[]): AnimationTrack[] {
 	return tracks.map((t, idx, arr) => {
 		const maybe = t as unknown as { identifier?: unknown; type?: string };
-		if (maybe && maybe.identifier) return t;
+		if (maybe?.identifier) return t;
 		const identifier = generateTransformIdentifier(t.type, arr);
 		const { ...rest } = t as Omit<AnimationTrack, 'identifier'> & { id?: string };
 		return { ...(rest as object), identifier } as AnimationTrack;
@@ -90,7 +90,7 @@ export function mergeEditorsIntoFlow(state: WorkspaceState): { nodes: Node<NodeD
 					return {
 						...node,
 						data: {
-							...(node.data as NodeData),
+							...node.data,
 							duration: timelineData.duration,
 							tracks: timelineData.tracks,
 						} as NodeData,
@@ -98,7 +98,7 @@ export function mergeEditorsIntoFlow(state: WorkspaceState): { nodes: Node<NodeD
 				}
 			}
 		}
-		return node as Node<NodeData>;
+		return node;
 	});
 
 	return { nodes, edges: state.flow.edges };
