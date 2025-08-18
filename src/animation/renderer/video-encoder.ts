@@ -26,7 +26,7 @@ export class VideoEncoder {
   private outputPath: string;
   private config: VideoConfig;
   private timeouts: EncoderTimeouts;
-  private stderrBuffer: string = '';
+  private stderrBuffer = '';
 
   constructor(outputPath: string, config: VideoConfig, timeouts: Partial<EncoderTimeouts> = {}) {
     this.outputPath = outputPath;

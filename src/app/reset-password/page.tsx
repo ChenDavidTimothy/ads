@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
 
       if (errorParam) {
         setError(
-          decodeURIComponent(errorDescription || "Reset link invalid or expired.")
+          decodeURIComponent(errorDescription ?? "Reset link invalid or expired.")
         );
         return;
       }
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
     }
 
     setSuccess(true);
-    setTimeout(() => router.push("/dashboard"), 2000);
+    void setTimeout(() => router.push("/dashboard"), 2000);
   };
 
   // Password validation helpers
@@ -139,7 +139,7 @@ export default function ResetPasswordPage() {
               </h1>
               
               <p className="text-[var(--text-secondary)] mb-6 leading-relaxed">
-                Your password has been reset successfully. You'll be redirected to the dashboard in a few seconds.
+                Your password has been reset successfully. You&apos;ll be redirected to the dashboard in a few seconds.
               </p>
 
               <Link 

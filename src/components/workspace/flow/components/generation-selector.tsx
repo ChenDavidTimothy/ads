@@ -36,13 +36,13 @@ export function GenerationSelector({
   const sceneItems = sceneNodes.map(node => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition('scene')?.rendering.icon || '🎬'
+    icon: getNodeDefinition('scene')?.rendering.icon ?? '🎬'
   }));
   
   const frameItems = frameNodes.map(node => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition('frame')?.rendering.icon || '🖼️'
+    icon: getNodeDefinition('frame')?.rendering.icon ?? '🖼️'
   }));
 
   const hasScenes = sceneNodes.length > 0;

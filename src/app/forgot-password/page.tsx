@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
               </h1>
               
               <p className="text-[var(--text-secondary)] mb-6 leading-relaxed">
-                We've sent a password reset link to <strong>{email}</strong>. 
+                We&apos;ve sent a password reset link to <strong>{email}</strong>. 
                 Please check your email and follow the instructions to reset your password.
               </p>
 
@@ -128,7 +128,7 @@ export default function ForgotPasswordPage() {
 
               <div className="mt-6 space-y-3">
                 <p className="text-xs text-[var(--text-tertiary)]">
-                  Didn't receive the email? Check your spam folder or try again in a few minutes.
+                  Didn&apos;t receive the email? Check your spam folder or try again in a few minutes.
                 </p>
                 
                 <div className="p-3 bg-[var(--warning-500)]/10 border border-[var(--warning-500)]/20 rounded-lg">
@@ -175,7 +175,7 @@ export default function ForgotPasswordPage() {
                 Forgot your password?
               </h1>
               <p className="text-[var(--text-secondary)]">
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address and we&apos;ll send you a link to reset your password.
               </p>
             </div>
 

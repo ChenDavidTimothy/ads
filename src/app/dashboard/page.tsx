@@ -13,7 +13,6 @@ import {
   Search, 
   MoreVertical, 
   FolderOpen, 
-  Calendar, 
   Users, 
   Settings, 
   Play,
@@ -26,19 +25,13 @@ import {
   Video,
   Loader2,
   Star,
-  Tag,
-  Filter,
   Grid,
   List,
   Download,
   Share2,
   Archive,
   Eye,
-  EyeOff,
-  ChevronDown,
-  CheckCircle,
-  AlertCircle,
-  Info
+  AlertCircle
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
@@ -85,7 +78,7 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const [sortBy, setSortBy] = useState<'name' | 'updated' | 'created'>('updated');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -208,7 +201,7 @@ export default function DashboardPage() {
     });
     
     // Sort workspaces
-    filtered.sort((a: Workspace, b: Workspace) => {
+    const sorted = [...filtered].sort((a: Workspace, b: Workspace) => {
       let aValue: string | Date;
       let bValue: string | Date;
       
@@ -234,7 +227,7 @@ export default function DashboardPage() {
       return 0;
     });
     
-    return filtered;
+    return sorted;
   }, [workspaces, searchQuery, selectedCategory, sortBy, sortOrder]);
 
   const recentWorkspaces = useMemo(() => {
@@ -254,13 +247,7 @@ export default function DashboardPage() {
     return date.toLocaleDateString();
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+
 
   // Event handlers
   const handleCreateWorkspace = (e: React.FormEvent) => {

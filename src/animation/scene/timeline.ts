@@ -3,10 +3,7 @@ import type {
   AnimationScene, 
   ObjectState, 
   SceneObject,
-  GeometryProperties,
-  TriangleProperties,
-  CircleProperties,
-  RectangleProperties
+  GeometryProperties
 } from '@/shared/types/scene';
 
 import type { Point2D } from '@/shared/types/core';
@@ -51,11 +48,7 @@ function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
   return transformEvaluator.getEndValue(sceneTrackToSceneTransform(animation));
 }
 
-function getStrokeColor(properties: GeometryProperties, objectType: string): string | undefined {
-  // Styling properties are now provided by Canvas node, not geometry properties
-  // Return undefined to let the Canvas defaults handle this
-  return undefined;
-}
+
 
 function evaluateVisibility(object: SceneObject, time: number): number {
   const appearanceTime = (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;

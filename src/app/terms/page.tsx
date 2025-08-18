@@ -45,14 +45,14 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">1. Acceptance of Terms</h2>
                 <p>
-                  By accessing and using Batchion ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                  By accessing and using Batchion (&ldquo;Service&rdquo;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
                 </p>
               </section>
 
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">2. Description of Service</h2>
                 <p>
-                  Batchion is a no-code animation platform that enables users to create dynamic, data-driven video content through a visual programming interface. The Service includes:
+                  Batchion is a no-code animation platform that enables users to create dynamic, data-driven video content through a visual programming interface. The &ldquo;Service&rdquo; includes:
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
                   <li>Visual node-based programming environment</li>

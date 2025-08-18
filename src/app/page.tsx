@@ -116,7 +116,7 @@ export default async function LandingPage() {
             <div className="text-[var(--text-tertiary)] text-sm">
               <p className="mb-4">Trusted by marketing teams at innovative companies</p>
               <div className="flex items-center justify-center gap-2">
-                {[...Array(5)].map((_, i) => (
+                {Array.from({ length: 5 }, (_, i) => (
                   <Star key={i} className="w-4 h-4 fill-[var(--warning-500)] text-[var(--warning-500)]" />
                 ))}
                 <span className="ml-2 text-[var(--text-secondary)]">4.9/5 from early access users</span>

@@ -41,7 +41,7 @@ export default function RegisterPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           // Redirect to the originally requested page or dashboard
-          const destination = redirectTo && redirectTo.startsWith('/') ? redirectTo : "/dashboard";
+          const destination = redirectTo?.startsWith('/') ? redirectTo : "/dashboard";
           router.push(destination);
           return;
         }
@@ -207,7 +207,7 @@ export default function RegisterPage() {
             </h1>
             
             <p className="text-[var(--text-secondary)] mb-6 leading-relaxed">
-              We've sent a confirmation link to <strong>{email}</strong>. 
+                              We&apos;ve sent a confirmation link to <strong>{email}</strong>. 
               Please check your email and click the link to activate your account.
             </p>
 
@@ -228,7 +228,7 @@ export default function RegisterPage() {
             </div>
 
             <p className="text-xs text-[var(--text-tertiary)] mt-6">
-              Didn't receive the email? Check your spam folder or contact support.
+                              Didn&apos;t receive the email? Check your spam folder or contact support.
             </p>
           </div>
         </div>
@@ -376,7 +376,7 @@ export default function RegisterPage() {
                 {password && (
                   <div className="space-y-2">
                     <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => (
+                      {Array.from({ length: 5 }, (_, i) => (
                         <div
                           key={i}
                           className="h-1 rounded-full flex-1 transition-colors"

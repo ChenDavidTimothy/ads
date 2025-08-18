@@ -45,7 +45,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">1. Introduction</h2>
                 <p>
-                  Batchion ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our no-code animation platform and services ("Service").
+                  Batchion (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our no-code animation platform and services (&ldquo;Service&rdquo;).
                 </p>
                 <p className="mt-2">
                   Please read this Privacy Policy carefully. If you do not agree with the terms of this Privacy Policy, please do not access the Service.
@@ -231,7 +231,7 @@ export default function PrivacyPage() {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">10. Children's Privacy</h2>
+                <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">10. Children&apos;s Privacy</h2>
                 <p>
                   Our Service is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we learn that we have collected such information, we will take steps to delete it promptly.
                 </p>

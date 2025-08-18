@@ -33,6 +33,19 @@ interface UserProfile {
   created_at: string;
 }
 
+interface UserMetadata {
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+}
+
+interface AuthUser {
+  id: string;
+  email: string;
+  user_metadata?: UserMetadata;
+  created_at: string;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createBrowserClient();
@@ -73,16 +86,16 @@ export default function SettingsPage() {
         const profile: UserProfile = {
           id: authUser.id,
           email: authUser.email!,
-          first_name: authUser.user_metadata?.first_name,
-          last_name: authUser.user_metadata?.last_name,
-          full_name: authUser.user_metadata?.full_name,
+          first_name: (authUser as AuthUser).user_metadata?.first_name,
+          last_name: (authUser as AuthUser).user_metadata?.last_name,
+          full_name: (authUser as AuthUser).user_metadata?.full_name,
           created_at: authUser.created_at,
         };
 
         setUser(profile);
-        setFirstName(profile.first_name || "");
-        setLastName(profile.last_name || "");
-      } catch (err) {
+        setFirstName(profile.first_name ?? "");
+        setLastName(profile.last_name ?? "");
+      } catch {
         setError("Failed to load user profile");
       } finally {
         setLoading(false);
@@ -332,7 +345,7 @@ export default function SettingsPage() {
                       </label>
                       <Input
                         type="email"
-                        value={user?.email || ""}
+                        value={user?.email ?? ""}
                         disabled
                         className="bg-[var(--surface-2)] cursor-not-allowed"
                       />

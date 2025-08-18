@@ -33,7 +33,7 @@ export default function LoginPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           // Redirect to the originally requested page or dashboard
-          const destination = redirectTo && redirectTo.startsWith('/') ? redirectTo : "/dashboard";
+          const destination = redirectTo?.startsWith('/') ? redirectTo : "/dashboard";
           router.push(destination);
           return;
         }
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
       // Success handling
       if (data.user) {
-        const destination = redirectTo && redirectTo.startsWith('/') ? redirectTo : "/dashboard";
+        const destination = redirectTo?.startsWith('/') ? redirectTo : "/dashboard";
         setSuccess(`Sign in successful! Redirecting${destination !== "/dashboard" ? " to your requested page" : ""}...`);
         
         // Mark successful login for auth status component
@@ -203,7 +203,7 @@ export default function LoginPage() {
           </Link>
           
           <div className="text-sm text-[var(--text-secondary)]">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-[var(--accent-primary)] hover:underline font-medium transition-colors">
               Sign up
             </Link>

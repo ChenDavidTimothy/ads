@@ -24,7 +24,7 @@ export default async function WorkspaceEditorPage({
   
   if (error || !user) {
     // User is not authenticated, redirect to login with return URL
-    const loginUrl = new URL('/login', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+    const loginUrl = new URL('/login', process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000');
     const currentUrl = `/workspace${workspaceId ? `?workspace=${workspaceId}` : ''}${tab ? `&tab=${tab}` : ''}${node ? `&node=${node}` : ''}`;
     loginUrl.searchParams.set('redirectTo', currentUrl);
     redirect(loginUrl.toString());

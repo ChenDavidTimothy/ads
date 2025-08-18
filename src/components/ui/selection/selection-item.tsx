@@ -11,7 +11,7 @@ interface SelectionItemProps {
 }
 
 export function SelectionItem({
-  id,
+  id: _id,
   label,
   icon,
   color,
