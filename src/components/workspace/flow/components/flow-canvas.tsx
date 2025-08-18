@@ -216,14 +216,15 @@ export function FlowCanvas(props: Props) {
 				{showMinimap && (
 					<MiniMap 
 						className="bg-[var(--surface-1)] border border-[var(--border-primary)] shadow-glass rounded-[var(--radius-sm)]" 
-						nodeColor={(node) => {
-							const type = node.type!;
-							if (type.includes('animation')) return 'var(--node-animation)';
-							if (type.includes('logic')) return 'var(--node-logic)';
-							if (type.includes('geometry')) return 'var(--node-geometry)';
-							if (type.includes('data')) return 'var(--node-data)';
-							return 'var(--node-output)';
-						}}
+						        nodeColor={(node) => {
+          const type = node.type!;
+          if (type.includes('animation')) return 'var(--node-animation)';
+          if (type.includes('logic')) return 'var(--node-logic)';
+          if (type.includes('geometry')) return 'var(--node-geometry)';
+          if (type.includes('text')) return 'var(--node-text)';
+          if (type.includes('data')) return 'var(--node-data)';
+          return 'var(--node-output)';
+        }}
 						maskColor="var(--surface-0)"
 						style={{
 							backgroundColor: 'var(--surface-1)',

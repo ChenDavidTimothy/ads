@@ -1,12 +1,14 @@
 export { TriangleNode } from "./triangle-node";
 export { CircleNode } from "./circle-node";
 export { RectangleNode } from "./rectangle-node";
+export { TextNode } from "./text-node";
 export { InsertNode } from "./insert-node";
 export { FilterNode } from "./filter-node";
 export { MergeNode } from "./merge-node";
 export { ConstantsNode } from "./constants-node";
 export { ResultNode } from "./result-node";
 export { AnimationNode } from "./animation-node";
+export { TextstyleNode } from "./textstyle-node";
 export { SceneNode } from "./scene-node";
 export { CanvasNode } from "./canvas-node";
 export { FrameNode } from "./frame-node";

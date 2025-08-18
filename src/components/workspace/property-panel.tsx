@@ -243,7 +243,7 @@ function SchemaBasedProperties({
     }
 
     // Only nodes that support variableBindings get the bind adornment (animation, canvas)
-    const supportsBinding = nodeType === 'animation' || nodeType === 'canvas';
+    const supportsBinding = nodeType === 'animation' || nodeType === 'canvas' || nodeType === 'textstyle';
     const nodeId = data.identifier.id;
 
     switch (schema.type) {

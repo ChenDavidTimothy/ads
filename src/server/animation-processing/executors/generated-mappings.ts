@@ -3,8 +3,9 @@ export const EXECUTOR_NODE_MAPPINGS = {
   geometry: ['triangle', 'circle', 'rectangle'],
   timing: ['insert'],
   logic: ['filter', 'merge', 'constants', 'result', 'compare', 'if_else', 'boolean_op', 'math_op', 'duplicate'],
-  animation: ['animation', 'canvas'],
+  animation: ['animation', 'canvas', 'textstyle'],
   scene: ['scene', 'frame'],
+  text: ['text'],
 } as const;
 
 export type ExecutorType = keyof typeof EXECUTOR_NODE_MAPPINGS;

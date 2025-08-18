@@ -9,6 +9,7 @@ import { TimingNodeExecutor } from "./executors/timing-executor";
 import { LogicNodeExecutor } from "./executors/logic-executor";
 import { AnimationNodeExecutor } from "./executors/animation-executor";
 import { SceneNodeExecutor } from "./executors/scene-executor";
+import { TextNodeExecutor } from "./executors/text-executor";
 import { getTopologicalOrder } from "./graph/topo-sort";
 import { 
   validateScene, 
@@ -35,6 +36,7 @@ export class ExecutionEngine {
     this.registry.register(new AnimationNodeExecutor());
     this.registry.register(new SceneNodeExecutor());
     this.registry.register(new CanvasNodeExecutor());
+    this.registry.register(new TextNodeExecutor());
   }
 
   private runComprehensiveValidation(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[], options?: { requireScene?: boolean }): void {

@@ -14,12 +14,20 @@ export interface AnimationScene {
 
 export interface SceneObject {
   id: string;
-  type: 'triangle' | 'circle' | 'rectangle';
+  type: 'triangle' | 'circle' | 'rectangle' | 'text';
   properties: GeometryProperties;
   initialPosition: Point2D;
   initialRotation?: number;
   initialScale?: Point2D;
   initialOpacity?: number;
+  // Store text styling directly (not in metadata)
+  textStyle?: {
+    fontFamily?: string;
+    fontWeight?: string;
+    textAlign?: string;
+    lineHeight?: number;
+    letterSpacing?: number;
+  };
 }
 
 export interface TriangleProperties {
@@ -35,7 +43,12 @@ export interface RectangleProperties {
   height: number;
 }
 
-export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties;
+export interface TextProperties {
+  content: string;
+  fontSize: number;
+}
+
+export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties | TextProperties;
 
 // Object state at any point in time
 export interface ObjectState {

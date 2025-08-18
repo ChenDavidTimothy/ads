@@ -13,8 +13,8 @@ export interface NodeRenderConfig {
 
 // Execution metadata for backend processing
 export interface NodeExecutionConfig {
-  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data';
-  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene';
+  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data' | 'text';
+  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene' | 'text';
   executionPriority?: number; // For future conditional execution
 }
 
@@ -779,6 +779,153 @@ export const NODE_DEFINITIONS = {
       count: 3,
       pattern: 'none',
       spacing: 50
+    }
+  },
+
+  text: {
+    type: 'text',
+    label: 'Text',
+    description: 'Text content object for dynamic text display',
+    execution: {
+      category: 'text',
+      executor: 'text',
+    },
+    ports: {
+      inputs: [],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Text Object' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'content', 
+          type: 'string', 
+          label: 'Content', 
+          defaultValue: 'Hello World'
+        },
+        { 
+          key: 'fontSize', 
+          type: 'number', 
+          label: 'Font Size (px)', 
+          min: 8, 
+          max: 200, 
+          step: 1,
+          defaultValue: 24
+        }
+      ]
+    },
+    rendering: {
+      icon: 'T',
+      colors: {
+        primary: 'bg-[var(--node-text)]',
+        handle: '!bg-[var(--node-text)]',
+      }
+    },
+    defaults: {
+      content: 'Hello World',
+      fontSize: 24
+    }
+  },
+
+  textstyle: {
+    type: 'textstyle',
+    label: 'Text Style',
+    description: 'Typography styling for text objects',
+    execution: {
+      category: 'animation', // Stays animation - processes objects like Canvas
+      executor: 'animation',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'object_stream', label: 'Text Objects' }
+      ],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Styled Text Objects' }
+      ]
+    },
+    properties: {
+      properties: [
+        { 
+          key: 'fontFamily', 
+          type: 'select', 
+          label: 'Font Family',
+          options: [
+            { value: 'Arial', label: 'Arial' },
+            { value: 'Helvetica', label: 'Helvetica' },
+            { value: 'Times New Roman', label: 'Times New Roman' },
+            { value: 'Courier New', label: 'Courier New' },
+            { value: 'Georgia', label: 'Georgia' },
+            { value: 'Verdana', label: 'Verdana' }
+          ],
+          defaultValue: 'Arial'
+        },
+        { 
+          key: 'fontWeight', 
+          type: 'select', 
+          label: 'Font Weight',
+          options: [
+            { value: 'normal', label: 'Normal (400)' },
+            { value: 'bold', label: 'Bold (700)' },
+            { value: '100', label: 'Thin (100)' },
+            { value: '300', label: 'Light (300)' },
+            { value: '500', label: 'Medium (500)' },
+            { value: '600', label: 'Semi Bold (600)' },
+            { value: '800', label: 'Extra Bold (800)' },
+            { value: '900', label: 'Black (900)' }
+          ],
+          defaultValue: 'normal'
+        },
+        { 
+          key: 'textAlign', 
+          type: 'select', 
+          label: 'Text Alignment',
+          options: [
+            { value: 'left', label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right', label: 'Right' },
+            { value: 'justify', label: 'Justify' }
+          ],
+          defaultValue: 'center'
+        },
+        { 
+          key: 'lineHeight', 
+          type: 'number', 
+          label: 'Line Height', 
+          min: 0.5, 
+          max: 5, 
+          step: 0.1, 
+          defaultValue: 1.2
+        },
+        { 
+          key: 'letterSpacing', 
+          type: 'number', 
+          label: 'Letter Spacing (px)', 
+          min: -5, 
+          max: 20, 
+          step: 0.1, 
+          defaultValue: 0
+        }
+      ]
+    },
+    rendering: {
+      icon: 'Aa',
+      colors: {
+        primary: 'bg-[var(--node-animation)]',
+        handle: '!bg-[var(--node-animation)]',
+      }
+    },
+    defaults: {
+      fontFamily: 'Arial',
+      fontWeight: 'normal',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      letterSpacing: 0
+    },
+    metadata: {
+      supportsVariableBinding: true,
+      supportsPerObjectAssignments: true,
+      requiresTextObjects: true
     }
   }
 } as const;

@@ -42,6 +42,30 @@ export interface RectangleNodeData extends BaseNodeData {
 
 export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
 
+// Text node data types
+export interface TextNodeData extends BaseNodeData {
+  content: string;
+  fontSize: number;
+}
+
+export interface TextStyleNodeData extends BaseNodeData {
+  fontFamily: string;
+  fontWeight: string;
+  textAlign: string;
+  lineHeight: number;
+  letterSpacing: number;
+  // Variable binding support (follows Canvas pattern)
+  variableBindings?: Record<string, {
+    target?: string;
+    boundResultNodeId?: string;
+  }>;
+  variableBindingsByObject?: Record<string, Record<string, {
+    target?: string;
+    boundResultNodeId?: string;
+  }>>;
+  perObjectAssignments?: PerObjectAssignments;
+}
+
 // Insert node data
 export interface InsertNodeData extends BaseNodeData {
   appearanceTime: number;
@@ -241,6 +265,6 @@ export interface DuplicateNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
+export type NodeData = GeometryNodeData | TextNodeData | TextStyleNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
 
 // NodeType is derived from the registry (definitions)

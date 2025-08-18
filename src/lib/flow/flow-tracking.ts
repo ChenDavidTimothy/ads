@@ -131,6 +131,7 @@ export class FlowTracker {
 
     // Get all node types from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
+    const textNodeTypes = getNodesByCategory('text').map(def => def.type);
     const dataNodeTypes = getNodesByCategory('data').map(def => def.type);
     const duplicateNodeTypes = ['duplicate']; // Can be expanded for other multiplier nodes
 
@@ -159,8 +160,8 @@ export class FlowTracker {
         return [];
       }
 
-      // If this is a geometry node, it creates new visual objects
-      if (geometryNodeTypes.includes(currentNode.type!)) {
+      // If this is a geometry node OR text node, it creates new visual objects
+      if (geometryNodeTypes.includes(currentNode.type!) || textNodeTypes.includes(currentNode.type!)) {
         const newObject: ObjectDescriptor = {
           id: currentNode.data.identifier.id,
           nodeId: currentNode.data.identifier.id,

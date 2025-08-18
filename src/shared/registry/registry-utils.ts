@@ -46,6 +46,8 @@ function getCategoryTokenClass(category: NodeDefinition['execution']['category']
       return { primary: 'bg-[var(--node-logic)]', handle: '!bg-[var(--node-logic)]' };
     case 'geometry':
       return { primary: 'bg-[var(--node-geometry)]', handle: '!bg-[var(--node-geometry)]' };
+    case 'text':
+      return { primary: 'bg-[var(--node-text)]', handle: '!bg-[var(--node-text)]' };
     case 'timing':
       return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
     case 'data':
@@ -105,6 +107,12 @@ export function generateNodePalette() {
     icon: def.rendering.icon
   }));
 
+  const textNodes = getNodesByCategory('text').map(def => ({
+    type: def.type as NodeType,
+    label: def.label,
+    icon: def.rendering.icon
+  }));
+
   const dataNodes = getNodesByCategory('data').map(def => ({
     type: def.type as NodeType,
     label: def.label,
@@ -137,6 +145,7 @@ export function generateNodePalette() {
 
   return {
     geometryNodes,
+    textNodes,
     dataNodes,
     timingNodes,
     logicNodes,

@@ -1,10 +1,11 @@
 // src/animation/execution/scene-renderer.ts
 import type { NodeCanvasContext, Point2D, Transform } from '@/shared/types/core';
-import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties } from '@/shared/types/scene';
+import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties, TextProperties } from '@/shared/types/scene';
 import { Timeline } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
+import { drawText, type TextStyle } from '../geometry/text';
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -104,6 +105,9 @@ export class SceneRenderer {
         case 'rectangle':
           this.renderRectangle(ctx, object.properties as RectangleProperties, state);
           break;
+        case 'text':
+          this.renderText(ctx, object, state);
+          break;
       }
     });
 
@@ -144,6 +148,26 @@ export class SceneRenderer {
 
     // Draw rectangle centered at origin
     drawRectangle(ctx, { x: -props.width / 2, y: -props.height / 2 }, props.width, props.height, style);
+  }
+
+  private renderText(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {
+    const props = object.properties as TextProperties;
+    const textStyle = object.textStyle; // Applied by TextStyle node
+
+    const style: TextStyle = {
+      fillColor: state.colors.fill,
+      strokeColor: state.colors.stroke,
+      strokeWidth: 2,
+      fontFamily: textStyle?.fontFamily ?? 'Arial',
+      fontSize: props.fontSize,
+      fontWeight: textStyle?.fontWeight ?? 'normal',
+      textAlign: (textStyle?.textAlign as TextStyle['textAlign']) ?? 'center',
+      lineHeight: textStyle?.lineHeight ?? 1.2,
+      letterSpacing: textStyle?.letterSpacing ?? 0
+    };
+
+    // Cast to CanvasRenderingContext2D for text rendering
+    drawText(ctx as unknown as CanvasRenderingContext2D, { x: 0, y: 0 }, props.content, style);
   }
 }
 

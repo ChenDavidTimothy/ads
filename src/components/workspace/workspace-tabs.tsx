@@ -5,9 +5,10 @@ import { TabButton } from './tab-button';
 import { useWorkspace } from './workspace-context';
 import { Layers3, Timer } from 'lucide-react';
 import { Image as ImageIcon } from 'lucide-react';
+import { Type } from 'lucide-react';
 
 interface EditorTabConfig {
-  key: 'timeline' | 'canvas' | 'image' | 'audio';
+  key: 'timeline' | 'canvas' | 'image' | 'audio' | 'textstyle';
   label: string;
   icon: ReactNode;
   requiredNodeType?: string;
@@ -16,6 +17,7 @@ interface EditorTabConfig {
 const EDITOR_TABS: EditorTabConfig[] = [
   { key: 'timeline', label: 'Timeline', icon: <Timer size={16} />, requiredNodeType: 'animation' },
   { key: 'canvas', label: 'Canvas', icon: <ImageIcon size={16} />, requiredNodeType: 'canvas' },
+  { key: 'textstyle', label: 'Text Style', icon: <Type size={16} />, requiredNodeType: 'textstyle' },
   // future: image, audio
 ];
 
@@ -23,7 +25,7 @@ export function WorkspaceTabs() {
   const { state, updateUI } = useWorkspace();
   const { activeTab, selectedNodeId, selectedNodeType } = state.ui;
 
-  const handleTabChange = (tabKey: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio') => {
+  const handleTabChange = (tabKey: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'textstyle') => {
     updateUI({ activeTab: tabKey });
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tabKey);
