@@ -34,6 +34,11 @@ function TextStyleBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; 
 	);
 }
 
+function TextStyleOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+	const { resetToDefault } = useVariableBinding(nodeId, objectId);
+	
+	return <Badge variant="manual" onRemove={() => resetToDefault(keyName)}>Manual</Badge>;
+}
 
 
 // Default Properties Component (Center Panel)
@@ -231,14 +236,27 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 		return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
 	};
 
+	// NEW: Add override detection function
+	const isOverridden = (key: string) => {
+		switch (key) {
+			case 'fontFamily': return initial.fontFamily !== undefined;
+			case 'fontWeight': return initial.fontWeight !== undefined;
+			case 'textAlign': return initial.textAlign !== undefined;
+			case 'lineHeight': return initial.lineHeight !== undefined;
+			case 'letterSpacing': return initial.letterSpacing !== undefined;
+			default: return false;
+		}
+	};
+
 	const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
 	const fontWeight = initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? 'normal';
 	const textAlign = initial.textAlign ?? base.textAlign ?? def.textAlign ?? 'center';
 	const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
 	const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
 
+	// UPDATED: Enhanced left border class with manual override styling
 	const leftBorderClass = (key: string) => (
-		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
+		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : (isOverridden(key) ? 'border-l-2 border-[var(--warning-600)]' : '')
 	);
 
 	return (
@@ -290,12 +308,23 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 							/>
 						</div>
 					</div>
+					{/* Badges for Font Family + Font Weight Row */}
+					<div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
+							<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
+							<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+						</div>
+					</div>
 				</div>
 
 				{/* Alignment and Spacing */}
 				<div className="space-y-[var(--space-3)]">
 					<div className="text-sm font-medium text-[var(--text-primary)]">Alignment & Spacing</div>
-					<div className="grid grid-cols-1 gap-[var(--space-3)]">
+					<div className="grid grid-cols-2 gap-[var(--space-3)]">
 						<div>
 							<SelectField
 								label="Text Alignment"
@@ -325,9 +354,23 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 								inputClassName={leftBorderClass('lineHeight')}
 							/>
 						</div>
+					</div>
+					{/* Badges for Text Align + Line Height Row */}
+					<div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('textAlign') && !isBound('textAlign') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />}
+							<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('lineHeight') && !isBound('lineHeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />}
+							<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />
+						</div>
+					</div>
+
+					<div className="grid grid-cols-1 gap-[var(--space-3)]">
 						<div>
 							<NumberField
-								label="Letter Spacing (px)"
+								label="Letter Spacing"
 								value={letterSpacing}
 								onChange={(letterSpacing) => onChange({ letterSpacing })}
 								min={-5}
@@ -339,27 +382,17 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 							/>
 						</div>
 					</div>
+					{/* Badges for Letter Spacing Row - SAME structure as field above */}
+					<div className="grid grid-cols-1 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('letterSpacing') && !isBound('letterSpacing') && <TextStyleOverrideBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />}
+							<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
+						</div>
+					</div>
 				</div>
 			</div>
 
-			{/* Binding Status Badges */}
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
-				</div>
-			</div>
+
 		</div>
 	);
 }
