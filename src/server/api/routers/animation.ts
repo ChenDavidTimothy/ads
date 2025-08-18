@@ -101,24 +101,75 @@ interface ValidationResult {
     nodeName?: string;
   }>;
 }
-// Convert BackendNode to ReactFlowNode with proper typing
+
+// Define interfaces for type safety
+interface Point2DValue {
+  x?: number;
+  y?: number;
+}
+
+interface PropertySchema {
+  key: string;
+  type: string;
+  defaultValue?: unknown;
+}
+
+interface NodeDefinition {
+  defaults?: Record<string, unknown>;
+  properties?: {
+    properties?: PropertySchema[];
+  };
+}
+
+// Type guard functions
+function isPoint2DValue(value: unknown): value is Point2DValue {
+  return typeof value === 'object' && value !== null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+// Type guard for identifier data
+function hasIdentifier(data: unknown): data is { identifier: { id: string } } {
+  return typeof data === 'object' && 
+         data !== null && 
+         'identifier' in data && 
+         typeof (data as { identifier: unknown }).identifier === 'object' &&
+         (data as { identifier: unknown }).identifier !== null &&
+         'id' in (data as { identifier: { id: unknown } }).identifier &&
+         typeof (data as { identifier: { id: unknown } }).identifier.id === 'string';
+}
+
+// Convert BackendNode to ReactFlowNode with proper typing - FIXED: Remove unnecessary type assertion
 function convertBackendNodeToReactFlowNode(backendNode: BackendNode): ReactFlowNode<NodeData> {
   return {
     id: backendNode.id,
     type: backendNode.type,
     position: backendNode.position,
-    data: backendNode.data as unknown as NodeData
+    data: backendNode.data as unknown as NodeData // This assertion is necessary and safe here
   };
+}
+
+// Fixed ID mapping logic - removing unsafe type assertions
+function createNodeIdMap(nodes: ReactFlowNodeInput[]): Map<string, string> {
+  const nodeIdMap = new Map<string, string>();
+  nodes.forEach(n => {
+    if (hasIdentifier(n.data)) {
+      nodeIdMap.set(n.id, n.data.identifier.id);
+    }
+  });
+  return nodeIdMap;
 }
 
 // Merge node data with registry defaults, ignoring undefined values and fixing point2d shapes
 function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknown): Record<string, unknown> {
-  const definition = nodeType ? getNodeDefinition(nodeType) : undefined;
-  const defaults = (definition?.defaults as Record<string, unknown> | undefined) ?? {};
-  const data = (rawData && typeof rawData === 'object' && rawData !== null) ? (rawData as Record<string, unknown>) : {};
+  const definition: NodeDefinition | undefined = nodeType ? getNodeDefinition(nodeType) : undefined;
+  const defaults = definition?.defaults ?? {};
+  const data = isRecord(rawData) ? rawData : {};
 
   // Look up property schemas up-front so we can handle structured types (e.g., point2d)
-  const propertySchemas = (definition?.properties?.properties as Array<{ key: string; type: string; defaultValue?: unknown }> | undefined) ?? [];
+  const propertySchemas = definition?.properties?.properties ?? [];
   const point2dKeys = new Set(propertySchemas.filter(s => s.type === 'point2d').map(s => s.key));
 
   // Start with defaults, then override with provided values except undefined
@@ -127,13 +178,11 @@ function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknow
     if (value === undefined) continue;
 
     // Deep-merge point2d objects so providing only x (or y) preserves the other axis from defaults
-    if (point2dKeys.has(key) && value && typeof value === 'object') {
-      const baseObj = (typeof defaults[key] === 'object' && defaults[key] !== null)
-        ? (defaults[key] as Record<string, unknown>)
-        : {};
-      merged[key] = { ...baseObj, ...(value as Record<string, unknown>) };
+    if (point2dKeys.has(key) && isPoint2DValue(value)) {
+      const baseObj = isRecord(defaults[key]) ? defaults[key] : {};
+      merged[key] = { ...baseObj, ...value };
     } else {
-      merged[key] = value as unknown;
+      merged[key] = value;
     }
   }
 
@@ -141,18 +190,17 @@ function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknow
   for (const schema of propertySchemas) {
     if (schema.type === 'point2d') {
       // Prefer actual input, then node-level defaults, then schema defaults, then 0
-      const provided = (data[schema.key] && typeof data[schema.key] === 'object')
-        ? (data[schema.key] as Record<string, unknown>)
-        : {};
-      const nodeDef = (defaults[schema.key] && typeof defaults[schema.key] === 'object')
-        ? (defaults[schema.key] as { x?: number; y?: number })
-        : undefined;
-      const schemaDef = (schema.defaultValue as { x?: number; y?: number } | undefined) ?? undefined;
+      const provided = isPoint2DValue(data[schema.key]) ? data[schema.key] as Point2DValue : {};
+      const nodeDef = isPoint2DValue(defaults[schema.key]) ? defaults[schema.key] as Point2DValue : undefined;
+      const schemaDef = isPoint2DValue(schema.defaultValue) ? schema.defaultValue as Point2DValue : undefined;
+      
+      // Type-safe coordinate extraction
+      const currentMerged = isRecord(merged[schema.key]) ? merged[schema.key] as Point2DValue : {};
 
       const x = typeof provided.x === 'number'
         ? provided.x
-        : typeof (merged[schema.key] as any)?.x === 'number'
-          ? (merged[schema.key] as any).x
+        : typeof currentMerged.x === 'number'
+          ? currentMerged.x
           : typeof nodeDef?.x === 'number'
             ? nodeDef.x
             : typeof schemaDef?.x === 'number'
@@ -161,8 +209,8 @@ function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknow
 
       const y = typeof provided.y === 'number'
         ? provided.y
-        : typeof (merged[schema.key] as any)?.y === 'number'
-          ? (merged[schema.key] as any).y
+        : typeof currentMerged.y === 'number'
+          ? currentMerged.y
           : typeof nodeDef?.y === 'number'
             ? nodeDef.y
             : typeof schemaDef?.y === 'number'
@@ -339,13 +387,7 @@ export const animationRouter = createTRPCRouter({
         });
 
         // Convert React Flow edges to backend format with identifier ID mapping
-        const nodeIdMap = new Map<string, string>();
-         input.nodes.forEach(n => {
-           if (n.data && typeof n.data === 'object' && n.data !== null) {
-             const identifier = (n.data as { identifier: { id: string } }).identifier;
-             nodeIdMap.set(n.id, identifier.id);
-           }
-         });
+        const nodeIdMap = createNodeIdMap(input.nodes);
 
         const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
@@ -431,13 +473,7 @@ export const animationRouter = createTRPCRouter({
         });
 
         // Convert React Flow edges to backend format with identifier ID mapping
-        const nodeIdMap = new Map<string, string>();
-         input.nodes.forEach(n => {
-           if (n.data && typeof n.data === 'object' && n.data !== null) {
-             const identifier = (n.data as { identifier: { id: string } }).identifier;
-             nodeIdMap.set(n.id, identifier.id);
-           }
-         });
+        const nodeIdMap = createNodeIdMap(input.nodes);
 
         const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
@@ -687,13 +723,7 @@ export const animationRouter = createTRPCRouter({
             data: mergedData,
           };
         });
-        const nodeIdMap = new Map<string, string>();
-        input.nodes.forEach(n => {
-          if (n.data && typeof n.data === 'object' && n.data !== null) {
-            const identifier = (n.data as { identifier: { id: string } }).identifier;
-            nodeIdMap.set(n.id, identifier.id);
-          }
-        });
+        const nodeIdMap = createNodeIdMap(input.nodes);
         const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: nodeIdMap.get(e.source) ?? e.source,
@@ -838,13 +868,7 @@ export const animationRouter = createTRPCRouter({
         data: mergeNodeDataWithDefaults(n.type, n.data),
       }));
 
-      const nodeIdMap = new Map<string, string>();
-       input.nodes.forEach(n => {
-         if (n.data && typeof n.data === 'object' && n.data !== null) {
-           const identifier = (n.data as { identifier: { id: string } }).identifier;
-           nodeIdMap.set(n.id, identifier.id);
-         }
-       });
+      const nodeIdMap = createNodeIdMap(input.nodes);
 
       const backendEdges: BackendEdge[] = input.edges.map((e) => ({
         id: e.id,

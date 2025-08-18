@@ -15,6 +15,19 @@ export interface RenderJobResult {
   publicUrl: string;
 }
 
+// Define proper interface for queue stats row
+interface QueueStatsRow {
+  pending?: string | number;
+  active?: string | number;
+  completed?: string | number;
+  failed?: string | number;
+}
+
+// Type guard for queue stats
+function isValidQueueStatsRow(row: unknown): row is QueueStatsRow {
+  return typeof row === 'object' && row !== null;
+}
+
 export class GraphileQueue<TJob extends { jobId: string }, TResult> implements JobQueue<TJob, TResult> {
   private readonly taskIdentifier: string;
 
@@ -73,7 +86,13 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
          where j.task_identifier = $1`,
         [this.taskIdentifier]
       );
-      const row = rows[0] ?? {};
+      
+      // Type-safe row access instead of using any
+      const row = rows[0];
+      if (!isValidQueueStatsRow(row)) {
+        return { pending: 0, active: 0, completed: 0, failed: 0 };
+      }
+      
       return {
         pending: Number(row.pending ?? 0),
         active: Number(row.active ?? 0),

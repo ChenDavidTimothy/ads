@@ -34,14 +34,42 @@ export enum StorageErrorCode {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
+// Define structured error details interface instead of Record<string, any>
+export interface StorageErrorDetails {
+  missingVars?: string[];
+  bucketName?: string;
+  reason?: string;
+  accessible?: boolean;
+  fileSize?: number;
+  maxSize?: number;
+  fileType?: string;
+  bucket?: string;
+  remoteKey?: string;
+  attempt?: number;
+  operation?: string;
+  timeoutMs?: number;
+  originalError?: string;
+  [key: string]: unknown; // Allow additional properties while maintaining type safety
+}
+
 export interface StorageError extends Error {
   code: StorageErrorCode;
-  details?: Record<string, any>;
+  details?: StorageErrorDetails;
   retryable: boolean;
   timestamp: string;
   userId?: string;
   bucket?: string;
   filePath?: string;
+}
+
+// Type guard for objects that might be errors
+function isErrorLike(error: unknown): error is { message?: unknown; code?: unknown; stack?: unknown } {
+  return typeof error === 'object' && error !== null;
+}
+
+// Type guard for network-related errors
+function hasNetworkErrorMessage(error: unknown): error is { message: string } {
+  return isErrorLike(error) && typeof error.message === 'string';
 }
 
 export class StorageErrorHandler {
@@ -54,7 +82,7 @@ export class StorageErrorHandler {
   static createError(
     code: StorageErrorCode,
     message: string,
-    details?: Record<string, any>,
+    details?: StorageErrorDetails,
     userId?: string,
     bucket?: string,
     filePath?: string
@@ -71,18 +99,19 @@ export class StorageErrorHandler {
     return error;
   }
 
-  static isRetryableError(error: any): boolean {
-    if (error?.code && this.RETRYABLE_ERRORS.has(error.code)) {
+  static isRetryableError(error: unknown): boolean {
+    // Check if error has a code property that matches retryable errors
+    if (isErrorLike(error) && typeof error.code === 'string' && this.RETRYABLE_ERRORS.has(error.code as StorageErrorCode)) {
       return true;
     }
     
-    // Check for network-related errors
-    if (error?.message) {
+    // Check for network-related errors by message content
+    if (hasNetworkErrorMessage(error)) {
       const message = error.message.toLowerCase();
-      return message.includes('network') || 
-             message.includes('timeout') || 
-             message.includes('connection') ||
-             message.includes('econnreset') ||
+      return message.includes('network') ?? 
+             message.includes('timeout') ?? 
+             message.includes('connection') ??
+             message.includes('econnreset') ??
              message.includes('enotfound');
     }
     
@@ -163,15 +192,21 @@ export class StorageErrorHandler {
     );
   }
 
-  static wrapError(originalError: any, code: StorageErrorCode, message?: string): StorageError {
+  static wrapError(originalError: unknown, code: StorageErrorCode, message?: string): StorageError {
+    const errorMessage = message ?? (isErrorLike(originalError) && typeof originalError.message === 'string' 
+      ? originalError.message 
+      : 'Unknown error occurred');
+    
     const error = this.createError(
       code,
-      message || originalError.message || 'Unknown error occurred',
-      { originalError: originalError.message || String(originalError) }
+      errorMessage,
+      { originalError: isErrorLike(originalError) && typeof originalError.message === 'string' 
+          ? originalError.message 
+          : String(originalError) }
     );
     
-    // Preserve original stack trace
-    if (originalError.stack) {
+    // Preserve original stack trace if available
+    if (isErrorLike(originalError) && typeof originalError.stack === 'string') {
       error.stack = originalError.stack;
     }
     

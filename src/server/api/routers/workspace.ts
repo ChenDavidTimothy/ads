@@ -28,6 +28,12 @@ const saveResultSchema = z.object({
   updated_at: z.string(),
 });
 
+// Define proper type for flow data input instead of using any
+interface FlowDataInput {
+  nodes: unknown[];
+  edges: unknown[];
+}
+
 export const workspaceRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
     const { supabase, user } = ctx;
@@ -76,12 +82,15 @@ export const workspaceRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().uuid(),
-        flowData: z.object({ nodes: z.any().array(), edges: z.any().array() }),
+        flowData: z.object({ nodes: z.unknown().array(), edges: z.unknown().array() }),
         version: z.number().int().nonnegative(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
+      
+      // Type the flow data properly instead of using any
+      const flowData: FlowDataInput = input.flowData;
       
       // Check if the flow data has actually changed to avoid unnecessary updates
       const { data: currentWorkspace } = await supabase
@@ -93,7 +102,7 @@ export const workspaceRouter = createTRPCRouter({
         
       if (currentWorkspace && 
           currentWorkspace.version === input.version && 
-          JSON.stringify(currentWorkspace.flow_data) === JSON.stringify(input.flowData)) {
+          JSON.stringify(currentWorkspace.flow_data) === JSON.stringify(flowData)) {
         // No changes detected, return current data without updating
         return saveResultSchema.parse({
           version: currentWorkspace.version,
@@ -104,7 +113,7 @@ export const workspaceRouter = createTRPCRouter({
       // Optimistic concurrency: version must match
       const { data, error } = await supabase
         .from("workspaces")
-        .update({ flow_data: input.flowData, version: (input.version + 1) })
+        .update({ flow_data: flowData, version: (input.version + 1) })
         .eq("id", input.id)
         .eq("user_id", user.id)
         .eq("version", input.version)
