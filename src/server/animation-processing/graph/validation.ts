@@ -8,7 +8,6 @@ import {
   TooManyScenesError,
   InvalidConnectionError 
 } from "@/shared/errors/domain";
-import { logger } from "@/lib/logger";
 import type { NodeData } from "@/shared/types";
 import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
 
@@ -233,7 +232,7 @@ function inferEffectiveLogicalType(
   sourcePortId: string,
   nodes: ReactFlowNode<NodeData>[],
   edges: ReactFlowEdge[],
-  visited: Set<string> = new Set()
+  visited: Set<string> = new Set<string>()
 ): LogicalType {
   const visitKey = `${sourceNodeId}::${sourcePortId}`;
   if (visited.has(visitKey)) return 'unknown';
@@ -270,7 +269,7 @@ function inferEffectiveLogicalType(
         t === 'number' || t === 'boolean' || t === 'string' || t === 'color'
       ));
       if (narrowed.length === 0) return 'unknown';
-      const unique = Array.from(new Set(narrowed));
+      const unique = Array.from(new Set<Exclude<LogicalType, 'unknown'>>(narrowed));
       return unique.length === 1 ? (unique[0] as LogicalType) : 'unknown';
     }
     default:

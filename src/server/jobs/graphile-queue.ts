@@ -88,7 +88,7 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
       );
       
       // Type-safe row access instead of using any
-      const row = rows[0];
+      const row: unknown = rows[0];
       if (!isValidQueueStatsRow(row)) {
         return { pending: 0, active: 0, completed: 0, failed: 0 };
       }

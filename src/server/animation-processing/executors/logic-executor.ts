@@ -9,7 +9,7 @@ import { TypeValidationError } from "@/shared/types/validation";
 import { MultipleResultValuesError, DuplicateNodeError, DuplicateCountExceededError } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments, isObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
@@ -535,17 +535,19 @@ export class LogicNodeExecutor extends BaseExecutor {
     return merged;
   }
 
-  private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[], allowIds: string[]): PerObjectAssignments {
+    private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[], allowIds: string[]): PerObjectAssignments {
     const merged: PerObjectAssignments = {};
     for (const input of inputs) {
       const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
       if (!fromMeta) continue;
-              for (const [objectId, assignment] of Object.entries(fromMeta)) {
-          if (!allowIds.includes(objectId)) continue;
-          const base = merged[objectId];
-          const combined = mergeObjectAssignments(base, assignment as any);
-          if (combined) merged[objectId] = combined as ObjectAssignments;
-        }
+      for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        if (!allowIds.includes(objectId)) continue;
+        const base = merged[objectId];
+        // Fix: Properly type the assignment from Object.entries and validate it
+        if (!isObjectAssignments(assignment)) continue;
+        const combined = mergeObjectAssignments(base, assignment);
+        if (combined) merged[objectId] = combined;
+      }
     }
     return merged;
   }
@@ -561,8 +563,10 @@ export class LogicNodeExecutor extends BaseExecutor {
         for (const [objectId, assignment] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
           const base = merged[objectId];
-          const combined = mergeObjectAssignments(base, assignment as any);
-          if (combined) merged[objectId] = combined as ObjectAssignments;
+          // Fix: Properly type the assignment from Object.entries and validate it
+          if (!isObjectAssignments(assignment)) continue;
+          const combined = mergeObjectAssignments(base, assignment);
+          if (combined) merged[objectId] = combined;
         }
       }
     }
@@ -1185,7 +1189,7 @@ export class LogicNodeExecutor extends BaseExecutor {
   private getAllExistingObjectIds(context: ExecutionContext): Set<string> {
     const ids = new Set<string>();
     
-    for (const [key, output] of context.nodeOutputs.entries()) {
+    for (const output of context.nodeOutputs.values()) {
       if (output.type !== 'object_stream') continue;
       
       const objects = Array.isArray(output.data) ? output.data : [output.data];
@@ -1200,12 +1204,12 @@ export class LogicNodeExecutor extends BaseExecutor {
   }
 
   private createDuplicateObject(original: unknown, duplicateId: string, index: number, pattern: string, spacing: number): unknown {
-    const duplicate = JSON.parse(JSON.stringify(original)); // Deep clone
-    (duplicate as { id: string }).id = duplicateId;
+    const duplicate = JSON.parse(JSON.stringify(original)) as Record<string, unknown>; // Deep clone
+    duplicate.id = duplicateId;
     
     // Apply positioning patterns
     if (pattern === 'linear' && 'initialPosition' in duplicate) {
-      const pos = (duplicate as { initialPosition: { x: number; y: number } }).initialPosition;
+      const pos = duplicate.initialPosition as { x: number; y: number };
       pos.x += index * spacing;
     }
     // Future: grid pattern implementation
@@ -1226,7 +1230,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     // Copy assignments with deep clone
     if (sourceAssignments?.[sourceId]) {
       try {
-        targetAssignments[targetId] = JSON.parse(JSON.stringify(sourceAssignments[sourceId]));
+        targetAssignments[targetId] = JSON.parse(JSON.stringify(sourceAssignments[sourceId])) as ObjectAssignments;
       } catch (error) {
         logger.warn(`Failed to clone assignments for ${sourceId}→${targetId}:`, { error: String(error) });
         targetAssignments[targetId] = {} as ObjectAssignments;
@@ -1240,8 +1244,8 @@ export class LogicNodeExecutor extends BaseExecutor {
           ...anim,
           objectId: targetId,
           id: anim.id.replace(sourceId, targetId), // Update trackId for consistency
-          properties: JSON.parse(JSON.stringify(anim.properties))
-        }));
+          properties: anim.properties
+        })) as SceneAnimationTrack[];
       } catch (error) {
         logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, { error: String(error) });
         targetAnimations[targetId] = [];

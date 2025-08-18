@@ -118,7 +118,7 @@ export class FlowTracker {
 
 
 
-  // Enhanced method to get actual objects (including duplicates)
+  // Enhanced method to get visual objects (geometry nodes only, excluding data nodes like constants)
   getUpstreamObjects(
     nodeId: string,
     allNodes: Node<NodeData>[],
@@ -164,8 +164,8 @@ export class FlowTracker {
         return [];
       }
 
-      // If this is a geometry or data node, it creates new objects
-      if (geometryNodeTypes.includes(currentNode.type!) || dataNodeTypes.includes(currentNode.type!)) {
+      // If this is a geometry node, it creates new visual objects
+      if (geometryNodeTypes.includes(currentNode.type!)) {
         const newObject: ObjectDescriptor = {
           id: currentNode.data.identifier.id,
           nodeId: currentNode.data.identifier.id,
@@ -174,6 +174,12 @@ export class FlowTracker {
           sourceGeometryNodeId: currentNode.data.identifier.id
         };
         return [newObject];
+      }
+
+      // Data nodes (like constants) output values but not visual objects
+      // They should not appear in object selection lists for timeline/canvas editors
+      if (dataNodeTypes.includes(currentNode.type!)) {
+        return []; // Return empty array for data nodes
       }
 
       // Handle merge nodes with multiple ports and conflict resolution
@@ -248,9 +254,10 @@ export class FlowTracker {
         }
       }
 
-      // If no input ports have objects and this is a geometry or data node, it's a source
-      if (objectsByPort.size === 0 && (geometryNodeTypes.includes(currentNode.type!) || dataNodeTypes.includes(currentNode.type!))) {
-        return traceObjects(currentNodeId, new Map([['input', []]]));
+      // If no input ports have objects and this is a geometry node, it's a source
+      if (objectsByPort.size === 0 && geometryNodeTypes.includes(currentNode.type!)) {
+        const emptyMap = new Map([['input', []]]);
+        return traceObjects(currentNodeId, emptyMap);
       }
 
       // Process objects through current node

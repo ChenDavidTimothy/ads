@@ -192,7 +192,7 @@ function mergeNodeDataWithDefaults(nodeType: string | undefined, rawData: unknow
       // Prefer actual input, then node-level defaults, then schema defaults, then 0
       const provided = isPoint2DValue(data[schema.key]) ? data[schema.key] as Point2DValue : {};
       const nodeDef = isPoint2DValue(defaults[schema.key]) ? defaults[schema.key] as Point2DValue : undefined;
-      const schemaDef = isPoint2DValue(schema.defaultValue) ? schema.defaultValue as Point2DValue : undefined;
+      const schemaDef = isPoint2DValue(schema.defaultValue) ? schema.defaultValue : undefined;
       
       // Type-safe coordinate extraction
       const currentMerged = isRecord(merged[schema.key]) ? merged[schema.key] as Point2DValue : {};
@@ -782,7 +782,7 @@ export const animationRouter = createTRPCRouter({
             width: Number(frameData.width),
             height: Number(frameData.height),
             backgroundColor: String(frameData.backgroundColor),
-            format: (frameData.format === 'jpeg' ? 'jpeg' : 'png') as 'png'|'jpeg',
+            format: frameData.format === 'jpeg' ? 'jpeg' : 'png',
             quality: Number(frameData.quality ?? 90),
           } as const;
 

@@ -44,13 +44,7 @@ function hasFromProperty(props: unknown): props is { from: unknown } {
   return typeof props === 'object' && props !== null && 'from' in props;
 }
 
-function hasToProperty(props: unknown): props is { to: unknown } {
-  return typeof props === 'object' && props !== null && 'to' in props;
-}
 
-function isMoveProperties(props: TrackProperties): props is MoveTrackProperties {
-  return hasFromProperty(props) && typeof props.from === 'object' && props.from !== null && 'x' in props.from;
-}
 
 function isColorProperties(props: TrackProperties): props is ColorTrackProperties {
   return hasFromProperty(props) && typeof props.from === 'string';
@@ -88,11 +82,11 @@ export function pickCursorsForIds(cursorMap: PerObjectCursorMap, ids: string[]):
 
 function applyTrackOverride(base: AnimationTrack, override: TrackOverride): AnimationTrack {
   const baseProps = base.properties as unknown as Record<string, unknown>;
-  const overrideProps = (override.properties ?? {}) as Record<string, unknown>;
-  const mergedProps = {
+  const overrideProps = override.properties ?? {};
+  const mergedProps: Record<string, unknown> = {
     ...baseProps,
     ...overrideProps,
-  } as Record<string, unknown>;
+  };
   
   // Deep-merge nested 'from'/'to' objects to preserve per-field overrides (e.g., move.from.x)
   if (typeof baseProps.from === 'object' && baseProps.from !== null && typeof overrideProps.from === 'object' && overrideProps.from !== null) {
@@ -107,7 +101,7 @@ function applyTrackOverride(base: AnimationTrack, override: TrackOverride): Anim
     ...base,
     startTime: override.startTime ?? base.startTime,
     duration: override.duration ?? base.duration,
-    easing: (override.easing ?? base.easing) as AnimationTrack['easing'],
+    easing: override.easing ?? base.easing,
     properties: mergedProps as unknown as typeof base.properties,
   };
   return merged as AnimationTrack;
@@ -212,14 +206,14 @@ export function convertTracksToSceneAnimations(
 
     if (defaultFrom !== undefined) {
       const matchedOverride = perObjectAssignments?.[objectId]?.tracks?.find(
-        (o: TrackOverride) => (o.trackId && o.trackId === baseTrack.identifier.id) || (!o.trackId && o.type === baseTrack.type)
+        (o: TrackOverride) => (o.trackId && o.trackId === baseTrack.identifier.id) ?? (!o.trackId && o.type === baseTrack.type)
       );
       const fromExplicitByOverride = !!(matchedOverride && Object.prototype.hasOwnProperty.call(matchedOverride.properties ?? {}, 'from'));
       
       // Type-safe property access instead of (baseTrack as any).properties.from
       const trackProps = baseTrack.properties as unknown as TrackProperties;
       const fromIsNonDefault = !isDefaultFrom(baseTrack.type, hasFromProperty(trackProps) ? trackProps.from : undefined);
-      const isFromExplicit = fromExplicitByOverride || fromIsNonDefault;
+      const isFromExplicit = fromExplicitByOverride ?? fromIsNonDefault;
       
       if (!isFromExplicit && hasFromProperty(properties) && properties.from !== undefined && defaultFrom !== undefined && isDefaultFrom(baseTrack.type, properties.from)) {
         const inh = tryComputeInherited();
