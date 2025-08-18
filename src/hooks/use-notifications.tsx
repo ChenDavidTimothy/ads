@@ -26,16 +26,42 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Use a ref to maintain a counter across re-renders
+  const notificationCounter = React.useRef(0);
 
   const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Date.now().toString();
+    // Use incremental counter for guaranteed uniqueness and better performance
+    const id = `toast-${++notificationCounter.current}`;
+    
+    // Prevent counter overflow (unlikely but safe)
+    if (notificationCounter.current > Number.MAX_SAFE_INTEGER - 1000) {
+      notificationCounter.current = 0;
+    }
+    
+    // Validate notification data
+    if (!notification.title || typeof notification.title !== 'string') {
+      console.warn('Invalid notification title:', notification.title);
+      return;
+    }
+    
     const newNotification: Notification = {
       ...notification,
       id,
       duration: notification.duration ?? (notification.persistent ? 0 : 5000),
     };
 
-    setNotifications(prev => [...prev, newNotification]);
+    setNotifications(prev => {
+      // Limit to maximum 50 notifications to prevent memory issues
+      const maxNotifications = 50;
+      const newNotifications = [...prev, newNotification];
+      
+      if (newNotifications.length > maxNotifications) {
+        // Remove oldest notifications, keeping the most recent
+        return newNotifications.slice(-maxNotifications);
+      }
+      
+      return newNotifications;
+    });
 
     if ((newNotification.duration ?? 0) > 0) {
       setTimeout(() => {
