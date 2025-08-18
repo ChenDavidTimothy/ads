@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
-export default function ResetPasswordPage() {
+// Separate component that uses useSearchParams
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createBrowserClient();
@@ -345,5 +346,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

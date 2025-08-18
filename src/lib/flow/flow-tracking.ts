@@ -306,32 +306,32 @@ export class FlowTracker {
   // Registry-aware node category validation
   isGeometryNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'geometry' ?? false;
+    return definition?.execution.category === 'geometry';
   }
 
   isDataNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'data' ?? false;
+    return definition?.execution.category === 'data';
   }
 
   isTimingNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'timing' ?? false;
+    return definition?.execution.category === 'timing';
   }
 
   isLogicNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'logic' ?? false;
+    return definition?.execution.category === 'logic';
   }
 
   isAnimationNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'animation' ?? false;
+    return definition?.execution.category === 'animation';
   }
 
   isOutputNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'output' ?? false;
+    return definition?.execution.category === 'output';
   }
 
   // Registry-aware flow validation

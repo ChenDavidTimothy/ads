@@ -125,7 +125,7 @@ export class FrameGenerator {
       throw error;
     } finally {
       this.stopWatchdog();
-      this.watchdogError = null;
+      // watchdogError is already null by default, no need to reassign
     }
   }
 
@@ -162,9 +162,7 @@ export class FrameGenerator {
         check();
       } catch (err) {
         // Do not throw beyond the interval; rely on flag and outer loop checks
-        if (!this.watchdogError) {
-          this.watchdogError = err instanceof Error ? err : new Error(String(err));
-        }
+        this.watchdogError ??= err instanceof Error ? err : new Error(String(err));
       }
     }, intervalMs);
   }

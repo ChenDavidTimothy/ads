@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
-export default function LoginPage() {
+// Separate component that uses useSearchParams
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createBrowserClient();
@@ -385,5 +386,21 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

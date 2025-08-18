@@ -5,9 +5,7 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
 import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
-import type { PerObjectAssignments, ObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments, isObjectAssignments } from "@/shared/properties/assignments";
-import { setByPath } from "@/shared/utils/object-path";
+import { mergeObjectAssignments, isObjectAssignments, type PerObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
 import { deleteByPath } from "@/shared/utils/object-path";
 
 // Helper types for better type safety
@@ -99,11 +97,43 @@ export class CanvasNodeExecutor extends BaseExecutor {
 
     // Apply all global binding keys generically into baseOverrides
     const globalKeys = Object.keys(bindings);
-    const nodeOverrides: CanvasOverrides = JSON.parse(JSON.stringify(baseOverrides));
+    const nodeOverrides: CanvasOverrides = JSON.parse(JSON.stringify(baseOverrides)) as CanvasOverrides;
     for (const key of globalKeys) {
       const val = readVarGlobal(key);
       if (val === undefined) continue;
-      setByPath(nodeOverrides as Record<string, unknown>, key, val);
+      
+      // Type-safe property setting for CanvasOverrides
+      if (key === 'position.x' && typeof val === 'number') {
+        nodeOverrides.position = { 
+          x: val, 
+          y: nodeOverrides.position?.y ?? 540 
+        };
+      } else if (key === 'position.y' && typeof val === 'number') {
+        nodeOverrides.position = { 
+          x: nodeOverrides.position?.x ?? 960, 
+          y: val 
+        };
+      } else if (key === 'scale.x' && typeof val === 'number') {
+        nodeOverrides.scale = { 
+          x: val, 
+          y: nodeOverrides.scale?.y ?? 1 
+        };
+      } else if (key === 'scale.y' && typeof val === 'number') {
+        nodeOverrides.scale = { 
+          x: nodeOverrides.scale?.x ?? 1, 
+          y: val 
+        };
+      } else if (key === 'rotation' && typeof val === 'number') {
+        nodeOverrides.rotation = val;
+      } else if (key === 'opacity' && typeof val === 'number') {
+        nodeOverrides.opacity = val;
+      } else if (key === 'fillColor' && typeof val === 'string') {
+        nodeOverrides.fillColor = val;
+      } else if (key === 'strokeColor' && typeof val === 'string') {
+        nodeOverrides.strokeColor = val;
+      } else if (key === 'strokeWidth' && typeof val === 'number') {
+        nodeOverrides.strokeWidth = val;
+      }
     }
 
     const passThrough: unknown[] = [];
@@ -137,12 +167,44 @@ export class CanvasNodeExecutor extends BaseExecutor {
           const original = obj;
           const objectId = original.id;
           const reader = readVarForObject(objectId);
-          const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides));
+          const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides)) as CanvasOverrides;
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
           for (const key of objectKeys) {
             const val = reader(key);
             if (val === undefined) continue;
-            setByPath(objectOverrides as Record<string, unknown>, key, val);
+            
+            // Type-safe property setting for CanvasOverrides
+            if (key === 'position.x' && typeof val === 'number') {
+              objectOverrides.position = { 
+                x: val, 
+                y: objectOverrides.position?.y ?? 540 
+              };
+            } else if (key === 'position.y' && typeof val === 'number') {
+              objectOverrides.position = { 
+                x: objectOverrides.position?.x ?? 960, 
+                y: val 
+              };
+            } else if (key === 'scale.x' && typeof val === 'number') {
+              objectOverrides.scale = { 
+                x: val, 
+                y: objectOverrides.scale?.y ?? 1 
+              };
+            } else if (key === 'scale.y' && typeof val === 'number') {
+              objectOverrides.scale = { 
+                x: objectOverrides.scale?.x ?? 1, 
+                y: val 
+              };
+            } else if (key === 'rotation' && typeof val === 'number') {
+              objectOverrides.rotation = val;
+            } else if (key === 'opacity' && typeof val === 'number') {
+              objectOverrides.opacity = val;
+            } else if (key === 'fillColor' && typeof val === 'string') {
+              objectOverrides.fillColor = val;
+            } else if (key === 'strokeColor' && typeof val === 'string') {
+              objectOverrides.strokeColor = val;
+            } else if (key === 'strokeWidth' && typeof val === 'number') {
+              objectOverrides.strokeWidth = val;
+            }
           }
 
           const assignmentsForObject = mergedAssignments?.[objectId];

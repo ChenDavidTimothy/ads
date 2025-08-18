@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
 interface VideoJob {
@@ -99,9 +100,11 @@ export function PreviewPanel({
           <div className="text-sm font-medium text-[var(--text-secondary)] mb-[var(--space-2)]">
             Image Preview
           </div>
-          <img 
+          <Image 
             src={imageUrl!} 
             alt="Generated" 
+            width={800}
+            height={600}
             className="w-full rounded-[var(--radius-md)] border border-[var(--border-primary)]" 
           />
         </div>
@@ -122,9 +125,11 @@ export function PreviewPanel({
           </div>
 
           {activeImage ? (
-            <img 
-              src={activeImage.imageUrl} 
+            <Image 
+              src={activeImage.imageUrl!} 
               alt={activeImage.frameName} 
+              width={800}
+              height={600}
               className="w-full rounded-[var(--radius-md)] border border-[var(--border-primary)] mb-[var(--space-3)]" 
             />
           ) : (

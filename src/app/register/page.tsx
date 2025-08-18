@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
@@ -13,7 +13,8 @@ interface PasswordStrength {
   color: string;
 }
 
-export default function RegisterPage() {
+// Separate component that uses useSearchParams
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createBrowserClient();
@@ -119,13 +120,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!password) {
-      setError("Password is required");
-      return;
-    }
-
-    if (passwordStrength.score < 3) {
-      setError("Password is too weak. Please follow the requirements below.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
       return;
     }
 
@@ -135,46 +131,36 @@ export default function RegisterPage() {
     }
 
     if (!acceptTerms) {
-      setError("Please accept the Terms of Service and Privacy Policy");
+      setError("You must accept the Terms of Service and Privacy Policy");
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError, data } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
-            full_name: `${firstName.trim()} ${lastName.trim()}`,
           },
         },
       });
 
       if (signUpError) {
-        // Provide user-friendly error messages
-        switch (signUpError.message) {
-          case "User already registered":
-            setError("An account with this email already exists. Please sign in instead.");
-            break;
-          case "Password should be at least 6 characters":
-            setError("Password must be at least 6 characters long.");
-            break;
-          case "Invalid email":
-            setError("Please enter a valid email address.");
-            break;
-          default:
-            setError(signUpError.message);
-        }
+        setError(signUpError.message || "An error occurred during sign up");
         return;
       }
 
-      setRegistrationSuccess(true);
+      if (data.user) {
+        setRegistrationSuccess(true);
+        // setSuccess("Account created successfully! Please check your email to verify your account."); // This line was removed as per the new_code
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      console.error("Registration error:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -195,47 +181,300 @@ export default function RegisterPage() {
   // Show success state
   if (registrationSuccess) {
     return (
-      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center px-6">
-        <div className="w-full max-w-md">
-          <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm shadow-[var(--glass-shadow-lg)] text-center">
-            <div className="w-16 h-16 bg-[var(--success-500)] rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-8 h-8 text-white" />
-            </div>
-            
-            <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-4">
-              Check your email
-            </h1>
-            
-            <p className="text-[var(--text-secondary)] mb-6 leading-relaxed">
-                              We&apos;ve sent a confirmation link to <strong>{email}</strong>. 
-              Please check your email and click the link to activate your account.
-            </p>
-
-            <div className="space-y-3">
-              <Link 
-                href="/login"
-                className="w-full block py-3 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg font-semibold hover:opacity-90 transition-all"
-              >
-                Go to Sign In
-              </Link>
-              
-              <button 
-                onClick={() => setRegistrationSuccess(false)}
-                className="w-full py-3 border border-[var(--border-primary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-
-            <p className="text-xs text-[var(--text-tertiary)] mt-6">
-                              Didn&apos;t receive the email? Check your spam folder or contact support.
-            </p>
-          </div>
+      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
+        <div className="text-center">
+          <CheckCircle2 className="w-16 h-16 text-[var(--success-500)] mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+            Account created successfully!
+          </h1>
+          <p className="text-[var(--text-secondary)] mb-6">
+            Please check your email to verify your account before signing in.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center px-6 py-3 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+          >
+            Go to Sign In
+          </Link>
         </div>
       </div>
     );
   }
 
+  return (
+    <div className="w-full max-w-md">
+      {/* Form Container */}
+      <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm shadow-[var(--glass-shadow-lg)]">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+            Create your account
+          </h1>
+          <p className="text-[var(--text-secondary)]">
+            Start creating stunning video content today
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="firstName" className="block text-sm font-medium text-[var(--text-primary)]">
+                First name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-[var(--text-tertiary)]" />
+                </div>
+                <input
+                  id="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  value={firstName}
+                  onChange={(e) => handleInputChange(setFirstName, e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="John"
+                  disabled={loading}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="lastName" className="block text-sm font-medium text-[var(--text-primary)]">
+                Last name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(e) => handleInputChange(setLastName, e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Doe"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)]">
+              Email address
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-[var(--text-tertiary)]" />
+              </div>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => handleInputChange(setEmail, e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="john@example.com"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)]">
+              Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-[var(--text-tertiary)]" />
+              </div>
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => handleInputChange(setPassword, e.target.value)}
+                className="w-full pl-10 pr-12 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Create a strong password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-[var(--text-tertiary)]" />
+                ) : (
+                  <Eye className="h-5 w-5 text-[var(--text-tertiary)]" />
+                )}
+              </button>
+            </div>
+
+            {/* Password Strength Indicator */}
+            {password && (
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="h-1 rounded-full flex-1 transition-colors"
+                      style={{
+                        backgroundColor: i < passwordStrength.score 
+                          ? passwordStrength.color 
+                          : 'var(--surface-2)'
+                      }}
+                    />
+                  ))}
+                </div>
+                
+                {passwordStrength.feedback.length > 0 && (
+                  <div className="text-xs text-[var(--text-tertiary)]">
+                    <span>Password must include: </span>
+                    {passwordStrength.feedback.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password Field */}
+          <div className="space-y-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-[var(--text-primary)]">
+              Confirm password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-[var(--text-tertiary)]" />
+              </div>
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={(e) => handleInputChange(setConfirmPassword, e.target.value)}
+                className="w-full pl-10 pr-12 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Confirm your password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+
+            {/* Password Match Indicator */}
+            {confirmPassword && (
+              <div className="flex items-center gap-2 text-xs">
+                {password === confirmPassword ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
+                    <span className="text-[var(--success-500)]">Passwords match</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-4 h-4 text-[var(--danger-500)]" />
+                    <span className="text-[var(--danger-500)]">Passwords do not match</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Terms Acceptance */}
+          <div className="flex items-start gap-3">
+            <input
+              id="acceptTerms"
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              className="mt-1 w-4 h-4 text-[var(--accent-primary)] border-[var(--border-primary)] rounded focus:ring-[var(--accent-primary)] focus:ring-2 focus:ring-offset-0 bg-[var(--glass-bg)]"
+              disabled={loading}
+            />
+            <label htmlFor="acceptTerms" className="text-sm text-[var(--text-secondary)] cursor-pointer">
+              I agree to the{" "}
+              <Link href="/terms" className="text-[var(--accent-primary)] hover:underline transition-colors">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-[var(--accent-primary)] hover:underline transition-colors">
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-[var(--danger-500)] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[var(--danger-500)] font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {/* The success message was removed as per the new_code */}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || !acceptTerms}
+            className="w-full py-3 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              "Create account"
+            )}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
+          <p className="text-center text-sm text-[var(--text-secondary)]">
+            Already have an account?{" "}
+            <Link href="/login" className="text-[var(--accent-primary)] hover:underline font-medium transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Additional Help */}
+      <div className="mt-6 text-center">
+        <p className="text-xs text-[var(--text-tertiary)]">
+          By creating an account, you agree to our{" "}
+          <Link href="/terms" className="hover:text-[var(--text-secondary)] underline transition-colors">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="hover:text-[var(--text-secondary)] underline transition-colors">
+            Privacy Policy
+          </Link>
+        </p>
+      </div>
+
+      {/* Security Notice */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-[var(--text-tertiary)]">
+          🔒 Your data is encrypted and secure
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[var(--surface-0)] flex flex-col">
       {/* Header */}
@@ -259,277 +498,14 @@ export default function RegisterPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          {/* Form Container */}
-          <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm shadow-[var(--glass-shadow-lg)]">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
-                Create your account
-              </h1>
-              <p className="text-[var(--text-secondary)]">
-                Start creating stunning video content today
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="firstName" className="block text-sm font-medium text-[var(--text-primary)]">
-                    First name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-[var(--text-tertiary)]" />
-                    </div>
-                    <input
-                      id="firstName"
-                      type="text"
-                      autoComplete="given-name"
-                      required
-                      value={firstName}
-                      onChange={(e) => handleInputChange(setFirstName, e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="John"
-                      disabled={loading}
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="lastName" className="block text-sm font-medium text-[var(--text-primary)]">
-                    Last name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    required
-                    value={lastName}
-                    onChange={(e) => handleInputChange(setLastName, e.target.value)}
-                    className="w-full px-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Doe"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Email Field */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)]">
-                  Email address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-[var(--text-tertiary)]" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => handleInputChange(setEmail, e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="john@example.com"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)]">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-[var(--text-tertiary)]" />
-                  </div>
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => handleInputChange(setPassword, e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Create a strong password"
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-[var(--text-tertiary)]" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-[var(--text-tertiary)]" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Password Strength Indicator */}
-                {password && (
-                  <div className="space-y-2">
-                    <div className="flex gap-1">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <div
-                          key={i}
-                          className="h-1 rounded-full flex-1 transition-colors"
-                          style={{
-                            backgroundColor: i < passwordStrength.score 
-                              ? passwordStrength.color 
-                              : 'var(--surface-2)'
-                          }}
-                        />
-                      ))}
-                    </div>
-                    
-                    {passwordStrength.feedback.length > 0 && (
-                      <div className="text-xs text-[var(--text-tertiary)]">
-                        <span>Password must include: </span>
-                        {passwordStrength.feedback.join(", ")}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Confirm Password Field */}
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-[var(--text-primary)]">
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-[var(--text-tertiary)]" />
-                  </div>
-                  <input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => handleInputChange(setConfirmPassword, e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Confirm your password"
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={loading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-[var(--text-tertiary)]" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-[var(--text-tertiary)]" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Password Match Indicator */}
-                {confirmPassword && (
-                  <div className="flex items-center gap-2 text-xs">
-                    {password === confirmPassword ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
-                        <span className="text-[var(--success-500)]">Passwords match</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="w-4 h-4 text-[var(--danger-500)]" />
-                        <span className="text-[var(--danger-500)]">Passwords do not match</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Terms Acceptance */}
-              <div className="flex items-start gap-3">
-                <input
-                  id="acceptTerms"
-                  type="checkbox"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-[var(--accent-primary)] border-[var(--border-primary)] rounded focus:ring-[var(--accent-primary)] focus:ring-2 focus:ring-offset-0 bg-[var(--glass-bg)]"
-                  disabled={loading}
-                />
-                <label htmlFor="acceptTerms" className="text-sm text-[var(--text-secondary)] cursor-pointer">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-[var(--accent-primary)] hover:underline transition-colors">
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/privacy" className="text-[var(--accent-primary)] hover:underline transition-colors">
-                    Privacy Policy
-                  </Link>
-                </label>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-[var(--danger-500)] mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-[var(--danger-500)] font-medium">{error}</p>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading || !acceptTerms}
-                className="w-full py-3 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Create account"
-                )}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
-              <p className="text-center text-sm text-[var(--text-secondary)]">
-                Already have an account?{" "}
-                <Link href="/login" className="text-[var(--accent-primary)] hover:underline font-medium transition-colors">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+        <Suspense fallback={<div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
+          <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading search params...</span>
           </div>
-
-          {/* Additional Help */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-[var(--text-tertiary)]">
-              By creating an account, you agree to our{" "}
-              <Link href="/terms" className="hover:text-[var(--text-secondary)] underline transition-colors">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="hover:text-[var(--text-secondary)] underline transition-colors">
-                Privacy Policy
-              </Link>
-            </p>
-          </div>
-
-          {/* Security Notice */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-[var(--text-tertiary)]">
-              🔒 Your data is encrypted and secure
-            </p>
-          </div>
-        </div>
+        </div>}>
+          <RegisterForm />
+        </Suspense>
       </div>
     </div>
   );
