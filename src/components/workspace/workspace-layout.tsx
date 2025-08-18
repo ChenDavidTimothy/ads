@@ -1,14 +1,10 @@
 "use client";
 
-import { useSearchParams } from 'next/navigation';
 import { WorkspaceProvider } from './workspace-context';
 import { WorkspaceHeader } from './workspace-header';
 import { WorkspaceTabContent } from './workspace-tab-content';
 
 export function WorkspaceLayout({ workspaceId }: { workspaceId: string }) {
-	const searchParams = useSearchParams();
-	const initialTab = (searchParams?.get('tab') as 'flow' | 'timeline' | 'canvas' | 'image' | 'audio') || 'flow';
-	const initialNodeId = searchParams?.get('node');
 
 	return (
 		<WorkspaceProvider workspaceId={workspaceId}>

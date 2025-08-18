@@ -7,7 +7,14 @@ const HEARTBEAT_MS = 30000;
 const STALE_MS = 2 * 60 * 1000;
 
 function readTabs(key: string): TabEntry[] {
-  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+  try { 
+    const item = localStorage.getItem(key);
+    if (!item) return [];
+    const parsed = JSON.parse(item) as unknown;
+    return Array.isArray(parsed) ? parsed as TabEntry[] : [];
+  } catch { 
+    return []; 
+  }
 }
 function writeTabs(key: string, tabs: TabEntry[]) { localStorage.setItem(key, JSON.stringify(tabs)); }
 

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useMemo, useState, useCallback } from 'react';
-import type { Node, Edge } from 'reactflow';
+import type { Node } from 'reactflow';
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
-import type { NodeData, CanvasNodeData } from '@/shared/types/nodes';
+import type { CanvasNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
 import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';

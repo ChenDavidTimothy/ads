@@ -2,8 +2,7 @@
 import type { 
   AnimationScene, 
   ObjectState, 
-  SceneObject,
-  GeometryProperties
+  SceneObject
 } from '@/shared/types/scene';
 
 import type { Point2D } from '@/shared/types/core';

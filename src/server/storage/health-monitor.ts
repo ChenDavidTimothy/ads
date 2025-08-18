@@ -1,6 +1,5 @@
 // src/server/storage/health-monitor.ts
 import { createServiceClient } from "@/utils/supabase/service";
-import { STORAGE_CONFIG } from "./config";
 
 export interface StorageHealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -64,14 +63,14 @@ export class StorageHealthMonitor {
           fileCount: 0,
           totalSize: 0,
           lastAccess: timestamp,
-          error: imagesHealth.reason?.toString() || 'Unknown error'
+          error: String(imagesHealth.reason ?? 'Unknown error')
         },
         videos: videosHealth.status === 'fulfilled' ? videosHealth.value : {
           accessible: false,
           fileCount: 0,
           totalSize: 0,
           lastAccess: timestamp,
-          error: videosHealth.reason?.toString() || 'Unknown error'
+          error: String(videosHealth.reason ?? 'Unknown error')
         }
       };
 
@@ -145,7 +144,7 @@ export class StorageHealthMonitor {
       if (files) {
         fileCount = files.length;
         for (const file of files) {
-          totalSize += file.metadata?.size || 0;
+          totalSize += file.metadata?.size ?? 0;
         }
       }
 

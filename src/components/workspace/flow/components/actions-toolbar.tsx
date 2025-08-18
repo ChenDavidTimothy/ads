@@ -151,7 +151,7 @@ export function ActionsToolbar({
         )}
 
         {/* Reset Button */}
-        {(lastError || validationSummary?.hasErrors) && onResetGeneration && (
+        {(lastError ?? validationSummary?.hasErrors) && onResetGeneration && (
           <Button
             onClick={onResetGeneration}
             variant="ghost"

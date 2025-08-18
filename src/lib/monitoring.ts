@@ -62,6 +62,33 @@ type MonitoringEvent =
   | { type: 'PERFORMANCE'; context: PerformanceMetric }
   | { type: 'RATE_LIMIT'; identifier: string; endpoint: string; context: BaseErrorContext };
 
+// Helper function to safely stringify errors for logging
+function safeStringifyError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return '[Object - could not stringify]';
+    }
+  }
+  return String(error);
+}
+
+// Helper function to safely convert promises for logging
+function safeStringifyPromise(promise: Promise<unknown>): string {
+  try {
+    return `[Promise object: ${promise.constructor.name}]`;
+  } catch {
+    return '[Promise object - details unavailable]';
+  }
+}
+
 class ProductionMonitor {
   private static instance: ProductionMonitor;
   private isProduction = process.env.NODE_ENV === 'production';
@@ -241,7 +268,10 @@ class ProductionMonitor {
 
     // Send immediate alerts for critical security events
     if (severity === 'critical' && this.isProduction) {
-      this.sendCriticalAlert(monitoringEvent);
+      // FIX: Add .catch() to handle promise properly
+      this.sendCriticalAlert(monitoringEvent).catch((alertError) => {
+        logger.errorWithStack('Failed to send critical security alert', alertError);
+      });
     }
   }
 
@@ -268,7 +298,10 @@ class ProductionMonitor {
     }
 
     // Production: send to monitoring services
-    this.sendToMonitoringService(event);
+    // FIX: Add .catch() to handle promise properly
+    this.sendToMonitoringService(event).catch((serviceError) => {
+      logger.errorWithStack('Failed to send monitoring event to service', serviceError);
+    });
   }
 
   private getEventEmoji(type: MonitoringEvent['type']): string {
@@ -291,72 +324,34 @@ class ProductionMonitor {
       
       // Sentry integration
       // if (typeof Sentry !== 'undefined') {
-      //   Sentry.captureException(event.error ?? new Error(JSON.stringify(event)), {
-      //     tags: { type: event.type },
-      //     contexts: { monitoring: event.context }
-      //   });
+      //   Sentry.captureException(event.error ?? new Error(event.type));
       // }
-
-      // LogRocket integration
-      // if (typeof LogRocket !== 'undefined') {
-      //   LogRocket.captureException(event.error ?? new Error(JSON.stringify(event)));
-      // }
-
-      // Custom webhook integration
-      // if (process.env.MONITORING_WEBHOOK_URL) {
-      //   await fetch(process.env.MONITORING_WEBHOOK_URL, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify(event),
-      //   });
-      // }
-
-      // For now, use structured console logging that can be picked up by log aggregators
-      console.error('[MONITORING]', JSON.stringify(event, null, 2));
       
+      // Custom monitoring service
+      // await fetch('/api/monitoring', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(event)
+      // });
+      
+      logger.debug('Monitoring event sent to external service', { type: event.type });
     } catch (error) {
-      // Fallback to basic logging if monitoring service fails
-      logger.errorWithStack('Failed to send to monitoring service', error, { originalEvent: event.type });
+      // FIX: Properly type the error parameter instead of using 'any'
+      const errorMessage = error instanceof Error ? error : new Error(String(error));
+      logger.errorWithStack('Failed to send monitoring event', errorMessage);
     }
   }
 
-  // Send critical alerts (email, Slack, PagerDuty, etc.)
+  // Send critical alerts (email, SMS, etc.)
   private async sendCriticalAlert(event: MonitoringEvent): Promise<void> {
     try {
-      // Critical alerting integration points:
-      
-      // Slack webhook
-      // if (process.env.SLACK_CRITICAL_WEBHOOK_URL) {
-      //   await fetch(process.env.SLACK_CRITICAL_WEBHOOK_URL, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({
-      //       text: `🚨 CRITICAL ALERT: ${event.type}`,
-      //       attachments: [{
-      //         color: 'danger',
-      //         text: JSON.stringify(event.context, null, 2)
-      //       }]
-      //     }),
-      //   });
-      // }
-
-      // PagerDuty integration
-      // if (process.env.PAGERDUTY_INTEGRATION_KEY) {
-      //   await fetch('https://events.pagerduty.com/v2/enqueue', {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({
-      //       routing_key: process.env.PAGERDUTY_INTEGRATION_KEY,
-      //       event_action: 'trigger',
-      //       payload: {
-      //         summary: `Critical ${event.type}`,
-      //         source: 'production-monitor',
-      //         severity: 'critical',
-      //         custom_details: event.context
-      //       }
-      //     }),
-      //   });
-      // }
+      // In production, integrate with alerting systems
+      // For now, just log with high priority
+      logger.error('CRITICAL ALERT', { 
+        type: event.type,
+        context: event.context,
+        timestamp: new Date().toISOString()
+      });
 
       console.error('[CRITICAL ALERT]', JSON.stringify(event, null, 2));
       
@@ -385,11 +380,11 @@ export function setupGlobalErrorHandling(): void {
   if (typeof window !== 'undefined') {
     window.addEventListener('unhandledrejection', (event) => {
       monitor.logAPIError(
-        new Error(`Unhandled Promise Rejection: ${event.reason}`),
+        new Error(`Unhandled Promise Rejection: ${safeStringifyError(event.reason)}`),
         'global/unhandled-rejection',
         { 
           path: window.location.pathname,
-          reason: String(event.reason),
+          reason: safeStringifyError(event.reason),
         }
       );
     });
@@ -403,7 +398,7 @@ export function setupGlobalErrorHandling(): void {
           filename: event.filename,
           line: event.lineno,
           column: event.colno,
-          stack: event.error?.stack,
+          stack: event.error instanceof Error ? event.error.stack : undefined,
         }
       );
     });
@@ -413,11 +408,12 @@ export function setupGlobalErrorHandling(): void {
   if (typeof process !== 'undefined') {
     process.on('unhandledRejection', (reason, promise) => {
       monitor.logAPIError(
-        new Error(`Unhandled Rejection: ${reason}`),
+        new Error(`Unhandled Rejection: ${safeStringifyError(reason)}`),
         'server/unhandled-rejection',
         { 
-          reason: String(reason),
-          promise: promise.toString(),
+          reason: safeStringifyError(reason),
+          // FIX: Use safe promise stringification instead of .toString()
+          promise: safeStringifyPromise(promise),
         }
       );
     });

@@ -68,9 +68,9 @@ export function RightSidebar({
   onDownloadAllImages
 }: Props) {
   const hasPreviewContent = Boolean(
-    videoUrl || 
-    videos.length > 0 || 
-    imageUrl || 
+    videoUrl ?? 
+    videos.length > 0 ?? 
+    imageUrl ?? 
     images.length > 0
   );
 

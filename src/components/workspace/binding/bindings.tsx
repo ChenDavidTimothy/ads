@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link as LinkIcon, Search } from 'lucide-react';
-import type { Node, Edge } from 'reactflow';
+
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { deleteByPath } from '@/shared/utils/object-path';

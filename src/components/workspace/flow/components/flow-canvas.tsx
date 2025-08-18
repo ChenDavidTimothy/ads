@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import 'reactflow/dist/style.css';
 import ReactFlow, { 
   Background, 
-  Controls, 
   MiniMap, 
   ConnectionLineType,
   MarkerType,
@@ -200,7 +199,7 @@ export function FlowCanvas(props: Props) {
 				selectNodesOnDrag={false}
 				className="bg-[var(--surface-0)]"
 				deleteKeyCode={['Delete', 'Backspace']}
-				multiSelectionKeyCode={disableDeletion ? (null as unknown as string) : 'Meta'}
+				multiSelectionKeyCode={disableDeletion ? null : 'Meta'}
 				proOptions={{ hideAttribution: true }}
 			>
 				<Background color="var(--border-secondary)" size={2} gap={20} />
@@ -218,11 +217,11 @@ export function FlowCanvas(props: Props) {
 					<MiniMap 
 						className="bg-[var(--surface-1)] border border-[var(--border-primary)] shadow-glass rounded-[var(--radius-sm)]" 
 						nodeColor={(node) => {
-							const type = node.type as string;
-							if (type?.includes('animation')) return 'var(--node-animation)';
-							if (type?.includes('logic')) return 'var(--node-logic)';
-							if (type?.includes('geometry')) return 'var(--node-geometry)';
-							if (type?.includes('data')) return 'var(--node-data)';
+							const type = node.type!;
+							if (type.includes('animation')) return 'var(--node-animation)';
+							if (type.includes('logic')) return 'var(--node-logic)';
+							if (type.includes('geometry')) return 'var(--node-geometry)';
+							if (type.includes('data')) return 'var(--node-data)';
 							return 'var(--node-output)';
 						}}
 						maskColor="var(--surface-0)"

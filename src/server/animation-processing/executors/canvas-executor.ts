@@ -50,10 +50,7 @@ function isSceneObject(obj: unknown): obj is SceneObject {
   );
 }
 
-// Type guard for valid object with id
-function hasId(obj: unknown): obj is { id: string } {
-  return typeof obj === 'object' && obj !== null && 'id' in obj && typeof (obj as { id: unknown }).id === 'string';
-}
+
 
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {

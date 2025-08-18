@@ -14,6 +14,11 @@ export interface ImageRenderConfig {
   time?: number; // optional snapshot time; default 0
 }
 
+// Proper type for jpeg config
+interface JpegConfig {
+  quality: number;
+}
+
 export class ImageRenderer {
   private readonly storageProvider: StorageProvider;
 
@@ -41,7 +46,7 @@ export class ImageRenderer {
         ? canvas.toBuffer('image/png')
         : canvas.toBuffer('image/jpeg', {
             quality: Math.max(0, Math.min(1, (cfg.quality ?? 90) / 100)),
-          } as unknown as any);
+          } as JpegConfig);
 
       await fs.promises.writeFile(prepared.filePath, buffer);
       const { publicUrl } = await this.storageProvider.finalize(prepared, {

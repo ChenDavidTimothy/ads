@@ -6,6 +6,16 @@ import { linear } from "@/animation/core/interpolation";
 import type { Renderer, SceneAnimationConfig, RenderOutput } from "./renderer";
 import type { StorageProvider } from "@/server/storage/provider";
 
+// Extended interface for storage providers that support cleanup
+interface CleanupableStorageProvider extends StorageProvider {
+  cleanup(): Promise<void>;
+}
+
+// Type guard to check if storage provider supports cleanup
+function supportsCleanup(provider: StorageProvider): provider is CleanupableStorageProvider {
+  return typeof (provider as CleanupableStorageProvider).cleanup === 'function';
+}
+
 export class CanvasRenderer implements Renderer {
   private readonly storageProvider: StorageProvider;
 
@@ -50,8 +60,8 @@ export class CanvasRenderer implements Renderer {
     } finally {
       frameGenerator.dispose();
       // Best-effort provider cleanup (removes temp dir on worker shutdowns or if needed)
-      if (typeof (this.storageProvider as any).cleanup === 'function') {
-        await (this.storageProvider as any).cleanup();
+      if (supportsCleanup(this.storageProvider)) {
+        await this.storageProvider.cleanup();
       }
     }
   }

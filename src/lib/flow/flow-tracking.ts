@@ -124,15 +124,10 @@ export class FlowTracker {
     allNodes: Node<NodeData>[],
     allEdges: Edge[]
   ): ObjectDescriptor[] {
-    const objects: ObjectDescriptor[] = [];
     const visited = new Set<string>();
 
     // Build ID mapping
     const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
-    const canonicalEdges = canonicalizeEdges(
-      allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
-      allEdges as unknown as Array<{ source: string; target: string }>
-    );
 
     // Get all node types from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
@@ -147,7 +142,7 @@ export class FlowTracker {
     const getInputPortsForNode = (node: Node<NodeData>): string[] => {
       if (node.type === 'merge') {
         const mergeData = node.data as unknown as { inputPortCount?: number };
-        const portCount = Math.min(Math.max(Number(mergeData.inputPortCount) || 2, 2), 5);
+        const portCount = Math.min(Math.max(Number(mergeData.inputPortCount) ?? 2, 2), 5);
         return Array.from({ length: portCount }, (_, i) => `input${i + 1}`);
       }
       return ['input']; // Default single input port
@@ -190,10 +185,10 @@ export class FlowTracker {
       // If this is a duplicate node, multiply the objects
       if (duplicateNodeTypes.includes(currentNode.type!)) {
         const duplicateData = currentNode.data as unknown as { count?: number };
-        const count = Math.min(Math.max(Number(duplicateData.count) || 1, 1), 50);
+        const count = Math.min(Math.max(Number(duplicateData.count) ?? 1, 1), 50);
         
         // Get objects from single input port
-        const inputObjects = objectsByPort.get('input') || [];
+        const inputObjects = objectsByPort.get('input') ?? [];
         const multipliedObjects: ObjectDescriptor[] = [];
         
         for (const obj of inputObjects) {
@@ -217,7 +212,7 @@ export class FlowTracker {
       }
 
       // For other nodes (filter, canvas, animation), pass through from single input
-      const inputObjects = objectsByPort.get('input') || [];
+      const inputObjects = objectsByPort.get('input') ?? [];
       return inputObjects;
     };
 
@@ -285,13 +280,13 @@ export class FlowTracker {
     
     // Process ports in reverse order so Port 1 (input1) has highest priority
     const portNames = Array.from(objectsByPort.keys()).sort((a, b) => {
-      const aNum = parseInt(a.replace('input', '')) || 0;
-      const bNum = parseInt(b.replace('input', '')) || 0;
+      const aNum = parseInt(a.replace('input', '')) ?? 0;
+      const bNum = parseInt(b.replace('input', '')) ?? 0;
       return bNum - aNum; // Reverse order
     });
     
     for (const portName of portNames) {
-      const objects = objectsByPort.get(portName) || [];
+      const objects = objectsByPort.get(portName) ?? [];
       
       for (const obj of objects) {
         const existingObject = mergedObjects.get(obj.id);
@@ -311,32 +306,32 @@ export class FlowTracker {
   // Registry-aware node category validation
   isGeometryNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'geometry' || false;
+    return definition?.execution.category === 'geometry' ?? false;
   }
 
   isDataNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'data' || false;
+    return definition?.execution.category === 'data' ?? false;
   }
 
   isTimingNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'timing' || false;
+    return definition?.execution.category === 'timing' ?? false;
   }
 
   isLogicNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'logic' || false;
+    return definition?.execution.category === 'logic' ?? false;
   }
 
   isAnimationNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'animation' || false;
+    return definition?.execution.category === 'animation' ?? false;
   }
 
   isOutputNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === 'output' || false;
+    return definition?.execution.category === 'output' ?? false;
   }
 
   // Registry-aware flow validation
@@ -348,12 +343,10 @@ export class FlowTracker {
     
     // Get node categories from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
-    const dataNodeTypes = getNodesByCategory('data').map(def => def.type);
 
     // Validate proper flow architecture
     const geometryNodes = nodes.filter(n => geometryNodeTypes.includes(n.type!));
     // Data nodes are sources like geometry nodes, so they follow the same validation rules
-    const dataNodes = nodes.filter(n => dataNodeTypes.includes(n.type!));
     
     // Validate geometry nodes
     for (const geoNode of geometryNodes) {

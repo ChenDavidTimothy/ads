@@ -163,7 +163,7 @@ export class FrameGenerator {
       } catch (err) {
         // Do not throw beyond the interval; rely on flag and outer loop checks
         if (!this.watchdogError) {
-          this.watchdogError ??= err instanceof Error ? err : new Error(String(err));
+          this.watchdogError = err instanceof Error ? err : new Error(String(err));
         }
       }
     }, intervalMs);

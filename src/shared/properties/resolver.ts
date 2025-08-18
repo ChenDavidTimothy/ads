@@ -97,15 +97,18 @@ export function resolveInitialObject(
       } as RectangleProperties & { color: string; strokeColor: string; strokeWidth: number };
       break;
     }
-    default:
-      throw new Error(`Unknown geometry type: ${original.type}`);
+    default: {
+      // Type assertion to handle the never case
+      const type = original.type as string;
+      throw new Error(`Unknown geometry type: ${type}`);
+    }
   }
 
   // Track sources for styling properties
   sources.colors = {
     fill: assignments?.initial?.fillColor ? 'assignment' : 'canvas',
     stroke: assignments?.initial?.strokeColor ? 'assignment' : 'canvas'
-  };
+  } as const;
   sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : 'canvas';
 
   return {

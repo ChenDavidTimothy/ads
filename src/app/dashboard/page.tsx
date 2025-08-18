@@ -190,7 +190,7 @@ export default function DashboardPage() {
   const filteredWorkspaces = useMemo(() => {
     if (!workspaces) return [];
     
-    let filtered = workspaces.filter((ws: Workspace) => {
+    const filtered = workspaces.filter((ws: Workspace) => {
       const matchesSearch = ws.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || 
         (selectedCategory === 'recent' && isRecent(ws.updated_at)) ||

@@ -73,9 +73,9 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
   // Try to read existing cache
   if (existsSync(VALIDATION_CACHE_FILE)) {
     try {
-      const cached: CrossWorkerValidationCache = JSON.parse(
+      const cached = JSON.parse(
         readFileSync(VALIDATION_CACHE_FILE, 'utf8')
-      );
+      ) as CrossWorkerValidationCache;
       const age = now - cached.timestamp;
       
       // Check if cache is still valid
@@ -184,13 +184,15 @@ export function validateOnStartup(): ValidationResult | null {
 }
 
 // Force re-validation (useful for testing or when node definitions change)
-export function resetValidationCache(): void {
+export async function resetValidationCache(): Promise<void> {
   registryValidationCache = null;
   
   // Also remove file cache in development
   if (process.env.NODE_ENV === 'development' && existsSync(VALIDATION_CACHE_FILE)) {
     try {
-      require('fs').unlinkSync(VALIDATION_CACHE_FILE);
+      // Use proper import instead of require
+      const fs = await import('fs');
+      fs.unlinkSync(VALIDATION_CACHE_FILE);
       logger.debug('🗑️ Cleared validation cache file');
     } catch (error) {
       logger.warn('Failed to remove validation cache file', { error });

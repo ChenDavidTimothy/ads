@@ -10,7 +10,6 @@ import { AuthStatus } from "@/components/auth/auth-status";
 import { 
   ArrowLeft,
   User,
-  Mail,
   Lock,
   Bell,
   Shield,

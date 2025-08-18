@@ -12,6 +12,7 @@ export interface ObjectInitialOverrides {
 	fillColor?: string;
 	strokeColor?: string;
 	strokeWidth?: number;
+	[key: string]: unknown;
 }
 
 // Per-track override for animation conversion time
@@ -26,6 +27,7 @@ export interface TrackOverride {
 	startTime?: number;
 	duration?: number;
 	easing?: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+	[key: string]: unknown;
 }
 
 export interface ObjectAssignments {

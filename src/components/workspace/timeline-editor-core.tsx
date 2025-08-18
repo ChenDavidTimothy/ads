@@ -14,7 +14,6 @@ import type {
   ScaleTrackProperties,
   FadeTrackProperties,
   ColorTrackProperties,
-  NodeData,
   AnimationNodeData,
 } from "@/shared/types/nodes";
 import { deepMerge } from '@/shared/utils/object-path';
@@ -565,7 +564,7 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
   // Type-safe property accessors for overrides
   const getOverrideProperty = function<T>(path: string): T | undefined {
     if (!override?.properties) return undefined;
-    const props = override.properties as Record<string, unknown>;
+    const props = override.properties;
     
     const parts = path.split('.');
     let current: unknown = props;

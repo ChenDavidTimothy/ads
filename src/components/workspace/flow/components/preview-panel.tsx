@@ -135,7 +135,7 @@ export function PreviewPanel({
 
           {/* Image selection tabs */}
           <div className="space-y-[var(--space-1)]">
-            {images.map((img, index) => {
+            {images.map((img, _index) => {
               const isCompleted = img.status === 'completed' && img.imageUrl;
               const isActive = isCompleted && completedImages.indexOf(img) === activeImageIndex;
               return (
@@ -234,7 +234,7 @@ export function PreviewPanel({
 
           {/* Video selection tabs - Enhanced from legacy VideoPreview */}
           <div className="space-y-[var(--space-1)]">
-            {videos.map((video, index) => {
+            {videos.map((video, _index) => {
               const isCompleted = video.status === 'completed' && video.videoUrl;
               const isActive = isCompleted && completedVideos.indexOf(video) === activeVideoIndex;
               return (

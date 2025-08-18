@@ -38,11 +38,7 @@ export interface TimelineEditorData {
 	tracks: AnimationTrack[];
 }
 
-// Future editor data types
-export interface ImageEditorData {
-	// Define when image editor is implemented
-}
+// Future editor data types - using object type instead of empty interface
+export type ImageEditorData = Record<string, never>;
 
-export interface AudioEditorData {
-	// Define when audio editor is implemented
-}
+export type AudioEditorData = Record<string, never>;

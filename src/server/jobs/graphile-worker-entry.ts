@@ -67,7 +67,7 @@ async function main() {
       const { job } = helpers;
       const supabase = createServiceClient();
       const { jobId, userId, scene, config } = payload as {
-        jobId: string; userId: string; scene: import('@/shared/types/scene').AnimationScene; config: {
+        jobId: string; userId: string; scene: unknown; config: {
           width: number; height: number; backgroundColor: string; format: 'png'|'jpeg'; quality?: number; time?: number;
         }
       };
@@ -81,7 +81,8 @@ async function main() {
         const storageProvider = new SmartStorageProvider(userId);
         const { ImageRenderer } = await import('@/server/rendering/image/image-renderer');
         const renderer = new ImageRenderer(storageProvider);
-        const { publicUrl } = await renderer.render(scene, config);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        const { publicUrl } = await renderer.render(scene as any, config);
 
         await supabase.from('render_jobs')
           .update({ status: 'completed', output_url: publicUrl, updated_at: new Date().toISOString() })

@@ -11,16 +11,21 @@ export function cn(...inputs: ClassValue[]) {
  * @param wait The delay in milliseconds
  * @returns A debounced version of the function
  */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
+// FIX: Replace 'any' with proper generic types
+export function debounce<TArgs extends readonly unknown[], TReturn>(
+  func: (...args: TArgs) => TReturn,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout | null = null;
   
-  return (...args: Parameters<T>) => {
+  // FIX: Use TArgs type instead of Parameters<T> with any
+  return (...args: TArgs) => {
     if (timeout) {
       clearTimeout(timeout);
     }
-    timeout = setTimeout(() => func(...args), wait);
+    // FIX: Ensure proper type safety by explicitly typing the callback
+    timeout = setTimeout(() => {
+      func(...args);
+    }, wait);
   };
 }

@@ -9,6 +9,18 @@ export interface RenderJobEventPayload {
   error?: string;
 }
 
+// Type guard for RenderJobEventPayload
+function isValidRenderJobEventPayload(payload: unknown): payload is RenderJobEventPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const obj = payload as Record<string, unknown>;
+  return (
+    typeof obj.jobId === 'string' &&
+    (obj.status === 'completed' || obj.status === 'failed') &&
+    (obj.publicUrl === undefined || typeof obj.publicUrl === 'string') &&
+    (obj.error === undefined || typeof obj.error === 'string')
+  );
+}
+
 // Notification channels
 const RENDER_COMPLETION_CHANNEL = 'render_job_events';
 
@@ -84,11 +96,15 @@ async function connectListener(): Promise<void> {
         try {
           if (!msg.payload) return;
           
-          const payload = JSON.parse(msg.payload);
+          const payload = JSON.parse(msg.payload) as unknown;
           
           switch (msg.channel) {
             case RENDER_COMPLETION_CHANNEL:
-              handleRenderJobEvent(payload as RenderJobEventPayload);
+              if (isValidRenderJobEventPayload(payload)) {
+                handleRenderJobEvent(payload);
+              } else {
+                logger.warn('Invalid render job event payload received', { payload });
+              }
               break;
             default:
               if (process.env.PG_EVENTS_DEBUG === '1') {
@@ -104,14 +120,17 @@ async function connectListener(): Promise<void> {
       });
 
       // Periodic ping to keep connection alive and detect silent drops
-      pingTimer = setInterval(async () => {
+      pingTimer = setInterval(() => {
         if (!listenerClient) return;
-        try {
-          await listenerClient.query('SELECT 1');
-        } catch (err) {
-          logger.errorWithStack('PostgreSQL listener ping failed', err);
-          scheduleReconnect();
-        }
+        // Use void to explicitly ignore the promise
+        void (async () => {
+          try {
+            await listenerClient.query('SELECT 1');
+          } catch (err) {
+            logger.errorWithStack('PostgreSQL listener ping failed', err);
+            scheduleReconnect();
+          }
+        })();
       }, 15000);
 
       logger.info('PostgreSQL event listener connected and subscribed', {

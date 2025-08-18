@@ -16,7 +16,7 @@ export default async function WorkspaceEditorPage({
 }: WorkspacePageProps) {
   // Get search params
   const params = await searchParams;
-  const { workspace: workspaceId, tab, node, redirectTo } = params;
+  const { workspace: workspaceId, tab, node } = params;
 
   // Check authentication
   const supabase = await createClient();

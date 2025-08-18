@@ -55,10 +55,10 @@ export async function checkJobSystemHealth(): Promise<JobSystemHealth> {
     subscribedChannels: eventHealth.subscribedChannels
   };
 
-  // Check queue health (placeholder: will be implemented with Graphile Worker)
+  // Check queue health with proper typing
   let queueComponent;
   try {
-    const queueStats = await (renderQueue as any).getQueueStats?.();
+    const queueStats = await renderQueue.getQueueStats?.();
     let queueStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     
     if (queueStats) {
@@ -146,7 +146,7 @@ export async function performHealthBasedMaintenance(): Promise<{
   try {
     const health = await checkJobSystemHealth();
 
-    const queueStats = (health.components.queue as any).stats;
+    const queueStats = health.components.queue.stats;
     if (queueStats && (queueStats.completed > 1000 || queueStats.failed > 100)) {
       // Placeholder: implement cleanup suitable for Graphile Worker if required
       actions.push('Queue appears large; consider manual cleanup or retention tuning');
@@ -174,7 +174,7 @@ export async function performHealthBasedMaintenance(): Promise<{
   };
 }
 
-export function startHealthMonitor(intervalMs: number = 300000): () => void {
+export function startHealthMonitor(intervalMs = 300000): () => void {
   let isRunning = true;
   
   const monitor = async () => {
@@ -196,11 +196,15 @@ export function startHealthMonitor(intervalMs: number = 300000): () => void {
     }
     
     if (isRunning) {
-      setTimeout(monitor, intervalMs);
+      setTimeout(() => {
+        void monitor();
+      }, intervalMs);
     }
   };
 
-  setTimeout(monitor, intervalMs);
+  setTimeout(() => {
+    void monitor();
+  }, intervalMs);
   
   return () => {
     isRunning = false;

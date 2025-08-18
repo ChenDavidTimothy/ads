@@ -331,7 +331,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     },
     onError: (error) => {
       setIsGeneratingImage(false);
-      const msg = error instanceof Error ? error.message : `Image generation failed: ${String(error)}`;
+      const msg = error instanceof Error ? error.message : `Image generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       setLastError(msg);
       toast.error('Image generation failed', msg);
     }

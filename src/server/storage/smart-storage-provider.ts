@@ -8,6 +8,7 @@ import { createServiceClient } from "@/utils/supabase/service";
 import { STORAGE_CONFIG } from "./config";
 import { StorageHealthMonitor } from "./health-monitor";
 import { Readable } from "stream";
+import type { SupportedExtension, SupportedImageExtension, SupportedVideoExtension } from "./config";
 
 export class SmartStorageProvider implements StorageProvider {
   private readonly userId: string | undefined;
@@ -38,8 +39,8 @@ export class SmartStorageProvider implements StorageProvider {
     // Initialize health monitor
     this.healthMonitor = new StorageHealthMonitor();
     
-    // Initialize and start cleanup
-    this.initialize();
+    // Initialize and start cleanup - use void to explicitly ignore the promise
+    void this.initialize();
   }
 
   private validateEnvironment(): void {
@@ -101,9 +102,9 @@ export class SmartStorageProvider implements StorageProvider {
   }
 
   private getBucketForExtension(extension: string): { bucket: string; config: { maxSizeBytes: number; mimeTypes: Record<string, string> } } {
-    const ext = extension.toLowerCase();
+    const ext = extension.toLowerCase() as SupportedExtension;
     
-    if (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images.includes(ext as any)) {
+    if (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images.includes(ext as SupportedImageExtension)) {
       return { 
         bucket: this.imagesBucket, 
         config: { 
@@ -111,7 +112,7 @@ export class SmartStorageProvider implements StorageProvider {
           mimeTypes: STORAGE_CONFIG.MIME_TYPES
         } 
       };
-    } else if (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos.includes(ext as any)) {
+    } else if (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos.includes(ext as SupportedVideoExtension)) {
       return { 
         bucket: this.videosBucket, 
         config: { 
@@ -260,9 +261,15 @@ export class SmartStorageProvider implements StorageProvider {
       try {
         // Create a new stream per attempt
         const nodeStream = fs.createReadStream(filePath);
-        const webStream: ReadableStream<any> = (Readable as any).toWeb
-          ? (Readable as any).toWeb(nodeStream)
-          : (nodeStream as unknown as ReadableStream<any>);
+        
+        // Type-safe stream conversion
+        let webStream: ReadableStream<Uint8Array>;
+        if (typeof Readable.toWeb === 'function') {
+          webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
+        } else {
+          // Fallback for older Node.js versions
+          webStream = nodeStream as unknown as ReadableStream<Uint8Array>;
+        }
 
         // Note: @supabase/supabase-js v2 accepts ReadableStream|Blob|ArrayBuffer|File
         const { error } = await this.supabase.storage
@@ -335,12 +342,11 @@ export class SmartStorageProvider implements StorageProvider {
   }
 
   private startCleanupInterval(): void {
-    this.cleanupInterval = setInterval(async () => {
-      try {
-        await this.cleanupOldTempFiles();
-      } catch (error) {
+    this.cleanupInterval = setInterval(() => {
+      // Use void to explicitly ignore the promise
+      void this.cleanupOldTempFiles().catch((error) => {
         this.logger.error('Temp file cleanup failed:', error);
-      }
+      });
     }, STORAGE_CONFIG.TEMP_DIR_CLEANUP_INTERVAL_MS);
   }
 

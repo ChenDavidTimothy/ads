@@ -5,9 +5,20 @@ import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import { convertTracksToSceneAnimations, mergeCursorMaps } from "../scene/scene-assembler";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import { mergeObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
+
+// Safe deep clone that preserves types without introducing `any`
+function deepClone<T>(value: T): T {
+  try {
+    // Prefer native structuredClone when available
+    return structuredClone(value);
+  } catch {
+    // Fallback to JSON-based clone for plain data
+    return JSON.parse(JSON.stringify(value)) as T;
+  }
+}
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -27,8 +38,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       node.data.identifier.id,
       'input'
     );
-
-
 
     // Resolve variable bindings from upstream Result nodes
     const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
@@ -187,9 +196,27 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const base = mergedAssignments?.[objectId];
           if (!base) return undefined;
           const keys = [...globalBindingKeys, ...objectBindingKeys];
-          const next = { ...base };
+          
+          // FIX: Use proper typing with ObjectAssignments interface instead of any
+          interface ObjectAssignments {
+            initial?: Record<string, unknown>;
+            tracks?: Array<{
+              trackId?: string;
+              type?: string;
+              properties?: Record<string, unknown>;
+              [key: string]: unknown;
+            }>;
+          }
+          
+          const next: ObjectAssignments = { ...base };
           const prunedTracks: Array<Record<string, unknown>> = [];
-          const tracks = Array.isArray(base.tracks) ? base.tracks.map(t => ({ ...t, properties: t.properties ? JSON.parse(JSON.stringify(t.properties)) : undefined })) : [];
+          const tracks = Array.isArray(base.tracks)
+            ? (base.tracks as Array<Record<string, unknown>>).map((t) => ({
+                ...t,
+                properties: t.properties ? deepClone(t.properties) : undefined,
+              }))
+            : [];
+          
           for (const t of tracks) {
             // Remove overrides for any bound keys that apply to this track
             for (const key of keys) {
@@ -208,7 +235,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
                 if (sub.startsWith(typePrefix)) {
                   const propPath = sub.slice(typePrefix.length);
                   if (propPath === 'duration' || propPath === 'startTime' || propPath === 'easing') {
-                    delete (t as Record<string, unknown>)[propPath];
+                    delete (t as Record<string, unknown>)[sub];
                   } else if ((t as { properties?: Record<string, unknown> }).properties) {
                     deleteByPath((t as { properties: Record<string, unknown> }).properties, propPath);
                   }
@@ -231,7 +258,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
             const hasProps = properties && Object.keys(properties).length > 0;
             const tRecord = t as Record<string, unknown>;
             const hasMeta = tRecord.easing !== undefined || tRecord.startTime !== undefined || tRecord.duration !== undefined;
-            if (hasProps || hasMeta) prunedTracks.push(t);
+            if (hasProps || hasMeta) prunedTracks.push(t as Record<string, unknown>);
           }
           const nextRecord = next as Record<string, unknown>;
           if (prunedTracks.length > 0) nextRecord.tracks = prunedTracks;
@@ -276,9 +303,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private clonePerObjectAnimations(map: Record<string, SceneAnimationTrack[]>): Record<string, SceneAnimationTrack[]> {
     const cloned: Record<string, SceneAnimationTrack[]> = {};
     for (const [k, v] of Object.entries(map)) {
-      cloned[k] = v.map((t) => ({ 
-        ...t, 
-        properties: JSON.parse(JSON.stringify(t.properties)) 
+      cloned[k] = v.map((t) => ({
+        ...t,
+        properties: deepClone(t.properties),
       })) as SceneAnimationTrack[];
     }
     return cloned;
@@ -287,6 +314,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[]): Record<string, SceneAnimationTrack[]> {
     const merged: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
+      // FIX: Properly type the metadata instead of using any
       const perObj = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
       if (!perObj) continue;
       for (const [objectId, tracks] of Object.entries(perObj)) {
@@ -300,6 +328,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
     const maps: Record<string, number>[] = [];
     for (const input of inputs) {
+      // FIX: Properly type the metadata instead of using any
       const cursors = (input.metadata as { perObjectTimeCursor?: Record<string, number> } | undefined)?.perObjectTimeCursor;
       if (cursors) maps.push(cursors);
     }
@@ -311,6 +340,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const merged: PerObjectAssignments = {};
     let found = false;
     for (const input of inputs) {
+      // FIX: Properly type the metadata instead of using any
       const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {

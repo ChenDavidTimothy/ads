@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
       window.history.replaceState({}, document.title, "/reset-password");
     };
 
-    checkSession();
+    void checkSession();
   }, [supabase.auth, searchParams]);
 
   // Step 2: Handle password update
@@ -102,7 +102,9 @@ export default function ResetPasswordPage() {
     }
 
     setSuccess(true);
-    void setTimeout(() => router.push("/dashboard"), 2000);
+    setTimeout(() => {
+      void router.push("/dashboard");
+    }, 2000);
   };
 
   // Password validation helpers
