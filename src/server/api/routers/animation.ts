@@ -18,6 +18,23 @@ import { partitionObjectsByScenes, buildAnimationSceneFromPartition } from "@/se
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
+// Type for backend nodes after processing
+type BackendNode = {
+  id: string;
+  type: string | undefined;
+  position: { x: number; y: number };
+  data: Record<string, unknown>;
+};
+
+// Type for backend edges after processing
+type BackendEdge = {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+};
+
 // Scene config schema (coerce types where the client might send strings)
 const sceneConfigSchema = z.object({
   width: z.coerce.number().max(1920).optional(),
@@ -301,7 +318,7 @@ export const animationRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: DebugExecutionInput; ctx: TRPCContext }) => {
       try {
         // Convert React Flow nodes to backend format with proper ID mapping
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+        const backendNodes: BackendNode[] = input.nodes.map((n: ReactFlowNodeInput) => {
           const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
           return {
             id: n.id,
@@ -320,7 +337,7 @@ export const animationRouter = createTRPCRouter({
            }
          });
 
-        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+        const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: nodeIdMap.get(e.source) ?? e.source,
           target: nodeIdMap.get(e.target) ?? e.target,
@@ -392,7 +409,7 @@ export const animationRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
         // Convert React Flow nodes to backend format with proper ID mapping
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+        const backendNodes: BackendNode[] = input.nodes.map((n: ReactFlowNodeInput) => {
           const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
           return {
             id: n.id,
@@ -411,7 +428,7 @@ export const animationRouter = createTRPCRouter({
            }
          });
 
-        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+        const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: nodeIdMap.get(e.source) ?? e.source,
           target: nodeIdMap.get(e.target) ?? e.target,
@@ -441,7 +458,7 @@ export const animationRouter = createTRPCRouter({
 
         // Comprehensive flow validation with graceful error handling
         const flowValidationResult = await validateFlowGracefully(
-          backendNodes as ReactFlowNode<NodeData>[],
+          backendNodes as unknown as ReactFlowNode<NodeData>[],
           backendEdges
         );
         if (!flowValidationResult.success) {
@@ -648,7 +665,7 @@ export const animationRouter = createTRPCRouter({
     .input(generateSceneInputSchema)
     .mutation(async ({ input, ctx }: { input: GenerateSceneInput; ctx: TRPCContext }) => {
       try {
-        const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => {
+        const backendNodes: BackendNode[] = input.nodes.map((n: ReactFlowNodeInput) => {
           const mergedData = mergeNodeDataWithDefaults(n.type, n.data);
           return {
             id: n.id,
@@ -664,7 +681,7 @@ export const animationRouter = createTRPCRouter({
             nodeIdMap.set(n.id, identifier.id);
           }
         });
-        const backendEdges = input.edges.map((e: ReactFlowEdgeInput) => ({
+        const backendEdges: BackendEdge[] = input.edges.map((e: ReactFlowEdgeInput) => ({
           id: e.id,
           source: nodeIdMap.get(e.source) ?? e.source,
           target: nodeIdMap.get(e.target) ?? e.target,
@@ -800,7 +817,7 @@ export const animationRouter = createTRPCRouter({
   validateScene: protectedProcedure
     .input(validateSceneInputSchema)
     .query(async ({ input }: { input: ValidateSceneInput }) => {
-      const backendNodes = input.nodes.map((n: ReactFlowNodeInput) => ({
+      const backendNodes: BackendNode[] = input.nodes.map((n: ReactFlowNodeInput) => ({
         id: n.id,
         type: n.type,
         position: n.position,
@@ -815,7 +832,7 @@ export const animationRouter = createTRPCRouter({
          }
        });
 
-      const backendEdges = input.edges.map((e) => ({
+      const backendEdges: BackendEdge[] = input.edges.map((e) => ({
         id: e.id,
         source: nodeIdMap.get(e.source) ?? e.source,
         target: nodeIdMap.get(e.target) ?? e.target,

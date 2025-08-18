@@ -106,7 +106,8 @@ export function checkRateLimit(identifier: string, endpoint: string): boolean {
   
   if (isLimited) {
     monitor.logRateLimitHit(identifier, endpoint, {
-      ipAddress: '127.0.0.1', // Get actual IP
+      // Remove ipAddress since it's not available in BaseErrorContext
+      // ipAddress: '127.0.0.1', // Get actual IP
     });
     return false;
   }

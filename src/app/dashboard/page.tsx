@@ -164,8 +164,9 @@ export default function DashboardPage() {
     
     const allCount = workspaces.length;
     const recentCount = workspaces.filter(ws => isRecent(ws.updated_at)).length;
-    const activeCount = workspaces.filter(ws => ws.status === 'active' || !ws.status).length;
-    const archivedCount = workspaces.filter(ws => ws.status === 'archived').length;
+    // Remove status-based filtering since status property doesn't exist
+    const activeCount = workspaces.length; // All workspaces are considered active
+    const archivedCount = 0; // No archived workspaces in current schema
 
     return [
       { id: 'all', name: 'All Workspaces', count: allCount, icon: <FolderOpen className="w-4 h-4" /> },
@@ -179,14 +180,15 @@ export default function DashboardPage() {
   const workspaceStats = useMemo(() => {
     if (!workspaces) return null;
     
-    const totalVideos = workspaces.reduce((sum, ws) => sum + (ws.video_count || 0), 0);
+    // Remove video_count and size since they don't exist in current schema
+    const totalVideos = 0; // No video_count property available
     const thisMonth = workspaces.filter(ws => {
       const date = new Date(ws.updated_at);
       const now = new Date();
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length;
-    const totalSize = workspaces.reduce((sum, ws) => sum + (ws.size || 0), 0);
-    const activeProjects = workspaces.filter(ws => ws.status === 'active' || !ws.status).length;
+    const totalSize = 0; // No size property available
+    const activeProjects = workspaces.length; // All workspaces are considered active
     
     return { totalVideos, thisMonth, totalSize, activeProjects };
   }, [workspaces]);
@@ -199,8 +201,8 @@ export default function DashboardPage() {
       const matchesSearch = ws.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || 
         (selectedCategory === 'recent' && isRecent(ws.updated_at)) ||
-        (selectedCategory === 'active' && (ws.status === 'active' || !ws.status)) ||
-        (selectedCategory === 'archived' && ws.status === 'archived');
+        (selectedCategory === 'active' && true) || // All workspaces are active
+        (selectedCategory === 'archived' && false); // No archived workspaces
       
       return matchesSearch && matchesCategory;
     });
@@ -216,8 +218,9 @@ export default function DashboardPage() {
           bValue = b.name.toLowerCase();
           break;
         case 'created':
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
+          // Use updated_at since created_at doesn't exist in list schema
+          aValue = new Date(a.updated_at);
+          bValue = new Date(b.updated_at);
           break;
         case 'updated':
         default:
@@ -709,12 +712,7 @@ export default function DashboardPage() {
                           <Clock className="w-3 h-3" />
                           {formatDate(workspace.updated_at)}
                         </div>
-                        {workspace.video_count && (
-                          <div className="flex items-center gap-1">
-                            <Video className="w-3 h-3" />
-                            {workspace.video_count} video{workspace.video_count !== 1 ? 's' : ''}
-                          </div>
-                        )}
+                        {/* Removed video_count and size as they don't exist */}
                       </div>
                     </div>
                   ))}
@@ -759,18 +757,7 @@ export default function DashboardPage() {
                           <Clock className="w-3 h-3" />
                           Last updated {formatDate(workspace.updated_at)}
                         </div>
-                        {workspace.video_count && (
-                          <div className="flex items-center gap-1">
-                            <Video className="w-3 h-3" />
-                            {workspace.video_count} video{workspace.video_count !== 1 ? 's' : ''}
-                          </div>
-                        )}
-                        {workspace.size && (
-                          <div className="flex items-center gap-1">
-                            <Tag className="w-3 h-3" />
-                            {formatFileSize(workspace.size)}
-                          </div>
-                        )}
+                        {/* Removed video_count and size as they don't exist */}
                       </div>
                     </div>
                   ))}
@@ -799,12 +786,7 @@ export default function DashboardPage() {
                               <Clock className="w-3 h-3" />
                               Last updated {formatDate(workspace.updated_at)}
                             </div>
-                            {workspace.video_count && (
-                              <div className="flex items-center gap-1">
-                                <Video className="w-3 h-3" />
-                                {workspace.video_count} video{workspace.video_count !== 1 ? 's' : ''}
-                              </div>
-                            )}
+                            {/* Removed video_count and size as they don't exist */}
                           </div>
                         </div>
                       </div>

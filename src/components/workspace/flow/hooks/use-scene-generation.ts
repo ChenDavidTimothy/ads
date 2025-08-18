@@ -1,13 +1,27 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-// Minimal local types to avoid dependency on reactflow types at build time
-type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
-type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
+import { useRouter } from 'next/navigation';
 import { api } from '@/trpc/react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { extractDomainError } from '@/shared/errors/client';
 import type { NodeData } from '@/shared/types';
 import { createBrowserClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
+
+// Minimal local types to avoid dependency on reactflow types at build time
+type RFEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null };
+type RFNode<T> = { id: string; type?: string; position: { x: number; y: number }; data: T };
+
+// Type definitions for API responses
+type GenerateSceneResponse = 
+  | { success: false; errors: Array<{ type: 'error' | 'warning'; code: string; message: string; suggestions?: string[] }>; canRetry: boolean }
+  | { success: true; immediateResult: { jobId: string; contentUrl: string; nodeId: string; nodeName: string; nodeType: 'scene' } }
+  | { success: true; jobs: Array<{ jobId: string; nodeId: string; nodeName: string; nodeType: 'scene' }>; totalNodes: number; generationType: 'batch' }
+  | { success: true; videoUrl?: string; jobId?: string; jobIds?: string[] }; // Legacy format
+
+type GenerateImageResponse = 
+  | { success: false; errors: Array<{ type: 'error' | 'warning'; code: string; message: string; suggestions?: string[] }>; canRetry: boolean }
+  | { success: true; immediateResult: { jobId: string; contentUrl: string; nodeId: string; nodeName: string; nodeType: 'frame' } }
+  | { success: true; jobs: Array<{ jobId: string; nodeId: string; nodeName: string; nodeType: 'frame' }>; totalNodes: number; generationType: 'batch' }
+  | { success: true; imageUrl?: string; jobId?: string; jobIds?: string[] }; // Legacy format
 
 // Backend graceful error response type
 interface ValidationError {
@@ -132,7 +146,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       // Handle legacy videoUrl format
-      if ('videoUrl' in data && data.videoUrl) {
+      if ('videoUrl' in data && data.videoUrl && typeof data.videoUrl === 'string') {
         setVideoUrl(data.videoUrl);
         setIsGenerating(false);
         toast.success('Video generated successfully!');
@@ -160,10 +174,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       // Handle multi-scene response (legacy jobIds array)
-      if ('jobIds' in data) {
+      if ('jobIds' in data && data.jobIds && Array.isArray(data.jobIds)) {
         console.warn('[GENERATION] Using legacy response format - migration incomplete');
         const sceneNodes = nodes.filter(n => n.type === 'scene');
-        const videoJobs: VideoJob[] = data.jobIds.map((jobId, index) => {
+        const videoJobs: VideoJob[] = data.jobIds.map((jobId: string, index: number) => {
           const sceneNode = sceneNodes[index] as RFNode<NodeData>;
           const idData = sceneNode ? 
             (sceneNode.data as { identifier: { id: string; displayName: string } }).identifier :
@@ -182,7 +196,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       // Handle single scene response (legacy jobId format)
-      if ('jobId' in data) {
+      if ('jobId' in data && data.jobId && typeof data.jobId === 'string') {
         const jobId = data.jobId;
         if (!jobId) {
           setIsGenerating(false);
@@ -281,7 +295,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       
       // Handle legacy imageUrl format
-      if ('imageUrl' in data && data.imageUrl) {
+      if ('imageUrl' in data && data.imageUrl && typeof data.imageUrl === 'string') {
         setImageUrl(data.imageUrl);
         setIsGeneratingImage(false);
         toast.success('Image generated successfully!');

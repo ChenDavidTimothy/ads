@@ -70,12 +70,15 @@ export const env = createEnv({
   // Enhanced runtime validation
   onValidationError: (error) => {
     console.error("❌ Invalid environment variables:");
-    console.error(error.flatten().fieldErrors);
+    console.error("Validation errors:", error);
     
     if (process.env.NODE_ENV === 'production') {
       // Fail fast in production
       throw new Error("Invalid environment configuration for production deployment");
     }
+    
+    // This function should never return normally
+    process.exit(1);
   },
 
   onInvalidAccess: (variable) => {

@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   // Get redirect URL from search params
-  const redirectTo = searchParams.get('redirectTo');
+  const redirectTo = searchParams?.get('redirectTo');
 
   // Check if user is already authenticated
   useEffect(() => {

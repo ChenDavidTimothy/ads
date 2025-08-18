@@ -31,6 +31,12 @@ interface APIErrorContext extends BaseErrorContext {
   statusCode?: number;
   responseTime?: number;
   endpoint: string;
+  reason?: string;
+  filename?: string;
+  line?: number;
+  column?: number;
+  stack?: string;
+  promise?: string;
 }
 
 interface SecurityEventContext extends BaseErrorContext {
@@ -38,6 +44,7 @@ interface SecurityEventContext extends BaseErrorContext {
   severity: 'low' | 'medium' | 'high' | 'critical';
   identifier?: string;
   ipAddress?: string;
+  endpoint?: string;
 }
 
 interface PerformanceMetric extends BaseErrorContext {
@@ -429,7 +436,6 @@ export function setupGlobalErrorHandling(): void {
 
 // Export singleton instance and setup function
 export const monitor = ProductionMonitor.getInstance();
-export { setupGlobalErrorHandling };
 
 // Convenience functions for common use cases
 export const monitoringHelpers = {
