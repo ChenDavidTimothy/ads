@@ -3,6 +3,15 @@ import type { NodeData } from '@/shared/types/nodes';
 import type { WorkspaceState } from '@/types/workspace-state';
 import { mergeEditorsIntoFlow } from '@/utils/workspace-state';
 
+// Type for sanitized node data structure
+interface SanitizedNodeData {
+  identifier?: {
+    id?: string;
+    createdAt?: number;
+  };
+  [key: string]: unknown;
+}
+
 export function createStableFlowSnapshot(flow: { nodes: Node<NodeData>[]; edges: Edge[] }): string {
   try {
     const normNodes = [...flow.nodes]
@@ -22,16 +31,24 @@ export function createStableFlowSnapshot(flow: { nodes: Node<NodeData>[]; edges:
   }
 }
 
-function sanitizeNodeData(data: NodeData): unknown {
+function sanitizeNodeData(data: NodeData): SanitizedNodeData {
   try {
-    const cloned: any = JSON.parse(JSON.stringify(data));
-    if (cloned?.identifier) {
+    // Deep clone the data safely with proper typing
+    const cloned = JSON.parse(JSON.stringify(data)) as SanitizedNodeData;
+    
+    // Check if the cloned data has an identifier and handle it safely
+    if (cloned.identifier && typeof cloned.identifier === 'object') {
+      const identifier = cloned.identifier as { id?: string; createdAt?: unknown };
       // Drop volatile timestamp for stable comparisons
-      if (typeof cloned.identifier.createdAt !== 'undefined') cloned.identifier.createdAt = 0;
+      if (typeof identifier.createdAt !== 'undefined') {
+        identifier.createdAt = 0;
+      }
     }
+    
     return cloned;
   } catch {
-    return data as unknown as object;
+    // Fallback: return a safe version of the data
+    return data as unknown as SanitizedNodeData;
   }
 }
 
