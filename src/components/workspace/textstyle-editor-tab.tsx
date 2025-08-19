@@ -118,18 +118,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               { value: 'Georgia', label: 'Georgia' },
               { value: 'Verdana', label: 'Verdana' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
-            disabled={isBound('fontFamily')}
-            inputClassName={leftBorderClass('fontFamily')}
           />
-          {/* Badge - Only show when needed */}
-          {isBound('fontFamily') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
-              <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Typography Row 2 - Font Size */}
@@ -169,18 +158,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               { value: '800', label: 'Extra Bold (800)' },
               { value: '900', label: 'Black (900)' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
-            disabled={isBound('fontWeight')}
-            inputClassName={leftBorderClass('fontWeight')}
           />
-          {/* Badge - Only show when needed */}
-          {isBound('fontWeight') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
-              <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Typography Row 3 - Font Style */}
@@ -194,18 +172,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               { value: 'italic', label: 'Italic' },
               { value: 'oblique', label: 'Oblique' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
-            disabled={isBound('fontStyle')}
-            inputClassName={leftBorderClass('fontStyle')}
           />
-          {/* Badge - Only show when needed */}
-          {isBound('fontStyle') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
-              <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" />
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -224,9 +191,8 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
               disabled={isBound('fillColor')}
-              inputClassName={leftBorderClass('fillColor')}
             />
-            {/* Badge - Only show when needed */}
+            {/* Badge - Only show when bound */}
             {isBound('fillColor') && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
@@ -242,9 +208,8 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
               disabled={isBound('strokeColor')}
-              inputClassName={leftBorderClass('strokeColor')}
             />
-            {/* Badge - Only show when needed */}
+            {/* Badge - Only show when bound */}
             {isBound('strokeColor') && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
@@ -388,8 +353,6 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   };
 
   const getStringValue = (key: string, fallbackValue: string) => {
-    if (isBound(key)) return ''; // Empty string when bound
-    
     switch (key) {
       case 'fontFamily': return initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? fallbackValue;
       case 'fontWeight': return initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? fallbackValue;
@@ -399,6 +362,8 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       default: return fallbackValue;
     }
   };
+
+
 
   return (
     <div className="space-y-[var(--space-4)]">
@@ -424,16 +389,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               { value: 'Georgia', label: 'Georgia' },
               { value: 'Verdana', label: 'Verdana' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
-            disabled={isBound('fontFamily')}
-            inputClassName={leftBorderClass('fontFamily')}
           />
-          {/* Badge - Only show when needed */}
-          {(isOverridden('fontFamily') || isBound('fontFamily')) && (
+          {/* Badge - Only show when overridden */}
+          {isOverridden('fontFamily') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
               </div>
             </div>
           )}
@@ -477,16 +438,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               { value: '800', label: 'Extra Bold (800)' },
               { value: '900', label: 'Black (900)' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
-            disabled={isBound('fontWeight')}
-            inputClassName={leftBorderClass('fontWeight')}
           />
-          {/* Badge - Only show when needed */}
-          {(isOverridden('fontWeight') || isBound('fontWeight')) && (
+          {/* Badge - Only show when overridden */}
+          {isOverridden('fontWeight') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
               </div>
             </div>
           )}
@@ -503,16 +460,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               { value: 'italic', label: 'Italic' },
               { value: 'oblique', label: 'Oblique' }
             ]}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" objectId={objectId} />}
-            disabled={isBound('fontStyle')}
-            inputClassName={leftBorderClass('fontStyle')}
           />
-          {/* Badge - Only show when needed */}
-          {(isOverridden('fontStyle') || isBound('fontStyle')) && (
+          {/* Badge - Only show when overridden */}
+          {isOverridden('fontStyle') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('fontStyle') && !isBound('fontStyle') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
+                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
               </div>
             </div>
           )}
@@ -530,13 +483,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           <div>
             <ColorField 
               label="Fill Color" 
-              value={getStringValue('fillColor', '#000000')} 
+              value={isBound('fillColor') ? (base.fillColor ?? def.fillColor ?? '#000000') : getStringValue('fillColor', '#000000')} 
               onChange={(fillColor) => onChange({ fillColor })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />}
               disabled={isBound('fillColor')}
-              inputClassName={leftBorderClass('fillColor')}
             />
-            {/* Badge - Only show when needed */}
+            {/* Badge - Show when overridden or bound */}
             {(isOverridden('fillColor') || isBound('fillColor')) && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
@@ -549,13 +501,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           <div>
             <ColorField 
               label="Stroke Color" 
-              value={getStringValue('strokeColor', '#ffffff')} 
+              value={isBound('strokeColor') ? (base.strokeColor ?? def.strokeColor ?? '#ffffff') : getStringValue('strokeColor', '#ffffff')} 
               onChange={(strokeColor) => onChange({ strokeColor })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />}
               disabled={isBound('strokeColor')}
-              inputClassName={leftBorderClass('strokeColor')}
             />
-            {/* Badge - Only show when needed */}
+            {/* Badge - Show when overridden or bound */}
             {(isOverridden('strokeColor') || isBound('strokeColor')) && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
