@@ -26,24 +26,12 @@ export interface SceneObject {
   initialStrokeWidth?: number;
   // Store text styling directly (not in metadata)
   textStyle?: {
-    // EXISTING PROPERTIES (keep)
     fontFamily?: string;
     fontWeight?: string;
-    textAlign?: string;
-    lineHeight?: number;
-    letterSpacing?: number;
-    // NEW PROPERTIES - Add these
     fontStyle?: string;
-    textBaseline?: string;
-    direction?: string;
     fillColor?: string;
     strokeColor?: string;
     strokeWidth?: number;
-    shadowColor?: string;
-    shadowOffsetX?: number;
-    shadowOffsetY?: number;
-    shadowBlur?: number;
-    textOpacity?: number;
   };
 }
 

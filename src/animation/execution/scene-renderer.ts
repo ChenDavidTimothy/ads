@@ -157,30 +157,14 @@ export class SceneRenderer {
     const style: TextStyle = {
       // Typography Core (FROM TEXTSTYLE) - Keep unchanged
       fontFamily: textStyle?.fontFamily ?? 'Arial',
-      fontSize: textStyle?.fontSize ?? props.fontSize, // TextStyle fontSize first
+      fontSize: props.fontSize, // Always use Text node fontSize
       fontWeight: textStyle?.fontWeight ?? 'normal',
       fontStyle: textStyle?.fontStyle ?? 'normal',
       
-      // Text Layout (FROM TEXTSTYLE)  
-      textAlign: (textStyle?.textAlign as TextStyle['textAlign']) ?? 'center',
-      textBaseline: (textStyle?.textBaseline as TextStyle['textBaseline']) ?? 'middle',
-      direction: (textStyle?.direction as TextStyle['direction']) ?? 'ltr',
-      
-      // Text Spacing (FROM TEXTSTYLE)
-      lineHeight: textStyle?.lineHeight ?? 1.2,
-      letterSpacing: textStyle?.letterSpacing ?? 0,
-      
-      // CHANGE: Prioritize TextStyle colors over ObjectState
+      // Colors (FROM TEXTSTYLE) - Prioritize TextStyle colors over ObjectState
       fillColor: textStyle?.fillColor ?? state.colors.fill,
       strokeColor: textStyle?.strokeColor ?? state.colors.stroke ?? '#ffffff',
       strokeWidth: textStyle?.strokeWidth ?? state.strokeWidth ?? 0,
-      
-      // Text Effects (FROM TEXTSTYLE) - Keep unchanged
-      shadowColor: textStyle?.shadowColor,
-      shadowOffsetX: textStyle?.shadowOffsetX ?? 0,
-      shadowOffsetY: textStyle?.shadowOffsetY ?? 0,
-      shadowBlur: textStyle?.shadowBlur ?? 0,
-      textOpacity: textStyle?.textOpacity ?? 1,
     };
 
     // Cast to CanvasRenderingContext2D for text rendering

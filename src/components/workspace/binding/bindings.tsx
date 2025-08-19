@@ -191,7 +191,31 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) };
 						const initial = { ...(entry.initial ?? {}) };
 						deleteByPath(initial, key);
-						const prunedInitial = pruneEmpty(initial);
+						const prunedInitial = (() => {
+							const result = { ...initial };
+							
+							// Handle coordinate pairs specially
+							if (key === 'position.x' || key === 'position.y') {
+								const pos = result.position as { x?: number; y?: number } | undefined;
+								if (pos && typeof pos === 'object') {
+									// Only remove position object if BOTH x and y are undefined
+									if (pos.x === undefined && pos.y === undefined) {
+										delete result.position;
+									}
+								}
+							} else if (key === 'scale.x' || key === 'scale.y') {
+								const scale = result.scale as { x?: number; y?: number } | undefined;
+								if (scale && typeof scale === 'object') {
+									// Only remove scale object if BOTH x and y are undefined  
+									if (scale.x === undefined && scale.y === undefined) {
+										delete result.scale;
+									}
+								}
+							}
+							
+							// Apply standard pruning to non-coordinate properties
+							return pruneEmpty(result);
+						})();
 						if (Object.keys(prunedInitial).length === 0) {
 							delete entry.initial;
 						} else {

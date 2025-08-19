@@ -899,63 +899,6 @@ export const NODE_DEFINITIONS = {
           defaultValue: 'normal'
         },
         
-        // Text Layout
-        { 
-          key: 'textAlign', 
-          type: 'select', 
-          label: 'Text Alignment',
-          options: [
-            { value: 'left', label: 'Left' },
-            { value: 'center', label: 'Center' },
-            { value: 'right', label: 'Right' },
-            { value: 'justify', label: 'Justify' }
-          ],
-          defaultValue: 'center'
-        },
-        { 
-          key: 'textBaseline', 
-          type: 'select', 
-          label: 'Text Baseline',
-          options: [
-            { value: 'top', label: 'Top' },
-            { value: 'hanging', label: 'Hanging' },
-            { value: 'middle', label: 'Middle' },
-            { value: 'alphabetic', label: 'Alphabetic' },
-            { value: 'bottom', label: 'Bottom' }
-          ],
-          defaultValue: 'middle'
-        },
-        { 
-          key: 'direction', 
-          type: 'select', 
-          label: 'Text Direction',
-          options: [
-            { value: 'ltr', label: 'Left to Right' },
-            { value: 'rtl', label: 'Right to Left' }
-          ],
-          defaultValue: 'ltr'
-        },
-        
-        // Text Spacing
-        { 
-          key: 'lineHeight', 
-          type: 'number', 
-          label: 'Line Height', 
-          min: 0.5, 
-          max: 5, 
-          step: 0.1, 
-          defaultValue: 1.2
-        },
-        { 
-          key: 'letterSpacing', 
-          type: 'number', 
-          label: 'Letter Spacing (px)', 
-          min: -5, 
-          max: 20, 
-          step: 0.1, 
-          defaultValue: 0
-        },
-        
         // Text Colors
         { 
           key: 'fillColor', 
@@ -977,50 +920,6 @@ export const NODE_DEFINITIONS = {
           max: 10, 
           step: 0.5, 
           defaultValue: 0
-        },
-        
-        // Text Effects
-        { 
-          key: 'shadowColor', 
-          type: 'color', 
-          label: 'Shadow Color', 
-          defaultValue: '#000000'
-        },
-        { 
-          key: 'shadowOffsetX', 
-          type: 'number', 
-          label: 'Shadow Offset X', 
-          min: -20, 
-          max: 20, 
-          step: 1, 
-          defaultValue: 0
-        },
-        { 
-          key: 'shadowOffsetY', 
-          type: 'number', 
-          label: 'Shadow Offset Y', 
-          min: -20, 
-          max: 20, 
-          step: 1, 
-          defaultValue: 0
-        },
-        { 
-          key: 'shadowBlur', 
-          type: 'number', 
-          label: 'Shadow Blur', 
-          min: 0, 
-          max: 20, 
-          step: 1, 
-          defaultValue: 0
-        },
-        { 
-          key: 'textOpacity', 
-          type: 'number', 
-          label: 'Text Opacity', 
-          min: 0, 
-          max: 1, 
-          step: 0.05, 
-          defaultValue: 1
         }
       ]
     },
@@ -1032,25 +931,13 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
-      // EXISTING DEFAULTS (keep)
       fontFamily: 'Arial',
-      fontSize: 24,  // ADD this line
+      fontSize: 24,
       fontWeight: 'normal',
-      textAlign: 'center',
-      lineHeight: 1.2,
-      letterSpacing: 0,
-      // NEW DEFAULTS - Add these
       fontStyle: 'normal',
-      textBaseline: 'middle',
-      direction: 'ltr',
       fillColor: '#000000',
       strokeColor: '#ffffff',
-      strokeWidth: 0,
-      shadowColor: '#000000',
-      shadowOffsetX: 0,
-      shadowOffsetY: 0,
-      shadowBlur: 0,
-      textOpacity: 1
+      strokeWidth: 0
     },
     metadata: {
       supportsVariableBinding: true,
