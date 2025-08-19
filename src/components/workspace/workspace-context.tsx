@@ -49,7 +49,13 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
     setState((prev) => {
       if (!prev) return prev;
       
-      // Only update if there are actual changes to prevent unnecessary re-renders
+      // For node updates, always apply the change since the overhead is minimal
+      // and ensures correctness for complex nested object mutations
+      if ('nodes' in updates) {
+        return { ...prev, flow: { ...prev.flow, ...updates } };
+      }
+      
+      // Keep existing logic for other flow updates (edges, etc.)
       const hasChanges = Object.keys(updates).some(key => {
         const updateValue = updates[key as keyof typeof updates];
         const currentValue = prev.flow[key as keyof typeof prev.flow];
