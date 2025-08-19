@@ -397,6 +397,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const baseOverrides: {
       // Typography properties (KEEP)
       fontFamily?: string;
+      fontSize?: number;
       fontWeight?: string;
       textAlign?: string;
       lineHeight?: number;
@@ -405,10 +406,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       fontStyle?: string;
       textBaseline?: string;
       direction?: string;
-      // ✅ REMOVE - Colors should come from Canvas/ObjectState
-      // fillColor?: string;
-      // strokeColor?: string;
-      // strokeWidth?: number;
+      // RESTORE: Add these back
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth?: number;
       // Text Effects (KEEP)
       shadowColor?: string;
       shadowOffsetX?: number;
@@ -418,6 +419,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     } = {
       // Typography properties (KEEP)
       fontFamily: data.fontFamily as string,
+      fontSize: data.fontSize as number,
       fontWeight: data.fontWeight as string,
       textAlign: data.textAlign as string,
       lineHeight: data.lineHeight as number,
@@ -426,10 +428,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       fontStyle: data.fontStyle as string,
       textBaseline: data.textBaseline as string,
       direction: data.direction as string,
-      // ✅ REMOVE color property assignments
-      // fillColor: data.fillColor as string,
-      // strokeColor: data.strokeColor as string,
-      // strokeWidth: data.strokeWidth as number,
+      // RESTORE: Add color assignments
+      fillColor: data.fillColor as string,
+      strokeColor: data.strokeColor as string,
+      strokeWidth: data.strokeWidth as number,
       // Text Effects (KEEP)
       shadowColor: data.shadowColor as string,
       shadowOffsetX: data.shadowOffsetX as number,
@@ -450,6 +452,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // EXISTING CASES (keep unchanged)
         case 'fontFamily':
           if (typeof val === 'string') nodeOverrides.fontFamily = val;
+          break;
+        case 'fontSize':
+          if (typeof val === 'number') nodeOverrides.fontSize = val;
           break;
         case 'fontWeight':
           if (typeof val === 'string') nodeOverrides.fontWeight = val;
@@ -472,6 +477,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
           break;
         case 'direction':
           if (typeof val === 'string') nodeOverrides.direction = val;
+          break;
+        // RESTORE: Add color binding cases
+        case 'fillColor':
+          if (typeof val === 'string') nodeOverrides.fillColor = val;
+          break;
+        case 'strokeColor':
+          if (typeof val === 'string') nodeOverrides.strokeColor = val;
+          break;
+        case 'strokeWidth':
+          if (typeof val === 'number') nodeOverrides.strokeWidth = val;
           break;
         case 'shadowColor':
           if (typeof val === 'string') nodeOverrides.shadowColor = val;
@@ -566,6 +581,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     nodeOverrides: {
       // Typography properties (KEEP)  
       fontFamily?: string;
+      fontSize?: number;
       fontWeight?: string;
       textAlign?: string;
       lineHeight?: number;
@@ -574,10 +590,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       fontStyle?: string;
       textBaseline?: string;
       direction?: string;
-      // ✅ REMOVE - Colors should come from Canvas/ObjectState
-      // fillColor?: string;
-      // strokeColor?: string;
-      // strokeWidth?: number;
+      // RESTORE: Add color cases back
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth?: number;
       // Text Effects (KEEP)
       shadowColor?: string;
       shadowOffsetX?: number;
@@ -604,6 +620,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
           case 'fontFamily':
             if (typeof value === 'string') objectOverrides.fontFamily = value;
             break;
+          case 'fontSize':
+            if (typeof value === 'number') objectOverrides.fontSize = value;
+            break;
           case 'fontWeight':
             if (typeof value === 'string') objectOverrides.fontWeight = value;
             break;
@@ -626,16 +645,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
           case 'direction':
             if (typeof value === 'string') objectOverrides.direction = value;
             break;
-          // ✅ REMOVE - Colors should come from Canvas/ObjectState
-          // case 'fillColor':
-          //   if (typeof value === 'string') objectOverrides.fillColor = value;
-          //   break;
-          // case 'strokeColor':
-          //   if (typeof value === 'string') objectOverrides.strokeColor = value;
-          //   break;
-          // case 'strokeWidth':
-          //   if (typeof value === 'number') objectOverrides.strokeWidth = value;
-          //   break;
+          // RESTORE: Add color cases back
+          case 'fillColor':
+            if (typeof value === 'string') objectOverrides.fillColor = value;
+            break;
+          case 'strokeColor':
+            if (typeof value === 'string') objectOverrides.strokeColor = value;
+            break;
+          case 'strokeWidth':
+            if (typeof value === 'number') objectOverrides.strokeWidth = value;
+            break;
           case 'shadowColor':
             if (typeof value === 'string') objectOverrides.shadowColor = value;
             break;
@@ -675,10 +694,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
           case 'fontStyle': delete initial.fontStyle; break;
           case 'textBaseline': delete initial.textBaseline; break;
           case 'direction': delete initial.direction; break;
-          // ✅ REMOVE - Colors should come from Canvas/ObjectState
-          // case 'fillColor': delete initial.fillColor; break;
-          // case 'strokeColor': delete initial.strokeColor; break;
-          // case 'strokeWidth': delete initial.strokeWidth; break;
+          // RESTORE: Add color cases back
+          case 'fillColor': delete initial.fillColor; break;
+          case 'strokeColor': delete initial.strokeColor; break;
+          case 'strokeWidth': delete initial.strokeWidth; break;
           case 'shadowColor': delete initial.shadowColor; break;
           case 'shadowOffsetX': delete initial.shadowOffsetX; break;
           case 'shadowOffsetY': delete initial.shadowOffsetY; break;
@@ -716,6 +735,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Apply text styling from assignments
     const finalTextStyle = {
       fontFamily: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontFamily as string ?? objectOverrides.fontFamily,
+      fontSize: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontSize as number ?? objectOverrides.fontSize,
       fontWeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontWeight as string ?? objectOverrides.fontWeight,
       textAlign: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textAlign as string ?? objectOverrides.textAlign,
       lineHeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.lineHeight as number ?? objectOverrides.lineHeight,
@@ -723,10 +743,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       fontStyle: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontStyle as string ?? objectOverrides.fontStyle,
       textBaseline: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textBaseline as string ?? objectOverrides.textBaseline,
       direction: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.direction as string ?? objectOverrides.direction,
-      // ✅ REMOVE - Colors should come from Canvas/ObjectState
-      // fillColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fillColor as string ?? objectOverrides.fillColor,
-      // strokeColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeColor as string ?? objectOverrides.strokeColor,
-      // strokeWidth: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeWidth as number ?? objectOverrides.strokeWidth,
+      // RESTORE: Add color cases back
+      fillColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fillColor as string ?? objectOverrides.fillColor,
+      strokeColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeColor as string ?? objectOverrides.strokeColor,
+      strokeWidth: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeWidth as number ?? objectOverrides.strokeWidth,
       shadowColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowColor as string ?? objectOverrides.shadowColor,
       shadowOffsetX: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowOffsetX as number ?? objectOverrides.shadowOffsetX,
       shadowOffsetY: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowOffsetY as number ?? objectOverrides.shadowOffsetY,

@@ -863,6 +863,15 @@ export const NODE_DEFINITIONS = {
           defaultValue: 'Arial'
         },
         { 
+          key: 'fontSize', 
+          type: 'number', 
+          label: 'Font Size (px)', 
+          min: 8, 
+          max: 200, 
+          step: 1,
+          defaultValue: 24
+        },
+        { 
           key: 'fontWeight', 
           type: 'select', 
           label: 'Font Weight',
@@ -1025,6 +1034,7 @@ export const NODE_DEFINITIONS = {
     defaults: {
       // EXISTING DEFAULTS (keep)
       fontFamily: 'Arial',
+      fontSize: 24,  // ADD this line
       fontWeight: 'normal',
       textAlign: 'center',
       lineHeight: 1.2,

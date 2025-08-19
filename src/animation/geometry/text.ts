@@ -3,7 +3,7 @@ import type { Point2D } from '@/shared/types/core';
 export interface TextStyle {
   // EXISTING PROPERTIES (keep unchanged)
   fontFamily?: string;
-  fontSize: number; // From Text node, not TextStyle
+  fontSize?: number; // Can come from Text node or TextStyle node
   fontWeight?: string;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   lineHeight?: number;
@@ -13,7 +13,7 @@ export interface TextStyle {
   fontStyle?: string;
   textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'bottom';
   direction?: 'ltr' | 'rtl';
-  fillColor: string;
+  fillColor?: string;
   strokeColor?: string;
   strokeWidth?: number;
   shadowColor?: string;
@@ -21,6 +21,55 @@ export interface TextStyle {
   shadowOffsetY?: number;
   shadowBlur?: number;
   textOpacity?: number;
+}
+
+// Manual letter spacing implementation (Canvas2D compatible)
+function drawTextWithLetterSpacing(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  letterSpacing: number
+): void {
+  if (!letterSpacing || letterSpacing === 0) {
+    ctx.fillText(text, x, y);
+    if (ctx.strokeStyle && ctx.lineWidth > 0) {
+      ctx.strokeText(text, x, y);
+    }
+    return;
+  }
+
+  let currentX = x;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    ctx.fillText(char, currentX, y);
+    if (ctx.strokeStyle && ctx.lineWidth > 0) {
+      ctx.strokeText(char, currentX, y);
+    }
+    const charWidth = ctx.measureText(char).width;
+    currentX += charWidth + letterSpacing;
+  }
+}
+
+function measureTextWithLetterSpacing(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  letterSpacing: number
+): number {
+  if (!letterSpacing || letterSpacing === 0) {
+    return ctx.measureText(text).width;
+  }
+
+  let totalWidth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const charWidth = ctx.measureText(char).width;
+    totalWidth += charWidth;
+    if (i < text.length - 1) {
+      totalWidth += letterSpacing;
+    }
+  }
+  return totalWidth;
 }
 
 export function drawText(
@@ -32,9 +81,9 @@ export function drawText(
   ctx.save();
   
   // Configure font with all typography properties
-  const fontString = `${style.fontStyle ?? 'normal'} ${style.fontWeight ?? 'normal'} ${style.fontSize}px ${style.fontFamily ?? 'Arial'}`;
+  const fontString = `${style.fontStyle ?? 'normal'} ${style.fontWeight ?? 'normal'} ${style.fontSize ?? 16}px ${style.fontFamily ?? 'Arial'}`;
   ctx.font = fontString;
-  ctx.fillStyle = style.fillColor;
+  ctx.fillStyle = style.fillColor ?? 'black'; // Fallback to black
   ctx.textAlign = mapTextAlign(style.textAlign ?? 'center');
   ctx.textBaseline = mapTextBaseline(style.textBaseline ?? 'middle');
   ctx.direction = style.direction ?? 'ltr';
@@ -42,11 +91,6 @@ export function drawText(
   // Apply text opacity
   if (style.textOpacity !== undefined) {
     ctx.globalAlpha = style.textOpacity;
-  }
-  
-  // Apply letter spacing if supported
-  if (style.letterSpacing && 'letterSpacing' in ctx) {
-    (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${style.letterSpacing}px`;
   }
 
   // Apply shadow effects
@@ -59,21 +103,30 @@ export function drawText(
 
   // Handle multi-line text
   const lines = content.split('\n');
-  const lineHeight = style.fontSize * (style.lineHeight ?? 1.2);
+  const fontSize = style.fontSize ?? 16; // Default fallback
+  const lineHeight = fontSize * (style.lineHeight ?? 1.2);
   const totalHeight = lines.length * lineHeight;
   const startY = center.y - (totalHeight / 2) + (lineHeight / 2);
+  const letterSpacing = style.letterSpacing ?? 0; // Default fallback
   
-  lines.forEach((line, index) => {
-    const y = startY + (index * lineHeight);
-    ctx.fillText(line, center.x, y);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineY = startY + i * lineHeight;
     
-    // Draw stroke if specified
-    if (style.strokeColor && style.strokeWidth && style.strokeWidth > 0) {
-      ctx.strokeStyle = style.strokeColor;
-      ctx.lineWidth = style.strokeWidth;
-      ctx.strokeText(line, center.x, y);
+    // Calculate line width for text alignment
+    let lineX = center.x;
+    if (style.textAlign === 'left') {
+      lineX = center.x;
+    } else if (style.textAlign === 'right') {
+      const lineWidth = measureTextWithLetterSpacing(ctx, line, letterSpacing);
+      lineX = center.x - lineWidth;
+    } else if (style.textAlign === 'center') {
+      const lineWidth = measureTextWithLetterSpacing(ctx, line, letterSpacing);
+      lineX = center.x - lineWidth / 2;
     }
-  });
+    
+    drawTextWithLetterSpacing(ctx, line, lineX, lineY, letterSpacing);
+  }
   
   ctx.restore();
 }

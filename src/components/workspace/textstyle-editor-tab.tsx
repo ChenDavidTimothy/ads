@@ -48,6 +48,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
   const data = (node?.data ?? {}) as Record<string, unknown> & {
     // Typography Core
     fontFamily?: string;
+    fontSize?: number;
     fontWeight?: string;
     fontStyle?: string;
     // Text Layout
@@ -57,10 +58,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
     // Text Spacing
     lineHeight?: number;
     letterSpacing?: number;
-    // ✅ REMOVE - Colors should come from Canvas/ObjectState
-    // fillColor?: string;
-    // strokeColor?: string;
-    // strokeWidth?: number;
+    // RESTORE: Uncomment color value resolution
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
     // Text Effects
     shadowColor?: string;
     shadowOffsetX?: number;
@@ -73,6 +74,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
 
   const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
     fontFamily?: string;
+    fontSize?: number;
     fontWeight?: string;
     fontStyle?: string;
     textAlign?: string;
@@ -80,10 +82,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
     direction?: string;
     lineHeight?: number;
     letterSpacing?: number;
-    // ✅ REMOVE - Colors should come from Canvas/ObjectState
-    // fillColor?: string;
-    // strokeColor?: string;
-    // strokeWidth?: number;
+    // RESTORE: Uncomment color value resolution
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -93,6 +95,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
 
   // Value resolution with fallbacks
   const fontFamily = data.fontFamily ?? def.fontFamily ?? 'Arial';
+  const fontSize = data.fontSize ?? def.fontSize ?? 24;
   const fontWeight = data.fontWeight ?? def.fontWeight ?? 'normal';
   const fontStyle = data.fontStyle ?? def.fontStyle ?? 'normal';
   const textAlign = data.textAlign ?? def.textAlign ?? 'center';
@@ -100,10 +103,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
   const direction = data.direction ?? def.direction ?? 'ltr';
   const lineHeight = data.lineHeight ?? def.lineHeight ?? 1.2;
   const letterSpacing = data.letterSpacing ?? def.letterSpacing ?? 0;
-  // ✅ REMOVE - Colors should come from Canvas/ObjectState
-  // const fillColor = data.fillColor ?? def.fillColor ?? '#000000';
-  // const strokeColor = data.strokeColor ?? def.strokeColor ?? '#ffffff';
-  // const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
+  // RESTORE: Uncomment color value resolution
+  const fillColor = data.fillColor ?? def.fillColor ?? '#000000';
+  const strokeColor = data.strokeColor ?? def.strokeColor ?? '#ffffff';  
+  const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
   const shadowColor = data.shadowColor ?? def.shadowColor ?? '#000000';
   const shadowOffsetX = data.shadowOffsetX ?? def.shadowOffsetX ?? 0;
   const shadowOffsetY = data.shadowOffsetY ?? def.shadowOffsetY ?? 0;
@@ -124,7 +127,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
       {/* Typography Core */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <SelectField
               label="Font Family"
@@ -141,6 +144,17 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
               disabled={isBound('fontFamily')}
               inputClassName={leftBorderClass('fontFamily')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Font Size (px)"
+              value={fontSize}
+              onChange={(fontSize) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontSize } })) })}
+              min={8} max={200} step={1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" />}
+              disabled={isBound('fontSize')}
+              inputClassName={leftBorderClass('fontSize')}
             />
           </div>
           <div>
@@ -257,6 +271,44 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
         </div>
       </div>
 
+      {/* Colors */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <ColorField 
+              label="Fill Color" 
+              value={fillColor} 
+              onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
+              disabled={isBound('fillColor')}
+              inputClassName={leftBorderClass('fillColor')}
+            />
+          </div>
+          <div>
+            <ColorField 
+              label="Stroke Color" 
+              value={strokeColor} 
+              onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
+              disabled={isBound('strokeColor')}
+              inputClassName={leftBorderClass('strokeColor')}
+            />
+          </div>
+          <div>
+            <NumberField 
+              label="Stroke Width" 
+              value={strokeWidth} 
+              onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
+              min={0} max={10} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
+              disabled={isBound('strokeWidth')}
+              inputClassName={leftBorderClass('strokeWidth')}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Text Effects */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Text Effects</div>
@@ -326,6 +378,9 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
           <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
           <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
@@ -345,6 +400,15 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
           <TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
           <TextStyleBindingBadge nodeId={nodeId} keyName="shadowColor" />
@@ -380,6 +444,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
     // Typography Core  
     fontFamily?: string;
+    fontSize?: number;
     fontWeight?: string;
     fontStyle?: string;
     // Text Layout
@@ -389,10 +454,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     // Text Spacing
     lineHeight?: number;
     letterSpacing?: number;
-    // ✅ REMOVE - Colors should come from Canvas/ObjectState
-    // fillColor?: string;
-    // strokeColor?: string;
-    // strokeWidth?: number;
+    // RESTORE: Uncomment color value resolution
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
     // Text Effects
     shadowColor?: string;
     shadowOffsetX?: number;
@@ -403,6 +468,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 
   const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
     fontFamily?: string;
+    fontSize?: number;
     fontWeight?: string;
     fontStyle?: string;
     textAlign?: string;
@@ -410,10 +476,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     direction?: string;
     lineHeight?: number;
     letterSpacing?: number;
-    // ✅ REMOVE - Colors should come from Canvas/ObjectState
-    // fillColor?: string;
-    // strokeColor?: string;
-    // strokeWidth?: number;
+    // RESTORE: Uncomment color value resolution
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -421,18 +487,23 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     textOpacity?: number;
   }) ?? {};
   const base = (node?.data ?? {}) as Record<string, unknown> & {
+    // Typography Core
     fontFamily?: string;
+    fontSize?: number;
     fontWeight?: string;
     fontStyle?: string;
+    // Text Layout
     textAlign?: string;
     textBaseline?: string;
     direction?: string;
+    // Text Spacing
     lineHeight?: number;
     letterSpacing?: number;
-    // ✅ REMOVE - Colors should come from Canvas/ObjectState
-    // fillColor?: string;
-    // strokeColor?: string;
-    // strokeWidth?: number;
+    // RESTORE: Uncomment color value resolution
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    // Text Effects
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -448,6 +519,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   const isOverridden = (key: string) => {
     switch (key) {
       case 'fontFamily': return initial.fontFamily !== undefined;
+      case 'fontSize': return initial.fontSize !== undefined;
       case 'fontWeight': return initial.fontWeight !== undefined;
       case 'fontStyle': return initial.fontStyle !== undefined;
       case 'textAlign': return initial.textAlign !== undefined;
@@ -455,6 +527,9 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       case 'direction': return initial.direction !== undefined;
       case 'lineHeight': return initial.lineHeight !== undefined;
       case 'letterSpacing': return initial.letterSpacing !== undefined;
+      case 'fillColor': return initial.fillColor !== undefined;
+      case 'strokeColor': return initial.strokeColor !== undefined;
+      case 'strokeWidth': return initial.strokeWidth !== undefined;
       case 'shadowColor': return initial.shadowColor !== undefined;
       case 'shadowOffsetX': return initial.shadowOffsetX !== undefined;
       case 'shadowOffsetY': return initial.shadowOffsetY !== undefined;
@@ -466,6 +541,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 
   // Property value resolution (same pattern as Canvas)
   const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
+  const fontSize = initial.fontSize ?? base.fontSize ?? def.fontSize ?? 24;
   const fontWeight = initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? 'normal';
   const fontStyle = initial.fontStyle ?? base.fontStyle ?? def.fontStyle ?? 'normal';
   const textAlign = initial.textAlign ?? base.textAlign ?? def.textAlign ?? 'center';
@@ -473,10 +549,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   const direction = initial.direction ?? base.direction ?? def.direction ?? 'ltr';
   const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
   const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
-  // ✅ REMOVE - Colors should come from Canvas/ObjectState
-  // const fillColor = initial.fillColor ?? base.fillColor ?? def.fillColor ?? '#000000';
-  // const strokeColor = initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? '#ffffff';
-  // const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
+  // RESTORE: Uncomment color value resolution
+  const fillColor = initial.fillColor ?? base.fillColor ?? def.fillColor ?? '#000000';
+  const strokeColor = initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? '#ffffff';
+  const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
   const shadowColor = initial.shadowColor ?? base.shadowColor ?? def.shadowColor ?? '#000000';
   const shadowOffsetX = initial.shadowOffsetX ?? base.shadowOffsetX ?? def.shadowOffsetX ?? 0;
   const shadowOffsetY = initial.shadowOffsetY ?? base.shadowOffsetY ?? def.shadowOffsetY ?? 0;
@@ -494,6 +570,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     
     switch (key) {
       case 'fontFamily': return fontFamily;
+      case 'fontSize': return fontSize;
       case 'fontWeight': return fontWeight;
       case 'fontStyle': return fontStyle;
       case 'textAlign': return textAlign;
@@ -501,6 +578,9 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       case 'direction': return direction;
       case 'lineHeight': return lineHeight;
       case 'letterSpacing': return letterSpacing;
+      case 'fillColor': return fillColor;
+      case 'strokeColor': return strokeColor;
+      case 'strokeWidth': return strokeWidth;
       case 'shadowColor': return shadowColor;
       case 'shadowOffsetX': return shadowOffsetX;
       case 'shadowOffsetY': return shadowOffsetY;
@@ -512,7 +592,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 
   const getStringValue = (key: string, fallbackValue: string) => {
     if (isBound(key)) return ''; // Empty string when bound
-    return getValue(key, fallbackValue) as string;
+    
+    switch (key) {
+      case 'fillColor': return initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue;
+      case 'strokeColor': return initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? fallbackValue;
+      default: return fallbackValue;
+    }
   };
 
   return (
@@ -524,7 +609,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       {/* Typography Core */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <SelectField
               label="Font Family"
@@ -541,6 +626,17 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
               disabled={isBound('fontFamily')}
               inputClassName={leftBorderClass('fontFamily')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Font Size (px)"
+              value={getValue('fontSize', 24) as number}
+              onChange={(fontSize) => onChange({ fontSize })}
+              min={8} max={200} step={1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" objectId={objectId} />}
+              disabled={isBound('fontSize')}
+              inputClassName={leftBorderClass('fontSize')}
             />
           </div>
           <div>
@@ -580,10 +676,14 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           </div>
         </div>
         {/* Badges for Typography Row */}
-        <div className="grid grid-cols-3 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
           <div className="flex items-center gap-[var(--space-1)]">
             {isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
             <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fontSize') && !isBound('fontSize') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
           </div>
           <div className="flex items-center gap-[var(--space-1)]">
             {isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
@@ -671,13 +771,13 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           </div>
         </div>
         {/* Badges for Layout & Spacing Row */}
-        <div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
           <div className="flex items-center gap-[var(--space-1)]">
             {isOverridden('textAlign') && !isBound('textAlign') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />}
             <TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
           </div>
           <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('textBaseline') && !isBound('textBaseline') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textBaseline" objectId={objectId} />}
+            {isOverridden('textBaseline') && !isBound('textAlign') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textBaseline" objectId={objectId} />}
             <TextStyleBindingBadge nodeId={nodeId} keyName="textBaseline" objectId={objectId} />
           </div>
           <div className="flex items-center gap-[var(--space-1)]">
@@ -691,6 +791,59 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           <div className="flex items-center gap-[var(--space-1)]">
             {isOverridden('letterSpacing') && !isBound('letterSpacing') && <TextStyleOverrideBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />}
             <TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
+          </div>
+        </div>
+      </div>
+
+      {/* Colors */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <ColorField 
+              label="Fill Color" 
+              value={getStringValue('fillColor', '#000000')} 
+              onChange={(fillColor) => onChange({ fillColor })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />}
+              disabled={isBound('fillColor')}
+              inputClassName={leftBorderClass('fillColor')}
+            />
+          </div>
+          <div>
+            <ColorField 
+              label="Stroke Color" 
+              value={getStringValue('strokeColor', '#ffffff')} 
+              onChange={(strokeColor) => onChange({ strokeColor })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />}
+              disabled={isBound('strokeColor')}
+              inputClassName={leftBorderClass('strokeColor')}
+            />
+          </div>
+          <div>
+            <NumberField 
+              label="Stroke Width" 
+              value={getValue('strokeWidth', 0) as number} 
+              onChange={(strokeWidth) => onChange({ strokeWidth })}
+              min={0} max={10} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />}
+              disabled={isBound('strokeWidth')}
+              inputClassName={leftBorderClass('strokeWidth')}
+            />
+          </div>
+        </div>
+        {/* Badges for Colors Row */}
+        <div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
           </div>
         </div>
       </div>

@@ -157,7 +157,7 @@ export class SceneRenderer {
     const style: TextStyle = {
       // Typography Core (FROM TEXTSTYLE) - Keep unchanged
       fontFamily: textStyle?.fontFamily ?? 'Arial',
-      fontSize: props.fontSize, // From Text node
+      fontSize: textStyle?.fontSize ?? props.fontSize, // TextStyle fontSize first
       fontWeight: textStyle?.fontWeight ?? 'normal',
       fontStyle: textStyle?.fontStyle ?? 'normal',
       
@@ -170,10 +170,10 @@ export class SceneRenderer {
       lineHeight: textStyle?.lineHeight ?? 1.2,
       letterSpacing: textStyle?.letterSpacing ?? 0,
       
-      // ✅ CHANGE - Use ObjectState colors (Canvas/Animation) with TextStyle fallback
-      fillColor: state.colors.fill,
-      strokeColor: state.colors.stroke,
-      strokeWidth: state.strokeWidth,
+      // CHANGE: Prioritize TextStyle colors over ObjectState
+      fillColor: textStyle?.fillColor ?? state.colors.fill,
+      strokeColor: textStyle?.strokeColor ?? state.colors.stroke ?? '#ffffff',
+      strokeWidth: textStyle?.strokeWidth ?? state.strokeWidth ?? 0,
       
       // Text Effects (FROM TEXTSTYLE) - Keep unchanged
       shadowColor: textStyle?.shadowColor,
