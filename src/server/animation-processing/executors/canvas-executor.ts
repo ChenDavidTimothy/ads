@@ -166,14 +166,31 @@ export class CanvasNodeExecutor extends BaseExecutor {
         if (isSceneObject(obj)) {
           const original = obj;
           const objectId = original.id;
+          
+          // NEW: Add type-aware color property filtering
+          const isTextObject = original.type === 'text';
+          
           const reader = readVarForObject(objectId);
           const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides)) as CanvasOverrides;
+          
+          // NEW: Remove color properties for text objects
+          if (isTextObject) {
+            delete objectOverrides.fillColor;
+            delete objectOverrides.strokeColor;
+            delete objectOverrides.strokeWidth;
+          }
+          
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
           for (const key of objectKeys) {
             const val = reader(key);
             if (val === undefined) continue;
             
-            // Type-safe property setting for CanvasOverrides
+            // NEW: Skip color binding keys for text objects
+            if (isTextObject && (key === 'fillColor' || key === 'strokeColor' || key === 'strokeWidth')) {
+              continue;
+            }
+            
+            // EXISTING: Keep all existing property binding logic unchanged
             if (key === 'position.x' && typeof val === 'number') {
               objectOverrides.position = { 
                 x: val, 
@@ -228,6 +245,13 @@ export class CanvasNodeExecutor extends BaseExecutor {
                 case 'strokeWidth': delete initial.strokeWidth; break;
                 default: break;
               }
+            }
+            
+            // NEW: Also remove color assignments for text objects (even if not bound)
+            if (isTextObject) {
+              delete initial.fillColor;
+              delete initial.strokeColor;
+              delete initial.strokeWidth;
             }
             
             // Prune empty objects recursively

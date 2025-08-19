@@ -67,19 +67,26 @@ export function resolveInitialObject(
     ?? (canvasOverrides?.opacity ?? (original.initialOpacity ?? 1));
   sources.opacity = assignments?.initial?.opacity ? 'assignment' : canvasOverrides?.opacity ? 'canvas' : 'base';
 
-  // ✅ ADD - Following exact pattern as opacity
-  const initialFillColor = assignments?.initial?.fillColor
-    ?? (canvasOverrides?.fillColor ?? '#4444ff');
-  sources.colors = sources.colors ?? {};
-  sources.colors.fill = assignments?.initial?.fillColor ? 'assignment' : canvasOverrides?.fillColor ? 'canvas' : 'base';
+  // CHANGE: Make color resolution conditional for text objects
+  const initialFillColor = original.type !== 'text' 
+    ? (assignments?.initial?.fillColor ?? (canvasOverrides?.fillColor ?? '#4444ff'))
+    : '#4444ff'; // Default for text (TextStyle will override)
 
-  const initialStrokeColor = assignments?.initial?.strokeColor
-    ?? (canvasOverrides?.strokeColor ?? '#ffffff');
-  sources.colors.stroke = assignments?.initial?.strokeColor ? 'assignment' : canvasOverrides?.strokeColor ? 'canvas' : 'base';
+  const initialStrokeColor = original.type !== 'text'
+    ? (assignments?.initial?.strokeColor ?? (canvasOverrides?.strokeColor ?? '#ffffff'))
+    : '#ffffff'; // Default for text (TextStyle will override)
 
-  const initialStrokeWidth = assignments?.initial?.strokeWidth
-    ?? (canvasOverrides?.strokeWidth ?? 2);
-  sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : canvasOverrides?.strokeWidth ? 'canvas' : 'base';
+  const initialStrokeWidth = original.type !== 'text'
+    ? (assignments?.initial?.strokeWidth ?? (canvasOverrides?.strokeWidth ?? 2))
+    : 0; // Default for text (TextStyle will override)
+
+  // Update sources tracking conditionally
+  if (original.type !== 'text') {
+    sources.colors = sources.colors ?? {};
+    sources.colors.fill = assignments?.initial?.fillColor ? 'assignment' : canvasOverrides?.fillColor ? 'canvas' : 'base';
+    sources.colors.stroke = assignments?.initial?.strokeColor ? 'assignment' : canvasOverrides?.strokeColor ? 'canvas' : 'base';
+    sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : canvasOverrides?.strokeWidth ? 'canvas' : 'base';
+  }
 
   // Geometry properties with Canvas-provided styling - clone with correct type
   let properties: GeometryProperties;
@@ -116,12 +123,14 @@ export function resolveInitialObject(
     }
     case 'text': {
       const base = original.properties as TextProperties;
+      // CHANGE: Remove Canvas color application for text objects
       properties = {
         ...base,
-        color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
-        strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
-        strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
-      } as TextProperties & { color: string; strokeColor: string; strokeWidth: number };
+        // REMOVED: Canvas color properties - TextStyle node handles these
+        // color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
+        // strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
+        // strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
+      } as TextProperties; // Remove color extensions
       break;
     }
     default: {
@@ -132,11 +141,14 @@ export function resolveInitialObject(
   }
 
   // Track sources for styling properties
-  sources.colors = {
-    fill: assignments?.initial?.fillColor ? 'assignment' : 'canvas',
-    stroke: assignments?.initial?.strokeColor ? 'assignment' : 'canvas'
-  } as const;
-  sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : 'canvas';
+  // CHANGE: Skip color source tracking for text objects
+  if (original.type !== 'text') {
+    sources.colors = {
+      fill: assignments?.initial?.fillColor ? 'assignment' : 'canvas',
+      stroke: assignments?.initial?.strokeColor ? 'assignment' : 'canvas'
+    } as const;
+    sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : 'canvas';
+  }
 
   return {
     initialPosition,

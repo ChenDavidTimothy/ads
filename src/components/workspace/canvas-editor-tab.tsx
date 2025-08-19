@@ -65,6 +65,19 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 		}));
 	}, [nodeId, state.flow.nodes, state.flow.edges]);
 
+	// ADD: Type composition detection using existing FlowTracker pattern
+	const upstreamObjectTypes = useMemo(() => {
+		const tracker = new FlowTracker();
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+		return {
+			hasText: objectDescriptors.some(obj => obj.type === 'text'),
+			hasGeometry: objectDescriptors.some(obj => ['triangle', 'circle', 'rectangle'].includes(obj.type)),
+			allText: objectDescriptors.length > 0 && objectDescriptors.every(obj => obj.type === 'text'),
+			isEmpty: objectDescriptors.length === 0,
+			objectTypes: objectDescriptors.map(obj => obj.type)
+		};
+	}, [nodeId, state.flow.nodes, state.flow.edges]);
+
 	// Log for debugging
 	React.useEffect(() => {
 		console.log(`[Canvas] Detected ${upstreamObjects.length} objects for canvas node ${nodeId}:`, 
@@ -181,6 +194,8 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const { state, updateFlow } = useWorkspace();
 	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined;
+	
+	// EXISTING: All data resolution code unchanged
 	const data = (node?.data ?? {}) as Record<string, unknown> & {
 		position?: { x: number; y: number };
 		scale?: { x: number; y: number };
@@ -202,6 +217,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 		strokeColor?: string;
 		strokeWidth?: number;
 	}) ?? {};
+	
+	// EXISTING: All value resolution unchanged
 	const posX = data.position?.x ?? def.position?.x ?? 0;
 	const posY = data.position?.y ?? def.position?.y ?? 0;
 	const scaleX = data.scale?.x ?? def.scale?.x ?? 1;
@@ -212,6 +229,17 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 	const strokeColor = data.strokeColor ?? def.strokeColor ?? '';
 	const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 1;
 
+	// ADD: Type detection for conditional rendering
+	const upstreamObjectTypes = useMemo(() => {
+		const tracker = new FlowTracker();
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+		return {
+			allText: objectDescriptors.length > 0 && objectDescriptors.every(obj => obj.type === 'text'),
+			isEmpty: objectDescriptors.length === 0
+		};
+	}, [nodeId, state.flow.nodes, state.flow.edges]);
+
+	// EXISTING: All helper functions unchanged
 	const isBound = (key: string) => !!bindings?.[key]?.boundResultNodeId;
 	const leftBorderClass = (key: string) => (isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '');
 
@@ -271,28 +299,41 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 					<CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
 				</div>
 			</div>
-			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
-				<div>
-					<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+			{/* CHANGE: Wrap color properties with conditional rendering */}
+			{!upstreamObjectTypes.allText && (
+				<>
+					<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
+						<div>
+							<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+						</div>
+						<div>
+							<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
+						</div>
+						<div>
+							<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
+						</div>
+					</div>
+					<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+						<div className="flex items-center gap-[var(--space-1)]">
+							<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* ADD: Message when color properties are hidden */}
+			{upstreamObjectTypes.allText && (
+				<div className="text-xs text-[var(--text-tertiary)] p-3 bg-[var(--surface-2)] rounded border border-[var(--border-primary)]">
+					<div className="font-medium mb-1">Color properties disabled</div>
+					<div>Use TextStyle node for text color and stroke styling</div>
 				</div>
-				<div>
-					<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
-				</div>
-				<div>
-					<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
-				</div>
-			</div>
+			)}
 		</div>
 	);
 }
@@ -305,6 +346,8 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 	_onClear: () => void;
 }) {
 	const { state } = useWorkspace();
+	
+	// EXISTING: All data resolution unchanged
 	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<CanvasNodeData> | undefined;
 	const selectedOverrides = assignments[objectId];
 	const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
@@ -317,6 +360,17 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 		strokeWidth?: number;
 	};
 
+	// ADD: Get object type for conditional rendering
+	const objectType = useMemo(() => {
+		const tracker = new FlowTracker();
+		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+		const objectDescriptor = objectDescriptors.find(obj => obj.id === objectId);
+		return objectDescriptor?.type;
+	}, [nodeId, objectId, state.flow.nodes, state.flow.edges]);
+
+	const isTextObject = objectType === 'text';
+
+	// EXISTING: All other resolution logic unchanged
 	const def = (getNodeDefinition('canvas')?.defaults as Record<string, unknown> & {
 		position?: { x: number; y: number };
 		scale?: { x: number; y: number };
@@ -458,34 +512,47 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 				</div>
 			</div>
 
-			<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
-				<div>
-					<ColorField label="Fill" value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+			{/* CHANGE: Conditional color section rendering */}
+			{!isTextObject && (
+				<>
+					<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
+						<div>
+							<ColorField label="Fill" value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+						</div>
+						<div>
+							<ColorField label="Stroke" value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
+						</div>
+						<div>
+							<NumberField label="Stroke W" value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
+								bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
+						</div>
+					</div>
+					<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('fillColor') && !isBound('fillColor') && <OverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+							<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('strokeColor') && !isBound('strokeColor') && <OverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+							<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+						</div>
+						<div className="flex items-center gap-[var(--space-1)]">
+							{isOverridden('strokeWidth') && !isBound('strokeWidth') && <OverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+							<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* ADD: Message for text objects */}
+			{isTextObject && (
+				<div className="text-xs text-[var(--text-tertiary)] p-3 bg-[var(--surface-2)] rounded border border-[var(--border-primary)]">
+					<div className="font-medium mb-1">Color properties disabled for text</div>
+					<div>Use TextStyle node for text color and stroke styling</div>
 				</div>
-				<div>
-					<ColorField label="Stroke" value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
-				</div>
-				<div>
-					<NumberField label="Stroke W" value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
-						bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('fillColor') && !isBound('fillColor') && <OverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('strokeColor') && !isBound('strokeColor') && <OverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('strokeWidth') && !isBound('strokeWidth') && <OverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
-				</div>
-			</div>
+			)}
 		</div>
 	);
 }
