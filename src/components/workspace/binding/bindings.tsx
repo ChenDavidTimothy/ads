@@ -44,8 +44,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 
 	const variables = useMemo(() => {
 		const tracker = new FlowTracker();
-		return tracker.getAvailableResultVariables(nodeId, state.flow.nodes, state.flow.edges);
-	}, [nodeId, state.flow.nodes, state.flow.edges]);
+		return tracker.getAllResultVariables(state.flow.nodes);
+	}, [state.flow.nodes]);
 
 	const getBinding = (key: string): string | undefined => {
 		const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId);

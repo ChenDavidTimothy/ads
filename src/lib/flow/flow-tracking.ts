@@ -524,87 +524,14 @@ export class FlowTracker {
     return traverse(nodeId);
   }
 
-  // Discover upstream Result nodes for variable binding
-  getUpstreamResultNodes(
-    nodeId: string,
-    allNodes: Node<NodeData>[],
-    allEdges: Edge[]
-  ): Node<NodeData>[] {
-    const result: Node<NodeData>[] = [];
-    const visited = new Set<string>();
-    const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
-    const canonicalEdges = canonicalizeEdges(
-      allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
-      allEdges as unknown as Array<{ source: string; target: string }>
-    );
-    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
-      return allNodes.find((n) => n.data.identifier.id === identifierId);
-    };
-    const traverseUpstream = (currentId: string) => {
-      if (visited.has(currentId)) return;
-      visited.add(currentId);
-      const current = getNodeByIdentifierId(currentId);
-      if (!current) return;
-      if (current.type === 'result') {
-        result.push(current);
-      }
-      const incoming = canonicalEdges.filter((e: { target: string }) => e.target === currentId);
-      for (const e of incoming) traverseUpstream(e.source);
-    };
-    const start = toCanonicalId(nodeId, idMap);
-    traverseUpstream(start);
-    return result.sort((a, b) => a.data.identifier.displayName.localeCompare(b.data.identifier.displayName));
-  }
-
-  // Discover any connected Result nodes (upstream or downstream) for variable binding
-  getConnectedResultNodes(
-    nodeId: string,
-    allNodes: Node<NodeData>[],
-    allEdges: Edge[]
-  ): Node<NodeData>[] {
-    const result: Node<NodeData>[] = [];
-    const visited = new Set<string>();
-    const idMap = buildIdMap(allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>);
-    const canonicalEdges = canonicalizeEdges(
-      allNodes as unknown as Array<{ id: string; data: { identifier: { id: string } } }>,
-      allEdges as unknown as Array<{ source: string; target: string }>
-    );
-    const neighbors = new Map<string, Set<string>>();
-    // Build undirected adjacency for reachability
-    for (const edge of canonicalEdges as unknown as Array<{ source: string; target: string }>) {
-      const a = edge.source;
-      const b = edge.target;
-      if (!neighbors.has(a)) neighbors.set(a, new Set());
-      if (!neighbors.has(b)) neighbors.set(b, new Set());
-      neighbors.get(a)!.add(b);
-      neighbors.get(b)!.add(a);
-    }
-    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined =>
-      allNodes.find((n) => n.data.identifier.id === identifierId);
-
-    const queue: string[] = [toCanonicalId(nodeId, idMap)];
-    while (queue.length > 0) {
-      const cur = queue.shift()!;
-      if (visited.has(cur)) continue;
-      visited.add(cur);
-      const node = getNodeByIdentifierId(cur);
-      if (node && node.type === 'result') result.push(node);
-      for (const nb of neighbors.get(cur) ?? []) {
-        if (!visited.has(nb)) queue.push(nb);
-      }
-    }
-    return result.sort((a, b) => a.data.identifier.displayName.localeCompare(b.data.identifier.displayName));
-  }
-
   // Build a compact list of available variable bindings for UI
-  getAvailableResultVariables(
-    nodeId: string,
-    allNodes: Node<NodeData>[],
-    allEdges: Edge[]
-  ): Array<{ id: string; name: string }>{
-    return this.getUpstreamResultNodes(nodeId, allNodes, allEdges).map((n) => ({
-      id: n.data.identifier.id,
-      name: n.data.identifier.displayName,
-    }));
+  getAllResultVariables(allNodes: Node<NodeData>[]): Array<{ id: string; name: string }> {
+    return allNodes
+      .filter(node => node.type === 'result')
+      .map(node => ({
+        id: node.data.identifier.id,
+        name: node.data.identifier.displayName,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 }
