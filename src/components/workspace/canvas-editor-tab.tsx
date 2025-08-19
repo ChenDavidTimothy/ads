@@ -66,17 +66,17 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 	}, [nodeId, state.flow.nodes, state.flow.edges]);
 
 	// ADD: Type composition detection using existing FlowTracker pattern
-	const upstreamObjectTypes = useMemo(() => {
-		const tracker = new FlowTracker();
-		const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
-		return {
-			hasText: objectDescriptors.some(obj => obj.type === 'text'),
-			hasGeometry: objectDescriptors.some(obj => ['triangle', 'circle', 'rectangle'].includes(obj.type)),
-			allText: objectDescriptors.length > 0 && objectDescriptors.every(obj => obj.type === 'text'),
-			isEmpty: objectDescriptors.length === 0,
-			objectTypes: objectDescriptors.map(obj => obj.type)
-		};
-	}, [nodeId, state.flow.nodes, state.flow.edges]);
+	// const upstreamObjectTypes = useMemo(() => {
+	// 	const tracker = new FlowTracker();
+	// 	const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
+	// 	return {
+	// 		hasText: objectDescriptors.some(obj => obj.type === 'text'),
+	// 		hasGeometry: objectDescriptors.some(obj => ['triangle', 'circle', 'rectangle'].includes(obj.type)),
+	// 		allText: objectDescriptors.length > 0 && objectDescriptors.every(obj => obj.type === 'text'),
+	// 		isEmpty: objectDescriptors.length === 0,
+	// 		objectTypes: objectDescriptors.map(obj => obj.type)
+	// 	};
+	// }, [nodeId, state.flow.nodes, state.flow.edges]);
 
 	// Log for debugging
 	React.useEffect(() => {

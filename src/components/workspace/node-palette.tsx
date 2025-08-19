@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { type XYPosition } from "reactflow";
-import { Search, Shapes, Clock, Cpu, Play, Monitor, Database, Type, Edit } from 'lucide-react';
+import { Search, Shapes, Clock, Cpu, Monitor, Database, Type, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CollapsibleSection } from './flow/components/collapsible-section';

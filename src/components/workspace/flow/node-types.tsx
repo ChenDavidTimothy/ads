@@ -2,7 +2,7 @@
 import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
 import { AnimationNode, ResultNode, CanvasNode, TextstyleNode } from "../nodes";
-import type { NodeData, TextStyleNodeData } from '@/shared/types/nodes';
+import type { NodeData } from '@/shared/types/nodes';
 
 export function createNodeTypes(
   handleOpenTimelineEditor: (nodeId: string) => void,
