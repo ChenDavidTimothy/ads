@@ -255,7 +255,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
             return next;
           })();
 
-          const { initialPosition, initialRotation, initialScale, initialOpacity, properties } = resolveInitialObject(
+          const { initialPosition, initialRotation, initialScale, initialOpacity, initialFillColor, initialStrokeColor, initialStrokeWidth, properties } = resolveInitialObject(
             original,
             objectOverrides,
             maskedAssignmentsForObject
@@ -267,6 +267,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
             initialRotation,
             initialScale,
             initialOpacity,
+            initialFillColor,
+            initialStrokeColor,
+            initialStrokeWidth,
             properties,
           };
           passThrough.push(styled);

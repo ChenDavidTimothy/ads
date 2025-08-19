@@ -19,6 +19,9 @@ export interface ResolveInitialResult {
   initialRotation: number;
   initialScale: { x: number; y: number };
   initialOpacity: number;
+  initialFillColor: string;
+  initialStrokeColor: string;
+  initialStrokeWidth: number;
   properties: GeometryProperties;
   sources: PropertySourceMap;
 }
@@ -63,6 +66,20 @@ export function resolveInitialObject(
   const initialOpacity = assignments?.initial?.opacity
     ?? (canvasOverrides?.opacity ?? (original.initialOpacity ?? 1));
   sources.opacity = assignments?.initial?.opacity ? 'assignment' : canvasOverrides?.opacity ? 'canvas' : 'base';
+
+  // ✅ ADD - Following exact pattern as opacity
+  const initialFillColor = assignments?.initial?.fillColor
+    ?? (canvasOverrides?.fillColor ?? '#4444ff');
+  sources.colors = sources.colors ?? {};
+  sources.colors.fill = assignments?.initial?.fillColor ? 'assignment' : canvasOverrides?.fillColor ? 'canvas' : 'base';
+
+  const initialStrokeColor = assignments?.initial?.strokeColor
+    ?? (canvasOverrides?.strokeColor ?? '#ffffff');
+  sources.colors.stroke = assignments?.initial?.strokeColor ? 'assignment' : canvasOverrides?.strokeColor ? 'canvas' : 'base';
+
+  const initialStrokeWidth = assignments?.initial?.strokeWidth
+    ?? (canvasOverrides?.strokeWidth ?? 2);
+  sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : canvasOverrides?.strokeWidth ? 'canvas' : 'base';
 
   // Geometry properties with Canvas-provided styling - clone with correct type
   let properties: GeometryProperties;
@@ -126,6 +143,9 @@ export function resolveInitialObject(
     initialRotation,
     initialScale,
     initialOpacity,
+    initialFillColor,
+    initialStrokeColor,
+    initialStrokeWidth,
     properties,
     sources
   };

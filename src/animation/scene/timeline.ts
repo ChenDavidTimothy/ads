@@ -76,10 +76,11 @@ export function getObjectStateAtTime(
     scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: evaluateVisibility(object, time),
     colors: {
-      // Styling properties are now provided by Canvas node, not geometry properties
-      fill: '#4444ff', // Canvas default
-      stroke: '#ffffff' // Canvas default
-    }
+      // ✅ CHANGE - Read from Canvas properties instead of hardcode
+      fill: object.initialFillColor ?? '#4444ff',
+      stroke: object.initialStrokeColor ?? '#ffffff'
+    },
+    strokeWidth: object.initialStrokeWidth ?? 2  // ✅ ADD
   };
   
   // animations is expected to contain only tracks for this object and be pre-sorted by startTime
@@ -92,10 +93,11 @@ export function getObjectStateAtTime(
     scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: object.initialOpacity ?? 1,
     colors: {
-      // Styling properties are now provided by Canvas node, not geometry properties
-      fill: '#4444ff', // Canvas default
-      stroke: '#ffffff' // Canvas default
-    }
+      // ✅ CHANGE - Read from Canvas properties
+      fill: object.initialFillColor ?? '#4444ff',
+      stroke: object.initialStrokeColor ?? '#ffffff'
+    },
+    strokeWidth: object.initialStrokeWidth ?? 2  // ✅ ADD
   };
   
   for (const animation of objectAnimations) {
@@ -166,6 +168,10 @@ function updateAccumulatedState(
         }
       }
       break;
+    // ✅ ADD - New case for strokeWidth animations
+    case 'strokeWidth':
+      accumulatedState.strokeWidth = endValue as number;
+      break;
   }
 }
 
@@ -209,6 +215,10 @@ function updateStateFromAnimation(
           }
         }
         break;
+      // ✅ ADD - New case for strokeWidth animations
+      case 'strokeWidth':
+        state.strokeWidth = value.strokeWidth;
+        break;
     }
   } else {
     // Value is a direct animation value
@@ -240,6 +250,10 @@ function updateStateFromAnimation(
             state.colors.stroke = value as string;
           }
         }
+        break;
+      // ✅ ADD - New case for strokeWidth animations
+      case 'strokeWidth':
+        state.strokeWidth = value as number;
         break;
     }
   }

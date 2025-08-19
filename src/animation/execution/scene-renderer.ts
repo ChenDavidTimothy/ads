@@ -120,7 +120,7 @@ export class SceneRenderer {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
       strokeColor: state.colors.stroke ?? '#ffffff', 
-      strokeWidth: 2 // Canvas default
+      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     // Triangle is drawn at origin since transform is already applied
@@ -132,7 +132,7 @@ export class SceneRenderer {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
       strokeColor: state.colors.stroke ?? '#ffffff',
-      strokeWidth: 2 // Canvas default
+      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     drawCircle(ctx, { x: 0, y: 0 }, props.radius, style);
@@ -143,7 +143,7 @@ export class SceneRenderer {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
       strokeColor: state.colors.stroke ?? '#ffffff',
-      strokeWidth: 2 // Canvas default
+      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     // Draw rectangle centered at origin
@@ -155,7 +155,7 @@ export class SceneRenderer {
     const textStyle = object.textStyle; // Applied by TextStyle node
 
     const style: TextStyle = {
-      // Typography Core (FROM TEXTSTYLE)
+      // Typography Core (FROM TEXTSTYLE) - Keep unchanged
       fontFamily: textStyle?.fontFamily ?? 'Arial',
       fontSize: props.fontSize, // From Text node
       fontWeight: textStyle?.fontWeight ?? 'normal',
@@ -170,12 +170,12 @@ export class SceneRenderer {
       lineHeight: textStyle?.lineHeight ?? 1.2,
       letterSpacing: textStyle?.letterSpacing ?? 0,
       
-      // Text Colors (FROM TEXTSTYLE - NOT CANVAS!)
-      fillColor: textStyle?.fillColor ?? '#000000',
-      strokeColor: textStyle?.strokeColor,
-      strokeWidth: textStyle?.strokeWidth ?? 0,
+      // ✅ CHANGE - Use ObjectState colors (Canvas/Animation) with TextStyle fallback
+      fillColor: state.colors.fill,
+      strokeColor: state.colors.stroke,
+      strokeWidth: state.strokeWidth,
       
-      // Text Effects (FROM TEXTSTYLE)
+      // Text Effects (FROM TEXTSTYLE) - Keep unchanged
       shadowColor: textStyle?.shadowColor,
       shadowOffsetX: textStyle?.shadowOffsetX ?? 0,
       shadowOffsetY: textStyle?.shadowOffsetY ?? 0,

@@ -57,10 +57,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
     // Text Spacing
     lineHeight?: number;
     letterSpacing?: number;
-    // Text Colors
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
+    // ✅ REMOVE - Colors should come from Canvas/ObjectState
+    // fillColor?: string;
+    // strokeColor?: string;
+    // strokeWidth?: number;
     // Text Effects
     shadowColor?: string;
     shadowOffsetX?: number;
@@ -80,9 +80,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
     direction?: string;
     lineHeight?: number;
     letterSpacing?: number;
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
+    // ✅ REMOVE - Colors should come from Canvas/ObjectState
+    // fillColor?: string;
+    // strokeColor?: string;
+    // strokeWidth?: number;
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -99,9 +100,10 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
   const direction = data.direction ?? def.direction ?? 'ltr';
   const lineHeight = data.lineHeight ?? def.lineHeight ?? 1.2;
   const letterSpacing = data.letterSpacing ?? def.letterSpacing ?? 0;
-  const fillColor = data.fillColor ?? def.fillColor ?? '#000000';
-  const strokeColor = data.strokeColor ?? def.strokeColor ?? '#ffffff';
-  const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
+  // ✅ REMOVE - Colors should come from Canvas/ObjectState
+  // const fillColor = data.fillColor ?? def.fillColor ?? '#000000';
+  // const strokeColor = data.strokeColor ?? def.strokeColor ?? '#ffffff';
+  // const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
   const shadowColor = data.shadowColor ?? def.shadowColor ?? '#000000';
   const shadowOffsetX = data.shadowOffsetX ?? def.shadowOffsetX ?? 0;
   const shadowOffsetY = data.shadowOffsetY ?? def.shadowOffsetY ?? 0;
@@ -174,44 +176,6 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
               disabled={isBound('fontStyle')}
               inputClassName={leftBorderClass('fontStyle')}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Text Colors */}
-      <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Text Colors</div>
-        <div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
-          <div>
-            <ColorField 
-              label="Fill" 
-              value={fillColor} 
-              onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
-              disabled={isBound('fillColor')}
-              inputClassName={leftBorderClass('fillColor')}
-            />
-          </div>
-          <div>
-            <ColorField 
-              label="Stroke" 
-              value={strokeColor} 
-              onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
-              disabled={isBound('strokeColor')}
-              inputClassName={leftBorderClass('strokeColor')}
-            />
-          </div>
-          <div>
-            <NumberField 
-              label="Stroke W" 
-              value={strokeWidth} 
-              onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
-              min={0} max={10} step={0.5} defaultValue={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
-              disabled={isBound('strokeWidth')}
-              inputClassName={leftBorderClass('strokeWidth')}
             />
           </div>
         </div>
@@ -383,15 +347,6 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
           <TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" />
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
           <TextStyleBindingBadge nodeId={nodeId} keyName="shadowColor" />
         </div>
         <div className="flex items-center gap-[var(--space-1)]">
@@ -434,10 +389,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     // Text Spacing
     lineHeight?: number;
     letterSpacing?: number;
-    // Text Colors
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
+    // ✅ REMOVE - Colors should come from Canvas/ObjectState
+    // fillColor?: string;
+    // strokeColor?: string;
+    // strokeWidth?: number;
     // Text Effects
     shadowColor?: string;
     shadowOffsetX?: number;
@@ -455,9 +410,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     direction?: string;
     lineHeight?: number;
     letterSpacing?: number;
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
+    // ✅ REMOVE - Colors should come from Canvas/ObjectState
+    // fillColor?: string;
+    // strokeColor?: string;
+    // strokeWidth?: number;
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -473,9 +429,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     direction?: string;
     lineHeight?: number;
     letterSpacing?: number;
-    fillColor?: string;
-    strokeColor?: string;
-    strokeWidth?: number;
+    // ✅ REMOVE - Colors should come from Canvas/ObjectState
+    // fillColor?: string;
+    // strokeColor?: string;
+    // strokeWidth?: number;
     shadowColor?: string;
     shadowOffsetX?: number;
     shadowOffsetY?: number;
@@ -498,9 +455,6 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       case 'direction': return initial.direction !== undefined;
       case 'lineHeight': return initial.lineHeight !== undefined;
       case 'letterSpacing': return initial.letterSpacing !== undefined;
-      case 'fillColor': return initial.fillColor !== undefined;
-      case 'strokeColor': return initial.strokeColor !== undefined;
-      case 'strokeWidth': return initial.strokeWidth !== undefined;
       case 'shadowColor': return initial.shadowColor !== undefined;
       case 'shadowOffsetX': return initial.shadowOffsetX !== undefined;
       case 'shadowOffsetY': return initial.shadowOffsetY !== undefined;
@@ -519,9 +473,10 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   const direction = initial.direction ?? base.direction ?? def.direction ?? 'ltr';
   const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
   const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
-  const fillColor = initial.fillColor ?? base.fillColor ?? def.fillColor ?? '#000000';
-  const strokeColor = initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? '#ffffff';
-  const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
+  // ✅ REMOVE - Colors should come from Canvas/ObjectState
+  // const fillColor = initial.fillColor ?? base.fillColor ?? def.fillColor ?? '#000000';
+  // const strokeColor = initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? '#ffffff';
+  // const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
   const shadowColor = initial.shadowColor ?? base.shadowColor ?? def.shadowColor ?? '#000000';
   const shadowOffsetX = initial.shadowOffsetX ?? base.shadowOffsetX ?? def.shadowOffsetX ?? 0;
   const shadowOffsetY = initial.shadowOffsetY ?? base.shadowOffsetY ?? def.shadowOffsetY ?? 0;
@@ -546,9 +501,6 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       case 'direction': return direction;
       case 'lineHeight': return lineHeight;
       case 'letterSpacing': return letterSpacing;
-      case 'fillColor': return fillColor;
-      case 'strokeColor': return strokeColor;
-      case 'strokeWidth': return strokeWidth;
       case 'shadowColor': return shadowColor;
       case 'shadowOffsetX': return shadowOffsetX;
       case 'shadowOffsetY': return shadowOffsetY;
@@ -640,59 +592,6 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           <div className="flex items-center gap-[var(--space-1)]">
             {isOverridden('fontStyle') && !isBound('fontStyle') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
             <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
-          </div>
-        </div>
-      </div>
-
-      {/* Text Colors */}
-      <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Text Colors</div>
-        <div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
-          <div>
-            <ColorField 
-              label="Fill" 
-              value={getStringValue('fillColor', '#000000')} 
-              onChange={(fillColor) => onChange({ fillColor })}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />}
-              disabled={isBound('fillColor')}
-              inputClassName={leftBorderClass('fillColor')}
-            />
-          </div>
-          <div>
-            <ColorField 
-              label="Stroke" 
-              value={getStringValue('strokeColor', '#ffffff')} 
-              onChange={(strokeColor) => onChange({ strokeColor })}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />}
-              disabled={isBound('strokeColor')}
-              inputClassName={leftBorderClass('strokeColor')}
-            />
-          </div>
-          <div>
-            <NumberField 
-              label="Stroke W" 
-              value={getValue('strokeWidth', 0) as number} 
-              onChange={(strokeWidth) => onChange({ strokeWidth })}
-              min={0} max={10} step={0.5} defaultValue={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />}
-              disabled={isBound('strokeWidth')}
-              inputClassName={leftBorderClass('strokeWidth')}
-            />
-          </div>
-        </div>
-        {/* Badges for Text Colors Row */}
-        <div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
           </div>
         </div>
       </div>

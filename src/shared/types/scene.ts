@@ -20,6 +20,10 @@ export interface SceneObject {
   initialRotation?: number;
   initialScale?: Point2D;
   initialOpacity?: number;
+  // ✅ ADD - Following existing pattern
+  initialFillColor?: string;
+  initialStrokeColor?: string;
+  initialStrokeWidth?: number;
   // Store text styling directly (not in metadata)
   textStyle?: {
     // EXISTING PROPERTIES (keep)
@@ -71,8 +75,9 @@ export interface ObjectState {
   opacity: number;
   colors: {
     fill: string;
-    stroke?: string;
+    stroke: string;
   };
+  strokeWidth: number;
   // Optional source tracking to support assignment precedence and debugging
   _sources?: PropertySourceMap;
 }
