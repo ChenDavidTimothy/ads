@@ -829,11 +829,12 @@ export const NODE_DEFINITIONS = {
   },
 
   textstyle: {
+    // Keep all existing metadata unchanged
     type: 'textstyle',
     label: 'Text Style',
     description: 'Typography styling for text objects',
     execution: {
-      category: 'animation', // Stays animation - processes objects like Canvas
+      category: 'animation',
       executor: 'animation',
     },
     ports: {
@@ -846,6 +847,7 @@ export const NODE_DEFINITIONS = {
     },
     properties: {
       properties: [
+        // Typography Core
         { 
           key: 'fontFamily', 
           type: 'select', 
@@ -877,6 +879,19 @@ export const NODE_DEFINITIONS = {
           defaultValue: 'normal'
         },
         { 
+          key: 'fontStyle', 
+          type: 'select', 
+          label: 'Font Style',
+          options: [
+            { value: 'normal', label: 'Normal' },
+            { value: 'italic', label: 'Italic' },
+            { value: 'oblique', label: 'Oblique' }
+          ],
+          defaultValue: 'normal'
+        },
+        
+        // Text Layout
+        { 
           key: 'textAlign', 
           type: 'select', 
           label: 'Text Alignment',
@@ -888,6 +903,31 @@ export const NODE_DEFINITIONS = {
           ],
           defaultValue: 'center'
         },
+        { 
+          key: 'textBaseline', 
+          type: 'select', 
+          label: 'Text Baseline',
+          options: [
+            { value: 'top', label: 'Top' },
+            { value: 'hanging', label: 'Hanging' },
+            { value: 'middle', label: 'Middle' },
+            { value: 'alphabetic', label: 'Alphabetic' },
+            { value: 'bottom', label: 'Bottom' }
+          ],
+          defaultValue: 'middle'
+        },
+        { 
+          key: 'direction', 
+          type: 'select', 
+          label: 'Text Direction',
+          options: [
+            { value: 'ltr', label: 'Left to Right' },
+            { value: 'rtl', label: 'Right to Left' }
+          ],
+          defaultValue: 'ltr'
+        },
+        
+        // Text Spacing
         { 
           key: 'lineHeight', 
           type: 'number', 
@@ -905,6 +945,73 @@ export const NODE_DEFINITIONS = {
           max: 20, 
           step: 0.1, 
           defaultValue: 0
+        },
+        
+        // Text Colors
+        { 
+          key: 'fillColor', 
+          type: 'color', 
+          label: 'Fill Color', 
+          defaultValue: '#000000'
+        },
+        { 
+          key: 'strokeColor', 
+          type: 'color', 
+          label: 'Stroke Color', 
+          defaultValue: '#ffffff'
+        },
+        { 
+          key: 'strokeWidth', 
+          type: 'number', 
+          label: 'Stroke Width', 
+          min: 0, 
+          max: 10, 
+          step: 0.5, 
+          defaultValue: 0
+        },
+        
+        // Text Effects
+        { 
+          key: 'shadowColor', 
+          type: 'color', 
+          label: 'Shadow Color', 
+          defaultValue: '#000000'
+        },
+        { 
+          key: 'shadowOffsetX', 
+          type: 'number', 
+          label: 'Shadow Offset X', 
+          min: -20, 
+          max: 20, 
+          step: 1, 
+          defaultValue: 0
+        },
+        { 
+          key: 'shadowOffsetY', 
+          type: 'number', 
+          label: 'Shadow Offset Y', 
+          min: -20, 
+          max: 20, 
+          step: 1, 
+          defaultValue: 0
+        },
+        { 
+          key: 'shadowBlur', 
+          type: 'number', 
+          label: 'Shadow Blur', 
+          min: 0, 
+          max: 20, 
+          step: 1, 
+          defaultValue: 0
+        },
+        { 
+          key: 'textOpacity', 
+          type: 'number', 
+          label: 'Text Opacity', 
+          min: 0, 
+          max: 1, 
+          step: 0.05, 
+          defaultValue: 1
         }
       ]
     },
@@ -916,11 +1023,24 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
+      // EXISTING DEFAULTS (keep)
       fontFamily: 'Arial',
       fontWeight: 'normal',
       textAlign: 'center',
       lineHeight: 1.2,
-      letterSpacing: 0
+      letterSpacing: 0,
+      // NEW DEFAULTS - Add these
+      fontStyle: 'normal',
+      textBaseline: 'middle',
+      direction: 'ltr',
+      fillColor: '#000000',
+      strokeColor: '#ffffff',
+      strokeWidth: 0,
+      shadowColor: '#000000',
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+      shadowBlur: 0,
+      textOpacity: 1
     },
     metadata: {
       supportsVariableBinding: true,

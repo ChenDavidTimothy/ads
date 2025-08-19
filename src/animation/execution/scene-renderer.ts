@@ -155,15 +155,32 @@ export class SceneRenderer {
     const textStyle = object.textStyle; // Applied by TextStyle node
 
     const style: TextStyle = {
-      fillColor: state.colors.fill,
-      strokeColor: state.colors.stroke,
-      strokeWidth: 2,
+      // Typography Core (FROM TEXTSTYLE)
       fontFamily: textStyle?.fontFamily ?? 'Arial',
-      fontSize: props.fontSize,
+      fontSize: props.fontSize, // From Text node
       fontWeight: textStyle?.fontWeight ?? 'normal',
+      fontStyle: textStyle?.fontStyle ?? 'normal',
+      
+      // Text Layout (FROM TEXTSTYLE)  
       textAlign: (textStyle?.textAlign as TextStyle['textAlign']) ?? 'center',
+      textBaseline: (textStyle?.textBaseline as TextStyle['textBaseline']) ?? 'middle',
+      direction: (textStyle?.direction as TextStyle['direction']) ?? 'ltr',
+      
+      // Text Spacing (FROM TEXTSTYLE)
       lineHeight: textStyle?.lineHeight ?? 1.2,
-      letterSpacing: textStyle?.letterSpacing ?? 0
+      letterSpacing: textStyle?.letterSpacing ?? 0,
+      
+      // Text Colors (FROM TEXTSTYLE - NOT CANVAS!)
+      fillColor: textStyle?.fillColor ?? '#000000',
+      strokeColor: textStyle?.strokeColor,
+      strokeWidth: textStyle?.strokeWidth ?? 0,
+      
+      // Text Effects (FROM TEXTSTYLE)
+      shadowColor: textStyle?.shadowColor,
+      shadowOffsetX: textStyle?.shadowOffsetX ?? 0,
+      shadowOffsetY: textStyle?.shadowOffsetY ?? 0,
+      shadowBlur: textStyle?.shadowBlur ?? 0,
+      textOpacity: textStyle?.textOpacity ?? 1,
     };
 
     // Cast to CanvasRenderingContext2D for text rendering

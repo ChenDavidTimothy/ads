@@ -6,7 +6,7 @@ import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { TextStyleNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
-import { SelectField, NumberField } from '@/components/ui/form-fields';
+import { SelectField, NumberField, ColorField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
 import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
@@ -43,358 +43,846 @@ function TextStyleOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string;
 
 // Default Properties Component (Center Panel)
 function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
-	const { state, updateFlow } = useWorkspace();
-	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
-	const data = (node?.data ?? {}) as Record<string, unknown> & {
-		fontFamily?: string;
-		fontWeight?: string;
-		textAlign?: string;
-		lineHeight?: number;
-		letterSpacing?: number;
-		variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
-	};
-	const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+  const { state, updateFlow } = useWorkspace();
+  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+  const data = (node?.data ?? {}) as Record<string, unknown> & {
+    // Typography Core
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    // Text Layout
+    textAlign?: string;
+    textBaseline?: string;
+    direction?: string;
+    // Text Spacing
+    lineHeight?: number;
+    letterSpacing?: number;
+    // Text Colors
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    // Text Effects
+    shadowColor?: string;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    textOpacity?: number;
+    variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+  };
+  const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-	const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
-		fontFamily?: string;
-		fontWeight?: string;
-		textAlign?: string;
-		lineHeight?: number;
-		letterSpacing?: number;
-	}) ?? {};
+  const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    textAlign?: string;
+    textBaseline?: string;
+    direction?: string;
+    lineHeight?: number;
+    letterSpacing?: number;
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    shadowColor?: string;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    textOpacity?: number;
+  }) ?? {};
 
-	const fontFamily = data.fontFamily ?? def.fontFamily ?? 'Arial';
-	const fontWeight = data.fontWeight ?? def.fontWeight ?? 'normal';
-	const textAlign = data.textAlign ?? def.textAlign ?? 'center';
-	const lineHeight = data.lineHeight ?? def.lineHeight ?? 1.2;
-	const letterSpacing = data.letterSpacing ?? def.letterSpacing ?? 0;
+  // Value resolution with fallbacks
+  const fontFamily = data.fontFamily ?? def.fontFamily ?? 'Arial';
+  const fontWeight = data.fontWeight ?? def.fontWeight ?? 'normal';
+  const fontStyle = data.fontStyle ?? def.fontStyle ?? 'normal';
+  const textAlign = data.textAlign ?? def.textAlign ?? 'center';
+  const textBaseline = data.textBaseline ?? def.textBaseline ?? 'middle';
+  const direction = data.direction ?? def.direction ?? 'ltr';
+  const lineHeight = data.lineHeight ?? def.lineHeight ?? 1.2;
+  const letterSpacing = data.letterSpacing ?? def.letterSpacing ?? 0;
+  const fillColor = data.fillColor ?? def.fillColor ?? '#000000';
+  const strokeColor = data.strokeColor ?? def.strokeColor ?? '#ffffff';
+  const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
+  const shadowColor = data.shadowColor ?? def.shadowColor ?? '#000000';
+  const shadowOffsetX = data.shadowOffsetX ?? def.shadowOffsetX ?? 0;
+  const shadowOffsetY = data.shadowOffsetY ?? def.shadowOffsetY ?? 0;
+  const shadowBlur = data.shadowBlur ?? def.shadowBlur ?? 0;
+  const textOpacity = data.textOpacity ?? def.textOpacity ?? 1;
 
-	const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
-	const leftBorderClass = (key: string) => (
-		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
-	);
+  const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+  const leftBorderClass = (key: string) => (
+    isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
+  );
 
-	return (
-		<div className="space-y-[var(--space-4)]">
-			<div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
-				Global Text Style Defaults
-			</div>
-			<div className="space-y-[var(--space-4)]">
-				{/* Typography */}
-				<div className="space-y-[var(--space-3)]">
-					<div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-					<div className="grid grid-cols-2 gap-[var(--space-3)]">
-						<div>
-							<SelectField
-								label="Font Family"
-								value={fontFamily}
-								onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
-								options={[
-									{ value: 'Arial', label: 'Arial' },
-									{ value: 'Helvetica', label: 'Helvetica' },
-									{ value: 'Times New Roman', label: 'Times New Roman' },
-									{ value: 'Courier New', label: 'Courier New' },
-									{ value: 'Georgia', label: 'Georgia' },
-									{ value: 'Verdana', label: 'Verdana' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
-								disabled={isBound('fontFamily')}
-								inputClassName={leftBorderClass('fontFamily')}
-							/>
-						</div>
-						<div>
-							<SelectField
-								label="Font Weight"
-								value={fontWeight}
-								onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
-								options={[
-									{ value: 'normal', label: 'Normal (400)' },
-									{ value: 'bold', label: 'Bold (700)' },
-									{ value: '100', label: 'Thin (100)' },
-									{ value: '300', label: 'Light (300)' },
-									{ value: '500', label: 'Medium (500)' },
-									{ value: '600', label: 'Semi Bold (600)' },
-									{ value: '800', label: 'Extra Bold (800)' },
-									{ value: '900', label: 'Black (900)' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
-								disabled={isBound('fontWeight')}
-								inputClassName={leftBorderClass('fontWeight')}
-							/>
-						</div>
-					</div>
-				</div>
+  return (
+    <div className="space-y-[var(--space-4)]">
+      <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+        Global Text Style Defaults
+      </div>
+      
+      {/* Typography Core */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <SelectField
+              label="Font Family"
+              value={fontFamily}
+              onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
+              options={[
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Courier New', label: 'Courier New' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
+              disabled={isBound('fontFamily')}
+              inputClassName={leftBorderClass('fontFamily')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Font Weight"
+              value={fontWeight}
+              onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
+              options={[
+                { value: 'normal', label: 'Normal (400)' },
+                { value: 'bold', label: 'Bold (700)' },
+                { value: '100', label: 'Thin (100)' },
+                { value: '300', label: 'Light (300)' },
+                { value: '500', label: 'Medium (500)' },
+                { value: '600', label: 'Semi Bold (600)' },
+                { value: '800', label: 'Extra Bold (800)' },
+                { value: '900', label: 'Black (900)' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
+              disabled={isBound('fontWeight')}
+              inputClassName={leftBorderClass('fontWeight')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Font Style"
+              value={fontStyle}
+              onChange={(fontStyle) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontStyle } })) })}
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'italic', label: 'Italic' },
+                { value: 'oblique', label: 'Oblique' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
+              disabled={isBound('fontStyle')}
+              inputClassName={leftBorderClass('fontStyle')}
+            />
+          </div>
+        </div>
+      </div>
 
-				{/* Alignment and Spacing */}
-				<div className="space-y-[var(--space-3)]">
-					<div className="text-sm font-medium text-[var(--text-primary)]">Alignment & Spacing</div>
-					<div className="grid grid-cols-1 gap-[var(--space-3)]">
-						<div>
-							<SelectField
-								label="Text Alignment"
-								value={textAlign}
-								onChange={(textAlign) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, textAlign } })) })}
-								options={[
-									{ value: 'left', label: 'Left' },
-									{ value: 'center', label: 'Center' },
-									{ value: 'right', label: 'Right' },
-									{ value: 'justify', label: 'Justify' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" />}
-								disabled={isBound('textAlign')}
-								inputClassName={leftBorderClass('textAlign')}
-							/>
-						</div>
-						<div>
-							<NumberField
-								label="Line Height"
-								value={lineHeight}
-								onChange={(lineHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, lineHeight } })) })}
-								min={0.5}
-								max={5}
-								step={0.1}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" />}
-								disabled={isBound('lineHeight')}
-								inputClassName={leftBorderClass('lineHeight')}
-							/>
-						</div>
-						<div>
-							<NumberField
-								label="Letter Spacing (px)"
-								value={letterSpacing}
-								onChange={(letterSpacing) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, letterSpacing } })) })}
-								min={-5}
-								max={20}
-								step={0.1}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" />}
-								disabled={isBound('letterSpacing')}
-								inputClassName={leftBorderClass('letterSpacing')}
-							/>
-						</div>
-					</div>
-				</div>
-			</div>
+      {/* Text Colors */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Text Colors</div>
+        <div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
+          <div>
+            <ColorField 
+              label="Fill" 
+              value={fillColor} 
+              onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
+              disabled={isBound('fillColor')}
+              inputClassName={leftBorderClass('fillColor')}
+            />
+          </div>
+          <div>
+            <ColorField 
+              label="Stroke" 
+              value={strokeColor} 
+              onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
+              disabled={isBound('strokeColor')}
+              inputClassName={leftBorderClass('strokeColor')}
+            />
+          </div>
+          <div>
+            <NumberField 
+              label="Stroke W" 
+              value={strokeWidth} 
+              onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
+              min={0} max={10} step={0.5} defaultValue={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
+              disabled={isBound('strokeWidth')}
+              inputClassName={leftBorderClass('strokeWidth')}
+            />
+          </div>
+        </div>
+      </div>
 
-			{/* Binding Status Badges */}
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" />
-				</div>
-			</div>
-		</div>
-	);
+      {/* Text Layout */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Layout & Spacing</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <SelectField
+              label="Text Alignment"
+              value={textAlign}
+              onChange={(textAlign) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, textAlign } })) })}
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'center', label: 'Center' },
+                { value: 'right', label: 'Right' },
+                { value: 'justify', label: 'Justify' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" />}
+              disabled={isBound('textAlign')}
+              inputClassName={leftBorderClass('textAlign')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Text Baseline"
+              value={textBaseline}
+              onChange={(textBaseline) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, textBaseline } })) })}
+              options={[
+                { value: 'top', label: 'Top' },
+                { value: 'hanging', label: 'Hanging' },
+                { value: 'middle', label: 'Middle' },
+                { value: 'alphabetic', label: 'Alphabetic' },
+                { value: 'bottom', label: 'Bottom' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textBaseline" />}
+              disabled={isBound('textBaseline')}
+              inputClassName={leftBorderClass('textBaseline')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Direction"
+              value={direction}
+              onChange={(direction) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, direction } })) })}
+              options={[
+                { value: 'ltr', label: 'Left to Right' },
+                { value: 'rtl', label: 'Right to Left' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="direction" />}
+              disabled={isBound('direction')}
+              inputClassName={leftBorderClass('direction')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Line Height"
+              value={lineHeight}
+              onChange={(lineHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, lineHeight } })) })}
+              min={0.5} max={5} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" />}
+              disabled={isBound('lineHeight')}
+              inputClassName={leftBorderClass('lineHeight')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Letter Spacing (px)"
+              value={letterSpacing}
+              onChange={(letterSpacing) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, letterSpacing } })) })}
+              min={-5} max={20} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" />}
+              disabled={isBound('letterSpacing')}
+              inputClassName={leftBorderClass('letterSpacing')}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Text Effects */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Text Effects</div>
+        <div className="space-y-[var(--space-3)]">
+          <div>
+            <ColorField 
+              label="Shadow Color" 
+              value={shadowColor} 
+              onChange={(shadowColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, shadowColor } })) })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowColor" />}
+              disabled={isBound('shadowColor')}
+              inputClassName={leftBorderClass('shadowColor')}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-[var(--space-2)]">
+            <div>
+              <NumberField 
+                label="Shadow X" 
+                value={shadowOffsetX} 
+                onChange={(shadowOffsetX) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, shadowOffsetX } })) })}
+                min={-20} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowOffsetX" />}
+                disabled={isBound('shadowOffsetX')}
+                inputClassName={leftBorderClass('shadowOffsetX')}
+              />
+            </div>
+            <div>
+              <NumberField 
+                label="Shadow Y" 
+                value={shadowOffsetY} 
+                onChange={(shadowOffsetY) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, shadowOffsetY } })) })}
+                min={-20} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowOffsetY" />}
+                disabled={isBound('shadowOffsetY')}
+                inputClassName={leftBorderClass('shadowOffsetY')}
+              />
+            </div>
+            <div>
+              <NumberField 
+                label="Shadow Blur" 
+                value={shadowBlur} 
+                onChange={(shadowBlur) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, shadowBlur } })) })}
+                min={0} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowBlur" />}
+              disabled={isBound('shadowBlur')}
+              inputClassName={leftBorderClass('shadowBlur')}
+              />
+            </div>
+          </div>
+          <div>
+            <NumberField 
+              label="Text Opacity" 
+              value={textOpacity} 
+              onChange={(textOpacity) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, textOpacity } })) })}
+              min={0} max={1} step={0.05}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textOpacity" />}
+              disabled={isBound('textOpacity')}
+              inputClassName={leftBorderClass('textOpacity')}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Binding Status Badges */}
+      <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="textBaseline" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="direction" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="shadowColor" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="shadowOffsetX" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="shadowOffsetY" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="shadowBlur" />
+        </div>
+        <div className="flex items-center gap-[var(--space-1)]">
+          <TextStyleBindingBadge nodeId={nodeId} keyName="textOpacity" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Per-Object Properties Component (Right Panel)
 function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange, _onClear }: {
-	nodeId: string;
-	objectId: string;
-	assignments: PerObjectAssignments;
-	onChange: (updates: Record<string, unknown>) => void;
-	_onClear: () => void;
+  nodeId: string;
+  objectId: string;
+  assignments: PerObjectAssignments;
+  onChange: (updates: Record<string, unknown>) => void;
+  _onClear: () => void;
 }) {
-	const { state } = useWorkspace();
-	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
-	const selectedOverrides = assignments[objectId];
-	const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
-		fontFamily?: string;
-		fontWeight?: string;
-		textAlign?: string;
-		lineHeight?: number;
-		letterSpacing?: number;
-	};
+  const { state } = useWorkspace();
+  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+  const selectedOverrides = assignments[objectId];
+  const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
+    // Typography Core  
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    // Text Layout
+    textAlign?: string;
+    textBaseline?: string;
+    direction?: string;
+    // Text Spacing
+    lineHeight?: number;
+    letterSpacing?: number;
+    // Text Colors
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    // Text Effects
+    shadowColor?: string;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    textOpacity?: number;
+  };
 
-	const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
-		fontFamily?: string;
-		fontWeight?: string;
-		textAlign?: string;
-		lineHeight?: number;
-		letterSpacing?: number;
-	}) ?? {};
-	const base = (node?.data ?? {}) as Record<string, unknown> & {
-		fontFamily?: string;
-		fontWeight?: string;
-		textAlign?: string;
-		lineHeight?: number;
-		letterSpacing?: number;
-	};
+  const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    textAlign?: string;
+    textBaseline?: string;
+    direction?: string;
+    lineHeight?: number;
+    letterSpacing?: number;
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    shadowColor?: string;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    textOpacity?: number;
+  }) ?? {};
+  const base = (node?.data ?? {}) as Record<string, unknown> & {
+    fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    textAlign?: string;
+    textBaseline?: string;
+    direction?: string;
+    lineHeight?: number;
+    letterSpacing?: number;
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    shadowColor?: string;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    textOpacity?: number;
+  };
 
-	const isBound = (key: string) => {
-		const vbAll = node?.data?.variableBindingsByObject ?? {};
-		return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-	};
+  const isBound = (key: string) => {
+    const vbAll = node?.data?.variableBindingsByObject ?? {};
+    return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
+  };
 
-	// NEW: Add override detection function
-	const isOverridden = (key: string) => {
-		switch (key) {
-			case 'fontFamily': return initial.fontFamily !== undefined;
-			case 'fontWeight': return initial.fontWeight !== undefined;
-			case 'textAlign': return initial.textAlign !== undefined;
-			case 'lineHeight': return initial.lineHeight !== undefined;
-			case 'letterSpacing': return initial.letterSpacing !== undefined;
-			default: return false;
-		}
-	};
+  const isOverridden = (key: string) => {
+    switch (key) {
+      case 'fontFamily': return initial.fontFamily !== undefined;
+      case 'fontWeight': return initial.fontWeight !== undefined;
+      case 'fontStyle': return initial.fontStyle !== undefined;
+      case 'textAlign': return initial.textAlign !== undefined;
+      case 'textBaseline': return initial.textBaseline !== undefined;
+      case 'direction': return initial.direction !== undefined;
+      case 'lineHeight': return initial.lineHeight !== undefined;
+      case 'letterSpacing': return initial.letterSpacing !== undefined;
+      case 'fillColor': return initial.fillColor !== undefined;
+      case 'strokeColor': return initial.strokeColor !== undefined;
+      case 'strokeWidth': return initial.strokeWidth !== undefined;
+      case 'shadowColor': return initial.shadowColor !== undefined;
+      case 'shadowOffsetX': return initial.shadowOffsetX !== undefined;
+      case 'shadowOffsetY': return initial.shadowOffsetY !== undefined;
+      case 'shadowBlur': return initial.shadowBlur !== undefined;
+      case 'textOpacity': return initial.textOpacity !== undefined;
+      default: return false;
+    }
+  };
 
-	const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
-	const fontWeight = initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? 'normal';
-	const textAlign = initial.textAlign ?? base.textAlign ?? def.textAlign ?? 'center';
-	const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
-	const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
+  // Property value resolution (same pattern as Canvas)
+  const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
+  const fontWeight = initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? 'normal';
+  const fontStyle = initial.fontStyle ?? base.fontStyle ?? def.fontStyle ?? 'normal';
+  const textAlign = initial.textAlign ?? base.textAlign ?? def.textAlign ?? 'center';
+  const textBaseline = initial.textBaseline ?? base.textBaseline ?? def.textBaseline ?? 'middle';
+  const direction = initial.direction ?? base.direction ?? def.direction ?? 'ltr';
+  const lineHeight = initial.lineHeight ?? base.lineHeight ?? def.lineHeight ?? 1.2;
+  const letterSpacing = initial.letterSpacing ?? base.letterSpacing ?? def.letterSpacing ?? 0;
+  const fillColor = initial.fillColor ?? base.fillColor ?? def.fillColor ?? '#000000';
+  const strokeColor = initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? '#ffffff';
+  const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
+  const shadowColor = initial.shadowColor ?? base.shadowColor ?? def.shadowColor ?? '#000000';
+  const shadowOffsetX = initial.shadowOffsetX ?? base.shadowOffsetX ?? def.shadowOffsetX ?? 0;
+  const shadowOffsetY = initial.shadowOffsetY ?? base.shadowOffsetY ?? def.shadowOffsetY ?? 0;
+  const shadowBlur = initial.shadowBlur ?? base.shadowBlur ?? def.shadowBlur ?? 0;
+  const textOpacity = initial.textOpacity ?? base.textOpacity ?? def.textOpacity ?? 1;
 
-	// UPDATED: Enhanced left border class with manual override styling
-	const leftBorderClass = (key: string) => (
-		isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : (isOverridden(key) ? 'border-l-2 border-[var(--warning-600)]' : '')
-	);
+  const leftBorderClass = (key: string) => (
+    isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : 
+    (isOverridden(key) ? 'border-l-2 border-[var(--warning-600)]' : '')
+  );
 
-	return (
-		<div className="space-y-[var(--space-4)]">
-			<div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
-				Per-Object Text Style Overrides
-			</div>
-			<div className="space-y-[var(--space-4)]">
-				{/* Typography */}
-				<div className="space-y-[var(--space-3)]">
-					<div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-					<div className="grid grid-cols-2 gap-[var(--space-3)]">
-						<div>
-							<SelectField
-								label="Font Family"
-								value={fontFamily}
-								onChange={(fontFamily) => onChange({ fontFamily })}
-								options={[
-									{ value: 'Arial', label: 'Arial' },
-									{ value: 'Helvetica', label: 'Helvetica' },
-									{ value: 'Times New Roman', label: 'Times New Roman' },
-									{ value: 'Courier New', label: 'Courier New' },
-									{ value: 'Georgia', label: 'Georgia' },
-									{ value: 'Verdana', label: 'Verdana' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
-								disabled={isBound('fontFamily')}
-								inputClassName={leftBorderClass('fontFamily')}
-							/>
-						</div>
-						<div>
-							<SelectField
-								label="Font Weight"
-								value={fontWeight}
-								onChange={(fontWeight) => onChange({ fontWeight })}
-								options={[
-									{ value: 'normal', label: 'Normal (400)' },
-									{ value: 'bold', label: 'Bold (700)' },
-									{ value: '100', label: 'Thin (100)' },
-									{ value: '300', label: 'Light (300)' },
-									{ value: '500', label: 'Medium (500)' },
-									{ value: '600', label: 'Semi Bold (600)' },
-									{ value: '800', label: 'Extra Bold (800)' },
-									{ value: '900', label: 'Black (900)' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
-								disabled={isBound('fontWeight')}
-								inputClassName={leftBorderClass('fontWeight')}
-							/>
-						</div>
-					</div>
-					{/* Badges for Font Family + Font Weight Row */}
-					<div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
-							<TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
-							<TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
-						</div>
-					</div>
-				</div>
+  // Helper functions for bound fields
+  const getValue = (key: string, fallbackValue: number | string) => {
+    if (isBound(key)) return undefined; // Blank when bound
+    
+    switch (key) {
+      case 'fontFamily': return fontFamily;
+      case 'fontWeight': return fontWeight;
+      case 'fontStyle': return fontStyle;
+      case 'textAlign': return textAlign;
+      case 'textBaseline': return textBaseline;
+      case 'direction': return direction;
+      case 'lineHeight': return lineHeight;
+      case 'letterSpacing': return letterSpacing;
+      case 'fillColor': return fillColor;
+      case 'strokeColor': return strokeColor;
+      case 'strokeWidth': return strokeWidth;
+      case 'shadowColor': return shadowColor;
+      case 'shadowOffsetX': return shadowOffsetX;
+      case 'shadowOffsetY': return shadowOffsetY;
+      case 'shadowBlur': return shadowBlur;
+      case 'textOpacity': return textOpacity;
+      default: return fallbackValue;
+    }
+  };
 
-				{/* Alignment and Spacing */}
-				<div className="space-y-[var(--space-3)]">
-					<div className="text-sm font-medium text-[var(--text-primary)]">Alignment & Spacing</div>
-					<div className="grid grid-cols-2 gap-[var(--space-3)]">
-						<div>
-							<SelectField
-								label="Text Alignment"
-								value={textAlign}
-								onChange={(textAlign) => onChange({ textAlign })}
-								options={[
-									{ value: 'left', label: 'Left' },
-									{ value: 'center', label: 'Center' },
-									{ value: 'right', label: 'Right' },
-									{ value: 'justify', label: 'Justify' }
-								]}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" objectId={objectId} />}
-								disabled={isBound('textAlign')}
-								inputClassName={leftBorderClass('textAlign')}
-							/>
-						</div>
-						<div>
-							<NumberField
-								label="Line Height"
-								value={lineHeight}
-								onChange={(lineHeight) => onChange({ lineHeight })}
-								min={0.5}
-								max={5}
-								step={0.1}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" objectId={objectId} />}
-								disabled={isBound('lineHeight')}
-								inputClassName={leftBorderClass('lineHeight')}
-							/>
-						</div>
-					</div>
-					{/* Badges for Text Align + Line Height Row */}
-					<div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('textAlign') && !isBound('textAlign') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />}
-							<TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('lineHeight') && !isBound('lineHeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />}
-							<TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />
-						</div>
-					</div>
+  const getStringValue = (key: string, fallbackValue: string) => {
+    if (isBound(key)) return ''; // Empty string when bound
+    return getValue(key, fallbackValue) as string;
+  };
 
-					<div className="grid grid-cols-1 gap-[var(--space-3)]">
-						<div>
-							<NumberField
-								label="Letter Spacing"
-								value={letterSpacing}
-								onChange={(letterSpacing) => onChange({ letterSpacing })}
-								min={-5}
-								max={20}
-								step={0.1}
-								bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" objectId={objectId} />}
-								disabled={isBound('letterSpacing')}
-								inputClassName={leftBorderClass('letterSpacing')}
-							/>
-						</div>
-					</div>
-					{/* Badges for Letter Spacing Row - SAME structure as field above */}
-					<div className="grid grid-cols-1 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('letterSpacing') && !isBound('letterSpacing') && <TextStyleOverrideBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />}
-							<TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
-						</div>
-					</div>
-				</div>
-			</div>
+  return (
+    <div className="space-y-[var(--space-4)]">
+      <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+        Per-Object Text Style Overrides
+      </div>
+      
+      {/* Typography Core */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <SelectField
+              label="Font Family"
+              value={getStringValue('fontFamily', 'Arial')}
+              onChange={(fontFamily) => onChange({ fontFamily })}
+              options={[
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Courier New', label: 'Courier New' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
+              disabled={isBound('fontFamily')}
+              inputClassName={leftBorderClass('fontFamily')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Font Weight"
+              value={getStringValue('fontWeight', 'normal')}
+              onChange={(fontWeight) => onChange({ fontWeight })}
+              options={[
+                { value: 'normal', label: 'Normal (400)' },
+                { value: 'bold', label: 'Bold (700)' },
+                { value: '100', label: 'Thin (100)' },
+                { value: '300', label: 'Light (300)' },
+                { value: '500', label: 'Medium (500)' },
+                { value: '600', label: 'Semi Bold (600)' },
+                { value: '800', label: 'Extra Bold (800)' },
+                { value: '900', label: 'Black (900)' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
+              disabled={isBound('fontWeight')}
+              inputClassName={leftBorderClass('fontWeight')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Font Style"
+              value={getStringValue('fontStyle', 'normal')}
+              onChange={(fontStyle) => onChange({ fontStyle })}
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'italic', label: 'Italic' },
+                { value: 'oblique', label: 'Oblique' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" objectId={objectId} />}
+              disabled={isBound('fontStyle')}
+              inputClassName={leftBorderClass('fontStyle')}
+            />
+          </div>
+        </div>
+        {/* Badges for Typography Row */}
+        <div className="grid grid-cols-3 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fontStyle') && !isBound('fontStyle') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
+          </div>
+        </div>
+      </div>
 
+      {/* Text Colors */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Text Colors</div>
+        <div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
+          <div>
+            <ColorField 
+              label="Fill" 
+              value={getStringValue('fillColor', '#000000')} 
+              onChange={(fillColor) => onChange({ fillColor })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />}
+              disabled={isBound('fillColor')}
+              inputClassName={leftBorderClass('fillColor')}
+            />
+          </div>
+          <div>
+            <ColorField 
+              label="Stroke" 
+              value={getStringValue('strokeColor', '#ffffff')} 
+              onChange={(strokeColor) => onChange({ strokeColor })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />}
+              disabled={isBound('strokeColor')}
+              inputClassName={leftBorderClass('strokeColor')}
+            />
+          </div>
+          <div>
+            <NumberField 
+              label="Stroke W" 
+              value={getValue('strokeWidth', 0) as number} 
+              onChange={(strokeWidth) => onChange({ strokeWidth })}
+              min={0} max={10} step={0.5} defaultValue={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />}
+              disabled={isBound('strokeWidth')}
+              inputClassName={leftBorderClass('strokeWidth')}
+            />
+          </div>
+        </div>
+        {/* Badges for Text Colors Row */}
+        <div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+          </div>
+        </div>
+      </div>
 
-		</div>
-	);
+      {/* Text Layout */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Layout & Spacing</div>
+        <div className="grid grid-cols-2 gap-[var(--space-3)]">
+          <div>
+            <SelectField
+              label="Text Alignment"
+              value={getStringValue('textAlign', 'center')}
+              onChange={(textAlign) => onChange({ textAlign })}
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'center', label: 'Center' },
+                { value: 'right', label: 'Right' },
+                { value: 'justify', label: 'Justify' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textAlign" objectId={objectId} />}
+              disabled={isBound('textAlign')}
+              inputClassName={leftBorderClass('textAlign')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Text Baseline"
+              value={getStringValue('textBaseline', 'middle')}
+              onChange={(textBaseline) => onChange({ textBaseline })}
+              options={[
+                { value: 'top', label: 'Top' },
+                { value: 'hanging', label: 'Hanging' },
+                { value: 'middle', label: 'Middle' },
+                { value: 'alphabetic', label: 'Alphabetic' },
+                { value: 'bottom', label: 'Bottom' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textBaseline" objectId={objectId} />}
+              disabled={isBound('textBaseline')}
+              inputClassName={leftBorderClass('textBaseline')}
+            />
+          </div>
+          <div>
+            <SelectField
+              label="Direction"
+              value={getStringValue('direction', 'ltr')}
+              onChange={(direction) => onChange({ direction })}
+              options={[
+                { value: 'ltr', label: 'Left to Right' },
+                { value: 'rtl', label: 'Right to Left' }
+              ]}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="direction" objectId={objectId} />}
+              disabled={isBound('direction')}
+              inputClassName={leftBorderClass('direction')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Line Height"
+              value={getValue('lineHeight', 1.2) as number}
+              onChange={(lineHeight) => onChange({ lineHeight })}
+              min={0.5} max={5} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="lineHeight" objectId={objectId} />}
+              disabled={isBound('lineHeight')}
+              inputClassName={leftBorderClass('lineHeight')}
+            />
+          </div>
+          <div>
+            <NumberField
+              label="Letter Spacing (px)"
+              value={getValue('letterSpacing', 0) as number}
+              onChange={(letterSpacing) => onChange({ letterSpacing })}
+              min={-5} max={20} step={0.1}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="letterSpacing" objectId={objectId} />}
+              disabled={isBound('letterSpacing')}
+              inputClassName={leftBorderClass('letterSpacing')}
+            />
+          </div>
+        </div>
+        {/* Badges for Layout & Spacing Row */}
+        <div className="grid grid-cols-2 gap-[var(--space-3)] text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('textAlign') && !isBound('textAlign') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="textAlign" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('textBaseline') && !isBound('textBaseline') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textBaseline" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="textBaseline" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('direction') && !isBound('direction') && <TextStyleOverrideBadge nodeId={nodeId} keyName="direction" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="direction" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('lineHeight') && !isBound('lineHeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="lineHeight" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('letterSpacing') && !isBound('letterSpacing') && <TextStyleOverrideBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="letterSpacing" objectId={objectId} />
+          </div>
+        </div>
+      </div>
+
+      {/* Text Effects */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Text Effects</div>
+        <div className="space-y-[var(--space-3)]">
+          <div>
+            <ColorField 
+              label="Shadow Color" 
+              value={getStringValue('shadowColor', '#000000')} 
+              onChange={(shadowColor) => onChange({ shadowColor })}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowColor" objectId={objectId} />}
+              disabled={isBound('shadowColor')}
+              inputClassName={leftBorderClass('shadowColor')}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-[var(--space-2)]">
+            <div>
+              <NumberField 
+                label="Shadow X" 
+                value={getValue('shadowOffsetX', 0) as number} 
+                onChange={(shadowOffsetX) => onChange({ shadowOffsetX })}
+                min={-20} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowOffsetX" objectId={objectId} />}
+                disabled={isBound('shadowOffsetX')}
+                inputClassName={leftBorderClass('shadowOffsetX')}
+              />
+            </div>
+            <div>
+              <NumberField 
+                label="Shadow Y" 
+                value={getValue('shadowOffsetY', 0) as number} 
+                onChange={(shadowOffsetY) => onChange({ shadowOffsetY })}
+                min={-20} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowOffsetY" objectId={objectId} />}
+                disabled={isBound('shadowOffsetY')}
+                inputClassName={leftBorderClass('shadowOffsetY')}
+              />
+            </div>
+            <div>
+              <NumberField 
+                label="Shadow Blur" 
+                value={getValue('shadowBlur', 0) as number} 
+                onChange={(shadowBlur) => onChange({ shadowBlur })}
+                min={0} max={20} step={1}
+                bindAdornment={<BindButton nodeId={nodeId} bindingKey="shadowBlur" objectId={objectId} />}
+                disabled={isBound('shadowBlur')}
+                inputClassName={leftBorderClass('shadowBlur')}
+              />
+            </div>
+          </div>
+          <div>
+            <NumberField 
+              label="Text Opacity" 
+              value={getValue('textOpacity', 1) as number} 
+              onChange={(textOpacity) => onChange({ textOpacity })}
+              min={0} max={1} step={0.05}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="textOpacity" objectId={objectId} />}
+              disabled={isBound('textOpacity')}
+              inputClassName={leftBorderClass('textOpacity')}
+            />
+          </div>
+        </div>
+        {/* Badges for Text Effects Row */}
+        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('shadowColor') && !isBound('shadowColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="shadowColor" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="shadowColor" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('shadowOffsetX') && !isBound('shadowOffsetX') && <TextStyleOverrideBadge nodeId={nodeId} keyName="shadowOffsetX" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="shadowOffsetX" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('shadowOffsetY') && !isBound('shadowOffsetY') && <TextStyleOverrideBadge nodeId={nodeId} keyName="shadowOffsetY" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="shadowOffsetY" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('shadowBlur') && !isBound('shadowBlur') && <TextStyleOverrideBadge nodeId={nodeId} keyName="shadowBlur" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="shadowBlur" objectId={objectId} />
+          </div>
+          <div className="flex items-center gap-[var(--space-1)]">
+            {isOverridden('textOpacity') && !isBound('textOpacity') && <TextStyleOverrideBadge nodeId={nodeId} keyName="textOpacity" objectId={objectId} />}
+            <TextStyleBindingBadge nodeId={nodeId} keyName="textOpacity" objectId={objectId} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Main Editor Component

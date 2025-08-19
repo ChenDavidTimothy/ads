@@ -64,6 +64,17 @@ export interface TextStyleNodeData extends BaseNodeData {
     boundResultNodeId?: string;
   }>>;
   perObjectAssignments?: PerObjectAssignments;
+  fontStyle: string; // 'normal' | 'italic' | 'oblique'
+  textBaseline: string; // 'top' | 'hanging' | 'middle' | 'alphabetic' | 'bottom'
+  direction: string; // 'ltr' | 'rtl'
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: number;
+  shadowColor: string;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
+  textOpacity: number;
 }
 
 // Insert node data

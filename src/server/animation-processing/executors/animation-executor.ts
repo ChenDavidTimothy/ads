@@ -393,19 +393,45 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return readVarGlobal(key);
     };
 
-    // Build text style overrides with proper defaults
+    // Build text style overrides with ALL properties
     const baseOverrides: {
+      // EXISTING PROPERTIES (keep unchanged)
       fontFamily?: string;
       fontWeight?: string;
       textAlign?: string;
       lineHeight?: number;
       letterSpacing?: number;
+      // NEW PROPERTIES - Add these
+      fontStyle?: string;
+      textBaseline?: string;
+      direction?: string;
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth?: number;
+      shadowColor?: string;
+      shadowOffsetX?: number;
+      shadowOffsetY?: number;
+      shadowBlur?: number;
+      textOpacity?: number;
     } = {
+      // EXISTING PROPERTIES (keep unchanged)
       fontFamily: data.fontFamily as string,
       fontWeight: data.fontWeight as string,
       textAlign: data.textAlign as string,
       lineHeight: data.lineHeight as number,
       letterSpacing: data.letterSpacing as number,
+      // NEW PROPERTIES - Add these
+      fontStyle: data.fontStyle as string,
+      textBaseline: data.textBaseline as string,
+      direction: data.direction as string,
+      fillColor: data.fillColor as string,
+      strokeColor: data.strokeColor as string,
+      strokeWidth: data.strokeWidth as number,
+      shadowColor: data.shadowColor as string,
+      shadowOffsetX: data.shadowOffsetX as number,
+      shadowOffsetY: data.shadowOffsetY as number,
+      shadowBlur: data.shadowBlur as number,
+      textOpacity: data.textOpacity as number,
     };
 
     // Apply all global binding keys generically into baseOverrides
@@ -415,8 +441,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
       const val = readVarGlobal(key);
       if (val === undefined) continue;
       
-      // Type-safe property setting for TextStyle overrides
+      // Type-safe property setting for ALL TextStyle overrides
       switch (key) {
+        // EXISTING CASES (keep unchanged)
         case 'fontFamily':
           if (typeof val === 'string') nodeOverrides.fontFamily = val;
           break;
@@ -431,6 +458,40 @@ export class AnimationNodeExecutor extends BaseExecutor {
           break;
         case 'letterSpacing':
           if (typeof val === 'number') nodeOverrides.letterSpacing = val;
+          break;
+        // NEW CASES - Add these
+        case 'fontStyle':
+          if (typeof val === 'string') nodeOverrides.fontStyle = val;
+          break;
+        case 'textBaseline':
+          if (typeof val === 'string') nodeOverrides.textBaseline = val;
+          break;
+        case 'direction':
+          if (typeof val === 'string') nodeOverrides.direction = val;
+          break;
+        case 'fillColor':
+          if (typeof val === 'string') nodeOverrides.fillColor = val;
+          break;
+        case 'strokeColor':
+          if (typeof val === 'string') nodeOverrides.strokeColor = val;
+          break;
+        case 'strokeWidth':
+          if (typeof val === 'number') nodeOverrides.strokeWidth = val;
+          break;
+        case 'shadowColor':
+          if (typeof val === 'string') nodeOverrides.shadowColor = val;
+          break;
+        case 'shadowOffsetX':
+          if (typeof val === 'number') nodeOverrides.shadowOffsetX = val;
+          break;
+        case 'shadowOffsetY':
+          if (typeof val === 'number') nodeOverrides.shadowOffsetY = val;
+          break;
+        case 'shadowBlur':
+          if (typeof val === 'number') nodeOverrides.shadowBlur = val;
+          break;
+        case 'textOpacity':
+          if (typeof val === 'number') nodeOverrides.textOpacity = val;
           break;
       }
     }
@@ -508,11 +569,24 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private processTextObject(
     obj: SceneObject,
     nodeOverrides: {
+      // EXISTING PROPERTIES (keep unchanged)  
       fontFamily?: string;
       fontWeight?: string;
       textAlign?: string;
       lineHeight?: number;
       letterSpacing?: number;
+      // NEW PROPERTIES - Add these
+      fontStyle?: string;
+      textBaseline?: string;
+      direction?: string;
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth?: number;
+      shadowColor?: string;
+      shadowOffsetX?: number;
+      shadowOffsetY?: number;
+      shadowBlur?: number;
+      textOpacity?: number;
     },
     assignments: PerObjectAssignments | undefined,
     bindingsByObject: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>,
@@ -529,6 +603,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       const value = reader(key);
       if (value !== undefined) {
         switch (key) {
+          // EXISTING CASES (keep unchanged)
           case 'fontFamily':
             if (typeof value === 'string') objectOverrides.fontFamily = value;
             break;
@@ -543,6 +618,40 @@ export class AnimationNodeExecutor extends BaseExecutor {
             break;
           case 'letterSpacing':
             if (typeof value === 'number') objectOverrides.letterSpacing = value;
+            break;
+          // NEW CASES - Add these
+          case 'fontStyle':
+            if (typeof value === 'string') objectOverrides.fontStyle = value;
+            break;
+          case 'textBaseline':
+            if (typeof value === 'string') objectOverrides.textBaseline = value;
+            break;
+          case 'direction':
+            if (typeof value === 'string') objectOverrides.direction = value;
+            break;
+          case 'fillColor':
+            if (typeof value === 'string') objectOverrides.fillColor = value;
+            break;
+          case 'strokeColor':
+            if (typeof value === 'string') objectOverrides.strokeColor = value;
+            break;
+          case 'strokeWidth':
+            if (typeof value === 'number') objectOverrides.strokeWidth = value;
+            break;
+          case 'shadowColor':
+            if (typeof value === 'string') objectOverrides.shadowColor = value;
+            break;
+          case 'shadowOffsetX':
+            if (typeof value === 'number') objectOverrides.shadowOffsetX = value;
+            break;
+          case 'shadowOffsetY':
+            if (typeof value === 'number') objectOverrides.shadowOffsetY = value;
+            break;
+          case 'shadowBlur':
+            if (typeof value === 'number') objectOverrides.shadowBlur = value;
+            break;
+          case 'textOpacity':
+            if (typeof value === 'number') objectOverrides.textOpacity = value;
             break;
         }
       }
@@ -564,6 +673,18 @@ export class AnimationNodeExecutor extends BaseExecutor {
           case 'textAlign': delete initial.textAlign; break;
           case 'lineHeight': delete initial.lineHeight; break;
           case 'letterSpacing': delete initial.letterSpacing; break;
+          // NEW CASES - Add these
+          case 'fontStyle': delete initial.fontStyle; break;
+          case 'textBaseline': delete initial.textBaseline; break;
+          case 'direction': delete initial.direction; break;
+          case 'fillColor': delete initial.fillColor; break;
+          case 'strokeColor': delete initial.strokeColor; break;
+          case 'strokeWidth': delete initial.strokeWidth; break;
+          case 'shadowColor': delete initial.shadowColor; break;
+          case 'shadowOffsetX': delete initial.shadowOffsetX; break;
+          case 'shadowOffsetY': delete initial.shadowOffsetY; break;
+          case 'shadowBlur': delete initial.shadowBlur; break;
+          case 'textOpacity': delete initial.textOpacity; break;
           default: break;
         }
       }
@@ -600,6 +721,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
       textAlign: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textAlign as string ?? objectOverrides.textAlign,
       lineHeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.lineHeight as number ?? objectOverrides.lineHeight,
       letterSpacing: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.letterSpacing as number ?? objectOverrides.letterSpacing,
+      fontStyle: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontStyle as string ?? objectOverrides.fontStyle,
+      textBaseline: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textBaseline as string ?? objectOverrides.textBaseline,
+      direction: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.direction as string ?? objectOverrides.direction,
+      fillColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fillColor as string ?? objectOverrides.fillColor,
+      strokeColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeColor as string ?? objectOverrides.strokeColor,
+      strokeWidth: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.strokeWidth as number ?? objectOverrides.strokeWidth,
+      shadowColor: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowColor as string ?? objectOverrides.shadowColor,
+      shadowOffsetX: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowOffsetX as number ?? objectOverrides.shadowOffsetX,
+      shadowOffsetY: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowOffsetY as number ?? objectOverrides.shadowOffsetY,
+      shadowBlur: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.shadowBlur as number ?? objectOverrides.shadowBlur,
+      textOpacity: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textOpacity as number ?? objectOverrides.textOpacity,
     };
 
     // Return object with applied text styling
