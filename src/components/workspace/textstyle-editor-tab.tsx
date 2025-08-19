@@ -103,71 +103,109 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
       {/* Typography Core */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-        <div className="space-y-[var(--space-2)]">
-          <div>
-            <SelectField
-              label="Font Family"
-              value={fontFamily}
-              onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
-              options={[
-                { value: 'Arial', label: 'Arial' },
-                { value: 'Helvetica', label: 'Helvetica' },
-                { value: 'Times New Roman', label: 'Times New Roman' },
-                { value: 'Courier New', label: 'Courier New' },
-                { value: 'Georgia', label: 'Georgia' },
-                { value: 'Verdana', label: 'Verdana' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
-              disabled={isBound('fontFamily')}
-              inputClassName={leftBorderClass('fontFamily')}
-            />
-          </div>
-          <div>
-            <NumberField
-              label="Font Size (px)"
-              value={fontSize}
-              onChange={(fontSize) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontSize } })) })}
-              min={8} max={200} step={1}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" />}
-              disabled={isBound('fontSize')}
-              inputClassName={leftBorderClass('fontSize')}
-            />
-          </div>
-          <div>
-            <SelectField
-              label="Font Weight"
-              value={fontWeight}
-              onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
-              options={[
-                { value: 'normal', label: 'Normal (400)' },
-                { value: 'bold', label: 'Bold (700)' },
-                { value: '100', label: 'Thin (100)' },
-                { value: '300', label: 'Light (300)' },
-                { value: '500', label: 'Medium (500)' },
-                { value: '600', label: 'Semi Bold (600)' },
-                { value: '800', label: 'Extra Bold (800)' },
-                { value: '900', label: 'Black (900)' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
-              disabled={isBound('fontWeight')}
-              inputClassName={leftBorderClass('fontWeight')}
-            />
-          </div>
-          <div>
-            <SelectField
-              label="Font Style"
-              value={fontStyle}
-              onChange={(fontStyle) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontStyle } })) })}
-              options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'italic', label: 'Italic' },
-                { value: 'oblique', label: 'Oblique' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
-              disabled={isBound('fontStyle')}
-              inputClassName={leftBorderClass('fontStyle')}
-            />
-          </div>
+        
+        {/* Typography Row 1 - Font Family */}
+        <div>
+          <SelectField
+            label="Font Family"
+            value={fontFamily}
+            onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
+            options={[
+              { value: 'Arial', label: 'Arial' },
+              { value: 'Helvetica', label: 'Helvetica' },
+              { value: 'Times New Roman', label: 'Times New Roman' },
+              { value: 'Courier New', label: 'Courier New' },
+              { value: 'Georgia', label: 'Georgia' },
+              { value: 'Verdana', label: 'Verdana' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
+            disabled={isBound('fontFamily')}
+            inputClassName={leftBorderClass('fontFamily')}
+          />
+          {/* Badge - Only show when needed */}
+          {isBound('fontFamily') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Typography Row 2 - Font Size */}
+        <div>
+          <NumberField
+            label="Font Size (px)"
+            value={fontSize}
+            onChange={(fontSize) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontSize } })) })}
+            min={8} max={200} step={1}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" />}
+            disabled={isBound('fontSize')}
+            inputClassName={leftBorderClass('fontSize')}
+          />
+          {/* Badge - Only show when needed */}
+          {isBound('fontSize') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Typography Row 2 - Font Weight */}
+        <div>
+          <SelectField
+            label="Font Weight"
+            value={fontWeight}
+            onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
+            options={[
+              { value: 'normal', label: 'Normal (400)' },
+              { value: 'bold', label: 'Bold (700)' },
+              { value: '100', label: 'Thin (100)' },
+              { value: '300', label: 'Light (300)' },
+              { value: '500', label: 'Medium (500)' },
+              { value: '600', label: 'Semi Bold (600)' },
+              { value: '800', label: 'Extra Bold (800)' },
+              { value: '900', label: 'Black (900)' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
+            disabled={isBound('fontWeight')}
+            inputClassName={leftBorderClass('fontWeight')}
+          />
+          {/* Badge - Only show when needed */}
+          {isBound('fontWeight') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Typography Row 3 - Font Style */}
+        <div>
+          <SelectField
+            label="Font Style"
+            value={fontStyle}
+            onChange={(fontStyle) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontStyle } })) })}
+            options={[
+              { value: 'normal', label: 'Normal' },
+              { value: 'italic', label: 'Italic' },
+              { value: 'oblique', label: 'Oblique' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
+            disabled={isBound('fontStyle')}
+            inputClassName={leftBorderClass('fontStyle')}
+          />
+          {/* Badge - Only show when needed */}
+          {isBound('fontStyle') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -176,7 +214,9 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
       {/* Colors */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
-        <div className="space-y-[var(--space-3)]">
+        
+        {/* Colors Row 1 - 2x2 grid for Fill and Stroke Color */}
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <ColorField 
               label="Fill Color" 
@@ -186,6 +226,14 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               disabled={isBound('fillColor')}
               inputClassName={leftBorderClass('fillColor')}
             />
+            {/* Badge - Only show when needed */}
+            {isBound('fillColor') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <ColorField 
@@ -196,47 +244,42 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
               disabled={isBound('strokeColor')}
               inputClassName={leftBorderClass('strokeColor')}
             />
+            {/* Badge - Only show when needed */}
+            {isBound('strokeColor') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
+                </div>
+              </div>
+            )}
           </div>
-          <div>
-            <NumberField 
-              label="Stroke Width" 
-              value={strokeWidth} 
-              onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
-              min={0} max={10} step={0.1}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
-              disabled={isBound('strokeWidth')}
-              inputClassName={leftBorderClass('strokeWidth')}
-            />
-          </div>
+        </div>
+
+        {/* Colors Row 2 - Single field for Stroke Width */}
+        <div>
+          <NumberField 
+            label="Stroke Width" 
+            value={strokeWidth} 
+            onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
+            min={0} max={10} step={0.1}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
+            disabled={isBound('strokeWidth')}
+            inputClassName={leftBorderClass('strokeWidth')}
+          />
+          {/* Badge - Only show when needed */}
+          {isBound('strokeWidth') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
 
 
-      {/* Binding Status Badges */}
-      <div className="space-y-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
-        </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
-        </div>
-      </div>
+
     </div>
   );
 }
@@ -366,90 +409,113 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       {/* Typography Core */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Typography</div>
-        <div className="space-y-[var(--space-2)]">
-          <div>
-            <SelectField
-              label="Font Family"
-              value={getStringValue('fontFamily', 'Arial')}
-              onChange={(fontFamily) => onChange({ fontFamily })}
-              options={[
-                { value: 'Arial', label: 'Arial' },
-                { value: 'Helvetica', label: 'Helvetica' },
-                { value: 'Times New Roman', label: 'Times New Roman' },
-                { value: 'Courier New', label: 'Courier New' },
-                { value: 'Georgia', label: 'Georgia' },
-                { value: 'Verdana', label: 'Verdana' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
-              disabled={isBound('fontFamily')}
-              inputClassName={leftBorderClass('fontFamily')}
-            />
-          </div>
-          <div>
-            <NumberField
-              label="Font Size (px)"
-              value={getValue('fontSize', 24) as number}
-              onChange={(fontSize) => onChange({ fontSize })}
-              min={8} max={200} step={1}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" objectId={objectId} />}
-              disabled={isBound('fontSize')}
-              inputClassName={leftBorderClass('fontSize')}
-            />
-          </div>
-          <div>
-            <SelectField
-              label="Font Weight"
-              value={getStringValue('fontWeight', 'normal')}
-              onChange={(fontWeight) => onChange({ fontWeight })}
-              options={[
-                { value: 'normal', label: 'Normal (400)' },
-                { value: 'bold', label: 'Bold (700)' },
-                { value: '100', label: 'Thin (100)' },
-                { value: '300', label: 'Light (300)' },
-                { value: '500', label: 'Medium (500)' },
-                { value: '600', label: 'Semi Bold (600)' },
-                { value: '800', label: 'Extra Bold (800)' },
-                { value: '900', label: 'Black (900)' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
-              disabled={isBound('fontWeight')}
-              inputClassName={leftBorderClass('fontWeight')}
-            />
-          </div>
-          <div>
-            <SelectField
-              label="Font Style"
-              value={getStringValue('fontStyle', 'normal')}
-              onChange={(fontStyle) => onChange({ fontStyle })}
-              options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'italic', label: 'Italic' },
-                { value: 'oblique', label: 'Oblique' }
-              ]}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" objectId={objectId} />}
-              disabled={isBound('fontStyle')}
-              inputClassName={leftBorderClass('fontStyle')}
-            />
-          </div>
+        
+        {/* Typography Row 1 - Font Family */}
+        <div>
+          <SelectField
+            label="Font Family"
+            value={getStringValue('fontFamily', 'Arial')}
+            onChange={(fontFamily) => onChange({ fontFamily })}
+            options={[
+              { value: 'Arial', label: 'Arial' },
+              { value: 'Helvetica', label: 'Helvetica' },
+              { value: 'Times New Roman', label: 'Times New Roman' },
+              { value: 'Courier New', label: 'Courier New' },
+              { value: 'Georgia', label: 'Georgia' },
+              { value: 'Verdana', label: 'Verdana' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
+            disabled={isBound('fontFamily')}
+            inputClassName={leftBorderClass('fontFamily')}
+          />
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontFamily') || isBound('fontFamily')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+              </div>
+            </div>
+          )}
         </div>
-        {/* Badges for Typography Row */}
-        <div className="space-y-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fontFamily') && !isBound('fontFamily') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fontSize') && !isBound('fontSize') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fontStyle') && !isBound('fontStyle') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
-          </div>
+
+        {/* Typography Row 2 - Font Size */}
+        <div>
+          <NumberField
+            label="Font Size (px)"
+            value={getValue('fontSize', 24) as number}
+            onChange={(fontSize) => onChange({ fontSize })}
+            min={8} max={200} step={1}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" objectId={objectId} />}
+            disabled={isBound('fontSize')}
+            inputClassName={leftBorderClass('fontSize')}
+          />
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontSize') || isBound('fontSize')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('fontSize') && !isBound('fontSize') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />}
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Typography Row 3 - Font Weight */}
+        <div>
+          <SelectField
+            label="Font Weight"
+            value={getStringValue('fontWeight', 'normal')}
+            onChange={(fontWeight) => onChange({ fontWeight })}
+            options={[
+              { value: 'normal', label: 'Normal (400)' },
+              { value: 'bold', label: 'Bold (700)' },
+              { value: '100', label: 'Thin (100)' },
+              { value: '300', label: 'Light (300)' },
+              { value: '500', label: 'Medium (500)' },
+              { value: '600', label: 'Semi Bold (600)' },
+              { value: '800', label: 'Extra Bold (800)' },
+              { value: '900', label: 'Black (900)' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
+            disabled={isBound('fontWeight')}
+            inputClassName={leftBorderClass('fontWeight')}
+          />
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontWeight') || isBound('fontWeight')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('fontWeight') && !isBound('fontWeight') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Typography Row 4 - Font Style */}
+        <div>
+          <SelectField
+            label="Font Style"
+            value={getStringValue('fontStyle', 'normal')}
+            onChange={(fontStyle) => onChange({ fontStyle })}
+            options={[
+              { value: 'normal', label: 'Normal' },
+              { value: 'italic', label: 'Italic' },
+              { value: 'oblique', label: 'Oblique' }
+            ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" objectId={objectId} />}
+            disabled={isBound('fontStyle')}
+            inputClassName={leftBorderClass('fontStyle')}
+          />
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontStyle') || isBound('fontStyle')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('fontStyle') && !isBound('fontStyle') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
+                <TextStyleBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -458,7 +524,9 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
       {/* Colors */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
-        <div className="space-y-[var(--space-3)]">
+        
+        {/* Colors Row 1 - 2x2 grid for Fill and Stroke Color */}
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <ColorField 
               label="Fill Color" 
@@ -468,6 +536,15 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               disabled={isBound('fillColor')}
               inputClassName={leftBorderClass('fillColor')}
             />
+            {/* Badge - Only show when needed */}
+            {(isOverridden('fillColor') || isBound('fillColor')) && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+                  <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <ColorField 
@@ -478,33 +555,38 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
               disabled={isBound('strokeColor')}
               inputClassName={leftBorderClass('strokeColor')}
             />
-          </div>
-          <div>
-            <NumberField 
-              label="Stroke Width" 
-              value={getValue('strokeWidth', 0) as number} 
-              onChange={(strokeWidth) => onChange({ strokeWidth })}
-              min={0} max={10} step={0.1}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />}
-              disabled={isBound('strokeWidth')}
-              inputClassName={leftBorderClass('strokeWidth')}
-            />
+            {/* Badge - Only show when needed */}
+            {(isOverridden('strokeColor') || isBound('strokeColor')) && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+                  <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        {/* Badges for Colors Row */}
-        <div className="space-y-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
-          </div>
-          <div className="flex items-center gap-[var(--space-1)]">
-            {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
-            <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
-          </div>
+
+        {/* Colors Row 2 - Single field for Stroke Width */}
+        <div>
+          <NumberField 
+            label="Stroke Width" 
+            value={getValue('strokeWidth', 0) as number} 
+            onChange={(strokeWidth) => onChange({ strokeWidth })}
+            min={0} max={10} step={0.1}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />}
+            disabled={isBound('strokeWidth')}
+            inputClassName={leftBorderClass('strokeWidth')}
+          />
+          {/* Badge - Only show when needed */}
+          {(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+                <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
