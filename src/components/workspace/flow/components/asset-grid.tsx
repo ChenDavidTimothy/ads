@@ -12,6 +12,7 @@ import {
   Calendar,
   HardDrive
 } from 'lucide-react';
+import NextImage from 'next/image';
 import { cn } from '@/lib/utils';
 import type { AssetResponse } from '@/shared/types/assets';
 import { formatFileSize, isImage, isVideo } from '@/shared/types/assets';
@@ -41,7 +42,7 @@ export function AssetGrid({
     return (
       <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
         <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-4">
-          <Image size={24} className="text-[var(--text-tertiary)]" />
+          <Image size={24} className="text-[var(--text-tertiary)]" aria-label="No assets" />
         </div>
         <h3 className="text-sm font-medium text-[var(--text-primary)] mb-1">
           No assets yet
@@ -138,10 +139,11 @@ function AssetCard({
       {/* Thumbnail */}
       <div className="aspect-video bg-[var(--surface-2)] relative overflow-hidden">
         {isImage(asset) && asset.public_url ? (
-          <img
+          <NextImage
             src={asset.public_url}
             alt={asset.original_name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
@@ -160,11 +162,11 @@ function AssetCard({
         <div className="absolute top-2 left-2">
           <div className="w-6 h-6 bg-black/60 rounded flex items-center justify-center">
             {isImage(asset) ? (
-              <Image size={12} className="text-white" />
+              <Image size={12} className="text-white" aria-label="Image file" />
             ) : isVideo(asset) ? (
-              <Video size={12} className="text-white" />
+              <Video size={12} className="text-white" aria-label="Video file" />
             ) : (
-              <HardDrive size={12} className="text-white" />
+              <HardDrive size={12} className="text-white" aria-label="File" />
             )}
           </div>
         </div>

@@ -6,6 +6,14 @@ import { createServiceClient } from '@/utils/supabase/service';
 import { loadImage } from 'canvas';
 import { BaseExecutor } from './base-executor';
 
+// Type for the asset data we expect from the database
+interface AssetData {
+  bucket_name: string;
+  storage_path: string;
+  original_name: string;
+  mime_type: string;
+}
+
 export class ImageExecutor extends BaseExecutor {
   private readonly supabase = createServiceClient();
 
@@ -16,7 +24,7 @@ export class ImageExecutor extends BaseExecutor {
   private async executeImage(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    edges: ReactFlowEdge[]
+    _edges: ReactFlowEdge[]
   ): Promise<void> {
     const data = node.data as unknown as {
       imageAssetId: string;
@@ -41,14 +49,33 @@ export class ImageExecutor extends BaseExecutor {
 
     try {
       // Fetch asset details from database
-      const { data: asset, error } = await this.supabase
+      const result = await this.supabase
         .from('user_assets')
         .select('*')
         .eq('id', data.imageAssetId)
         .single();
 
+      const { data: asset, error } = result as { data: AssetData | null; error: unknown };
+
       if (error || !asset) {
         console.warn(`Image asset not found: ${data.imageAssetId}`);
+        setNodeOutput(
+          context,
+          node.data.identifier.id,
+          'output',
+          'object_stream',
+          [],
+          { perObjectTimeCursor: {}, perObjectAssignments: {} }
+        );
+        return;
+      }
+
+      // Type guard to ensure asset has required properties
+      if (typeof asset.bucket_name !== 'string' || 
+          typeof asset.storage_path !== 'string' ||
+          typeof asset.original_name !== 'string' ||
+          typeof asset.mime_type !== 'string') {
+        console.warn(`Invalid asset data format: ${data.imageAssetId}`);
         setNodeOutput(
           context,
           node.data.identifier.id,

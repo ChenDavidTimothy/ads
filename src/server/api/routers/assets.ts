@@ -2,27 +2,70 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type { createTRPCContext } from "@/server/api/trpc";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { 
   uploadAssetInputSchema,
   listAssetsInputSchema,
   deleteAssetInputSchema,
   moveToAssetsInputSchema,
   getUploadUrlInputSchema,
-  assetResponseSchema,
   listAssetsResponseSchema,
   uploadUrlResponseSchema,
   storageQuotaResponseSchema,
   getBucketForMimeType,
   validateFileSize,
   validateMimeType,
-  type UserAsset,
-  type UserStorageQuota,
-  type AssetResponse,
-  type BucketName
+  type AssetResponse
 } from "@/shared/types/assets";
 import { randomUUID } from "crypto";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
+
+// Type for Supabase client with proper typing
+type TypedSupabaseClient = SupabaseClient;
+
+// Database row types for better type safety
+interface DatabaseUserAsset {
+  id: string;
+  user_id: string;
+  filename: string;
+  original_name: string;
+  file_size: number;
+  mime_type: string;
+  bucket_name: string;
+  storage_path: string;
+  asset_type: "uploaded" | "generated_saved";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface StorageFileInfo {
+  name: string;
+  metadata?: {
+    size?: number;
+  };
+}
+
+// Type for Supabase storage response
+interface StorageResponse {
+  signedUrl: string;
+}
+
+// Type for Supabase database response
+interface DatabaseResponse<T> {
+  data: T | null;
+  error: unknown;
+}
+
+// Type for quota response
+interface QuotaResponse {
+  current_usage_bytes: number;
+  quota_limit_bytes: number;
+  image_count: number;
+  video_count: number;
+  updated_at: string;
+}
 
 export const assetsRouter = createTRPCRouter({
   // Get signed upload URL for direct client upload
@@ -117,7 +160,7 @@ export const assetsRouter = createTRPCRouter({
     .input(uploadAssetInputSchema.extend({
       assetId: z.string().uuid(),
     }))
-    .mutation(async ({ input, ctx }: { input: any; ctx: TRPCContext }) => {
+    .mutation(async ({ input, ctx }) => {
       const { supabase, user } = ctx;
       
       if (!user) {
@@ -128,17 +171,27 @@ export const assetsRouter = createTRPCRouter({
       }
       
       // Verify asset exists and belongs to user
-      const { data: asset, error } = await supabase
+      const result = await supabase
         .from('user_assets')
         .select('*')
         .eq('id', input.assetId)
         .eq('user_id', user.id)
         .single();
         
+      const { data: asset, error } = result as DatabaseResponse<DatabaseUserAsset>;
+        
       if (error || !asset) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Asset not found",
+        });
+      }
+      
+      // Type guard to ensure asset has required properties
+      if (typeof asset.file_size !== 'number' || typeof asset.mime_type !== 'string') {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Invalid asset data",
         });
       }
       
@@ -182,7 +235,8 @@ export const assetsRouter = createTRPCRouter({
         query = query.ilike('original_name', `%${input.search}%`);
       }
       
-      const { data: assets, error, count } = await query;
+      const result = await query;
+      const { data: assets, error, count } = result;
       
       if (error) {
         throw new TRPCError({
@@ -191,12 +245,15 @@ export const assetsRouter = createTRPCRouter({
         });
       }
       
+      // Type guard to ensure assets array contains valid data
+      const typedAssets = (assets ?? []) as DatabaseUserAsset[];
+      
       // Generate public URLs for assets
       const assetsWithUrls: AssetResponse[] = await Promise.all(
-        (assets ?? []).map(async (asset: UserAsset) => {
+        typedAssets.map(async (asset: DatabaseUserAsset) => {
           const { data: signedUrl } = await supabase.storage
             .from(asset.bucket_name)
-            .createSignedUrl(asset.storage_path, 60 * 60 * 24); // 24 hours
+            .createSignedUrl(asset.storage_path, 60 * 60 * 24) as DatabaseResponse<StorageResponse>; // 24 hours
             
           return {
             ...asset,
@@ -226,17 +283,27 @@ export const assetsRouter = createTRPCRouter({
       }
       
       // Get asset details first
-      const { data: asset, error: fetchError } = await supabase
+      const result = await supabase
         .from('user_assets')
         .select('*')
         .eq('id', input.assetId)
         .eq('user_id', user.id)
         .single();
         
+      const { data: asset, error: fetchError } = result as DatabaseResponse<DatabaseUserAsset>;
+      
       if (fetchError || !asset) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Asset not found",
+        });
+      }
+      
+      // Type guard to ensure asset has required properties
+      if (typeof asset.bucket_name !== 'string' || typeof asset.storage_path !== 'string') {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Invalid asset data",
         });
       }
       
@@ -267,7 +334,9 @@ export const assetsRouter = createTRPCRouter({
       }
       
       // Update user quota
-      await updateUserQuota(supabase, user.id, asset.file_size, asset.mime_type, 'subtract');
+      if (typeof asset.file_size === 'number' && typeof asset.mime_type === 'string') {
+        await updateUserQuota(supabase, user.id, asset.file_size, asset.mime_type, 'subtract');
+      }
       
       return { success: true };
     }),
@@ -275,7 +344,7 @@ export const assetsRouter = createTRPCRouter({
   // Save generated content to permanent assets
   moveToAssets: protectedProcedure
     .input(moveToAssetsInputSchema)
-    .mutation(async ({ input, ctx }: { input: any; ctx: TRPCContext }) => {
+    .mutation(async ({ input, ctx }) => {
       const { supabase, user } = ctx;
       
       if (!user) {
@@ -287,7 +356,7 @@ export const assetsRouter = createTRPCRouter({
       
       try {
         // 1. Get the render job details
-        const { data: renderJob, error: jobError } = await supabase
+        const result = await supabase
           .from('render_jobs')
           .select('*')
           .eq('id', input.renderJobId)
@@ -295,10 +364,20 @@ export const assetsRouter = createTRPCRouter({
           .eq('status', 'completed')
           .single();
 
-        if (jobError || !renderJob || !renderJob.output_url) {
+        const { data: renderJob, error: jobError } = result as DatabaseResponse<{ output_url: string }>;
+
+        if (jobError || !renderJob?.output_url) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Render job not found or not completed",
+          });
+        }
+
+        // Type guard for output_url
+        if (typeof renderJob.output_url !== 'string') {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Invalid output URL format",
           });
         }
 
@@ -326,7 +405,7 @@ export const assetsRouter = createTRPCRouter({
           });
         }
 
-        const fileData = fileInfo.find(f => filePath.endsWith(f.name));
+        const fileData = fileInfo.find(f => filePath.endsWith(f.name)) as StorageFileInfo | undefined;
         if (!fileData) {
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -334,16 +413,12 @@ export const assetsRouter = createTRPCRouter({
           });
         }
 
-        // 4. Check storage quota before saving
-        const quota = await getOrCreateUserQuota(supabase, user.id);
-        const fileSize = fileData.metadata?.size || 0;
-        
-        // Don't count against quota if already generated (already paid for)
-        // But still check we have space for the record
+        // 4. Get file size for asset record
+        const fileSize = fileData.metadata?.size ?? 0;
         
         // 5. Generate asset details
         const assetId = randomUUID();
-        const assetName = input.originalName || `Generated_${Date.now()}.${extension}`;
+        const assetName = input.originalName ?? `Generated_${Date.now()}.${extension}`;
         
         // 6. Create user_assets record
         const { error: insertError } = await supabase
@@ -351,7 +426,7 @@ export const assetsRouter = createTRPCRouter({
           .insert({
             id: assetId,
             user_id: user.id,
-            filename: filePath.split('/').pop() || assetName,
+            filename: filePath.split('/').pop() ?? assetName,
             original_name: assetName,
             file_size: fileSize,
             mime_type: mimeType,
@@ -434,17 +509,19 @@ export const assetsRouter = createTRPCRouter({
     }),
 });
 
-// Helper functions
-async function getOrCreateUserQuota(supabase: any, userId: string): Promise<UserStorageQuota> {
-  const { data: quota, error } = await supabase
+// Helper functions with proper typing
+async function getOrCreateUserQuota(supabase: TypedSupabaseClient, userId: string): Promise<QuotaResponse> {
+  const result = await supabase
     .from('user_storage_quotas')
     .select('*')
     .eq('user_id', userId)
     .single();
     
-  if (error && error.code === 'PGRST116') {
+  const { data: quota, error } = result as DatabaseResponse<QuotaResponse>;
+    
+  if (error && (error as { code?: string }).code === 'PGRST116') {
     // No quota record exists, create one
-    const { data: newQuota, error: createError } = await supabase
+    const insertResult = await supabase
       .from('user_storage_quotas')
       .insert({
         user_id: userId,
@@ -456,6 +533,8 @@ async function getOrCreateUserQuota(supabase: any, userId: string): Promise<User
       })
       .select()
       .single();
+      
+    const { data: newQuota, error: createError } = insertResult as DatabaseResponse<QuotaResponse>;
       
     if (createError) {
       console.error('Failed to create quota record:', createError);
@@ -472,7 +551,25 @@ async function getOrCreateUserQuota(supabase: any, userId: string): Promise<User
       });
     }
     
-    return newQuota;
+    // Type guard to ensure newQuota has required properties
+    if (typeof newQuota.current_usage_bytes !== 'number' ||
+        typeof newQuota.quota_limit_bytes !== 'number' ||
+        typeof newQuota.image_count !== 'number' ||
+        typeof newQuota.video_count !== 'number' ||
+        typeof newQuota.updated_at !== 'string') {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Invalid quota data format",
+      });
+    }
+    
+    return {
+      current_usage_bytes: newQuota.current_usage_bytes,
+      quota_limit_bytes: newQuota.quota_limit_bytes,
+      image_count: newQuota.image_count,
+      video_count: newQuota.video_count,
+      updated_at: newQuota.updated_at,
+    };
   }
   
   if (error) {
@@ -490,11 +587,29 @@ async function getOrCreateUserQuota(supabase: any, userId: string): Promise<User
     });
   }
   
-  return quota;
+  // Type guard to ensure quota has required properties
+  if (typeof quota.current_usage_bytes !== 'number' ||
+      typeof quota.quota_limit_bytes !== 'number' ||
+      typeof quota.image_count !== 'number' ||
+      typeof quota.video_count !== 'number' ||
+      typeof quota.updated_at !== 'string') {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Invalid quota data format",
+    });
+  }
+  
+  return {
+    current_usage_bytes: quota.current_usage_bytes,
+    quota_limit_bytes: quota.quota_limit_bytes,
+    image_count: quota.image_count,
+    video_count: quota.video_count,
+    updated_at: quota.updated_at,
+  };
 }
 
 async function updateUserQuota(
-  supabase: any, 
+  supabase: TypedSupabaseClient, 
   userId: string, 
   fileSize: number, 
   mimeType: string, 
@@ -505,16 +620,29 @@ async function updateUserQuota(
   const countDelta = operation === 'add' ? 1 : -1;
   
   // First, get current values
-  const { data: currentQuota, error: fetchError } = await supabase
+  const result = await supabase
     .from('user_storage_quotas')
     .select('current_usage_bytes, image_count, video_count')
     .eq('user_id', userId)
     .single();
     
+  const { data: currentQuota, error: fetchError } = result as DatabaseResponse<Pick<QuotaResponse, 'current_usage_bytes' | 'image_count' | 'video_count'>>;
+    
   if (fetchError) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to fetch current quota",
+    });
+  }
+  
+  // Type guard to ensure quota data has required properties
+  if (!currentQuota || 
+      typeof currentQuota.current_usage_bytes !== 'number' ||
+      typeof currentQuota.image_count !== 'number' ||
+      typeof currentQuota.video_count !== 'number') {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Invalid quota data format",
     });
   }
   
@@ -561,7 +689,7 @@ function parseSignedUrl(signedUrl: string): {
     
     const bucket = pathParts[signIndex + 1];
     const filePath = pathParts.slice(signIndex + 2).join('/');
-    const extension = filePath.split('.').pop()?.toLowerCase() || '';
+    const extension = filePath.split('.').pop()?.toLowerCase() ?? '';
     
     // Determine MIME type from extension and bucket
     let mimeType = '';
@@ -573,18 +701,18 @@ function parseSignedUrl(signedUrl: string): {
         'gif': 'image/gif',
         'webp': 'image/webp',
       };
-      mimeType = imageTypes[extension] || 'image/png';
+      mimeType = imageTypes[extension] ?? 'image/png';
     } else if (bucket === 'videos') {
       const videoTypes: Record<string, string> = {
         'mp4': 'video/mp4',
         'webm': 'video/webm',
         'mov': 'video/quicktime',
       };
-      mimeType = videoTypes[extension] || 'video/mp4';
+      mimeType = videoTypes[extension] ?? 'video/mp4';
     }
     
-    return { bucket: bucket || null, filePath: filePath || null, mimeType, extension };
-  } catch (error) {
+    return { bucket: bucket ?? null, filePath: filePath ?? null, mimeType, extension };
+  } catch {
     return { bucket: null, filePath: null, mimeType: '', extension: '' };
   }
 }

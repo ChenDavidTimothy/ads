@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { ImageNodeData } from "@/shared/types/nodes";
 import { Image, ImageOff } from "lucide-react";
+import NextImage from "next/image";
 import { api } from "@/trpc/react";
 import { useMemo } from "react";
 
@@ -52,9 +53,9 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
         <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-input)] flex items-center justify-center rounded text-[var(--text-primary)]">
             {displayInfo.hasImage ? (
-              <Image size={12} />
+              <Image size={12} aria-label="Image loaded" />
             ) : (
-              <ImageOff size={12} />
+              <ImageOff size={12} aria-label="No image" />
             )}
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -66,11 +67,12 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
       <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
         {/* Image preview thumbnail */}
         {displayInfo.hasImage && displayInfo.thumbnail ? (
-          <div className="w-full h-16 bg-[var(--surface-2)] rounded overflow-hidden">
-            <img 
+          <div className="w-full h-16 bg-[var(--surface-2)] rounded overflow-hidden relative">
+            <NextImage 
               src={displayInfo.thumbnail} 
               alt={displayInfo.name}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
               onError={(e) => {
                 // Hide broken images
                 e.currentTarget.style.display = 'none';

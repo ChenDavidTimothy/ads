@@ -10,7 +10,6 @@ import { useAssetManagement } from '@/hooks/use-asset-management';
 import { api } from '@/trpc/react';
 import { 
   Search, 
-  Filter, 
   Image, 
   Video, 
   Upload,
@@ -19,7 +18,7 @@ import {
   HardDrive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ListAssetsInput, AssetResponse } from '@/shared/types/assets';
+import type { ListAssetsInput } from '@/shared/types/assets';
 import { formatFileSize } from '@/shared/types/assets';
 
 type FilterType = 'all' | 'images' | 'videos' | 'uploaded' | 'generated_saved';
@@ -89,7 +88,7 @@ export function AssetsPanel() {
     isLoading: isLoadingQuota 
   } = api.assets.getQuota.useQuery();
 
-  const assets = assetsData?.assets || [];
+  const assets = assetsData?.assets ?? [];
   const isLoading = isLoadingAssets || isLoadingQuota;
 
   const filterOptions = [
@@ -101,7 +100,7 @@ export function AssetsPanel() {
   ] as const;
 
   const handleRefresh = () => {
-    refetchAssets();
+    void refetchAssets();
   };
 
   return (
@@ -174,7 +173,6 @@ export function AssetsPanel() {
             onDrop={assetManagement.handleDrop}
             isDragOver={assetManagement.isDragOver}
             uploadProgress={assetManagement.uploadProgress}
-            isUploading={assetManagement.isUploading}
           />
         </div>
       )}

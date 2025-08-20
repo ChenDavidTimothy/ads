@@ -2,17 +2,12 @@
 
 import { useCallback, useState } from 'react';
 import { api } from '@/trpc/react';
-import { createBrowserClient } from '@/utils/supabase/client';
 import type { 
-  AssetResponse, 
-  ListAssetsInput,
-  GetUploadUrlInput,
-  DeleteAssetInput
+  AssetResponse
 } from '@/shared/types/assets';
 import { 
   validateMimeType, 
-  validateFileSize, 
-  getBucketForMimeType,
+  validateFileSize,
   formatFileSize
 } from '@/shared/types/assets';
 
@@ -36,7 +31,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const utils = api.useUtils();
-  const supabase = createBrowserClient();
 
   // API mutations
   const getUploadUrlMutation = api.assets.getUploadUrl.useMutation();
@@ -45,8 +39,8 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     onSuccess: (_, variables) => {
       options.onDeleteSuccess?.(variables.assetId);
       // Invalidate queries to refresh the list
-      utils.assets.list.invalidate();
-      utils.assets.getQuota.invalidate();
+      void utils.assets.list.invalidate();
+      void utils.assets.getQuota.invalidate();
     },
     onError: (error) => {
       options.onDeleteError?.(error.message);
@@ -165,7 +159,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         });
       }, 3000);
 
-      return uploadedAsset || null;
+      return uploadedAsset ?? null;
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -226,15 +220,15 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
 
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
-      uploadFiles(droppedFiles);
+      void uploadFiles(droppedFiles);
     }
   }, [uploadFiles]);
 
   // File input handler
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+    const selectedFiles = Array.from(e.target.files ?? []);
     if (selectedFiles.length > 0) {
-      uploadFiles(selectedFiles);
+      void uploadFiles(selectedFiles);
     }
     // Clear the input so the same file can be selected again
     e.target.value = '';

@@ -20,7 +20,6 @@ interface FileUploadProps {
   onDrop: (e: React.DragEvent) => void;
   isDragOver: boolean;
   uploadProgress: UploadProgress[];
-  isUploading: boolean;
   accept?: string;
   multiple?: boolean;
   disabled?: boolean;
@@ -34,7 +33,6 @@ export function FileUpload({
   onDrop,
   isDragOver,
   uploadProgress,
-  isUploading,
   accept = "image/*,video/*",
   multiple = true,
   disabled = false,
@@ -49,7 +47,7 @@ export function FileUpload({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files ?? []);
     if (files.length > 0) {
       onFilesSelected(files);
     }

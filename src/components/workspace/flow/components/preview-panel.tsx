@@ -35,7 +35,7 @@ interface SaveButtonProps {
   onSaveSuccess?: () => void;
 }
 
-function SaveToAssetsButton({ renderJobId, contentUrl, contentName, onSaveSuccess }: SaveButtonProps) {
+function SaveToAssetsButton({ renderJobId, contentName, onSaveSuccess }: SaveButtonProps) {
   const { toast } = useNotifications();
   const utils = api.useUtils();
   
@@ -43,8 +43,8 @@ function SaveToAssetsButton({ renderJobId, contentUrl, contentName, onSaveSucces
     onSuccess: (data) => {
       toast.success('Saved to Assets', data.message);
       // Refresh assets list to show the new asset
-      utils.assets.list.invalidate();
-      utils.assets.getQuota.invalidate();
+      void utils.assets.list.invalidate();
+      void utils.assets.getQuota.invalidate();
       onSaveSuccess?.();
     },
     onError: (error) => {
