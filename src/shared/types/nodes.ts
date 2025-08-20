@@ -275,7 +275,16 @@ export interface DuplicateNodeData extends BaseNodeData {
   spacing: number;
 }
 
+// Image node data
+export interface ImageNodeData extends BaseNodeData {
+  imageAssetId: string; // References user_assets.id
+  position: Point2D;
+  scale: Point2D;
+  rotation: number;
+  opacity: number;
+}
+
 // Union type for all node data
-export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
+export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData | ImageNodeData;
 
 // NodeType is derived from the registry (definitions)

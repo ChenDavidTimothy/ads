@@ -215,6 +215,20 @@ export function PropertyPanel({
           <div>Double-click the Typography node to edit typography in its dedicated tab.</div>
         </div>
       )}
+
+      {/* Image special handling - only show asset selection */}
+      {node.type === 'image' && (
+        <div className="space-y-[var(--space-4)]">
+          <div className="space-y-[var(--space-2)]">
+            <label className="block text-sm font-medium text-gray-300">
+              Image Asset
+            </label>
+            <div className="text-xs text-gray-400">
+              Select an image from your assets. Transform properties (position, scale, rotation, opacity) are controlled in the animation system.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -233,7 +247,7 @@ function SchemaBasedProperties({
   nodeType
 }: SchemaBasedProps) {
   // Skip rendering properties for nodes with dedicated editor tabs - they should only be edited in the dedicated tab
-  if (nodeType === 'canvas' || nodeType === 'typography') {
+  if (nodeType === 'canvas' || nodeType === 'typography' || nodeType === 'image') {
     return null;
   }
 

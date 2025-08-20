@@ -782,6 +782,48 @@ export const NODE_DEFINITIONS = {
     }
   },
 
+          image: {
+          type: 'image',
+          label: 'Image',
+          description: 'Load image from user assets',
+          execution: {
+            category: 'image',
+            executor: 'image',
+          },
+    ports: {
+      inputs: [],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Image Object' }
+      ]
+    },
+              properties: {
+            properties: [
+              { 
+                key: 'imageAssetId', 
+                type: 'string', 
+                label: 'Image Asset', 
+                defaultValue: '',
+                // Only the image asset selection is shown in the property panel
+                // Transform properties (position, scale, rotation, opacity) are controlled elsewhere
+              }
+            ]
+          },
+    rendering: {
+      icon: '🖼️',
+      colors: {
+        primary: 'bg-[var(--node-input)]',
+        handle: '!bg-[var(--node-input)]',
+      }
+    },
+    defaults: {
+      imageAssetId: '',
+      position: { x: 960, y: 540 }, // Center of 1920x1080
+      scale: { x: 1, y: 1 },
+      rotation: 0,
+      opacity: 1,
+    }
+  },
+
   text: {
     type: 'text',
     label: 'Text',

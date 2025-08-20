@@ -52,6 +52,10 @@ function getCategoryTokenClass(category: NodeDefinition['execution']['category']
       return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
     case 'data':
       return { primary: 'bg-[var(--node-data)]', handle: '!bg-[var(--node-data)]' };
+    case 'image':
+      return { primary: 'bg-[var(--node-image)]', handle: '!bg-[var(--node-image)]' };
+    case 'input':
+      return { primary: 'bg-[var(--node-input)]', handle: '!bg-[var(--node-input)]' };
     case 'output':
       return { primary: 'bg-[var(--node-output)]', handle: '!bg-[var(--node-output)]' };
     default:
@@ -137,6 +141,18 @@ export function generateNodePalette() {
     icon: def.rendering.icon
   }));
 
+  const imageNodes = getNodesByCategory('image').map(def => ({
+    type: def.type as NodeType,
+    label: def.label,
+    icon: def.rendering.icon
+  }));
+
+  const inputNodes = getNodesByCategory('input').map(def => ({
+    type: def.type as NodeType,
+    label: def.label,
+    icon: def.rendering.icon
+  }));
+
   const outputNodes = getNodesByCategory('output').map(def => ({
     type: def.type as NodeType,
     label: def.label,
@@ -150,6 +166,8 @@ export function generateNodePalette() {
     timingNodes,
     logicNodes,
     animationNodes,
+    imageNodes,
+    inputNodes,
     outputNodes
   };
 }

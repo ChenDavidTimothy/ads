@@ -1,5 +1,6 @@
 import { postRouter } from "@/server/api/routers/post";
 import { animationRouter } from "@/server/api/routers/animation";
+import { assetsRouter } from "@/server/api/routers/assets";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 import { workspaceRouter } from "./routers/workspace";
 
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   animation: animationRouter,
   workspace: workspaceRouter,
+  assets: assetsRouter,
 });
 
 // export type definition of API

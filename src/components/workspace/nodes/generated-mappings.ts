@@ -19,6 +19,7 @@ import { IfElseNode } from './if-else-node';
 import { BooleanOpNode } from './boolean-op-node';
 import { MathOpNode } from './math-op-node';
 import { DuplicateNode } from './duplicate-node';
+import { ImageNode } from './image-node';
 import { TextNode } from './text-node';
 import { TypographyNode } from './typography-node';
 
@@ -40,6 +41,7 @@ export const COMPONENT_MAPPING = {
   'boolean_op': BooleanOpNode,
   'math_op': MathOpNode,
   'duplicate': DuplicateNode,
+  'image': ImageNode,
   'text': TextNode,
   'typography': TypographyNode,
 } as const;

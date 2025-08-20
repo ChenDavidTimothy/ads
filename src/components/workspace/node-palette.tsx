@@ -30,6 +30,8 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 		...palette.timingNodes, 
 		...palette.logicNodes,
 		...palette.animationNodes,
+		...palette.imageNodes,
+		...palette.inputNodes,
 		...palette.outputNodes
 	], [palette]);
 
@@ -115,6 +117,8 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 			{/* Category Sections - Hidden When Searching */}
 			{!isSearching && (
 				<>
+					{renderCategorySection("Image", palette.imageNodes, <Database size={16} />)}
+					{renderCategorySection("Input", palette.inputNodes, <Database size={16} />)}
 					{renderCategorySection("Geometry", palette.geometryNodes, <Shapes size={16} />)}
 					{renderCategorySection("Text", palette.textNodes, <Type size={16} />)}
 					{renderCategorySection("Data", palette.dataNodes, <Database size={16} />)}
