@@ -847,6 +847,14 @@ export const NODE_DEFINITIONS = {
     },
     properties: {
       properties: [
+        // ADD Content as FIRST property
+        { 
+          key: 'content', 
+          type: 'textarea', 
+          label: 'Content', 
+          rows: 4,
+          defaultValue: 'Sample Text'
+        },
         // Typography Core
         { 
           key: 'fontFamily', 
@@ -931,6 +939,7 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
+      content: 'Sample Text',  // ADD this line
       fontFamily: 'Arial',
       fontSize: 24,
       fontWeight: 'normal',

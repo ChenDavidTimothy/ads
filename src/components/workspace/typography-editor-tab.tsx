@@ -6,7 +6,7 @@ import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import type { TypographyNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
-import { SelectField, NumberField, ColorField } from '@/components/ui/form-fields';
+import { SelectField, NumberField, ColorField, TextareaField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
 import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
@@ -46,6 +46,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
   const { state, updateFlow } = useWorkspace();
   const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined;
   const data = (node?.data ?? {}) as Record<string, unknown> & {
+    content?: string;
     // Typography Core
     fontFamily?: string;
     fontSize?: number;
@@ -60,6 +61,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
   const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
   const def = (getNodeDefinition('typography')?.defaults as Record<string, unknown> & {
+    content?: string;
     fontFamily?: string;
     fontSize?: number;
     fontWeight?: string;
@@ -80,6 +82,9 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
     textOpacity?: number;
   }) ?? {};
 
+  // ADD content to value resolution
+  const content = data.content ?? def.content ?? 'Sample Text';
+  
   // Value resolution with fallbacks
   const fontFamily = data.fontFamily ?? def.fontFamily ?? 'Arial';
   const fontSize = data.fontSize ?? def.fontSize ?? 24;
@@ -98,6 +103,34 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
     <div className="space-y-[var(--space-4)]">
       <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
         Global Typography Defaults
+      </div>
+      
+      {/* ADD Content Section as FIRST section */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Content</div>
+        <div>
+          <TextareaField
+            label="Text Content"
+            value={content}
+            onChange={(content) => updateFlow({ 
+              nodes: state.flow.nodes.map(n => 
+                n.data?.identifier?.id !== nodeId ? n : 
+                ({ ...n, data: { ...n.data, content } })
+              ) 
+            })}
+            rows={4}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="content" />}
+            disabled={isBound('content')}
+            inputClassName={leftBorderClass('content')}
+          />
+          {isBound('content') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TypographyBindingBadge nodeId={nodeId} keyName="content" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Typography Core */}
@@ -176,8 +209,6 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         </div>
       </div>
 
-
-
       {/* Colors */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
@@ -241,10 +272,6 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
       </div>
-
-
-
-
     </div>
   );
 }
@@ -261,6 +288,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
   const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined;
   const selectedOverrides = assignments[objectId];
   const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
+    content?: string;
     // Typography Core  
     fontFamily?: string;
     fontSize?: number;
@@ -273,6 +301,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
   };
 
   const def = (getNodeDefinition('typography')?.defaults as Record<string, unknown> & {
+    content?: string;
     fontFamily?: string;
     fontSize?: number;
     fontWeight?: string;
@@ -293,6 +322,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
     textOpacity?: number;
   }) ?? {};
   const base = (node?.data ?? {}) as Record<string, unknown> & {
+    content?: string;
     // Typography Core
     fontFamily?: string;
     fontSize?: number;
@@ -311,6 +341,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
 
   const isOverridden = (key: string) => {
     switch (key) {
+      case 'content': return initial.content !== undefined;
       case 'fontFamily': return initial.fontFamily !== undefined;
       case 'fontSize': return initial.fontSize !== undefined;
       case 'fontWeight': return initial.fontWeight !== undefined;
@@ -341,6 +372,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
     if (isBound(key)) return undefined; // Blank when bound
     
     switch (key) {
+      case 'content': return initial.content ?? base.content ?? def.content ?? fallbackValue;
       case 'fontFamily': return fontFamily;
       case 'fontSize': return fontSize;
       case 'fontWeight': return fontWeight;
@@ -354,6 +386,7 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
 
   const getStringValue = (key: string, fallbackValue: string) => {
     switch (key) {
+      case 'content': return initial.content ?? base.content ?? def.content ?? fallbackValue;
       case 'fontFamily': return initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? fallbackValue;
       case 'fontWeight': return initial.fontWeight ?? base.fontWeight ?? def.fontWeight ?? fallbackValue;
       case 'fontStyle': return initial.fontStyle ?? base.fontStyle ?? def.fontStyle ?? fallbackValue;
@@ -363,12 +396,34 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
     }
   };
 
-
-
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
         Per-Object Typography Overrides
+      </div>
+      
+      {/* ADD Content Section as FIRST section */}
+      <div className="space-y-[var(--space-3)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">Content</div>
+        <div>
+          <TextareaField 
+            label="Content" 
+            value={getValue('content', 'Sample Text') as string} 
+            onChange={(content) => onChange({ content })}
+            rows={4}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="content" objectId={objectId} />}
+            disabled={isBound('content')}
+            inputClassName={leftBorderClass('content')}
+          />
+          {(isOverridden('content') || isBound('content')) && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('content') && !isBound('content') && <TypographyOverrideBadge nodeId={nodeId} keyName="content" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="content" objectId={objectId} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Typography Core */}
@@ -472,8 +527,6 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
         </div>
       </div>
 
-
-
       {/* Colors */}
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Colors</div>
@@ -540,8 +593,6 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
           )}
         </div>
       </div>
-
-
     </div>
   );
 }

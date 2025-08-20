@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import type { Node, Edge } from "reactflow";
-import { NumberField, ColorField, SelectField, TextField, RangeField, BooleanField } from "@/components/ui/form-fields";
+import { NumberField, ColorField, SelectField, TextField, RangeField, BooleanField, TextareaField } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
 import { Button } from "@/components/ui/button";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
@@ -353,6 +353,19 @@ function SchemaBasedProperties({
             value={(value as string) || ''}
             onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             placeholder={`Enter ${schema.label.toLowerCase()}`}
+          />
+        );
+
+      case 'textarea':
+        return (
+          <TextareaField
+            key={schema.key}
+            label={schema.label}
+            value={(value as string) || ''}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
+            placeholder={`Enter ${schema.label.toLowerCase()}`}
+            rows={schema.rows}
+            bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
           />
         );
 

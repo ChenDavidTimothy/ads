@@ -9,7 +9,7 @@ import { mergeObjectAssignments } from "@/shared/properties/assignments";
 import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
 import { logger } from "@/lib/logger";
-import type { SceneObject } from "@/shared/types/scene";
+import type { SceneObject, TextProperties } from "@/shared/types/scene";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -395,6 +395,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Build Typography overrides with ALL properties
     const baseOverrides: {
+      content?: string;
       // Typography properties (KEEP)
       fontFamily?: string;
       fontSize?: number;
@@ -417,6 +418,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       shadowBlur?: number;
       textOpacity?: number;
     } = {
+      content: data.content as string,
       // Typography properties (KEEP)
       fontFamily: data.fontFamily as string,
       fontSize: data.fontSize as number,
@@ -449,6 +451,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
       
       // Type-safe property setting for ALL Typography overrides
       switch (key) {
+        case 'content':  // ADD this case
+          if (typeof val === 'string') nodeOverrides.content = val;
+          break;
         // EXISTING CASES (keep unchanged)
         case 'fontFamily':
           if (typeof val === 'string') nodeOverrides.fontFamily = val;
@@ -579,6 +584,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
   private processTextObject(
     obj: SceneObject,
     nodeOverrides: {
+      content?: string;
       // Typography properties (KEEP)  
       fontFamily?: string;
       fontSize?: number;
@@ -616,6 +622,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
       const value = reader(key);
       if (value !== undefined) {
         switch (key) {
+          case 'content':
+            if (typeof value === 'string') objectOverrides.content = value;
+            break;
           // EXISTING CASES (keep unchanged)
           case 'fontFamily':
             if (typeof value === 'string') objectOverrides.fontFamily = value;
@@ -685,6 +694,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       // Remove properties that are bound by variables
       for (const key of keys) {
         switch (key) {
+          case 'content': delete initial.content; break;  // ADD this case
           case 'fontFamily': delete initial.fontFamily; break;
           case 'fontWeight': delete initial.fontWeight; break;
           case 'textAlign': delete initial.textAlign; break;
@@ -734,6 +744,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Apply text styling from assignments
     const finalTypography = {
+      content: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.content as string ?? objectOverrides.content,  // ADD this line
       fontFamily: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontFamily as string ?? objectOverrides.fontFamily,
       fontSize: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontSize as number ?? objectOverrides.fontSize,
       fontWeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontWeight as string ?? objectOverrides.fontWeight,
@@ -754,9 +765,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
       textOpacity: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.textOpacity as number ?? objectOverrides.textOpacity,
     };
 
-    // Return object with applied text styling
+    // CRITICAL: Update both properties.content AND typography.content
+    // This ensures content changes are reflected in the rendered output
     return {
       ...obj,
+      properties: {
+        ...obj.properties,
+        content: finalTypography.content ?? (obj.properties as TextProperties).content  // Override text content
+      },
       typography: finalTypography
     };
   }

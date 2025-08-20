@@ -398,3 +398,68 @@ export function BooleanField({
 		</FormField>
 	);
 }
+
+interface TextareaFieldProps {
+  label: React.ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  error?: string;
+  className?: string;
+  placeholder?: string;
+  bindAdornment?: React.ReactNode;
+  inputClassName?: string;
+  disabled?: boolean;
+  rows?: number;
+}
+
+export function TextareaField({
+  label,
+  value,
+  onChange,
+  required = true,
+  error,
+  className,
+  placeholder,
+  bindAdornment,
+  inputClassName,
+  disabled,
+  rows = 3
+}: TextareaFieldProps) {
+  return (
+    <FormField label={label} required={required} error={error} className={className}>
+      <div className="relative">
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          disabled={disabled}
+          className={cn(
+            // Base textarea styling - follows Input component pattern
+            "w-full text-[var(--text-primary)] text-[12px] text-refined transition-all",
+            "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
+            "placeholder:text-[var(--text-muted)]",
+            "bg-[var(--surface-2)] border border-[var(--border-primary)]", 
+            "rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
+            "resize-vertical min-h-[60px]", // Allow vertical resize, min height
+            error
+              ? "border-[var(--danger-500)] focus:outline-none focus:ring-1 focus:ring-[var(--danger-500)]"
+              : "focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)]",
+            disabled ? "opacity-60" : undefined,
+            bindAdornment ? 'pr-9' : undefined,
+            inputClassName
+          )}
+        />
+        {bindAdornment && (
+          <div className="absolute right-2 top-2 z-20">
+            {bindAdornment}
+          </div>
+        )}
+        {disabled && (
+          <div className="absolute inset-0 bg-[var(--surface-3)] rounded-[var(--radius-sm)] z-10" />
+        )}
+      </div>
+    </FormField>
+  );
+}

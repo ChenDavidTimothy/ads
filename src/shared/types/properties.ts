@@ -3,6 +3,7 @@ import type { Point2D } from './core';
 import { z } from 'zod';
 
 export type PropertyType = 
+  | 'textarea'
   | 'number'
   | 'string' 
   | 'color'
@@ -29,6 +30,12 @@ export interface NumberPropertySchema extends BasePropertySchema {
 
 export interface StringPropertySchema extends BasePropertySchema {
   type: 'string';
+  defaultValue?: string;
+}
+
+export interface TextareaPropertySchema extends BasePropertySchema {
+  type: 'textarea';
+  rows?: number;
   defaultValue?: string;
 }
 
@@ -62,6 +69,7 @@ export interface RangePropertySchema extends BasePropertySchema {
 }
 
 export type PropertySchema = 
+  | TextareaPropertySchema
   | NumberPropertySchema
   | StringPropertySchema
   | ColorPropertySchema
