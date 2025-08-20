@@ -347,8 +347,6 @@ export class SmartStorageProvider implements StorageProvider {
       const files = await fs.promises.readdir(this.tempDir);
       const now = Date.now();
       
-      this.logger.info(`🔍 Checking ${files.length} local temp files for cleanup`);
-      
       let cleanedCount = 0;
       for (const file of files) {
         const filePath = path.join(this.tempDir, file);
@@ -357,7 +355,6 @@ export class SmartStorageProvider implements StorageProvider {
         if (now - stats.mtime.getTime() > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
           try {
             await fs.promises.unlink(filePath);
-            this.logger.info(`🧹 Cleaned up old temp file: ${file}`);
             cleanedCount++;
           } catch (error) {
             this.logger.warn(`Failed to cleanup old temp file ${file}:`, error);
@@ -365,9 +362,7 @@ export class SmartStorageProvider implements StorageProvider {
         }
       }
       
-      if (cleanedCount === 0) {
-        this.logger.info('No local temp files needed cleanup');
-      } else {
+      if (cleanedCount > 0) {
         this.logger.info(`🧹 Cleaned up ${cleanedCount} local temp files`);
       }
     } catch (error) {
@@ -393,57 +388,66 @@ export class SmartStorageProvider implements StorageProvider {
       const entries = await fs.promises.readdir(tempDir, { withFileTypes: true });
       const now = Date.now();
       
-      this.logger.info(`🔍 Checking for old temp directories in ${tempDir}`);
+      this.logger.info(`🔍 Checking for old temp files and directories in ${tempDir}`);
       
       let cleanedCount = 0;
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        const itemName = entry.name;
         
-        const dirName = entry.name;
-        // Look for our storage directories and mat-debug directories
-        if (dirName.startsWith('storage-') || dirName.startsWith('mat-debug-')) {
-          const dirPath = path.join(tempDir, dirName);
+        // Look for our storage directories and mat-debug items (files or directories)
+        if (itemName.startsWith('storage-') || itemName.startsWith('mat-debug-')) {
+          const itemPath = path.join(tempDir, itemName);
+          
           try {
-            const stats = await fs.promises.stat(dirPath);
+            const stats = await fs.promises.stat(itemPath);
             const ageMs = now - stats.mtime.getTime();
             
-            // Clean up directories older than 3 minutes (same as files)
+            // Clean up items older than 3 minutes
             if (ageMs > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
-              // Check if directory is empty or only contains old files
-              const dirContents = await fs.promises.readdir(dirPath);
-              let shouldDelete = true;
-              
-              // If directory has contents, check if they're all old
-              if (dirContents.length > 0) {
-                for (const item of dirContents) {
-                  const itemPath = path.join(dirPath, item);
-                  const itemStats = await fs.promises.stat(itemPath);
-                  if (now - itemStats.mtime.getTime() <= STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
-                    shouldDelete = false;
-                    break;
+              if (entry.isDirectory()) {
+                // Handle directories
+                const dirContents = await fs.promises.readdir(itemPath);
+                let shouldDelete = true;
+                
+                // If directory has contents, check if they're all old
+                if (dirContents.length > 0) {
+                  for (const subItem of dirContents) {
+                    const subItemPath = path.join(itemPath, subItem);
+                    const subItemStats = await fs.promises.stat(subItemPath);
+                    const subItemAgeMs = now - subItemStats.mtime.getTime();
+                    
+                    if (subItemAgeMs <= STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
+                      shouldDelete = false;
+                      break;
+                    }
                   }
                 }
-              }
-              
-              if (shouldDelete) {
-                await fs.promises.rm(dirPath, { recursive: true, force: true });
-                this.logger.info(`🧹 Cleaned up old temp directory: ${dirName}`);
+                
+                if (shouldDelete) {
+                  await fs.promises.rm(itemPath, { recursive: true, force: true });
+                  this.logger.info(`🧹 Cleaned up old temp directory: ${itemName}`);
+                  cleanedCount++;
+                }
+              } else {
+                // Handle files (like mat-debug-*.txt)
+                await fs.promises.unlink(itemPath);
+                this.logger.info(`🧹 Cleaned up old temp file: ${itemName}`);
                 cleanedCount++;
               }
             }
           } catch (error) {
-            this.logger.warn(`Failed to cleanup temp directory ${dirName}:`, error);
+            this.logger.warn(`Failed to cleanup temp item ${itemName}:`, error);
           }
         }
       }
       
       if (cleanedCount === 0) {
-        this.logger.info('No old temp directories needed cleanup');
+        this.logger.info('No old temp items needed cleanup');
       } else {
-        this.logger.info(`🧹 Cleaned up ${cleanedCount} old temp directories`);
+        this.logger.info(`🧹 Cleaned up ${cleanedCount} old temp items`);
       }
     } catch (error) {
-      this.logger.error('Failed to cleanup old temp directories:', error);
+      this.logger.error('Failed to cleanup old temp items:', error);
     }
   }
 
@@ -476,8 +480,6 @@ export class SmartStorageProvider implements StorageProvider {
       const maxAgeMs = STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS;
       const cutoffTime = new Date(Date.now() - maxAgeMs);
 
-      this.logger.info(`🔍 Looking for orphaned files older than ${maxAgeMs / 1000 / 60} minutes (cutoff: ${cutoffTime.toISOString()})`);
-
       // Get orphaned render jobs (completed but not saved to assets)
       const { data: orphanedJobs, error } = await this.supabase
         .from('render_jobs')
@@ -491,10 +493,7 @@ export class SmartStorageProvider implements StorageProvider {
         return;
       }
 
-      this.logger.info(`🔍 Found ${orphanedJobs?.length || 0} completed jobs older than cutoff time`);
-
       if (!orphanedJobs || orphanedJobs.length === 0) {
-        this.logger.info('No orphaned files to clean up');
         return;
       }
 
@@ -509,22 +508,15 @@ export class SmartStorageProvider implements StorageProvider {
         return;
       }
 
-      this.logger.info(`🔍 Found ${savedAssets?.length || 0} saved assets with render job IDs`);
-
       const savedJobIds = new Set(
         (savedAssets || [])
           .map(asset => asset.metadata?.render_job_id as string)
           .filter(Boolean)
       );
 
-      this.logger.info(`🔍 Saved job IDs: ${Array.from(savedJobIds).join(', ')}`);
-
       const filesToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
 
-      this.logger.info(`🔍 After filtering: ${filesToDelete.length} files to delete out of ${orphanedJobs.length} total`);
-
       if (filesToDelete.length === 0) {
-        this.logger.info('No orphaned files to clean up after filtering');
         return;
       }
 
@@ -566,8 +558,6 @@ export class SmartStorageProvider implements StorageProvider {
       const maxAgeMs = STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS;
       const cutoffTime = new Date(Date.now() - maxAgeMs);
 
-      this.logger.info(`🔍 Looking for orphaned render job records older than ${maxAgeMs / 1000 / 60} minutes (cutoff: ${cutoffTime.toISOString()})`);
-
       // Get orphaned render job IDs (completed but not saved to assets, older than 3 minutes)
       const { data: orphanedJobs, error } = await this.supabase
         .from('render_jobs')
@@ -580,10 +570,7 @@ export class SmartStorageProvider implements StorageProvider {
         return;
       }
 
-      this.logger.info(`🔍 Found ${orphanedJobs?.length || 0} completed render job records older than cutoff time`);
-
       if (!orphanedJobs || orphanedJobs.length === 0) {
-        this.logger.info('No orphaned render job records to clean up');
         return;
       }
 
@@ -598,22 +585,15 @@ export class SmartStorageProvider implements StorageProvider {
         return;
       }
 
-      this.logger.info(`🔍 Found ${savedAssets?.length || 0} saved assets with render job IDs`);
-
       const savedJobIds = new Set(
         (savedAssets || [])
           .map(asset => asset.metadata?.render_job_id as string)
           .filter(Boolean)
       );
 
-      this.logger.info(`🔍 Saved job IDs: ${Array.from(savedJobIds).join(', ')}`);
-
       const jobsToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
 
-      this.logger.info(`🔍 After filtering: ${jobsToDelete.length} jobs to delete out of ${orphanedJobs.length} total`);
-
       if (jobsToDelete.length === 0) {
-        this.logger.info('No orphaned render job records to clean up after filtering');
         return;
       }
 

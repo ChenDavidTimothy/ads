@@ -24,15 +24,7 @@ export function detectProcessType(): ProcessConfig {
 
   const processType: 'main' | 'worker' | 'unknown' = isWorker ? 'worker' : isMainApp ? 'main' : 'unknown';
 
-  // Debug logging
-  console.log('🔍 Process detection:', {
-    argv: process.argv,
-    title: process.title,
-    nodeEnv: process.env.NODE_ENV,
-    isWorker,
-    isMainApp,
-    processType
-  });
+  // Debug logging removed for cleaner console output
 
   return {
     isWorker,
