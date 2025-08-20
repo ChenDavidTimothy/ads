@@ -37,6 +37,7 @@ interface VideoJob {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   videoUrl?: string;
   error?: string;
+  renderJobId?: string; // Add this field
 }
 
 interface ImageJob {
@@ -46,6 +47,7 @@ interface ImageJob {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   imageUrl?: string;
   error?: string;
+  renderJobId?: string; // Add this field
 }
 
 export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
@@ -148,7 +150,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           jobId: job.jobId,
           sceneName: job.nodeName,
           sceneId: job.nodeId,
-          status: 'pending' as const
+          status: 'pending' as const,
+          renderJobId: job.jobId, // Map jobId to renderJobId for save functionality
         }));
         
         setVideos(videoJobs);
@@ -296,7 +299,8 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           jobId: job.jobId,
           frameName: job.nodeName,
           frameId: job.nodeId,
-          status: 'pending' as const
+          status: 'pending' as const,
+          renderJobId: job.jobId, // Map jobId to renderJobId for save functionality
         }));
         
         setImages(imageJobs);

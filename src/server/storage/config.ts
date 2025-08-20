@@ -11,7 +11,7 @@ export const STORAGE_CONFIG = {
   
   // Cleanup configuration
   TEMP_DIR_CLEANUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
-  MAX_TEMP_FILE_AGE_MS: 24 * 60 * 60 * 1000, // 24 hours
+  MAX_TEMP_FILE_AGE_MS: 60 * 60 * 1000, // 1 hour
   
   // File size limits
   MAX_IMAGE_SIZE_MB: 50,

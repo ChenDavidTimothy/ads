@@ -50,6 +50,7 @@ export function AssetsPanel() {
     const params: ListAssetsInput = {
       limit: 50,
       offset: 0,
+      assetType: 'all', // Explicitly set default
     };
 
     if (searchQuery.trim()) {

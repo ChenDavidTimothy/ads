@@ -33,6 +33,13 @@ export const assetsRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: typeof getUploadUrlInputSchema._type; ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
       
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+      
       // Validate file type and size
       if (!validateMimeType(input.mimeType)) {
         throw new TRPCError({
@@ -114,6 +121,13 @@ export const assetsRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: any; ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
       
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+      
       // Verify asset exists and belongs to user
       const { data: asset, error } = await supabase
         .from('user_assets')
@@ -141,6 +155,13 @@ export const assetsRouter = createTRPCRouter({
     .output(listAssetsResponseSchema)
     .query(async ({ input, ctx }: { input: typeof listAssetsInputSchema._type; ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
+      
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
       
       let query = supabase
         .from('user_assets')
@@ -198,6 +219,13 @@ export const assetsRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }: { input: typeof deleteAssetInputSchema._type; ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
       
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+      
       // Get asset details first
       const { data: asset, error: fetchError } = await supabase
         .from('user_assets')
@@ -248,29 +276,131 @@ export const assetsRouter = createTRPCRouter({
   // Move temporary file to permanent assets
   moveToAssets: protectedProcedure
     .input(moveToAssetsInputSchema)
-    .mutation(async ({ input, ctx }: { input: typeof moveToAssetsInputSchema._type; ctx: TRPCContext }) => {
+    .mutation(async ({ input, ctx }: { input: any; ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
       
-      // This endpoint is called from the Preview Panel's "Save to Assets" button
-      // It moves a file from temporary storage to permanent user assets
-      
-      const storageProvider = new SmartStorageProvider(user.id);
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
       
       try {
-        // The file is already in temporary storage, we need to move it to permanent storage
-        // and register it as a user asset
+        // 1. Get the render job details
+        const { data: renderJob, error: jobError } = await supabase
+          .from('render_jobs')
+          .select('*')
+          .eq('id', input.renderJobId)
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .single();
+
+        if (jobError || !renderJob || !renderJob.output_url) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Render job not found or not completed",
+          });
+        }
+
+        // 2. Parse the signed URL to get bucket and file path
+        const { bucket, filePath, mimeType, extension } = parseSignedUrl(renderJob.output_url);
         
-        // For now, we'll implement this as a copy operation since the file might still be needed
-        // in the preview panel. The original temp file will be cleaned up by the existing cleanup job.
+        if (!bucket || !filePath) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid output URL format",
+          });
+        }
+
+        // 3. Get file metadata from storage
+        const { data: fileInfo, error: fileError } = await supabase.storage
+          .from(bucket)
+          .list(user.id, {
+            search: filePath.split('/').pop()?.split('.')[0] // Get filename without extension
+          });
+
+        if (fileError || !fileInfo || fileInfo.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND", 
+            message: "File not found in storage",
+          });
+        }
+
+        const fileData = fileInfo.find(f => filePath.endsWith(f.name));
+        if (!fileData) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "File metadata not found",
+          });
+        }
+
+        // 4. Check storage quota before saving
+        const quota = await getOrCreateUserQuota(supabase, user.id);
+        const fileSize = fileData.metadata?.size || 0;
         
-        throw new TRPCError({
-          code: "NOT_IMPLEMENTED",
-          message: "Move to assets functionality will be implemented in Phase 4",
+        // Don't count against quota if already generated (already paid for)
+        // But still check we have space for the record
+        
+        // 5. Generate asset details
+        const assetId = randomUUID();
+        const assetName = input.originalName || `Generated_${Date.now()}.${extension}`;
+        
+        // 6. Create user_assets record
+        const { error: insertError } = await supabase
+          .from('user_assets')
+          .insert({
+            id: assetId,
+            user_id: user.id,
+            filename: filePath.split('/').pop() || assetName,
+            original_name: assetName,
+            file_size: fileSize,
+            mime_type: mimeType,
+            bucket_name: bucket,
+            storage_path: filePath,
+            asset_type: 'generated_saved' as const,
+            metadata: {
+              ...input.metadata,
+              source: 'render_job',
+              render_job_id: input.renderJobId,
+              saved_at: new Date().toISOString(),
+            },
+          });
+
+        if (insertError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to save asset record",
+          });
+        }
+
+        // 7. Update quota to include this asset in permanent storage
+        // (even though file already exists, we track it as a permanent asset now)
+        await updateUserQuota(supabase, user.id, fileSize, mimeType, 'add');
+
+        console.log('Asset saved successfully', {
+          assetId,
+          renderJobId: input.renderJobId,
+          userId: user.id,
+          bucket,
+          filePath
         });
+
+        return { 
+          success: true, 
+          assetId,
+          message: `Asset saved as "${assetName}"` 
+        };
+
       } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        console.error('moveToAssets failed', error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : "Failed to move file to assets",
+          message: "Failed to save asset",
         });
       }
     }),
@@ -280,6 +410,13 @@ export const assetsRouter = createTRPCRouter({
     .output(storageQuotaResponseSchema)
     .query(async ({ ctx }: { ctx: TRPCContext }) => {
       const { supabase, user } = ctx;
+      
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
       
       const quota = await getOrCreateUserQuota(supabase, user.id);
       
@@ -403,6 +540,53 @@ async function updateUserQuota(
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to update quota",
     });
+  }
+}
+
+// Helper function to parse signed URLs
+function parseSignedUrl(signedUrl: string): {
+  bucket: string | null;
+  filePath: string | null;
+  mimeType: string;
+  extension: string;
+} {
+  try {
+    const url = new URL(signedUrl);
+    const pathParts = url.pathname.split('/');
+    
+    // Supabase storage URLs: /storage/v1/object/sign/{bucket}/{path...}
+    const signIndex = pathParts.indexOf('sign');
+    if (signIndex === -1 || signIndex + 2 >= pathParts.length) {
+      return { bucket: null, filePath: null, mimeType: '', extension: '' };
+    }
+    
+    const bucket = pathParts[signIndex + 1];
+    const filePath = pathParts.slice(signIndex + 2).join('/');
+    const extension = filePath.split('.').pop()?.toLowerCase() || '';
+    
+    // Determine MIME type from extension and bucket
+    let mimeType = '';
+    if (bucket === 'images') {
+      const imageTypes: Record<string, string> = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg', 
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+      };
+      mimeType = imageTypes[extension] || 'image/png';
+    } else if (bucket === 'videos') {
+      const videoTypes: Record<string, string> = {
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'mov': 'video/quicktime',
+      };
+      mimeType = videoTypes[extension] || 'video/mp4';
+    }
+    
+    return { bucket: bucket || null, filePath: filePath || null, mimeType, extension };
+  } catch (error) {
+    return { bucket: null, filePath: null, mimeType: '', extension: '' };
   }
 }
 

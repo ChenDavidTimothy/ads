@@ -47,8 +47,8 @@ export const deleteAssetInputSchema = z.object({
 });
 
 export const moveToAssetsInputSchema = z.object({
-  tempFilePath: z.string().min(1),
-  originalName: z.string().min(1).max(255),
+  renderJobId: z.string().uuid(), // Change from tempFilePath to renderJobId
+  originalName: z.string().min(1).max(255).optional(),
   metadata: z.record(z.unknown()).optional().default({}),
 });
 

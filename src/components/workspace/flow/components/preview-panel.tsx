@@ -4,6 +4,9 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
+import { api } from '@/trpc/react';
+import { useNotifications } from '@/hooks/use-notifications';
 
 interface VideoJob {
   jobId: string;
@@ -12,6 +15,7 @@ interface VideoJob {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   videoUrl?: string;
   error?: string;
+  renderJobId?: string; // NEW: For save functionality
 }
 
 interface ImageJob {
@@ -21,6 +25,58 @@ interface ImageJob {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   imageUrl?: string;
   error?: string;
+  renderJobId?: string; // NEW: For save functionality
+}
+
+interface SaveButtonProps {
+  renderJobId?: string;
+  contentUrl?: string;
+  contentName: string;
+  onSaveSuccess?: () => void;
+}
+
+function SaveToAssetsButton({ renderJobId, contentUrl, contentName, onSaveSuccess }: SaveButtonProps) {
+  const { toast } = useNotifications();
+  const utils = api.useUtils();
+  
+  const saveToAssets = api.assets.moveToAssets.useMutation({
+    onSuccess: (data) => {
+      toast.success('Saved to Assets', data.message);
+      // Refresh assets list to show the new asset
+      utils.assets.list.invalidate();
+      utils.assets.getQuota.invalidate();
+      onSaveSuccess?.();
+    },
+    onError: (error) => {
+      toast.error('Save Failed', error.message);
+    },
+  });
+
+  // Find renderJobId from contentUrl if not provided directly
+  const handleSave = () => {
+    if (renderJobId) {
+      saveToAssets.mutate({
+        renderJobId,
+        originalName: contentName,
+        metadata: { saved_from: 'preview_panel' }
+      });
+    } else {
+      toast.error('Save Failed', 'Unable to identify content source');
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleSave}
+      disabled={saveToAssets.isPending}
+      variant="secondary"
+      size="sm"
+      className="flex items-center gap-2"
+    >
+      <Save size={12} />
+      {saveToAssets.isPending ? 'Saving...' : 'Save to Assets'}
+    </Button>
+  );
 }
 
 interface PreviewPanelProps {
@@ -97,8 +153,15 @@ export function PreviewPanel({
       {/* Single Image Preview */}
       {hasSingleImage && !hasMultipleImages && (
         <div>
-          <div className="text-sm font-medium text-[var(--text-secondary)] mb-[var(--space-2)]">
-            Image Preview
+          <div className="flex items-center justify-between mb-[var(--space-2)]">
+            <div className="text-sm font-medium text-[var(--text-secondary)]">
+              Image Preview
+            </div>
+            <SaveToAssetsButton
+              contentUrl={imageUrl!}
+              contentName={`Generated_Image_${Date.now()}`}
+              renderJobId={undefined} // We'll implement this
+            />
           </div>
           <Image 
             src={imageUrl!} 
@@ -168,12 +231,24 @@ export function PreviewPanel({
                     <span className="truncate">{img.frameName}</span>
                   </div>
                   <div className="flex items-center gap-[var(--space-1)]">
+                    {/* Status icon */}
                     <span className="text-xs text-[var(--text-tertiary)]">
                       {img.status === 'completed' && '✓'}
                       {img.status === 'processing' && '⏳'}
                       {img.status === 'failed' && '✗'}
                       {img.status === 'pending' && '⏸'}
                     </span>
+                    
+                    {/* Save button */}
+                    {img.status === 'completed' && img.imageUrl && (
+                      <SaveToAssetsButton
+                        renderJobId={img.renderJobId}
+                        contentUrl={img.imageUrl}
+                        contentName={img.frameName}
+                      />
+                    )}
+                    
+                    {/* Download button */}
                     {onDownloadImage && img.status === 'completed' && (
                       <Button
                         onClick={(e) => {
@@ -267,12 +342,24 @@ export function PreviewPanel({
                     <span className="truncate">{video.sceneName}</span>
                   </div>
                   <div className="flex items-center gap-[var(--space-1)]">
+                    {/* Status icon */}
                     <span className="text-xs text-[var(--text-tertiary)]">
                       {video.status === 'completed' && '✓'}
                       {video.status === 'processing' && '⏳'}
                       {video.status === 'failed' && '✗'}
                       {video.status === 'pending' && '⏸'}
                     </span>
+                    
+                    {/* Save button */}
+                    {video.status === 'completed' && video.videoUrl && (
+                      <SaveToAssetsButton
+                        renderJobId={video.renderJobId}
+                        contentUrl={video.videoUrl}
+                        contentName={video.sceneName}
+                      />
+                    )}
+                    
+                    {/* Download button */}
                     {onDownloadVideo && video.status === 'completed' && (
                       <Button
                         onClick={(e) => {
