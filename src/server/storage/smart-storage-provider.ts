@@ -424,15 +424,35 @@ export class SmartStorageProvider implements StorageProvider {
                 }
                 
                 if (shouldDelete) {
-                  await fs.promises.rm(itemPath, { recursive: true, force: true });
-                  this.logger.info(`🧹 Cleaned up old temp directory: ${itemName}`);
-                  cleanedCount++;
+                  try {
+                    await fs.promises.rm(itemPath, { recursive: true, force: true });
+                    this.logger.info(`🧹 Cleaned up old temp directory: ${itemName}`);
+                    cleanedCount++;
+                  } catch (deleteError) {
+                    // Handle Windows directory locking gracefully
+                    const errorCode = (deleteError as NodeJS.ErrnoException)?.code;
+                    if (errorCode === 'EBUSY' || errorCode === 'EACCES') {
+                      this.logger.info(`⏳ Directory ${itemName} is currently in use - will retry later`);
+                    } else {
+                      this.logger.warn(`Failed to cleanup temp directory ${itemName}:`, deleteError);
+                    }
+                  }
                 }
               } else {
                 // Handle files (like mat-debug-*.txt)
-                await fs.promises.unlink(itemPath);
-                this.logger.info(`🧹 Cleaned up old temp file: ${itemName}`);
-                cleanedCount++;
+                try {
+                  await fs.promises.unlink(itemPath);
+                  this.logger.info(`🧹 Cleaned up old temp file: ${itemName}`);
+                  cleanedCount++;
+                } catch (deleteError) {
+                  // Handle Windows file locking gracefully
+                  const errorCode = (deleteError as NodeJS.ErrnoException)?.code;
+                  if (errorCode === 'EBUSY' || errorCode === 'EACCES') {
+                    this.logger.info(`⏳ File ${itemName} is currently in use - will retry later`);
+                  } else {
+                    this.logger.warn(`Failed to cleanup temp file ${itemName}:`, deleteError);
+                  }
+                }
               }
             }
           } catch (error) {
