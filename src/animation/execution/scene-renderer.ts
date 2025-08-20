@@ -70,7 +70,6 @@ export class SceneRenderer {
   async renderFrame(ctx: NodeCanvasContext, time: number): Promise<void> {
     // Clear canvas with background
     const bgColor = this.scene.background?.color ?? this.config.backgroundColor;
-    console.log('[DEBUG] SceneRenderer: Setting background color:', bgColor, 'for canvas size:', this.config.width, 'x', this.config.height);
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, this.config.width, this.config.height);
 
@@ -78,15 +77,10 @@ export class SceneRenderer {
     const sceneState = this.timeline.getSceneState(time);
 
     // Render each object
-    console.log('[DEBUG] SceneRenderer: Rendering', this.scene.objects.length, 'objects');
     for (const object of this.scene.objects) {
       const state = sceneState.get(object.id);
-      if (!state) {
-        console.log('[DEBUG] SceneRenderer: No state for object', object.id);
-        continue;
-      }
+      if (!state) continue;
 
-      console.log('[DEBUG] SceneRenderer: Rendering object', object.id, 'of type', object.type, 'at position', state.position);
       await this.renderObject(ctx, object, state);
     }
   }
@@ -163,10 +157,7 @@ export class SceneRenderer {
 
   private async renderImage(ctx: NodeCanvasContext, props: ImageProperties, _state: ObjectState): Promise<void> {
     // Skip rendering if no image URL
-    if (!props.imageUrl) {
-      console.log('[DEBUG] renderImage: No imageUrl, skipping');
-      return;
-    }
+    if (!props.imageUrl) return;
 
     // Calculate final dimensions based on crop and display settings
     // cropWidth/Height = 0 means "use original size"
@@ -180,20 +171,14 @@ export class SceneRenderer {
     const width = finalWidth ?? 100;
     const height = finalHeight ?? 100;
     
-    console.log('[DEBUG] renderImage: Rendering image with dimensions:', { width, height, props });
-    
     // Try to load and render the actual image
     try {
-      console.log('[DEBUG] renderImage: Starting to load image from:', props.imageUrl);
-      
       // Load the image and wait for it to complete
       const img = await loadImage(props.imageUrl);
-      console.log('[DEBUG] renderImage: Image loaded successfully, dimensions:', img.width, 'x', img.height);
       
       // Calculate crop and display parameters
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
-      // ✅ FIX: Use !== 0 check instead of ?? operator for crop dimensions
       const srcWidth = props.cropWidth !== 0 ? props.cropWidth : img.width;
       const srcHeight = props.cropHeight !== 0 ? props.cropHeight : img.height;
       
@@ -201,26 +186,20 @@ export class SceneRenderer {
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;
       
-      // Draw the image at top-left corner (0, 0) instead of centered
-      console.log('[DEBUG] renderImage: Drawing image at position (0, 0) with size', finalSrcWidth, 'x', finalSrcHeight);
+      // Draw the image at top-left corner (0, 0)
       ctx.drawImage(
         img,
         srcX, srcY, finalSrcWidth, finalSrcHeight,  // Source rectangle
         0, 0, width, height  // Destination rectangle: top-left corner
       );
       
-      console.log('[DEBUG] renderImage: Image drawing complete');
-      
-    } catch (error) {
-      console.error('[DEBUG] renderImage: Failed to load image:', error);
+    } catch {
       // Fallback to placeholder if image loading fails
       this.drawImagePlaceholder(ctx, width, height);
     }
   }
   
   private drawImagePlaceholder(ctx: NodeCanvasContext, width: number, height: number): void {
-    console.log('[DEBUG] drawImagePlaceholder: Drawing placeholder rectangle at', -width / 2, -height / 2, 'with size', width, height);
-    
     // Draw placeholder rectangle
     ctx.fillStyle = '#cccccc';
     ctx.strokeStyle = '#999999';
@@ -234,8 +213,6 @@ export class SceneRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('IMAGE PLACEHOLDER', 0, 0);
-    
-    console.log('[DEBUG] drawImagePlaceholder: Drawing complete');
   }
 
   private renderText(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {
