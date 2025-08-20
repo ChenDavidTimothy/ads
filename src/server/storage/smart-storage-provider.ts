@@ -387,6 +387,66 @@ export class SmartStorageProvider implements StorageProvider {
     }
   }
 
+  private async cleanupOldTempDirectories(): Promise<void> {
+    try {
+      const tempDir = os.tmpdir();
+      const entries = await fs.promises.readdir(tempDir, { withFileTypes: true });
+      const now = Date.now();
+      
+      this.logger.info(`🔍 Checking for old temp directories in ${tempDir}`);
+      
+      let cleanedCount = 0;
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        
+        const dirName = entry.name;
+        // Look for our storage directories and mat-debug directories
+        if (dirName.startsWith('storage-') || dirName.startsWith('mat-debug-')) {
+          const dirPath = path.join(tempDir, dirName);
+          try {
+            const stats = await fs.promises.stat(dirPath);
+            const ageMs = now - stats.mtime.getTime();
+            
+            // Clean up directories older than 3 minutes (same as files)
+            if (ageMs > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
+              // Check if directory is empty or only contains old files
+              const dirContents = await fs.promises.readdir(dirPath);
+              let shouldDelete = true;
+              
+              // If directory has contents, check if they're all old
+              if (dirContents.length > 0) {
+                for (const item of dirContents) {
+                  const itemPath = path.join(dirPath, item);
+                  const itemStats = await fs.promises.stat(itemPath);
+                  if (now - itemStats.mtime.getTime() <= STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
+                    shouldDelete = false;
+                    break;
+                  }
+                }
+              }
+              
+              if (shouldDelete) {
+                await fs.promises.rm(dirPath, { recursive: true, force: true });
+                this.logger.info(`🧹 Cleaned up old temp directory: ${dirName}`);
+                cleanedCount++;
+              }
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to cleanup temp directory ${dirName}:`, error);
+          }
+        }
+      }
+      
+      if (cleanedCount === 0) {
+        this.logger.info('No old temp directories needed cleanup');
+      } else {
+        this.logger.info(`🧹 Cleaned up ${cleanedCount} old temp directories`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to cleanup old temp directories:', error);
+    }
+  }
+
   public async performComprehensiveCleanup(): Promise<void> {
     try {
       this.logger.info('Starting comprehensive cleanup cycle');
@@ -394,10 +454,13 @@ export class SmartStorageProvider implements StorageProvider {
       // 1. Clean local temp files (existing functionality)
       await this.cleanupOldTempFiles();
       
-      // 2. Clean orphaned Supabase storage files
+      // 2. Clean old temp directories (storage-* and mat-debug-*)
+      await this.cleanupOldTempDirectories();
+      
+      // 3. Clean orphaned Supabase storage files
       await this.cleanupOrphanedSupabaseFiles();
       
-      // 3. Clean orphaned render job records
+      // 4. Clean orphaned render job records
       await this.cleanupOrphanedRenderJobs();
       
       this.logger.info('Comprehensive cleanup cycle completed');
