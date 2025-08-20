@@ -13,7 +13,7 @@ export interface UserAsset {
   asset_type: 'uploaded' | 'generated_saved';
   metadata: Record<string, unknown>;
   created_at: string;
-  updated_at: string;
+  // removed: updated_at: string;
 }
 
 export interface UserStorageQuota {
@@ -70,7 +70,7 @@ export const assetResponseSchema = z.object({
   asset_type: z.enum(['uploaded', 'generated_saved']),
   metadata: z.record(z.unknown()),
   created_at: z.string(),
-  updated_at: z.string(),
+  // removed: updated_at: string;
   public_url: z.string().optional(), // Added by backend
   thumbnail_url: z.string().optional(), // For future image optimization
 });
