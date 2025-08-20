@@ -184,7 +184,12 @@ export class AnimationNodeExecutor extends BaseExecutor {
       typeof obj === 'object' &&
       obj !== null &&
       'type' in obj &&
-      (obj as { type: string }).type === 'image'
+      (obj as { type: string }).type === 'image' &&
+      'initialPosition' in obj &&
+      'initialRotation' in obj &&
+      'initialScale' in obj &&
+      'initialOpacity' in obj &&
+      'properties' in obj
     );
   }
 
@@ -205,6 +210,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext
   ): Promise<SceneObject> {
     const objectId = obj.id;
+    
+    // Debug logging to check object structure
+    logger.debug(`Processing image object ${objectId}:`, {
+      hasInitialPosition: !!obj.initialPosition,
+      hasInitialRotation: !!obj.initialRotation,
+      hasInitialScale: !!obj.initialScale,
+      hasInitialOpacity: !!obj.initialOpacity,
+      initialPosition: obj.initialPosition,
+      type: obj.type
+    });
+    
     const reader = readVarForObject(objectId);
     
     // Build object-specific overrides
@@ -261,11 +277,12 @@ export class AnimationNodeExecutor extends BaseExecutor {
           .eq('id', finalOverrides.imageAssetId)
           .single();
 
-        const { data: asset, error } = result;
+        const { data: asset, error } = result as { data: unknown; error: unknown };
         
         if (!error && asset && typeof asset === 'object' && asset !== null) {
-          const bucketName = (asset as { bucket_name?: string }).bucket_name;
-          const storagePath = (asset as { storage_path?: string }).storage_path;
+          const assetRecord = asset as Record<string, unknown>;
+          const bucketName = assetRecord.bucket_name as string | undefined;
+          const storagePath = assetRecord.storage_path as string | undefined;
           
           if (bucketName && storagePath) {
             // Get signed URL
@@ -296,6 +313,11 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Apply media processing to the image object
     const processed = {
       ...obj,
+      // Ensure timeline properties are preserved
+      initialPosition: obj.initialPosition ?? { x: 0, y: 0 },
+      initialRotation: obj.initialRotation ?? 0,
+      initialScale: obj.initialScale ?? { x: 1, y: 1 },
+      initialOpacity: obj.initialOpacity ?? 1,
       properties: {
         ...obj.properties,
         // Asset properties
@@ -315,6 +337,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
         displayHeight: finalOverrides.displayHeight ?? 0,
       }
     };
+
+    // Debug logging to verify processed object structure
+    logger.debug(`Processed image object ${objectId}:`, {
+      hasInitialPosition: !!processed.initialPosition,
+      hasInitialRotation: !!processed.initialRotation,
+      hasInitialScale: !!processed.initialScale,
+      hasInitialOpacity: !!processed.initialOpacity,
+      initialPosition: processed.initialPosition,
+      type: processed.type
+    });
 
     return processed;
   }

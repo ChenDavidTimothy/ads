@@ -1030,7 +1030,7 @@ export const NODE_DEFINITIONS = {
           key: 'cropWidth', 
           type: 'number', 
           label: 'Crop Width', 
-          min: 1, 
+          min: 0, 
           defaultValue: 0,
           description: 'Crop width (0 = use original)'
         },
@@ -1038,7 +1038,7 @@ export const NODE_DEFINITIONS = {
           key: 'cropHeight', 
           type: 'number', 
           label: 'Crop Height', 
-          min: 1, 
+          min: 0, 
           defaultValue: 0,
           description: 'Crop height (0 = use original)'
         },
@@ -1048,7 +1048,7 @@ export const NODE_DEFINITIONS = {
           key: 'displayWidth', 
           type: 'number', 
           label: 'Display Width', 
-          min: 1, 
+          min: 0, 
           defaultValue: 0,
           description: 'Final display width (0 = use crop size)'
         },
@@ -1056,7 +1056,7 @@ export const NODE_DEFINITIONS = {
           key: 'displayHeight', 
           type: 'number', 
           label: 'Display Height', 
-          min: 1, 
+          min: 0, 
           defaultValue: 0,
           description: 'Final display height (0 = use crop size)'
         }

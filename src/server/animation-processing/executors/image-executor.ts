@@ -14,14 +14,20 @@ export class ImageExecutor extends BaseExecutor {
     context: ExecutionContext,
     _edges: ReactFlowEdge[]
   ): Promise<void> {
-    // Create basic image placeholder object
+    // Create proper SceneObject with timeline-compatible properties
     const imageObject = {
       type: 'image' as const,
       id: `image_${node.data.identifier.id}`,
-      // Basic properties only - no asset loading
+      // Timeline-required properties
+      initialPosition: { x: 0, y: 0 }, // Default origin - Canvas will provide positioning
+      initialRotation: 0,
+      initialScale: { x: 1, y: 1 },
+      initialOpacity: 1,
+      // Basic properties - no asset loading (that's handled by media node)
       placeholder: true,
       nodeId: node.data.identifier.id,
-      displayName: node.data.identifier.displayName
+      displayName: node.data.identifier.displayName,
+      properties: {}
     };
 
     setNodeOutput(

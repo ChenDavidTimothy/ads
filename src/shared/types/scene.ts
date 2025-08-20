@@ -14,7 +14,7 @@ export interface AnimationScene {
 
 export interface SceneObject {
   id: string;
-  type: 'triangle' | 'circle' | 'rectangle' | 'text';
+  type: 'triangle' | 'circle' | 'rectangle' | 'text' | 'image';
   properties: GeometryProperties;
   initialPosition: Point2D;
   initialRotation?: number;
@@ -48,12 +48,25 @@ export interface RectangleProperties {
   height: number;
 }
 
+export interface ImageProperties {
+  imageUrl?: string;
+  originalWidth?: number;
+  originalHeight?: number;
+  assetId?: string;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+  displayWidth?: number;
+  displayHeight?: number;
+}
+
 export interface TextProperties {
   content: string;
   fontSize: number;
 }
 
-export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties | TextProperties;
+export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties | ImageProperties | TextProperties;
 
 // Object state at any point in time
 export interface ObjectState {

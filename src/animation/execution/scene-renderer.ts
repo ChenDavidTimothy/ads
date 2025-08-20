@@ -1,11 +1,12 @@
 // src/animation/execution/scene-renderer.ts
 import type { NodeCanvasContext, Point2D, Transform } from '@/shared/types/core';
-import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties, TextProperties } from '@/shared/types/scene';
+import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties, ImageProperties, TextProperties } from '@/shared/types/scene';
 import { Timeline } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
 import { drawText, type Typography } from '../geometry/text';
+import { loadImage } from 'canvas';
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -40,12 +41,13 @@ function applyTransform(
 function saveAndTransform(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
   transform: Transform,
-  drawCallback: () => void
-): void {
+  drawCallback: () => void | Promise<void>
+): void | Promise<void> {
   ctx.save();
   applyTransform(ctx, transform);
-  drawCallback();
+  const result = drawCallback();
   ctx.restore();
+  return result;
 }
 
 export interface SceneRenderConfig {
@@ -65,9 +67,10 @@ export class SceneRenderer {
     this.timeline = new Timeline(scene);
   }
 
-  renderFrame(ctx: NodeCanvasContext, time: number): void {
+  async renderFrame(ctx: NodeCanvasContext, time: number): Promise<void> {
     // Clear canvas with background
     const bgColor = this.scene.background?.color ?? this.config.backgroundColor;
+    console.log('[DEBUG] SceneRenderer: Setting background color:', bgColor, 'for canvas size:', this.config.width, 'x', this.config.height);
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, this.config.width, this.config.height);
 
@@ -75,15 +78,20 @@ export class SceneRenderer {
     const sceneState = this.timeline.getSceneState(time);
 
     // Render each object
+    console.log('[DEBUG] SceneRenderer: Rendering', this.scene.objects.length, 'objects');
     for (const object of this.scene.objects) {
       const state = sceneState.get(object.id);
-      if (!state) continue;
+      if (!state) {
+        console.log('[DEBUG] SceneRenderer: No state for object', object.id);
+        continue;
+      }
 
-      this.renderObject(ctx, object, state);
+      console.log('[DEBUG] SceneRenderer: Rendering object', object.id, 'of type', object.type, 'at position', state.position);
+      await this.renderObject(ctx, object, state);
     }
   }
 
-  private renderObject(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {
+  private async renderObject(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): Promise<void> {
     const transform = {
       translate: state.position,
       rotate: state.rotation,
@@ -94,7 +102,7 @@ export class SceneRenderer {
     const originalAlpha = ctx.globalAlpha;
     ctx.globalAlpha = originalAlpha * state.opacity;
 
-    saveAndTransform(ctx, transform, () => {
+    await saveAndTransform(ctx, transform, async () => {
       switch (object.type) {
         case 'triangle':
           this.renderTriangle(ctx, object.properties as TriangleProperties, state);
@@ -104,6 +112,9 @@ export class SceneRenderer {
           break;
         case 'rectangle':
           this.renderRectangle(ctx, object.properties as RectangleProperties, state);
+          break;
+        case 'image':
+          await this.renderImage(ctx, object.properties as ImageProperties, state);
           break;
         case 'text':
           this.renderText(ctx, object, state);
@@ -148,6 +159,77 @@ export class SceneRenderer {
 
     // Draw rectangle centered at origin
     drawRectangle(ctx, { x: -props.width / 2, y: -props.height / 2 }, props.width, props.height, style);
+  }
+
+  private async renderImage(ctx: NodeCanvasContext, props: ImageProperties, _state: ObjectState): Promise<void> {
+    // Skip rendering if no image URL
+    if (!props.imageUrl) {
+      console.log('[DEBUG] renderImage: No imageUrl, skipping');
+      return;
+    }
+
+    // Calculate final dimensions based on crop and display settings
+    // cropWidth/Height = 0 means "use original size"
+    // displayWidth/Height = 0 means "use crop size"
+    const cropWidth = props.cropWidth !== 0 ? props.cropWidth : (props.originalWidth ?? 100);
+    const cropHeight = props.cropHeight !== 0 ? props.cropHeight : (props.originalHeight ?? 100);
+    const finalWidth = props.displayWidth !== 0 ? props.displayWidth : cropWidth;
+    const finalHeight = props.displayHeight !== 0 ? props.displayHeight : cropHeight;
+    
+    // Ensure we have valid dimensions
+    const width = finalWidth ?? 100;
+    const height = finalHeight ?? 100;
+    
+    console.log('[DEBUG] renderImage: Rendering image with dimensions:', { width, height, props });
+    
+    // Try to load and render the actual image
+    try {
+      console.log('[DEBUG] renderImage: Starting to load image from:', props.imageUrl);
+      
+      // Load the image and wait for it to complete
+      const img = await loadImage(props.imageUrl);
+      console.log('[DEBUG] renderImage: Image loaded successfully, dimensions:', img.width, 'x', img.height);
+      
+      // Calculate crop and display parameters
+      const srcX = props.cropX ?? 0;
+      const srcY = props.cropY ?? 0;
+      const srcWidth = props.cropWidth ?? img.width;
+      const srcHeight = props.cropHeight ?? img.height;
+      
+      // Draw the image centered at origin
+      ctx.drawImage(
+        img,
+        srcX, srcY, srcWidth, srcHeight,  // Source rectangle
+        -width / 2, -height / 2, width, height  // Destination rectangle
+      );
+      
+      console.log('[DEBUG] renderImage: Image drawing complete');
+      
+    } catch (error) {
+      console.error('[DEBUG] renderImage: Failed to load image:', error);
+      // Fallback to placeholder if image loading fails
+      this.drawImagePlaceholder(ctx, width, height);
+    }
+  }
+  
+  private drawImagePlaceholder(ctx: NodeCanvasContext, width: number, height: number): void {
+    console.log('[DEBUG] drawImagePlaceholder: Drawing placeholder rectangle at', -width / 2, -height / 2, 'with size', width, height);
+    
+    // Draw placeholder rectangle
+    ctx.fillStyle = '#cccccc';
+    ctx.strokeStyle = '#999999';
+    ctx.lineWidth = 2;
+    ctx.fillRect(-width / 2, -height / 2, width, height);
+    ctx.strokeRect(-width / 2, -height / 2, width, height);
+    
+    // Add text to indicate it's a placeholder
+    ctx.fillStyle = '#666666';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('IMAGE PLACEHOLDER', 0, 0);
+    
+    console.log('[DEBUG] drawImagePlaceholder: Drawing complete');
   }
 
   private renderText(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {

@@ -1,6 +1,6 @@
 // src/shared/properties/resolver.ts
 
-import type { GeometryProperties, SceneObject, TriangleProperties, CircleProperties, RectangleProperties, TextProperties } from '@/shared/types/scene';
+import type { GeometryProperties, SceneObject, TriangleProperties, CircleProperties, RectangleProperties, ImageProperties, TextProperties } from '@/shared/types/scene';
 import type { PropertySourceMap } from './precedence';
 import type { ObjectAssignments } from './assignments';
 
@@ -131,6 +131,14 @@ export function resolveInitialObject(
         // strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
         // strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
       } as TextProperties; // Remove color extensions
+      break;
+    }
+    case 'image': {
+      const base = original.properties as ImageProperties;
+      // Image objects don't use Canvas color properties - they're rendered as-is
+      properties = {
+        ...base,
+      } as ImageProperties;
       break;
     }
     default: {

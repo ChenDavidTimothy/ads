@@ -132,6 +132,7 @@ export class FlowTracker {
     // Get all node types from registry
     const geometryNodeTypes = getNodesByCategory('geometry').map(def => def.type);
     const textNodeTypes = getNodesByCategory('text').map(def => def.type);
+    const imageNodeTypes = getNodesByCategory('image').map(def => def.type);
     const dataNodeTypes = getNodesByCategory('data').map(def => def.type);
     const duplicateNodeTypes = ['duplicate']; // Can be expanded for other multiplier nodes
 
@@ -160,8 +161,8 @@ export class FlowTracker {
         return [];
       }
 
-      // If this is a geometry node OR text node, it creates new visual objects
-      if (geometryNodeTypes.includes(currentNode.type!) || textNodeTypes.includes(currentNode.type!)) {
+      // If this is a geometry node OR text node OR image node, it creates new visual objects
+      if (geometryNodeTypes.includes(currentNode.type!) || textNodeTypes.includes(currentNode.type!) || imageNodeTypes.includes(currentNode.type!)) {
         const newObject: ObjectDescriptor = {
           id: currentNode.data.identifier.id,
           nodeId: currentNode.data.identifier.id,
@@ -250,8 +251,8 @@ export class FlowTracker {
         }
       }
 
-      // If no input ports have objects and this is a geometry node, it's a source
-      if (objectsByPort.size === 0 && geometryNodeTypes.includes(currentNode.type!)) {
+      // If no input ports have objects and this is a geometry node or image node, it's a source
+      if (objectsByPort.size === 0 && (geometryNodeTypes.includes(currentNode.type!) || imageNodeTypes.includes(currentNode.type!))) {
         const emptyMap = new Map([['input', []]]);
         return traceObjects(currentNodeId, emptyMap);
       }

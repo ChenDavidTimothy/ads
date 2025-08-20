@@ -37,7 +37,7 @@ export class ImageRenderer {
     };
 
     const sceneRenderer = new SceneRenderer(scene, renderConfig);
-    sceneRenderer.renderFrame(ctx as never, cfg.time ?? 0);
+    await sceneRenderer.renderFrame(ctx as never, cfg.time ?? 0);
 
     const prepared = await this.storageProvider.prepareTarget(cfg.format);
 

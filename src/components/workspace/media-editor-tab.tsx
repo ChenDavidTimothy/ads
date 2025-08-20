@@ -749,7 +749,9 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
             onChange={handleUpdateAssignment}
           />
         ) : (
-          <MediaDefaultProperties nodeId={nodeId} />
+          <div className="text-sm text-[var(--text-tertiary)]">
+            Select an object on the left to edit its specific properties, or use the center panel to edit global defaults.
+          </div>
         )}
       </div>
     </div>
