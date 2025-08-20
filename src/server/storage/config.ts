@@ -10,8 +10,8 @@ export const STORAGE_CONFIG = {
   SIGNED_URL_EXPIRY_SECONDS: 60 * 60 * 24 * 7, // 7 days
   
   // Cleanup configuration
-  TEMP_DIR_CLEANUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
-  MAX_TEMP_FILE_AGE_MS: 60 * 60 * 1000, // 1 hour
+  TEMP_DIR_CLEANUP_INTERVAL_MS: 3 * 60 * 1000, // 3 minutes
+  MAX_TEMP_FILE_AGE_MS: 3 * 60 * 1000, // 3 minutes
   
   // File size limits
   MAX_IMAGE_SIZE_MB: 50,

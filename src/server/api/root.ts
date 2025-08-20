@@ -3,6 +3,10 @@ import { animationRouter } from "@/server/api/routers/animation";
 import { assetsRouter } from "@/server/api/routers/assets";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 import { workspaceRouter } from "./routers/workspace";
+import { cleanupRouter } from "./routers/cleanup";
+
+// Initialize background services
+import "../startup";
 
 /**
  * This is the primary router for your server.
@@ -14,6 +18,7 @@ export const appRouter = createTRPCRouter({
   animation: animationRouter,
   workspace: workspaceRouter,
   assets: assetsRouter,
+  cleanup: cleanupRouter,
 });
 
 // export type definition of API

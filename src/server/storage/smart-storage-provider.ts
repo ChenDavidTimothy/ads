@@ -18,7 +18,6 @@ export class SmartStorageProvider implements StorageProvider {
   private readonly tempDir: string;
   private readonly logger: Console;
   private readonly healthMonitor: StorageHealthMonitor;
-  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(userId?: string) {
     this.userId = userId;
@@ -68,8 +67,8 @@ export class SmartStorageProvider implements StorageProvider {
       // Verify buckets exist
       await this.validateBuckets();
       
-      // Start cleanup interval
-      this.startCleanupInterval();
+      // NOTE: Cleanup is now handled by the centralized CleanupService
+      // No more duplicate cleanup intervals
       
       this.logger.info(`SmartStorageProvider initialized successfully. Temp dir: ${this.tempDir}`);
     } catch (error) {
@@ -341,20 +340,16 @@ export class SmartStorageProvider implements StorageProvider {
     }
   }
 
-  private startCleanupInterval(): void {
-    this.cleanupInterval = setInterval(() => {
-      // Use void to explicitly ignore the promise
-      void this.cleanupOldTempFiles().catch((error) => {
-        this.logger.error('Temp file cleanup failed:', error);
-      });
-    }, STORAGE_CONFIG.TEMP_DIR_CLEANUP_INTERVAL_MS);
-  }
+  // REMOVED: startCleanupInterval method - cleanup is now handled by CleanupService
 
   private async cleanupOldTempFiles(): Promise<void> {
     try {
       const files = await fs.promises.readdir(this.tempDir);
       const now = Date.now();
       
+      this.logger.info(`🔍 Checking ${files.length} local temp files for cleanup`);
+      
+      let cleanedCount = 0;
       for (const file of files) {
         const filePath = path.join(this.tempDir, file);
         const stats = await fs.promises.stat(filePath);
@@ -362,11 +357,18 @@ export class SmartStorageProvider implements StorageProvider {
         if (now - stats.mtime.getTime() > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
           try {
             await fs.promises.unlink(filePath);
-            this.logger.debug(`Cleaned up old temp file: ${file}`);
+            this.logger.info(`🧹 Cleaned up old temp file: ${file}`);
+            cleanedCount++;
           } catch (error) {
             this.logger.warn(`Failed to cleanup old temp file ${file}:`, error);
           }
         }
+      }
+      
+      if (cleanedCount === 0) {
+        this.logger.info('No local temp files needed cleanup');
+      } else {
+        this.logger.info(`🧹 Cleaned up ${cleanedCount} local temp files`);
       }
     } catch (error) {
       // If the temp directory was removed externally (e.g., OS cleanup), recreate it silently
@@ -385,6 +387,214 @@ export class SmartStorageProvider implements StorageProvider {
     }
   }
 
+  public async performComprehensiveCleanup(): Promise<void> {
+    try {
+      this.logger.info('Starting comprehensive cleanup cycle');
+      
+      // 1. Clean local temp files (existing functionality)
+      await this.cleanupOldTempFiles();
+      
+      // 2. Clean orphaned Supabase storage files
+      await this.cleanupOrphanedSupabaseFiles();
+      
+      // 3. Clean orphaned render job records
+      await this.cleanupOrphanedRenderJobs();
+      
+      this.logger.info('Comprehensive cleanup cycle completed');
+      
+    } catch (error) {
+      this.logger.error('Comprehensive cleanup cycle failed:', error);
+      // Don't throw - we want the interval to continue running
+    }
+  }
+
+  private async cleanupOrphanedSupabaseFiles(): Promise<void> {
+    try {
+      const maxAgeMs = STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS;
+      const cutoffTime = new Date(Date.now() - maxAgeMs);
+
+      this.logger.info(`🔍 Looking for orphaned files older than ${maxAgeMs / 1000 / 60} minutes (cutoff: ${cutoffTime.toISOString()})`);
+
+      // Get orphaned render jobs (completed but not saved to assets)
+      const { data: orphanedJobs, error } = await this.supabase
+        .from('render_jobs')
+        .select('id, output_url, created_at')
+        .eq('status', 'completed')
+        .not('output_url', 'is', null)
+        .lt('created_at', cutoffTime.toISOString());
+
+      if (error) {
+        this.logger.error('Failed to fetch orphaned jobs for file cleanup:', error);
+        return;
+      }
+
+      this.logger.info(`🔍 Found ${orphanedJobs?.length || 0} completed jobs older than cutoff time`);
+
+      if (!orphanedJobs || orphanedJobs.length === 0) {
+        this.logger.info('No orphaned files to clean up');
+        return;
+      }
+
+      // Filter out jobs that have been saved to assets
+      const { data: savedAssets, error: assetsError } = await this.supabase
+        .from('user_assets')
+        .select('metadata')
+        .not('metadata->render_job_id', 'is', null);
+
+      if (assetsError) {
+        this.logger.error('Failed to fetch saved assets for cleanup:', assetsError);
+        return;
+      }
+
+      this.logger.info(`🔍 Found ${savedAssets?.length || 0} saved assets with render job IDs`);
+
+      const savedJobIds = new Set(
+        (savedAssets || [])
+          .map(asset => asset.metadata?.render_job_id as string)
+          .filter(Boolean)
+      );
+
+      this.logger.info(`🔍 Saved job IDs: ${Array.from(savedJobIds).join(', ')}`);
+
+      const filesToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
+
+      this.logger.info(`🔍 After filtering: ${filesToDelete.length} files to delete out of ${orphanedJobs.length} total`);
+
+      if (filesToDelete.length === 0) {
+        this.logger.info('No orphaned files to clean up after filtering');
+        return;
+      }
+
+      this.logger.info(`Cleaning up ${filesToDelete.length} orphaned Supabase files`);
+
+      // Delete files from Supabase storage
+      let deletedCount = 0;
+      for (const job of filesToDelete) {
+        try {
+          const fileInfo = this.parseStorageUrl(job.output_url);
+          if (fileInfo) {
+            const { error: deleteError } = await this.supabase.storage
+              .from(fileInfo.bucket)
+              .remove([fileInfo.path]);
+
+            if (!deleteError) {
+              deletedCount++;
+              this.logger.info(`Deleted orphaned file: ${fileInfo.bucket}/${fileInfo.path}`);
+            } else {
+              this.logger.warn(`Failed to delete file ${fileInfo.path}:`, deleteError.message);
+            }
+          }
+        } catch (error) {
+          this.logger.warn(`Error processing file deletion for job ${job.id}:`, error);
+        }
+      }
+
+      if (deletedCount > 0) {
+        this.logger.info(`Successfully deleted ${deletedCount} orphaned Supabase files`);
+      }
+
+    } catch (error) {
+      this.logger.error('Failed to cleanup orphaned Supabase files:', error);
+    }
+  }
+
+  private async cleanupOrphanedRenderJobs(): Promise<void> {
+    try {
+      const maxAgeMs = STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS;
+      const cutoffTime = new Date(Date.now() - maxAgeMs);
+
+      this.logger.info(`🔍 Looking for orphaned render job records older than ${maxAgeMs / 1000 / 60} minutes (cutoff: ${cutoffTime.toISOString()})`);
+
+      // Get orphaned render job IDs (completed but not saved to assets, older than 3 minutes)
+      const { data: orphanedJobs, error } = await this.supabase
+        .from('render_jobs')
+        .select('id')
+        .eq('status', 'completed')
+        .lt('created_at', cutoffTime.toISOString());
+
+      if (error) {
+        this.logger.error('Failed to fetch orphaned jobs for record cleanup:', error);
+        return;
+      }
+
+      this.logger.info(`🔍 Found ${orphanedJobs?.length || 0} completed render job records older than cutoff time`);
+
+      if (!orphanedJobs || orphanedJobs.length === 0) {
+        this.logger.info('No orphaned render job records to clean up');
+        return;
+      }
+
+      // Filter out jobs that have been saved to assets
+      const { data: savedAssets, error: assetsError } = await this.supabase
+        .from('user_assets')
+        .select('metadata')
+        .not('metadata->render_job_id', 'is', null);
+
+      if (assetsError) {
+        this.logger.error('Failed to fetch saved assets for record cleanup:', assetsError);
+        return;
+      }
+
+      this.logger.info(`🔍 Found ${savedAssets?.length || 0} saved assets with render job IDs`);
+
+      const savedJobIds = new Set(
+        (savedAssets || [])
+          .map(asset => asset.metadata?.render_job_id as string)
+          .filter(Boolean)
+      );
+
+      this.logger.info(`🔍 Saved job IDs: ${Array.from(savedJobIds).join(', ')}`);
+
+      const jobsToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
+
+      this.logger.info(`🔍 After filtering: ${jobsToDelete.length} jobs to delete out of ${orphanedJobs.length} total`);
+
+      if (jobsToDelete.length === 0) {
+        this.logger.info('No orphaned render job records to clean up after filtering');
+        return;
+      }
+
+      this.logger.info(`Cleaning up ${jobsToDelete.length} orphaned render job records`);
+
+      // Delete orphaned render job records
+      const jobIds = jobsToDelete.map(job => job.id);
+      const { error: deleteError } = await this.supabase
+        .from('render_jobs')
+        .delete()
+        .in('id', jobIds);
+
+      if (deleteError) {
+        this.logger.error('Failed to delete orphaned render job records:', deleteError);
+        return;
+      }
+
+      this.logger.info(`Successfully deleted ${jobIds.length} orphaned render job records`);
+
+    } catch (error) {
+      this.logger.error('Failed to cleanup orphaned render job records:', error);
+    }
+  }
+
+  private parseStorageUrl(url: string): { bucket: string; path: string } | null {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      
+      // Supabase storage URLs: /storage/v1/object/sign/{bucket}/{path...}
+      const signIndex = pathParts.indexOf('sign');
+      if (signIndex === -1 || signIndex + 2 >= pathParts.length) {
+        return null;
+      }
+      
+      const bucket = pathParts[signIndex + 1];
+      const path = pathParts.slice(signIndex + 2).join('/');
+      
+      return { bucket: bucket!, path };
+    } catch {
+      return null;
+    }
+  }
+
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -392,10 +602,7 @@ export class SmartStorageProvider implements StorageProvider {
   // Cleanup method for graceful shutdown
   async cleanup(): Promise<void> {
     try {
-      if (this.cleanupInterval) {
-        clearInterval(this.cleanupInterval);
-        this.cleanupInterval = null;
-      }
+      // Cleanup is now handled by CleanupService
       // Remove temp directory and all contents
       await fs.promises.rm(this.tempDir, { recursive: true, force: true });
       this.logger.info('SmartStorageProvider cleanup completed');

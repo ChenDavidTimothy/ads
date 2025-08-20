@@ -7,3 +7,6 @@ export type { StorageProvider, StoragePreparedTarget, FinalizeOptions } from './
 export type { StorageHealthStatus, BucketHealth } from './health-monitor';
 export type { StorageError } from './error-handler';
 export type { SupportedExtension, SupportedImageExtension, SupportedVideoExtension } from './config';
+
+// Cleanup service is managed by the service registry
+// Import from services/service-registry instead
