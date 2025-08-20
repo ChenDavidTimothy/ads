@@ -36,7 +36,8 @@ function getNodeShortId(nodeType: NodeType): string {
     boolean_op: 'bop',
     math_op: 'mat',
     duplicate: 'dup',
-    image: 'img', // Add this line
+    image: 'img',
+    media: 'med',
   };
   return prefixes[nodeType];
 }

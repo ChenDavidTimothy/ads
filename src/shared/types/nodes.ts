@@ -277,14 +277,32 @@ export interface DuplicateNodeData extends BaseNodeData {
 
 // Image node data
 export interface ImageNodeData extends BaseNodeData {
-  imageAssetId: string; // References user_assets.id
-  position: Point2D;
-  scale: Point2D;
-  rotation: number;
-  opacity: number;
+  // No additional properties - basic image object only
+  _placeholder?: never; // Prevent empty interface warning
+}
+
+// Media node data
+export interface MediaNodeData extends BaseNodeData {
+  // Content
+  imageAssetId: string;
+  
+  // Crop Properties
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+  
+  // Display Properties
+  displayWidth: number;
+  displayHeight: number;
+  
+  // Binding System Support
+  variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+  variableBindingsByObject?: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+  perObjectAssignments?: PerObjectAssignments;
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData | ImageNodeData;
+export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData | ImageNodeData | MediaNodeData;
 
 // NodeType is derived from the registry (definitions)

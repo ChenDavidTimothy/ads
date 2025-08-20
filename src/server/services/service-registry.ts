@@ -11,7 +11,7 @@ export interface ServiceRegistry {
 
 class ServiceRegistryImpl implements ServiceRegistry {
   private isInitialized = false;
-  private services: Map<string, { start: () => void; stop: () => void; getStatus: () => any }> = new Map();
+  private services = new Map<string, { start: () => void; stop: () => void; getStatus: () => any }>();
 
   constructor() {
     // Register services

@@ -10,6 +10,8 @@ import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
 import { logger } from "@/lib/logger";
 import type { SceneObject, TextProperties } from "@/shared/types/scene";
+import { createServiceClient } from '@/utils/supabase/service';
+import { loadImage } from 'canvas';
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -27,6 +29,294 @@ export class AnimationNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
     this.registerHandler('animation', this.executeAnimation.bind(this));
     this.registerHandler('typography', this.executeTypography.bind(this));
+    this.registerHandler('media', this.executeMedia.bind(this));
+  }
+
+  private async executeMedia(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[]
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      node.data.identifier.id,
+      'input'
+    );
+
+    logger.info(`Applying media processing: ${node.data.identifier.displayName}`);
+
+    // Variable binding resolution (identical to Typography pattern)
+    const bindings = (data.variableBindings as Record<string, { target?: string; boundResultNodeId?: string }> | undefined) ?? {};
+    const bindingsByObject = (data.variableBindingsByObject as Record<string, Record<string, { target?: string; boundResultNodeId?: string }>> | undefined) ?? {};
+    
+    const readVarGlobal = (key: string): unknown => {
+      const rid = bindings[key]?.boundResultNodeId;
+      if (!rid) return undefined;
+      return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+    };
+    
+    const readVarForObject = (objectId: string | undefined) => (key: string): unknown => {
+      if (!objectId) return readVarGlobal(key);
+      const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
+      if (rid) return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+      return readVarGlobal(key);
+    };
+
+    // Build Media overrides with ALL properties
+    const baseOverrides: {
+      imageAssetId?: string;
+      cropX?: number;
+      cropY?: number;
+      cropWidth?: number;
+      cropHeight?: number;
+      displayWidth?: number;
+      displayHeight?: number;
+    } = {
+      imageAssetId: data.imageAssetId as string,
+      cropX: data.cropX as number,
+      cropY: data.cropY as number,
+      cropWidth: data.cropWidth as number,
+      cropHeight: data.cropHeight as number,
+      displayWidth: data.displayWidth as number,
+      displayHeight: data.displayHeight as number,
+    };
+
+    // Apply all global binding keys generically into baseOverrides
+    const globalKeys = Object.keys(bindings);
+    const nodeOverrides = JSON.parse(JSON.stringify(baseOverrides)) as typeof baseOverrides;
+    
+    for (const key of globalKeys) {
+      const val = readVarGlobal(key);
+      if (val === undefined) continue;
+      
+      // Type-safe property setting for ALL Media overrides
+      switch (key) {
+        case 'imageAssetId':
+          if (typeof val === 'string') nodeOverrides.imageAssetId = val;
+          break;
+        case 'cropX':
+          if (typeof val === 'number') nodeOverrides.cropX = val;
+          break;
+        case 'cropY':
+          if (typeof val === 'number') nodeOverrides.cropY = val;
+          break;
+        case 'cropWidth':
+          if (typeof val === 'number') nodeOverrides.cropWidth = val;
+          break;
+        case 'cropHeight':
+          if (typeof val === 'number') nodeOverrides.cropHeight = val;
+          break;
+        case 'displayWidth':
+          if (typeof val === 'number') nodeOverrides.displayWidth = val;
+          break;
+        case 'displayHeight':
+          if (typeof val === 'number') nodeOverrides.displayHeight = val;
+          break;
+      }
+    }
+
+    const processedObjects: unknown[] = [];
+
+    // Read optional per-object assignments metadata (from upstream)
+    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs);
+    // Read node-level assignments stored on the Media node itself
+    const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments as PerObjectAssignments | undefined;
+
+    // Merge upstream + node-level; node-level takes precedence per object
+    const mergedAssignments: PerObjectAssignments | undefined = (() => {
+      if (!upstreamAssignments && !nodeAssignments) return undefined;
+      const result: PerObjectAssignments = {};
+      const objectIds = new Set<string>([
+        ...Object.keys(upstreamAssignments ?? {}),
+        ...Object.keys(nodeAssignments ?? {}),
+      ]);
+      for (const objectId of objectIds) {
+        const base = upstreamAssignments?.[objectId];
+        const overrides = nodeAssignments?.[objectId];
+        const merged = mergeObjectAssignments(base, overrides);
+        if (merged) result[objectId] = merged;
+      }
+      return result;
+    })();
+
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      
+      for (const obj of inputData) {
+        if (this.isImageObject(obj)) {
+          const processed = await this.processImageObject(
+            obj,
+            nodeOverrides,
+            mergedAssignments,
+            bindingsByObject,
+            readVarForObject,
+            context
+          );
+          processedObjects.push(processed);
+        } else {
+          // Pass through non-image objects unchanged
+          processedObjects.push(obj);
+        }
+      }
+    }
+
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      'output',
+      'object_stream',
+      processedObjects,
+      {
+        perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
+        perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
+        perObjectAssignments: mergedAssignments
+      }
+    );
+
+    logger.info(`Media processing applied: ${processedObjects.length} objects processed`);
+  }
+
+  // Helper methods for media processing
+  private isImageObject(obj: unknown): obj is SceneObject {
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      'type' in obj &&
+      (obj as { type: string }).type === 'image'
+    );
+  }
+
+  private async processImageObject(
+    obj: SceneObject,
+    nodeOverrides: {
+      imageAssetId?: string;
+      cropX?: number;
+      cropY?: number;
+      cropWidth?: number;
+      cropHeight?: number;
+      displayWidth?: number;
+      displayHeight?: number;
+    },
+    assignments: PerObjectAssignments | undefined,
+    bindingsByObject: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>,
+    readVarForObject: (objectId: string | undefined) => (key: string) => unknown,
+    _context: ExecutionContext
+  ): Promise<SceneObject> {
+    const objectId = obj.id;
+    const reader = readVarForObject(objectId);
+    
+    // Build object-specific overrides
+    const objectOverrides = { ...nodeOverrides };
+    const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+    
+    for (const key of objectKeys) {
+      const val = reader(key);
+      if (val === undefined) continue;
+      
+      // Apply object-level bindings
+      switch (key) {
+        case 'imageAssetId':
+          if (typeof val === 'string') objectOverrides.imageAssetId = val;
+          break;
+        case 'cropX':
+          if (typeof val === 'number') objectOverrides.cropX = val;
+          break;
+        case 'cropY':
+          if (typeof val === 'number') objectOverrides.cropY = val;
+          break;
+        case 'cropWidth':
+          if (typeof val === 'number') objectOverrides.cropWidth = val;
+          break;
+        case 'cropHeight':
+          if (typeof val === 'number') objectOverrides.cropHeight = val;
+          break;
+        case 'displayWidth':
+          if (typeof val === 'number') objectOverrides.displayWidth = val;
+          break;
+        case 'displayHeight':
+          if (typeof val === 'number') objectOverrides.displayHeight = val;
+          break;
+      }
+    }
+
+    // Apply per-object assignments (manual overrides)
+    const assignment = assignments?.[objectId];
+    const initial = assignment?.initial ?? {};
+    
+    // Merge in the assignment overrides
+    const finalOverrides = { ...objectOverrides, ...initial };
+
+    // Load asset if specified
+    let imageData: { url: string; width: number; height: number } | undefined;
+    
+    if (finalOverrides.imageAssetId) {
+      try {
+        // Fetch asset from database (reuse logic from current image executor)
+        const supabase = createServiceClient();
+        const result = await supabase
+          .from('user_assets')
+          .select('*')
+          .eq('id', finalOverrides.imageAssetId)
+          .single();
+
+        const { data: asset, error } = result;
+        
+        if (!error && asset && typeof asset === 'object' && asset !== null) {
+          const bucketName = (asset as { bucket_name?: string }).bucket_name;
+          const storagePath = (asset as { storage_path?: string }).storage_path;
+          
+          if (bucketName && storagePath) {
+            // Get signed URL
+            const { data: signedUrl, error: urlError } = await supabase.storage
+              .from(bucketName)
+              .createSignedUrl(storagePath, 60 * 60);
+            
+            if (!urlError && signedUrl) {
+              // Load image to get dimensions
+              try {
+                const image = await loadImage(signedUrl.signedUrl);
+                imageData = {
+                  url: signedUrl.signedUrl,
+                  width: image.width,
+                  height: image.height
+                };
+              } catch (imageError) {
+                console.warn(`Failed to load image: ${finalOverrides.imageAssetId}`, imageError);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to process asset: ${finalOverrides.imageAssetId}`, error);
+      }
+    }
+
+    // Apply media processing to the image object
+    const processed = {
+      ...obj,
+      properties: {
+        ...obj.properties,
+        // Asset properties
+        imageUrl: imageData?.url,
+        originalWidth: imageData?.width ?? 100,
+        originalHeight: imageData?.height ?? 100,
+        assetId: finalOverrides.imageAssetId,
+        
+        // Crop properties
+        cropX: finalOverrides.cropX ?? 0,
+        cropY: finalOverrides.cropY ?? 0,
+        cropWidth: finalOverrides.cropWidth ?? 0,
+        cropHeight: finalOverrides.cropHeight ?? 0,
+        
+        // Display properties
+        displayWidth: finalOverrides.displayWidth ?? 0,
+        displayHeight: finalOverrides.displayHeight ?? 0,
+      }
+    };
+
+    return processed;
   }
 
   private async executeAnimation(

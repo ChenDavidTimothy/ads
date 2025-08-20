@@ -121,6 +121,9 @@ export function FlowEditorTab() {
 	const openTypographyRef = useRef<(nodeId: string) => void>((nodeId: string) => {
 		console.warn('Typography handler not initialized yet for node:', nodeId);
 	});
+	const openMediaRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+		console.warn('Media handler not initialized yet for node:', nodeId);
+	});
 	const openLogViewerRef = useRef<(nodeId: string) => void>((nodeId: string) => {
 		console.warn('Log viewer handler not initialized yet for node:', nodeId);
 	});
@@ -168,6 +171,23 @@ export function FlowEditorTab() {
 		};
 		window.addEventListener('open-typography-editor', handler as EventListener);
 		return () => window.removeEventListener('open-typography-editor', handler as EventListener);
+	}, [updateUI]);
+
+	useEffect(() => {
+		openMediaRef.current = (nodeId: string) => {
+			updateUI({ activeTab: 'media', selectedNodeId: nodeId, selectedNodeType: 'media' });
+			const url = new URL(window.location.href);
+			url.searchParams.set('tab', 'media');
+			url.searchParams.set('node', nodeId);
+			window.history.pushState({}, '', url.toString());
+		};
+
+		const handler = (e: Event) => {
+			const detail = (e as CustomEvent<{ nodeId: string }>).detail;
+			if (detail?.nodeId) openMediaRef.current(detail.nodeId);
+		};
+		window.addEventListener('open-media-editor', handler as EventListener);
+		return () => window.removeEventListener('open-media-editor', handler as EventListener);
 	}, [updateUI]);
 
 	useEffect(() => {

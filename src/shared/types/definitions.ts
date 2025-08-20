@@ -785,7 +785,7 @@ export const NODE_DEFINITIONS = {
           image: {
           type: 'image',
           label: 'Image',
-          description: 'Load image from user assets',
+          description: 'Basic image object for media processing',
           execution: {
             category: 'image',
             executor: 'image',
@@ -797,16 +797,7 @@ export const NODE_DEFINITIONS = {
       ]
     },
               properties: {
-            properties: [
-              { 
-                key: 'imageAssetId', 
-                type: 'string', 
-                label: 'Image Asset', 
-                defaultValue: '',
-                // Only the image asset selection is shown in the property panel
-                // Transform properties (position, scale, rotation, opacity) are controlled elsewhere
-              }
-            ]
+            properties: []
           },
     rendering: {
       icon: '🖼️',
@@ -815,13 +806,7 @@ export const NODE_DEFINITIONS = {
         handle: '!bg-[var(--node-input)]',
       }
     },
-    defaults: {
-      imageAssetId: '',
-      position: { x: 960, y: 540 }, // Center of 1920x1080
-      scale: { x: 1, y: 1 },
-      rotation: 0,
-      opacity: 1,
-    }
+    defaults: {}
   },
 
   text: {
@@ -994,6 +979,109 @@ export const NODE_DEFINITIONS = {
       supportsVariableBinding: true,
       supportsPerObjectAssignments: true,
       requiresTextObjects: true
+    }
+  },
+
+  media: {
+    type: 'media',
+    label: 'Media',
+    description: 'Media processing for image objects',
+    execution: {
+      category: 'animation',
+      executor: 'animation',
+    },
+    ports: {
+      inputs: [
+        { id: 'input', type: 'object_stream', label: 'Image Objects' }
+      ],
+      outputs: [
+        { id: 'output', type: 'object_stream', label: 'Processed Media Objects' }
+      ]
+    },
+    properties: {
+      properties: [
+        // Content Section
+        { 
+          key: 'imageAssetId', 
+          type: 'string', 
+          label: 'Image Asset', 
+          defaultValue: '',
+          description: 'Selected image from asset library'
+        },
+        
+        // Crop Section
+        { 
+          key: 'cropX', 
+          type: 'number', 
+          label: 'Crop X Offset', 
+          min: 0, 
+          defaultValue: 0,
+          description: 'Horizontal crop offset in pixels'
+        },
+        { 
+          key: 'cropY', 
+          type: 'number', 
+          label: 'Crop Y Offset', 
+          min: 0, 
+          defaultValue: 0,
+          description: 'Vertical crop offset in pixels'
+        },
+        { 
+          key: 'cropWidth', 
+          type: 'number', 
+          label: 'Crop Width', 
+          min: 1, 
+          defaultValue: 0,
+          description: 'Crop width (0 = use original)'
+        },
+        { 
+          key: 'cropHeight', 
+          type: 'number', 
+          label: 'Crop Height', 
+          min: 1, 
+          defaultValue: 0,
+          description: 'Crop height (0 = use original)'
+        },
+        
+        // Display Section
+        { 
+          key: 'displayWidth', 
+          type: 'number', 
+          label: 'Display Width', 
+          min: 1, 
+          defaultValue: 0,
+          description: 'Final display width (0 = use crop size)'
+        },
+        { 
+          key: 'displayHeight', 
+          type: 'number', 
+          label: 'Display Height', 
+          min: 1, 
+          defaultValue: 0,
+          description: 'Final display height (0 = use crop size)'
+        }
+      ]
+    },
+    rendering: {
+      icon: '🎬',
+      colors: {
+        primary: 'bg-[var(--node-animation)]',
+        handle: '!bg-[var(--node-animation)]',
+      }
+    },
+    defaults: {
+      imageAssetId: '',
+      cropX: 0,
+      cropY: 0,
+      cropWidth: 0,
+      cropHeight: 0,
+      displayWidth: 0,
+      displayHeight: 0
+    },
+    metadata: {
+      supportsVariableBinding: true,
+      supportsPerObjectAssignments: true,
+      requiresImageObjects: true
     }
   }
 } as const;

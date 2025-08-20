@@ -1,7 +1,7 @@
 // src/components/workspace/flow/node-types.tsx - Build-time generated component mapping
 import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
-import { AnimationNode, ResultNode, CanvasNode, TypographyNode } from "../nodes";
+import { AnimationNode, ResultNode, CanvasNode, TypographyNode, MediaNode } from "../nodes";
 import type { NodeData } from '@/shared/types/nodes';
 
 export function createNodeTypes(
@@ -38,6 +38,16 @@ export function createNodeTypes(
           const nodeId = (props.data as NodeData).identifier.id;
           // Defer to FlowEditorTab wiring; URL push handled there
           const event = new CustomEvent('open-typography-editor', { detail: { nodeId } });
+          window.dispatchEvent(event);
+        }} />
+      );
+    } else if (nodeType === 'media') {
+      // Special handling for media node with Media editor callback
+      nodeTypes[nodeType] = (props: Parameters<typeof MediaNode>[0]) => (
+        <MediaNode {...props} onOpenMedia={() => {
+          const nodeId = (props.data as NodeData).identifier.id;
+          // Defer to FlowEditorTab wiring; URL push handled there
+          const event = new CustomEvent('open-media-editor', { detail: { nodeId } });
           window.dispatchEvent(event);
         }} />
       );

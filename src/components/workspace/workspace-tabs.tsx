@@ -6,9 +6,10 @@ import { useWorkspace } from './workspace-context';
 import { Layers3, Timer } from 'lucide-react';
 import { Image as ImageIcon } from 'lucide-react';
 import { Type } from 'lucide-react';
+import { Image } from 'lucide-react';
 
 interface EditorTabConfig {
-  key: 'timeline' | 'canvas' | 'image' | 'audio' | 'typography';
+  key: 'timeline' | 'canvas' | 'image' | 'audio' | 'typography' | 'media';
   label: string;
   icon: ReactNode;
   requiredNodeType?: string;
@@ -18,6 +19,7 @@ const EDITOR_TABS: EditorTabConfig[] = [
   { key: 'timeline', label: 'Timeline', icon: <Timer size={16} />, requiredNodeType: 'animation' },
   { key: 'canvas', label: 'Canvas', icon: <ImageIcon size={16} />, requiredNodeType: 'canvas' },
   { key: 'typography', label: 'Typography', icon: <Type size={16} />, requiredNodeType: 'typography' },
+  { key: 'media', label: 'Media', icon: <Image size={16} />, requiredNodeType: 'media' },
   // future: image, audio
 ];
 
@@ -25,7 +27,7 @@ export function WorkspaceTabs() {
   const { state, updateUI } = useWorkspace();
   const { activeTab, selectedNodeId, selectedNodeType } = state.ui;
 
-  const handleTabChange = (tabKey: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'typography') => {
+  const handleTabChange = (tabKey: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'typography' | 'media') => {
     updateUI({ activeTab: tabKey });
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tabKey);

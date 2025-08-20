@@ -22,6 +22,7 @@ import { DuplicateNode } from './duplicate-node';
 import { ImageNode } from './image-node';
 import { TextNode } from './text-node';
 import { TypographyNode } from './typography-node';
+import { MediaNode } from './media-node';
 
 export const COMPONENT_MAPPING = {
   'triangle': TriangleNode,
@@ -44,6 +45,7 @@ export const COMPONENT_MAPPING = {
   'image': ImageNode,
   'text': TextNode,
   'typography': TypographyNode,
+  'media': MediaNode,
 } as const;
 
 export type ComponentMapping = typeof COMPONENT_MAPPING;
