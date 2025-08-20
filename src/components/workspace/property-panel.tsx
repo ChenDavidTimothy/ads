@@ -208,6 +208,13 @@ export function PropertyPanel({
           <div>Double-click the Canvas node to edit in its dedicated tab.</div>
         </div>
       )}
+
+      {/* TextStyle special handling */}
+      {node.type === 'textstyle' && (
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
+          <div>Double-click the TextStyle node to edit typography in its dedicated tab.</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -225,8 +232,8 @@ function SchemaBasedProperties({
   onChange,
   nodeType
 }: SchemaBasedProps) {
-  // Skip rendering properties for canvas nodes - they should only be edited in the dedicated tab
-  if (nodeType === 'canvas') {
+  // Skip rendering properties for nodes with dedicated editor tabs - they should only be edited in the dedicated tab
+  if (nodeType === 'canvas' || nodeType === 'textstyle') {
     return null;
   }
 
