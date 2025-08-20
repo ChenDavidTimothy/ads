@@ -70,15 +70,15 @@ export function resolveInitialObject(
   // CHANGE: Make color resolution conditional for text objects
   const initialFillColor = original.type !== 'text' 
     ? (assignments?.initial?.fillColor ?? (canvasOverrides?.fillColor ?? '#4444ff'))
-    : '#4444ff'; // Default for text (TextStyle will override)
+    : '#4444ff'; // Default for text (Typography will override)
 
   const initialStrokeColor = original.type !== 'text'
     ? (assignments?.initial?.strokeColor ?? (canvasOverrides?.strokeColor ?? '#ffffff'))
-    : '#ffffff'; // Default for text (TextStyle will override)
+    : '#ffffff'; // Default for text (Typography will override)
 
   const initialStrokeWidth = original.type !== 'text'
     ? (assignments?.initial?.strokeWidth ?? (canvasOverrides?.strokeWidth ?? 2))
-    : 0; // Default for text (TextStyle will override)
+    : 0; // Default for text (Typography will override)
 
   // Update sources tracking conditionally
   if (original.type !== 'text') {
@@ -126,7 +126,7 @@ export function resolveInitialObject(
       // CHANGE: Remove Canvas color application for text objects
       properties = {
         ...base,
-        // REMOVED: Canvas color properties - TextStyle node handles these
+        // REMOVED: Canvas color properties - Typography node handles these
         // color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
         // strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
         // strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,

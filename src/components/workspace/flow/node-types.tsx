@@ -1,7 +1,7 @@
 // src/components/workspace/flow/node-types.tsx - Build-time generated component mapping
 import type { NodeTypes, NodeProps } from 'reactflow';
 import { getNodeComponentMapping } from '@/shared/registry/registry-utils';
-import { AnimationNode, ResultNode, CanvasNode, TextstyleNode } from "../nodes";
+import { AnimationNode, ResultNode, CanvasNode, TypographyNode } from "../nodes";
 import type { NodeData } from '@/shared/types/nodes';
 
 export function createNodeTypes(
@@ -31,13 +31,13 @@ export function createNodeTypes(
       nodeTypes[nodeType] = (props: Parameters<typeof ResultNode>[0]) => (
         <ResultNode {...props} onOpenLogViewer={() => handleOpenResultLogViewer(props.data.identifier.id)} />
       );
-    } else if (nodeType === 'textstyle') {
-      // Special handling for textstyle node with TextStyle editor callback
-      nodeTypes[nodeType] = (props: Parameters<typeof TextstyleNode>[0]) => (
-        <TextstyleNode {...props} onOpenTextStyle={() => {
+    } else if (nodeType === 'typography') {
+      // Special handling for typography node with Typography editor callback
+      nodeTypes[nodeType] = (props: Parameters<typeof TypographyNode>[0]) => (
+        <TypographyNode {...props} onOpenTypography={() => {
           const nodeId = (props.data as NodeData).identifier.id;
           // Defer to FlowEditorTab wiring; URL push handled there
-          const event = new CustomEvent('open-textstyle-editor', { detail: { nodeId } });
+          const event = new CustomEvent('open-typography-editor', { detail: { nodeId } });
           window.dispatchEvent(event);
         }} />
       );

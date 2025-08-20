@@ -25,7 +25,7 @@ export interface SceneObject {
   initialStrokeColor?: string;
   initialStrokeWidth?: number;
   // Store text styling directly (not in metadata)
-  textStyle?: {
+  typography?: {
     fontFamily?: string;
     fontWeight?: string;
     fontStyle?: string;

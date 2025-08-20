@@ -1,8 +1,8 @@
 import type { Point2D } from '@/shared/types/core';
 
-export interface TextStyle {
+export interface Typography {
   fontFamily?: string;
-  fontSize?: number; // Can come from Text node or TextStyle node
+  fontSize?: number; // Can come from Text node or Typography node
   fontWeight?: string;
   fontStyle?: string;
   fillColor?: string;
@@ -14,7 +14,7 @@ export function drawText(
   ctx: CanvasRenderingContext2D,
   center: Point2D,
   content: string,
-  style: TextStyle
+  style: Typography
 ): void {
   ctx.save();
   

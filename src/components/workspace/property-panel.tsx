@@ -209,10 +209,10 @@ export function PropertyPanel({
         </div>
       )}
 
-      {/* TextStyle special handling */}
-      {node.type === 'textstyle' && (
+      {/* Typography special handling */}
+      {node.type === 'typography' && (
         <div className="space-y-[var(--space-2)] text-xs text-gray-400">
-          <div>Double-click the TextStyle node to edit typography in its dedicated tab.</div>
+          <div>Double-click the Typography node to edit typography in its dedicated tab.</div>
         </div>
       )}
     </div>
@@ -233,7 +233,7 @@ function SchemaBasedProperties({
   nodeType
 }: SchemaBasedProps) {
   // Skip rendering properties for nodes with dedicated editor tabs - they should only be edited in the dedicated tab
-  if (nodeType === 'canvas' || nodeType === 'textstyle') {
+  if (nodeType === 'canvas' || nodeType === 'typography') {
     return null;
   }
 
@@ -250,7 +250,7 @@ function SchemaBasedProperties({
     }
 
     // Only nodes that support variableBindings get the bind adornment (animation, canvas)
-    const supportsBinding = nodeType === 'animation' || nodeType === 'canvas' || nodeType === 'textstyle';
+    const supportsBinding = nodeType === 'animation' || nodeType === 'canvas' || nodeType === 'typography';
     const nodeId = data.identifier.id;
 
     switch (schema.type) {

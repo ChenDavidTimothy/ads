@@ -5,7 +5,7 @@ import { Timeline } from '../scene/timeline';
 import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
-import { drawText, type TextStyle } from '../geometry/text';
+import { drawText, type Typography } from '../geometry/text';
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -152,19 +152,19 @@ export class SceneRenderer {
 
   private renderText(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {
     const props = object.properties as TextProperties;
-    const textStyle = object.textStyle; // Applied by TextStyle node
+    const typography = object.typography; // Applied by Typography node
 
-    const style: TextStyle = {
-      // Typography Core (FROM TEXTSTYLE) - Keep unchanged
-      fontFamily: textStyle?.fontFamily ?? 'Arial',
+    const style: Typography = {
+      // Typography Core (FROM TYPOGRAPHY) - Keep unchanged
+      fontFamily: typography?.fontFamily ?? 'Arial',
       fontSize: props.fontSize, // Always use Text node fontSize
-      fontWeight: textStyle?.fontWeight ?? 'normal',
-      fontStyle: textStyle?.fontStyle ?? 'normal',
+      fontWeight: typography?.fontWeight ?? 'normal',
+      fontStyle: typography?.fontStyle ?? 'normal',
       
-      // Colors (FROM TEXTSTYLE) - Prioritize TextStyle colors over ObjectState
-      fillColor: textStyle?.fillColor ?? state.colors.fill,
-      strokeColor: textStyle?.strokeColor ?? state.colors.stroke ?? '#ffffff',
-      strokeWidth: textStyle?.strokeWidth ?? state.strokeWidth ?? 0,
+      // Colors (FROM TYPOGRAPHY) - Prioritize Typography colors over ObjectState
+      fillColor: typography?.fillColor ?? state.colors.fill,
+      strokeColor: typography?.strokeColor ?? state.colors.stroke ?? '#ffffff',
+      strokeWidth: typography?.strokeWidth ?? state.strokeWidth ?? 0,
     };
 
     // Cast to CanvasRenderingContext2D for text rendering

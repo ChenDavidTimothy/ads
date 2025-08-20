@@ -8,7 +8,7 @@ export { MergeNode } from "./merge-node";
 export { ConstantsNode } from "./constants-node";
 export { ResultNode } from "./result-node";
 export { AnimationNode } from "./animation-node";
-export { TextstyleNode } from "./textstyle-node";
+export { TypographyNode } from "./typography-node";
 export { SceneNode } from "./scene-node";
 export { CanvasNode } from "./canvas-node";
 export { FrameNode } from "./frame-node";

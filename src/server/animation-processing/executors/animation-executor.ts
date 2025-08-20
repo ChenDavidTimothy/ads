@@ -26,7 +26,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
   protected registerHandlers(): void {
     this.registerHandler('animation', this.executeAnimation.bind(this));
-    this.registerHandler('textstyle', this.executeTextStyle.bind(this));
+    this.registerHandler('typography', this.executeTypography.bind(this));
   }
 
   private async executeAnimation(
@@ -361,7 +361,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     return found ? merged : undefined;
   }
 
-  private async executeTextStyle(
+  private async executeTypography(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
     connections: ReactFlowEdge[]
@@ -393,7 +393,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return readVarGlobal(key);
     };
 
-    // Build text style overrides with ALL properties
+    // Build Typography overrides with ALL properties
     const baseOverrides: {
       // Typography properties (KEEP)
       fontFamily?: string;
@@ -447,7 +447,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       const val = readVarGlobal(key);
       if (val === undefined) continue;
       
-      // Type-safe property setting for ALL TextStyle overrides
+      // Type-safe property setting for ALL Typography overrides
       switch (key) {
         // EXISTING CASES (keep unchanged)
         case 'fontFamily':
@@ -510,7 +510,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Read optional per-object assignments metadata (from upstream)
     const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignmentsFromInputs(inputs);
-    // Read node-level assignments stored on the TextStyle node itself
+    // Read node-level assignments stored on the Typography node itself
     const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments as PerObjectAssignments | undefined;
 
     // Merge upstream + node-level; node-level takes precedence per object
@@ -733,7 +733,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     })();
 
     // Apply text styling from assignments
-    const finalTextStyle = {
+    const finalTypography = {
       fontFamily: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontFamily as string ?? objectOverrides.fontFamily,
       fontSize: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontSize as number ?? objectOverrides.fontSize,
       fontWeight: (maskedAssignmentsForObject?.initial as Record<string, unknown>)?.fontWeight as string ?? objectOverrides.fontWeight,
@@ -757,7 +757,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Return object with applied text styling
     return {
       ...obj,
-      textStyle: finalTextStyle
+      typography: finalTypography
     };
   }
 

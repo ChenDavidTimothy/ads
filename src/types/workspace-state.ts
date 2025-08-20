@@ -17,7 +17,7 @@ export interface WorkspaceState {
 
 	// UI state (not persisted to backend)
 	ui: {
-		activeTab: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'textstyle';
+		activeTab: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'typography';
 		selectedNodeId?: string;
 		selectedNodeType?: string;
 		leftSidebarCollapsed?: boolean;

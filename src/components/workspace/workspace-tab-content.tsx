@@ -4,7 +4,7 @@ import { useWorkspace } from './workspace-context';
 import { FlowEditorTab } from '@/components/workspace/flow-editor-tab';
 import { TimelineEditorTab } from '@/components/workspace/timeline-editor-tab';
 import { CanvasEditorTab } from '@/components/workspace/canvas-editor-tab';
-import { TextStyleEditorTab } from '@/components/workspace/textstyle-editor-tab';
+import { TypographyEditorTab } from '@/components/workspace/typography-editor-tab';
 
 export function WorkspaceTabContent() {
   const { state } = useWorkspace();
@@ -21,11 +21,11 @@ export function WorkspaceTabContent() {
         return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">No canvas node selected</div>;
       }
       return <CanvasEditorTab nodeId={selectedNodeId} />;
-    case 'textstyle':
-      if (!selectedNodeId || selectedNodeType !== 'textstyle') {
-        return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">No text style node selected</div>;
+    case 'typography':
+      if (!selectedNodeId || selectedNodeType !== 'typography') {
+        return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">No Typography node selected</div>;
       }
-      return <TextStyleEditorTab nodeId={selectedNodeId} />;
+      return <TypographyEditorTab nodeId={selectedNodeId} />;
     case 'flow':
     default:
       return <FlowEditorTab />;

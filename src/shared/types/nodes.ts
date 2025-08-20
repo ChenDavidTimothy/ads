@@ -48,7 +48,7 @@ export interface TextNodeData extends BaseNodeData {
   fontSize: number;
 }
 
-export interface TextStyleNodeData extends BaseNodeData {
+export interface TypographyNodeData extends BaseNodeData {
   fontFamily: string;
   fontWeight: string;
   textAlign: string;
@@ -276,6 +276,6 @@ export interface DuplicateNodeData extends BaseNodeData {
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | TextNodeData | TextStyleNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
+export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData;
 
 // NodeType is derived from the registry (definitions)

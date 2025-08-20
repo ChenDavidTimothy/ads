@@ -4,7 +4,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import type { Node } from 'reactflow';
 import { useWorkspace } from './workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
-import type { TextStyleNodeData } from '@/shared/types/nodes';
+import type { TypographyNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
 import { SelectField, NumberField, ColorField } from '@/components/ui/form-fields';
 import { SelectionList } from '@/components/ui/selection';
@@ -14,11 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Type } from 'lucide-react';
 
 // Badge Components
-function TextStyleBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+function TypographyBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
 	const { state } = useWorkspace();
 	const { resetToDefault } = useVariableBinding(nodeId, objectId);
 	
-	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+	const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined;
 	if (!node) return null;
 	let bound: string | undefined;
 	if (objectId) {
@@ -34,7 +34,7 @@ function TextStyleBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; 
 	);
 }
 
-function TextStyleOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+function TypographyOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
 	const { resetToDefault } = useVariableBinding(nodeId, objectId);
 	
 	return <Badge variant="manual" onRemove={() => resetToDefault(keyName)}>Manual</Badge>;
@@ -42,9 +42,9 @@ function TextStyleOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string;
 
 
 // Default Properties Component (Center Panel)
-function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
+function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
   const { state, updateFlow } = useWorkspace();
-  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined;
   const data = (node?.data ?? {}) as Record<string, unknown> & {
     // Typography Core
     fontFamily?: string;
@@ -59,7 +59,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
   };
   const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-  const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+  const def = (getNodeDefinition('typography')?.defaults as Record<string, unknown> & {
     fontFamily?: string;
     fontSize?: number;
     fontWeight?: string;
@@ -97,7 +97,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
-        Global Text Style Defaults
+        Global Typography Defaults
       </div>
       
       {/* Typography Core */}
@@ -136,7 +136,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
           {isBound('fontSize') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" />
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontSize" />
               </div>
             </div>
           )}
@@ -196,7 +196,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
             {isBound('fillColor') && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" />
+                  <TypographyBindingBadge nodeId={nodeId} keyName="fillColor" />
                 </div>
               </div>
             )}
@@ -213,7 +213,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
             {isBound('strokeColor') && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" />
+                  <TypographyBindingBadge nodeId={nodeId} keyName="strokeColor" />
                 </div>
               </div>
             )}
@@ -235,7 +235,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
           {isBound('strokeWidth') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+                <TypographyBindingBadge nodeId={nodeId} keyName="strokeWidth" />
               </div>
             </div>
           )}
@@ -250,7 +250,7 @@ function TextStyleDefaultProperties({ nodeId }: { nodeId: string }) {
 }
 
 // Per-Object Properties Component (Right Panel)
-function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange, _onClear }: {
+function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange, _onClear }: {
   nodeId: string;
   objectId: string;
   assignments: PerObjectAssignments;
@@ -258,7 +258,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   _onClear: () => void;
 }) {
   const { state } = useWorkspace();
-  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined;
+  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined;
   const selectedOverrides = assignments[objectId];
   const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
     // Typography Core  
@@ -272,7 +272,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
     strokeWidth?: number;
   };
 
-  const def = (getNodeDefinition('textstyle')?.defaults as Record<string, unknown> & {
+  const def = (getNodeDefinition('typography')?.defaults as Record<string, unknown> & {
     fontFamily?: string;
     fontSize?: number;
     fontWeight?: string;
@@ -368,7 +368,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
-        Per-Object Text Style Overrides
+        Per-Object Typography Overrides
       </div>
       
       {/* Typography Core */}
@@ -394,7 +394,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           {isOverridden('fontFamily') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+                <TypographyOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
               </div>
             </div>
           )}
@@ -415,8 +415,8 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           {(isOverridden('fontSize') || isBound('fontSize')) && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('fontSize') && !isBound('fontSize') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />}
-                <TextStyleBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
+                {isOverridden('fontSize') && !isBound('fontSize') && <TypographyOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
               </div>
             </div>
           )}
@@ -443,7 +443,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           {isOverridden('fontWeight') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+                <TypographyOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
               </div>
             </div>
           )}
@@ -465,7 +465,7 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           {isOverridden('fontStyle') && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TextStyleOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
+                <TypographyOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
               </div>
             </div>
           )}
@@ -492,8 +492,8 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
             {(isOverridden('fillColor') || isBound('fillColor')) && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('fillColor') && !isBound('fillColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
-                  <TextStyleBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+                  {isOverridden('fillColor') && !isBound('fillColor') && <TypographyOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+                  <TypographyBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
                 </div>
               </div>
             )}
@@ -510,8 +510,8 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
             {(isOverridden('strokeColor') || isBound('strokeColor')) && (
               <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('strokeColor') && !isBound('strokeColor') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
-                  <TextStyleBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+                  {isOverridden('strokeColor') && !isBound('strokeColor') && <TypographyOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+                  <TypographyBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
                 </div>
               </div>
             )}
@@ -533,8 +533,8 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
           {(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TextStyleOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
-                <TextStyleBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+                {isOverridden('strokeWidth') && !isBound('strokeWidth') && <TypographyOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
               </div>
             </div>
           )}
@@ -547,12 +547,12 @@ function TextStylePerObjectProperties({ nodeId, objectId, assignments, onChange,
 }
 
 // Main Editor Component
-export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
+export function TypographyEditorTab({ nodeId }: { nodeId: string }) {
 	const { state, updateUI, updateFlow } = useWorkspace();
 
-	// Find the TextStyle node in the workspace and its current assignments
-	const textStyleNode = useMemo(() => state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TextStyleNodeData> | undefined, [state.flow.nodes, nodeId]);
-	const assignments: PerObjectAssignments = useMemo(() => textStyleNode?.data?.perObjectAssignments ?? {}, [textStyleNode]);
+	// Find the Typography node in the workspace and its current assignments
+	const typographyNode = useMemo(() => state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<TypographyNodeData> | undefined, [state.flow.nodes, nodeId]);
+	const assignments: PerObjectAssignments = useMemo(() => typographyNode?.data?.perObjectAssignments ?? {}, [typographyNode]);
 
 	// Use enhanced object detection that understands duplication
 	const upstreamObjects = useMemo(() => {
@@ -578,7 +578,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 
 	// Log for debugging
 	React.useEffect(() => {
-		console.log(`[TextStyle] Detected ${upstreamObjects.length} text objects for TextStyle node ${nodeId}:`, 
+		console.log(`[Typography] Detected ${upstreamObjects.length} text objects for Typography node ${nodeId}:`, 
 			upstreamObjects.map(o => ({
 				id: o.data.identifier.id,
 				name: o.data.identifier.displayName,
@@ -596,7 +596,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 		const baseInitial = (current.initial ?? {}) as Record<string, unknown>;
 		const mergedInitial: Record<string, unknown> = { ...baseInitial, ...updates };
 		
-		// Deep-merge any nested objects if needed (TextStyle doesn't have nested objects like position/scale)
+		// Deep-merge any nested objects if needed (Typography doesn't have nested objects like position/scale)
 		const cleanedInitial = Object.fromEntries(Object.entries(mergedInitial).filter(([_, v]) => v !== undefined));
 		current.initial = cleanedInitial;
 		next[selectedObjectId] = current;
@@ -651,7 +651,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 				<div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
 					<div className="flex items-center gap-3">
 						<Type size={16} />
-						<div className="text-[var(--text-primary)] font-medium">Text Style</div>
+						<div className="text-[var(--text-primary)] font-medium">Typography</div>
 					</div>
 					<button className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
 						Back to Workspace
@@ -661,7 +661,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 				{/* Content */}
 				<div className="flex-1 p-[var(--space-4)]">
 					<div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">
-						No timeline for TextStyle. Select Default or a text object on the left to edit its properties.
+						No timeline for Typography. Select Default or a text object on the left to edit its properties.
 					</div>
 				</div>
 			</div>
@@ -670,7 +670,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 			<div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
 				{selectedObjectId ? (
-					<TextStylePerObjectProperties
+					<TypographyPerObjectProperties
 						nodeId={nodeId}
 						objectId={selectedObjectId}
 						assignments={assignments}
@@ -678,7 +678,7 @@ export function TextStyleEditorTab({ nodeId }: { nodeId: string }) {
 						_onClear={handleClearAssignment}
 					/>
 				) : (
-					<TextStyleDefaultProperties nodeId={nodeId} />
+					<TypographyDefaultProperties nodeId={nodeId} />
 				)}
 			</div>
 		</div>

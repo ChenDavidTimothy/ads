@@ -828,10 +828,10 @@ export const NODE_DEFINITIONS = {
     }
   },
 
-  textstyle: {
+  typography: {
     // Keep all existing metadata unchanged
-    type: 'textstyle',
-    label: 'Text Style',
+    type: 'typography',
+    label: 'Typography',
     description: 'Typography styling for text objects',
     execution: {
       category: 'animation',

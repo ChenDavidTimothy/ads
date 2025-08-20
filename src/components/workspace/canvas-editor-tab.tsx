@@ -331,7 +331,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 			{upstreamObjectTypes.allText && (
 				<div className="text-xs text-[var(--text-tertiary)] p-3 bg-[var(--surface-2)] rounded border border-[var(--border-primary)]">
 					<div className="font-medium mb-1">Color properties disabled</div>
-					<div>Use TextStyle node for text color and stroke styling</div>
+					<div>Use Typography node for text color and stroke styling</div>
 				</div>
 			)}
 		</div>
@@ -550,7 +550,7 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 			{isTextObject && (
 				<div className="text-xs text-[var(--text-tertiary)] p-3 bg-[var(--surface-2)] rounded border border-[var(--border-primary)]">
 					<div className="font-medium mb-1">Color properties disabled for text</div>
-					<div>Use TextStyle node for text color and stroke styling</div>
+					<div>Use Typography node for text color and stroke styling</div>
 				</div>
 			)}
 		</div>
