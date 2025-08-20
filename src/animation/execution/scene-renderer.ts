@@ -193,14 +193,20 @@ export class SceneRenderer {
       // Calculate crop and display parameters
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
-      const srcWidth = props.cropWidth ?? img.width;
-      const srcHeight = props.cropHeight ?? img.height;
+      // ✅ FIX: Use !== 0 check instead of ?? operator for crop dimensions
+      const srcWidth = props.cropWidth !== 0 ? props.cropWidth : img.width;
+      const srcHeight = props.cropHeight !== 0 ? props.cropHeight : img.height;
       
-      // Draw the image centered at origin
+      // Ensure source dimensions are valid numbers
+      const finalSrcWidth = srcWidth ?? img.width;
+      const finalSrcHeight = srcHeight ?? img.height;
+      
+      // Draw the image at top-left corner (0, 0) instead of centered
+      console.log('[DEBUG] renderImage: Drawing image at position (0, 0) with size', finalSrcWidth, 'x', finalSrcHeight);
       ctx.drawImage(
         img,
-        srcX, srcY, srcWidth, srcHeight,  // Source rectangle
-        -width / 2, -height / 2, width, height  // Destination rectangle
+        srcX, srcY, finalSrcWidth, finalSrcHeight,  // Source rectangle
+        0, 0, width, height  // Destination rectangle: top-left corner
       );
       
       console.log('[DEBUG] renderImage: Image drawing complete');
