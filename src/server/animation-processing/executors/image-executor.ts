@@ -1,4 +1,4 @@
-import type { ReactFlowNode, ReactFlowEdge } from '@/shared/types';
+import type { ReactFlowNode, ReactFlowEdge } from '../types/graph';
 import type { NodeData } from '@/shared/types/nodes';
 import type { ExecutionContext } from '@/server/animation-processing/execution-context';
 import { setNodeOutput } from '../execution-context';

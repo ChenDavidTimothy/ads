@@ -13,8 +13,8 @@ export interface NodeRenderConfig {
 
 // Execution metadata for backend processing
 export interface NodeExecutionConfig {
-  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data' | 'text';
-  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene' | 'text';
+  category: 'geometry' | 'timing' | 'animation' | 'logic' | 'output' | 'data' | 'text' | 'image' | 'input';
+  executor: 'geometry' | 'timing' | 'animation' | 'logic' | 'scene' | 'text' | 'image';
   executionPriority?: number; // For future conditional execution
 }
 

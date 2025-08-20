@@ -2,7 +2,6 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type { createTRPCContext } from "@/server/api/trpc";
-import { SmartStorageProvider } from "@/server/storage/smart-storage-provider";
 import { 
   uploadAssetInputSchema,
   listAssetsInputSchema,
@@ -273,7 +272,7 @@ export const assetsRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  // Move temporary file to permanent assets
+  // Save generated content to permanent assets
   moveToAssets: protectedProcedure
     .input(moveToAssetsInputSchema)
     .mutation(async ({ input, ctx }: { input: any; ctx: TRPCContext }) => {
