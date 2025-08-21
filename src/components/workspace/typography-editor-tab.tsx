@@ -95,6 +95,13 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
   const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+  
+  // Helper to get value for bound fields - blank if bound, normal value if not
+  const getValue = function<T>(key: string, defaultValue: T): T | undefined {
+    if (isBound(key)) return undefined; // Blank when bound
+    return (data[key] as T) ?? defaultValue;
+  };
+  
   const leftBorderClass = (key: string) => (
     isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
   );
@@ -111,7 +118,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <TextareaField
             label="Text Content"
-            value={content}
+            value={getValue('content', 'Sample Text') ?? 'Sample Text'} 
             onChange={(content) => updateFlow({ 
               nodes: state.flow.nodes.map(n => 
                 n.data?.identifier?.id !== nodeId ? n : 
@@ -141,7 +148,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <SelectField
             label="Font Family"
-            value={fontFamily}
+            value={getValue('fontFamily', 'Arial') ?? 'Arial'}
             onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
             options={[
               { value: 'Arial', label: 'Arial' },
@@ -151,14 +158,25 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
               { value: 'Georgia', label: 'Georgia' },
               { value: 'Verdana', label: 'Verdana' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" />}
+            disabled={isBound('fontFamily')}
+            inputClassName={leftBorderClass('fontFamily')}
           />
+          {/* Badge - Only show when bound */}
+          {isBound('fontFamily') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontFamily" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Typography Row 2 - Font Size */}
         <div>
           <NumberField
             label="Font Size (px)"
-            value={fontSize}
+            value={getValue('fontSize', 24)}
             onChange={(fontSize) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontSize } })) })}
             min={8} max={200} step={1}
             bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" />}
@@ -179,7 +197,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <SelectField
             label="Font Weight"
-            value={fontWeight}
+            value={getValue('fontWeight', 'normal') ?? 'normal'}
             onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
             options={[
               { value: 'normal', label: 'Normal (400)' },
@@ -191,21 +209,43 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
               { value: '800', label: 'Extra Bold (800)' },
               { value: '900', label: 'Black (900)' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" />}
+            disabled={isBound('fontWeight')}
+            inputClassName={leftBorderClass('fontWeight')}
           />
+          {/* Badge - Only show when bound */}
+          {isBound('fontWeight') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontWeight" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Typography Row 3 - Font Style */}
         <div>
           <SelectField
             label="Font Style"
-            value={fontStyle}
+            value={getValue('fontStyle', 'normal') ?? 'normal'}
             onChange={(fontStyle) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontStyle } })) })}
             options={[
               { value: 'normal', label: 'Normal' },
               { value: 'italic', label: 'Italic' },
               { value: 'oblique', label: 'Oblique' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" />}
+            disabled={isBound('fontStyle')}
+            inputClassName={leftBorderClass('fontStyle')}
           />
+          {/* Badge - Only show when bound */}
+          {isBound('fontStyle') && (
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontStyle" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -218,7 +258,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <ColorField 
               label="Fill Color" 
-              value={fillColor} 
+              value={getValue('fillColor', '#000000') ?? '#000000'} 
               onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
               disabled={isBound('fillColor')}
@@ -235,7 +275,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <ColorField 
               label="Stroke Color" 
-              value={strokeColor} 
+              value={getValue('strokeColor', '#ffffff') ?? '#ffffff'} 
               onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
               disabled={isBound('strokeColor')}
@@ -255,7 +295,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <NumberField 
             label="Stroke Width" 
-            value={strokeWidth} 
+            value={getValue('strokeWidth', 0)} 
             onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
             min={0} max={10} step={0.1}
             bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}
@@ -264,7 +304,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           />
           {/* Badge - Only show when needed */}
           {isBound('strokeWidth') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            <div className="text-[10px] text-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <TypographyBindingBadge nodeId={nodeId} keyName="strokeWidth" />
               </div>
@@ -444,12 +484,16 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
               { value: 'Georgia', label: 'Georgia' },
               { value: 'Verdana', label: 'Verdana' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontFamily" objectId={objectId} />}
+            disabled={isBound('fontFamily')}
+            inputClassName={leftBorderClass('fontFamily')}
           />
-          {/* Badge - Only show when overridden */}
-          {isOverridden('fontFamily') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontFamily') || isBound('fontFamily')) && (
+            <div className="text-[10px] text-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TypographyOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
+                {isOverridden('fontFamily') && !isBound('fontFamily') && <TypographyOverrideBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontFamily" objectId={objectId} />
               </div>
             </div>
           )}
@@ -493,12 +537,16 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
               { value: '800', label: 'Extra Bold (800)' },
               { value: '900', label: 'Black (900)' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontWeight" objectId={objectId} />}
+            disabled={isBound('fontWeight')}
+            inputClassName={leftBorderClass('fontWeight')}
           />
-          {/* Badge - Only show when overridden */}
-          {isOverridden('fontWeight') && (
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontWeight') || isBound('fontWeight')) && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TypographyOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
+                {isOverridden('fontWeight') && !isBound('fontWeight') && <TypographyOverrideBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontWeight" objectId={objectId} />
               </div>
             </div>
           )}
@@ -515,12 +563,16 @@ function TypographyPerObjectProperties({ nodeId, objectId, assignments, onChange
               { value: 'italic', label: 'Italic' },
               { value: 'oblique', label: 'Oblique' }
             ]}
+            bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontStyle" objectId={objectId} />}
+            disabled={isBound('fontStyle')}
+            inputClassName={leftBorderClass('fontStyle')}
           />
-          {/* Badge - Only show when overridden */}
-          {isOverridden('fontStyle') && (
+          {/* Badge - Only show when needed */}
+          {(isOverridden('fontStyle') || isBound('fontStyle')) && (
             <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                <TypographyOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
+                {isOverridden('fontStyle') && !isBound('fontStyle') && <TypographyOverrideBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />}
+                <TypographyBindingBadge nodeId={nodeId} keyName="fontStyle" objectId={objectId} />
               </div>
             </div>
           )}

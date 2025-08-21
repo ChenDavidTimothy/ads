@@ -90,6 +90,13 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   const displayHeight = data.displayHeight ?? def.displayHeight ?? 0;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+  
+  // Helper to get value for bound fields - blank if bound, normal value if not
+  const getValue = function<T>(key: string, defaultValue: T): T | undefined {
+    if (isBound(key)) return undefined; // Blank when bound
+    return (data[key] as T) ?? defaultValue;
+  };
+  
   const leftBorderClass = (key: string) => (
     isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
   );
@@ -209,7 +216,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="X"
-              value={cropX}
+              value={getValue('cropX', 0)}
               onChange={(cropX) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropX } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" />}
@@ -228,7 +235,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Y"
-              value={cropY}
+              value={getValue('cropY', 0)}
               onChange={(cropY) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropY } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" />}
@@ -251,7 +258,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Width (0=full)"
-              value={cropWidth}
+              value={getValue('cropWidth', 0)}
               onChange={(cropWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropWidth } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" />}
@@ -270,7 +277,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Height (0=full)"
-              value={cropHeight}
+              value={getValue('cropHeight', 0)}
               onChange={(cropHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropHeight } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" />}
@@ -298,7 +305,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Width (0=auto)"
-              value={displayWidth}
+              value={getValue('displayWidth', 0)}
               onChange={(displayWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayWidth } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" />}
@@ -317,7 +324,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Height (0=auto)"
-              value={displayHeight}
+              value={getValue('displayHeight', 0)}
               onChange={(displayHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayHeight } })) })}
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" />}
