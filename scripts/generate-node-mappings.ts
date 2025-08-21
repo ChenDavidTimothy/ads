@@ -82,9 +82,7 @@ function generateExecutorMappings(): string {
   
   Object.entries(NODE_DEFINITIONS).forEach(([nodeType, definition]) => {
     const executor = definition.execution.executor;
-    if (!executorMappings[executor]) {
-      executorMappings[executor] = [];
-    }
+    executorMappings[executor] ??= [];
     executorMappings[executor].push(nodeType);
   });
 
@@ -137,7 +135,7 @@ async function generateMappings(): Promise<void> {
 
 // Check if this is the main module
 if (process.argv[1] === __filename) {
-  generateMappings();
+  void generateMappings();
 }
 
 export { generateMappings };
