@@ -4,6 +4,13 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
+  
+  // Add these debug lines:
+  console.log("🔍 Auth Callback Debug:");
+  console.log("request.url:", request.url);
+  console.log("origin:", origin);
+  console.log("NEXT_PUBLIC_SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL);
+  
   const code = searchParams.get("code");
   const redirectTo = searchParams.get("redirectTo");
   const error = searchParams.get("error");
@@ -65,8 +72,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Before the final redirect, add:
+    console.log("🔍 Final redirect destination:", destination);
+    console.log("🔍 Final redirect origin:", origin);
+    console.log("🔍 Final redirect URL:", new URL(destination, origin).toString());
+
     // Mark successful login for auth status component
-    const response = NextResponse.redirect(new URL(destination, origin));
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? origin;
+    const response = NextResponse.redirect(new URL(destination, baseUrl));
     response.cookies.set("justSignedIn", "1", {
       maxAge: 60, // 1 minute
       httpOnly: false, // Needs to be accessible by client-side JS

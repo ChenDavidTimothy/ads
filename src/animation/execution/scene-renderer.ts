@@ -8,6 +8,52 @@ import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
 import { drawText, type Typography } from '../geometry/text';
 import { loadImage, type Image } from 'canvas';
 
+// ✅ CRITICAL FIX: Add timeout wrapper for loadImage
+async function loadImageWithTimeout(url: string, timeoutMs = 30000): Promise<Image> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Image loading timed out after ${timeoutMs}ms for URL: ${url}`));
+    }, timeoutMs);
+
+    loadImage(url)
+      .then((img) => {
+        clearTimeout(timeoutId);
+        resolve(img);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      });
+  });
+}
+
+// ✅ CRITICAL FIX: Add retry logic for image loading
+async function loadImageWithRetry(url: string, maxRetries = 3, timeoutMs = 30000): Promise<Image> {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[SceneRenderer] Loading image attempt ${attempt}/${maxRetries}: ${url}`);
+      return await loadImageWithTimeout(url, timeoutMs);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`[SceneRenderer] Image loading attempt ${attempt} failed:`, lastError.message);
+      
+      if (attempt === maxRetries) {
+        console.error(`[SceneRenderer] Failed to load image after ${maxRetries} attempts:`, lastError.message);
+        throw new Error(`Failed to load image after ${maxRetries} attempts. Last error: ${lastError.message}`);
+      }
+      
+      // Exponential backoff: wait longer between retries
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`[SceneRenderer] Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
   translation: Point2D
@@ -60,6 +106,12 @@ export interface SceneRenderConfig {
   width: number;
   height: number;
   backgroundColor: string;
+  // ✅ CRITICAL FIX: Add image loading configuration
+  imageLoading?: {
+    timeoutMs?: number;
+    maxRetries?: number;
+    retryDelayMs?: number;
+  };
 }
 
 export class SceneRenderer {
@@ -68,11 +120,24 @@ export class SceneRenderer {
   private timeline: Timeline;
   // ✅ CRITICAL FIX: Add image cache
   private imageCache = new Map<string, Image>();
+  // ✅ CRITICAL FIX: Add image loading configuration with proper typing
+  private imageLoadingConfig: {
+    timeoutMs: number;
+    maxRetries: number;
+    retryDelayMs: number;
+  };
 
   constructor(scene: AnimationScene, config: SceneRenderConfig) {
     this.scene = scene;
     this.config = config;
     this.timeline = new Timeline(scene);
+    
+    // ✅ CRITICAL FIX: Set default image loading configuration with proper defaults
+    this.imageLoadingConfig = {
+      timeoutMs: config.imageLoading?.timeoutMs ?? 30000,
+      maxRetries: config.imageLoading?.maxRetries ?? 3,
+      retryDelayMs: config.imageLoading?.retryDelayMs ?? 1000
+    };
   }
 
   async renderFrame(ctx: NodeCanvasContext, time: number): Promise<void> {
@@ -183,10 +248,15 @@ export class SceneRenderer {
     
     try {
       // ✅ CRITICAL FIX: Check cache first, load only if not cached
-      let img = this.imageCache.get(props.imageUrl);
+      let img: Image | undefined = this.imageCache.get(props.imageUrl);
       if (!img) {
-        img = await loadImage(props.imageUrl);
+        img = await loadImageWithRetry(props.imageUrl, this.imageLoadingConfig.maxRetries, this.imageLoadingConfig.timeoutMs);
         this.imageCache.set(props.imageUrl, img);
+      }
+      
+      // Ensure img is loaded before proceeding
+      if (!img) {
+        throw new Error('Failed to load image');
       }
       
       // Calculate crop and display parameters
