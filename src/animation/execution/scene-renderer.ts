@@ -46,8 +46,14 @@ function saveAndTransform(
   ctx.save();
   applyTransform(ctx, transform);
   const result = drawCallback();
-  ctx.restore();
-  return result;
+  if (result instanceof Promise) {
+    return result.then(() => {
+      ctx.restore();
+    });
+  } else {
+    ctx.restore();
+    return result;
+  }
 }
 
 export interface SceneRenderConfig {
@@ -96,7 +102,7 @@ export class SceneRenderer {
     const originalAlpha = ctx.globalAlpha;
     ctx.globalAlpha = originalAlpha * state.opacity;
 
-    await saveAndTransform(ctx, transform, async () => {
+    const result = saveAndTransform(ctx, transform, () => {
       switch (object.type) {
         case 'triangle':
           this.renderTriangle(ctx, object.properties as TriangleProperties, state);
@@ -108,13 +114,17 @@ export class SceneRenderer {
           this.renderRectangle(ctx, object.properties as RectangleProperties, state);
           break;
         case 'image':
-          await this.renderImage(ctx, object.properties as ImageProperties, state);
-          break;
+          return this.renderImage(ctx, object.properties as ImageProperties, state);
         case 'text':
           this.renderText(ctx, object, state);
           break;
       }
     });
+
+    // Handle async result if present
+    if (result instanceof Promise) {
+      await result;
+    }
 
     // Restore opacity
     ctx.globalAlpha = originalAlpha;
