@@ -1,39 +1,52 @@
 // src/animation/execution/scene-renderer.ts
-import type { NodeCanvasContext, Point2D, Transform } from '@/shared/types/core';
-import type { AnimationScene, SceneObject, ObjectState, TriangleProperties, CircleProperties, RectangleProperties, ImageProperties, TextProperties } from '@/shared/types/scene';
-import { Timeline } from '../scene/timeline';
-import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
-import { drawCircle, type CircleStyle } from '../geometry/circle';
-import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
-import { drawText, type Typography } from '../geometry/text';
-import { loadImage, type Image } from 'canvas';
+import type {
+  NodeCanvasContext,
+  Point2D,
+  Transform,
+} from "@/shared/types/core";
+import type {
+  AnimationScene,
+  SceneObject,
+  ObjectState,
+  TriangleProperties,
+  CircleProperties,
+  RectangleProperties,
+  ImageProperties,
+  TextProperties,
+} from "@/shared/types/scene";
+import { Timeline } from "../scene/timeline";
+import { drawTriangle, type TriangleStyle } from "../geometry/triangle";
+import { drawCircle, type CircleStyle } from "../geometry/circle";
+import { drawRectangle, type RectangleStyle } from "../geometry/rectangle";
+import { drawText, type Typography } from "../geometry/text";
+import { loadImage, type Image } from "canvas";
 // ADD this import after the existing canvas import
-import { withTimeout } from '@/server/utils/timeout-utils';
+import { withTimeout } from "@/server/utils/timeout-utils";
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  translation: Point2D
+  translation: Point2D,
 ): void {
   ctx.translate(Math.round(translation.x), Math.round(translation.y));
 }
 
 function applyRotation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  rotation: number
+  rotation: number,
 ): void {
   ctx.rotate(rotation);
 }
 
 function applyScale(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  scale: Point2D
+  scale: Point2D,
 ): void {
   ctx.scale(scale.x, scale.y);
 }
 
 function applyTransform(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  transform: Transform
+  transform: Transform,
 ): void {
   applyTranslation(ctx, transform.translate);
   applyRotation(ctx, transform.rotate);
@@ -43,7 +56,7 @@ function applyTransform(
 function saveAndTransform(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
   transform: Transform,
-  drawCallback: () => void | Promise<void>
+  drawCallback: () => void | Promise<void>,
 ): void | Promise<void> {
   ctx.save();
   applyTransform(ctx, transform);
@@ -95,11 +108,15 @@ export class SceneRenderer {
     }
   }
 
-  private async renderObject(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): Promise<void> {
+  private async renderObject(
+    ctx: NodeCanvasContext,
+    object: SceneObject,
+    state: ObjectState,
+  ): Promise<void> {
     const transform = {
       translate: state.position,
       rotate: state.rotation,
-      scale: state.scale
+      scale: state.scale,
     };
 
     // Apply opacity
@@ -108,18 +125,30 @@ export class SceneRenderer {
 
     const result = saveAndTransform(ctx, transform, () => {
       switch (object.type) {
-        case 'triangle':
-          this.renderTriangle(ctx, object.properties as TriangleProperties, state);
+        case "triangle":
+          this.renderTriangle(
+            ctx,
+            object.properties as TriangleProperties,
+            state,
+          );
           break;
-        case 'circle':
+        case "circle":
           this.renderCircle(ctx, object.properties as CircleProperties, state);
           break;
-        case 'rectangle':
-          this.renderRectangle(ctx, object.properties as RectangleProperties, state);
+        case "rectangle":
+          this.renderRectangle(
+            ctx,
+            object.properties as RectangleProperties,
+            state,
+          );
           break;
-        case 'image':
-          return this.renderImage(ctx, object.properties as ImageProperties, state);
-        case 'text':
+        case "image":
+          return this.renderImage(
+            ctx,
+            object.properties as ImageProperties,
+            state,
+          );
+        case "text":
           this.renderText(ctx, object, state);
           break;
       }
@@ -134,55 +163,81 @@ export class SceneRenderer {
     ctx.globalAlpha = originalAlpha;
   }
 
-  private renderTriangle(ctx: NodeCanvasContext, props: TriangleProperties, state: ObjectState): void {
+  private renderTriangle(
+    ctx: NodeCanvasContext,
+    props: TriangleProperties,
+    state: ObjectState,
+  ): void {
     const style: TriangleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? '#ffffff', 
-      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
+      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     // Triangle is drawn at origin since transform is already applied
     drawTriangle(ctx, { x: 0, y: 0 }, props.size, 0, style);
   }
 
-  private renderCircle(ctx: NodeCanvasContext, props: CircleProperties, state: ObjectState): void {
+  private renderCircle(
+    ctx: NodeCanvasContext,
+    props: CircleProperties,
+    state: ObjectState,
+  ): void {
     const style: CircleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? '#ffffff',
-      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
+      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     drawCircle(ctx, { x: 0, y: 0 }, props.radius, style);
   }
 
-  private renderRectangle(ctx: NodeCanvasContext, props: RectangleProperties, state: ObjectState): void {
+  private renderRectangle(
+    ctx: NodeCanvasContext,
+    props: RectangleProperties,
+    state: ObjectState,
+  ): void {
     const style: RectangleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? '#ffffff',
-      strokeWidth: state.strokeWidth  // ✅ CHANGE - Use ObjectState instead of hardcode
+      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
     // Draw rectangle centered at origin
-    drawRectangle(ctx, { x: -props.width / 2, y: -props.height / 2 }, props.width, props.height, style);
+    drawRectangle(
+      ctx,
+      { x: -props.width / 2, y: -props.height / 2 },
+      props.width,
+      props.height,
+      style,
+    );
   }
 
   // ✅ CRITICAL FIX: Optimized image rendering with caching
-  private async renderImage(ctx: NodeCanvasContext, props: ImageProperties, _state: ObjectState): Promise<void> {
+  private async renderImage(
+    ctx: NodeCanvasContext,
+    props: ImageProperties,
+    _state: ObjectState,
+  ): Promise<void> {
     // Skip rendering if no image URL
     if (!props.imageUrl) return;
 
     // Calculate final dimensions based on crop and display settings
-    const cropWidth = props.cropWidth !== 0 ? props.cropWidth : (props.originalWidth ?? 100);
-    const cropHeight = props.cropHeight !== 0 ? props.cropHeight : (props.originalHeight ?? 100);
-    const finalWidth = props.displayWidth !== 0 ? props.displayWidth : cropWidth;
-    const finalHeight = props.displayHeight !== 0 ? props.displayHeight : cropHeight;
-    
+    const cropWidth =
+      props.cropWidth !== 0 ? props.cropWidth : (props.originalWidth ?? 100);
+    const cropHeight =
+      props.cropHeight !== 0 ? props.cropHeight : (props.originalHeight ?? 100);
+    const finalWidth =
+      props.displayWidth !== 0 ? props.displayWidth : cropWidth;
+    const finalHeight =
+      props.displayHeight !== 0 ? props.displayHeight : cropHeight;
+
     const width = finalWidth ?? 100;
     const height = finalHeight ?? 100;
-    
+
     try {
       // ✅ CRITICAL FIX: Check cache first, load with timeout if not cached
       let img = this.imageCache.get(props.imageUrl);
@@ -190,68 +245,86 @@ export class SceneRenderer {
         img = await withTimeout(
           loadImage(props.imageUrl),
           30000, // 30 second timeout
-          `Image load timeout: ${props.imageUrl}`
+          `Image load timeout: ${props.imageUrl}`,
         );
         this.imageCache.set(props.imageUrl, img);
       }
-      
+
       // Calculate crop and display parameters
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
       const srcWidth = props.cropWidth !== 0 ? props.cropWidth : img.width;
       const srcHeight = props.cropHeight !== 0 ? props.cropHeight : img.height;
-      
+
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;
-      
+
       // Draw the image at origin (transforms already applied)
       ctx.drawImage(
         img,
-        srcX, srcY, finalSrcWidth, finalSrcHeight,  // Source rectangle
-        0, 0, width, height  // Destination rectangle
+        srcX,
+        srcY,
+        finalSrcWidth,
+        finalSrcHeight, // Source rectangle
+        0,
+        0,
+        width,
+        height, // Destination rectangle
       );
-      
     } catch {
       // Fallback to placeholder if image loading fails
       this.drawImagePlaceholder(ctx, width, height);
     }
   }
-  
-  private drawImagePlaceholder(ctx: NodeCanvasContext, width: number, height: number): void {
+
+  private drawImagePlaceholder(
+    ctx: NodeCanvasContext,
+    width: number,
+    height: number,
+  ): void {
     // Draw placeholder rectangle
-    ctx.fillStyle = '#cccccc';
-    ctx.strokeStyle = '#999999';
+    ctx.fillStyle = "#cccccc";
+    ctx.strokeStyle = "#999999";
     ctx.lineWidth = 2;
     ctx.fillRect(-width / 2, -height / 2, width, height);
     ctx.strokeRect(-width / 2, -height / 2, width, height);
-    
+
     // Add text to indicate it's a placeholder
-    ctx.fillStyle = '#666666';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('IMAGE PLACEHOLDER', 0, 0);
+    ctx.fillStyle = "#666666";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("IMAGE PLACEHOLDER", 0, 0);
   }
 
-  private renderText(ctx: NodeCanvasContext, object: SceneObject, state: ObjectState): void {
+  private renderText(
+    ctx: NodeCanvasContext,
+    object: SceneObject,
+    state: ObjectState,
+  ): void {
     const props = object.properties as TextProperties;
     const typography = object.typography; // Applied by Typography node
 
     const style: Typography = {
       // Typography Core (FROM TYPOGRAPHY) - Keep unchanged
-      fontFamily: typography?.fontFamily ?? 'Arial',
+      fontFamily: typography?.fontFamily ?? "Arial",
       fontSize: props.fontSize, // Always use Text node fontSize
-      fontWeight: typography?.fontWeight ?? 'normal',
-      fontStyle: typography?.fontStyle ?? 'normal',
-      
+      fontWeight: typography?.fontWeight ?? "normal",
+      fontStyle: typography?.fontStyle ?? "normal",
+
       // Colors (FROM TYPOGRAPHY) - Prioritize Typography colors over ObjectState
       fillColor: typography?.fillColor ?? state.colors.fill,
-      strokeColor: typography?.strokeColor ?? state.colors.stroke ?? '#ffffff',
+      strokeColor: typography?.strokeColor ?? state.colors.stroke ?? "#ffffff",
       strokeWidth: typography?.strokeWidth ?? state.strokeWidth ?? 0,
     };
 
     // Cast to CanvasRenderingContext2D for text rendering
-    drawText(ctx as unknown as CanvasRenderingContext2D, { x: 0, y: 0 }, props.content, style);
+    drawText(
+      ctx as unknown as CanvasRenderingContext2D,
+      { x: 0, y: 0 },
+      props.content,
+      style,
+    );
   }
 
   // ✅ CRITICAL FIX: Dispose cache to prevent memory leaks
@@ -267,8 +340,8 @@ export function createSimpleScene(duration: number): AnimationScene {
     objects: [],
     animations: [],
     background: {
-      color: '#000000'
-    }
+      color: "#000000",
+    },
   };
 }
 
@@ -277,18 +350,18 @@ export function addTriangleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  size: number
+  size: number,
 ): void {
   scene.objects.push({
     id,
-    type: 'triangle',
+    type: "triangle",
     properties: {
-      size
+      size,
     },
     initialPosition: position,
     initialRotation: 0,
     initialScale: { x: 1, y: 1 },
-    initialOpacity: 1
+    initialOpacity: 1,
   });
 }
 
@@ -296,18 +369,18 @@ export function addCircleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  radius: number
+  radius: number,
 ): void {
   scene.objects.push({
     id,
-    type: 'circle',
+    type: "circle",
     properties: {
-      radius
+      radius,
     },
     initialPosition: position,
     initialRotation: 0,
     initialScale: { x: 1, y: 1 },
-    initialOpacity: 1
+    initialOpacity: 1,
   });
 }
 
@@ -316,18 +389,18 @@ export function addRectangleToScene(
   id: string,
   position: Point2D,
   width: number,
-  height: number
+  height: number,
 ): void {
   scene.objects.push({
     id,
-    type: 'rectangle',
+    type: "rectangle",
     properties: {
       width,
-      height
+      height,
     },
     initialPosition: position,
     initialRotation: 0,
     initialScale: { x: 1, y: 1 },
-    initialOpacity: 1
+    initialOpacity: 1,
   });
 }

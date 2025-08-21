@@ -7,16 +7,22 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { RectangleNodeData } from "@/shared/types/nodes";
 import { Square as SquareIcon } from "lucide-react";
 
-export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) {
-  const nodeDefinition = getNodeDefinition('rectangle');
-  
+export function RectangleNode({
+  data,
+  selected,
+}: NodeProps<RectangleNodeData>) {
+  const nodeDefinition = getNodeDefinition("rectangle");
+
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div 
-            className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: '#4444ff' }} // Canvas default
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
+            style={{ backgroundColor: "#4444ff" }} // Canvas default
           >
             <SquareIcon size={12} />
           </div>
@@ -26,7 +32,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div>Width: {data.width || 100}px</div>
         <div>Height: {data.height || 60}px</div>
       </CardContent>
@@ -38,7 +44,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 bg-[var(--node-geometry)] !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-geometry)]`}
           style={{ top: `50%` }}
         />
       ))}

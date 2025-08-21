@@ -64,7 +64,11 @@ export const workspaceRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1).max(100).default("Untitled") }).optional())
+    .input(
+      z
+        .object({ name: z.string().min(1).max(100).default("Untitled") })
+        .optional(),
+    )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
       const payload = {
@@ -85,38 +89,43 @@ export const workspaceRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().uuid(),
-        flowData: z.object({ nodes: z.unknown().array(), edges: z.unknown().array() }),
+        flowData: z.object({
+          nodes: z.unknown().array(),
+          edges: z.unknown().array(),
+        }),
         version: z.number().int().nonnegative(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
-      
+
       // FIX: Properly type the flow data instead of using any
       const flowData = flowDataSchema.parse(input.flowData);
-      
+
       // Check if the flow data has actually changed to avoid unnecessary updates
-      const { data: currentWorkspace } = await supabase
+      const { data: currentWorkspace } = (await supabase
         .from("workspaces")
         .select("flow_data, version")
         .eq("id", input.id)
         .eq("user_id", user.id)
-        .single() as { data: WorkspaceRow | null };
-        
-      if (currentWorkspace && 
-          currentWorkspace.version === input.version && 
-          JSON.stringify(currentWorkspace.flow_data) === JSON.stringify(flowData)) {
+        .single()) as { data: WorkspaceRow | null };
+
+      if (
+        currentWorkspace &&
+        currentWorkspace.version === input.version &&
+        JSON.stringify(currentWorkspace.flow_data) === JSON.stringify(flowData)
+      ) {
         // No changes detected, return current data without updating
         return saveResultSchema.parse({
           version: currentWorkspace.version,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
       }
-      
+
       // Optimistic concurrency: version must match
       const { data, error } = await supabase
         .from("workspaces")
-        .update({ flow_data: flowData, version: (input.version + 1) })
+        .update({ flow_data: flowData, version: input.version + 1 })
         .eq("id", input.id)
         .eq("user_id", user.id)
         .eq("version", input.version)
@@ -125,7 +134,10 @@ export const workspaceRouter = createTRPCRouter({
 
       if (error) throw error;
       if (!data) {
-        throw new TRPCError({ code: "CONFLICT", message: "Workspace has changed since last load. Please reload." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Workspace has changed since last load. Please reload.",
+        });
       }
 
       return saveResultSchema.parse(data);
@@ -133,5 +145,3 @@ export const workspaceRouter = createTRPCRouter({
 });
 
 export type WorkspaceRouter = typeof workspaceRouter;
-
-

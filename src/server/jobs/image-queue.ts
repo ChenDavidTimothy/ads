@@ -1,6 +1,6 @@
 // src/server/jobs/image-queue.ts
 import type { AnimationScene } from "@/shared/types/scene";
-import { GraphileQueue } from './graphile-queue';
+import { GraphileQueue } from "./graphile-queue";
 
 export interface ImageJobInput {
   scene: AnimationScene;
@@ -8,7 +8,7 @@ export interface ImageJobInput {
     width: number;
     height: number;
     backgroundColor: string;
-    format: 'png' | 'jpeg';
+    format: "png" | "jpeg";
     quality?: number;
     time?: number;
   };
@@ -21,5 +21,5 @@ export interface ImageJobResult {
 }
 
 export const imageQueue = new GraphileQueue<ImageJobInput, ImageJobResult>({
-  taskIdentifier: 'render-image',
+  taskIdentifier: "render-image",
 });

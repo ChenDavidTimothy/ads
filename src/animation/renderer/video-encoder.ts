@@ -1,7 +1,7 @@
 // src/animation/renderer/video-encoder.ts
-import { spawn, type ChildProcess } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import { spawn, type ChildProcess } from "child_process";
+import fs from "fs";
+import path from "path";
 
 export interface VideoConfig {
   width: number;
@@ -10,10 +10,10 @@ export interface VideoConfig {
   preset: string;
   crf: number;
   // Raw input pixel format
-  inputPixelFormat: 'rgb24' | 'rgba' | 'bgra';
+  inputPixelFormat: "rgb24" | "rgba" | "bgra";
 }
 
-import { ENCODER_TIMEOUTS as GLOBAL_ENCODER_TIMEOUTS } from '@/server/rendering/config';
+import { ENCODER_TIMEOUTS as GLOBAL_ENCODER_TIMEOUTS } from "@/server/rendering/config";
 
 interface EncoderTimeouts {
   startupMs: number;
@@ -26,12 +26,19 @@ export class VideoEncoder {
   private outputPath: string;
   private config: VideoConfig;
   private timeouts: EncoderTimeouts;
-  private stderrBuffer = '';
+  private stderrBuffer = "";
 
-  constructor(outputPath: string, config: VideoConfig, timeouts: Partial<EncoderTimeouts> = {}) {
+  constructor(
+    outputPath: string,
+    config: VideoConfig,
+    timeouts: Partial<EncoderTimeouts> = {},
+  ) {
     this.outputPath = outputPath;
     this.config = config;
-    this.timeouts = { ...GLOBAL_ENCODER_TIMEOUTS, ...timeouts } as EncoderTimeouts;
+    this.timeouts = {
+      ...GLOBAL_ENCODER_TIMEOUTS,
+      ...timeouts,
+    } as EncoderTimeouts;
   }
 
   start(): Promise<void> {
@@ -41,21 +48,32 @@ export class VideoEncoder {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      const ffmpegPath = process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
-        ? process.env.FFMPEG_PATH
-        : 'ffmpeg';
+      const ffmpegPath =
+        process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
+          ? process.env.FFMPEG_PATH
+          : "ffmpeg";
 
       const args = [
-        '-f', 'rawvideo',
-        '-pix_fmt', this.config.inputPixelFormat,
-        '-s', `${this.config.width}x${this.config.height}`,
-        '-r', this.config.fps.toString(),
-        '-i', 'pipe:0',
-        '-pix_fmt', 'yuv420p',
-        '-c:v', 'libx264',
-        '-preset', this.config.preset,
-        '-crf', this.config.crf.toString(),
-        '-y', this.outputPath
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        this.config.inputPixelFormat,
+        "-s",
+        `${this.config.width}x${this.config.height}`,
+        "-r",
+        this.config.fps.toString(),
+        "-i",
+        "pipe:0",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-preset",
+        this.config.preset,
+        "-crf",
+        this.config.crf.toString(),
+        "-y",
+        this.outputPath,
       ];
 
       let settled = false;
@@ -73,19 +91,23 @@ export class VideoEncoder {
 
       const proc = this.ffmpegProcess;
 
-      proc.on('error', onError);
+      proc.on("error", onError);
 
       // If the process exits before we're ready, treat as startup failure
       const startupCloseHandler = (code: number | null) => {
         if (settled) return;
         settled = true;
-        reject(new Error(`FFmpeg exited during startup with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+        reject(
+          new Error(
+            `FFmpeg exited during startup with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
       };
-      proc.once('close', startupCloseHandler);
+      proc.once("close", startupCloseHandler);
 
       // Capture stderr for diagnostics
-      proc.stderr?.setEncoding('utf8');
-      proc.stderr?.on('data', (chunk: string) => {
+      proc.stderr?.setEncoding("utf8");
+      proc.stderr?.on("data", (chunk: string) => {
         this.stderrBuffer += chunk;
       });
 
@@ -94,7 +116,11 @@ export class VideoEncoder {
         if (settled) return;
         settled = true;
         this.kill();
-        reject(new Error(`FFmpeg startup timeout after ${this.timeouts.startupMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+        reject(
+          new Error(
+            `FFmpeg startup timeout after ${this.timeouts.startupMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
       }, this.timeouts.startupMs);
 
       const markReady = () => {
@@ -103,7 +129,7 @@ export class VideoEncoder {
           settled = true;
           clearTimeout(startupTimer);
           // Remove startup close handler to avoid consuming the real close event
-          proc.off('close', startupCloseHandler);
+          proc.off("close", startupCloseHandler);
           resolve();
         }
       };
@@ -115,7 +141,7 @@ export class VideoEncoder {
 
   async writeFrame(frameData: Buffer): Promise<void> {
     if (!this.ffmpegProcess?.stdin) {
-      throw new Error('FFmpeg process not started');
+      throw new Error("FFmpeg process not started");
     }
 
     const stdin = this.ffmpegProcess.stdin;
@@ -127,13 +153,17 @@ export class VideoEncoder {
         if (finished) return;
         finished = true;
         this.kill();
-        reject(new Error(`FFmpeg frame write timeout after ${this.timeouts.writeMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+        reject(
+          new Error(
+            `FFmpeg frame write timeout after ${this.timeouts.writeMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
       }, this.timeouts.writeMs);
 
       const cleanup = () => {
         clearTimeout(timeout);
-        stdin.removeListener('drain', onDrain);
-        stdin.removeListener('error', onError);
+        stdin.removeListener("drain", onDrain);
+        stdin.removeListener("error", onError);
       };
 
       const onDrain = () => {
@@ -156,8 +186,8 @@ export class VideoEncoder {
         cleanup();
         resolve();
       } else {
-        stdin.once('drain', onDrain);
-        stdin.once('error', onError);
+        stdin.once("drain", onDrain);
+        stdin.once("error", onError);
       }
     });
   }
@@ -176,7 +206,11 @@ export class VideoEncoder {
         if (settled) return;
         settled = true;
         this.kill();
-        reject(new Error(`FFmpeg finish timeout after ${this.timeouts.finishMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+        reject(
+          new Error(
+            `FFmpeg finish timeout after ${this.timeouts.finishMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
       }, this.timeouts.finishMs);
 
       const onClose = (code: number | null) => {
@@ -185,13 +219,17 @@ export class VideoEncoder {
         clearTimeout(timeout);
         this.ffmpegProcess = null;
         if (code !== 0) {
-          reject(new Error(`FFmpeg exited with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`));
+          reject(
+            new Error(
+              `FFmpeg exited with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+            ),
+          );
         } else {
           resolve();
         }
       };
 
-      proc.once('close', onClose);
+      proc.once("close", onClose);
       // Signal EOF
       proc.stdin?.end();
     });
@@ -217,7 +255,7 @@ export class VideoEncoder {
 export function convertImageDataToRGB(
   imageData: ImageData,
   width: number,
-  height: number
+  height: number,
 ): Buffer {
   const pixelCount = width * height;
   const rgbPixels = new Uint8Array(pixelCount * 3);

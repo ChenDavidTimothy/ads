@@ -8,21 +8,27 @@ import { BaseExecutor } from "./base-executor";
 export class GeometryNodeExecutor extends BaseExecutor {
   // Register all geometry node handlers
   protected registerHandlers(): void {
-    this.registerHandler('triangle', (node, context, connections) => this.executeGeometry(node, context, connections));
-    this.registerHandler('circle', (node, context, connections) => this.executeGeometry(node, context, connections));
-    this.registerHandler('rectangle', (node, context, connections) => this.executeGeometry(node, context, connections));
+    this.registerHandler("triangle", (node, context, connections) =>
+      this.executeGeometry(node, context, connections),
+    );
+    this.registerHandler("circle", (node, context, connections) =>
+      this.executeGeometry(node, context, connections),
+    );
+    this.registerHandler("rectangle", (node, context, connections) =>
+      this.executeGeometry(node, context, connections),
+    );
   }
-
-
 
   // Single method handles all geometry nodes
   private async executeGeometry(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    _connections: ReactFlowEdge[]
+    _connections: ReactFlowEdge[],
   ): Promise<void> {
     const objectDefinition = this.buildObjectDefinition(node);
-    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [objectDefinition]);
+    setNodeOutput(context, node.data.identifier.id, "output", "object_stream", [
+      objectDefinition,
+    ]);
   }
 
   private buildObjectDefinition(node: ReactFlowNode<NodeData>) {
@@ -60,9 +66,7 @@ export class GeometryNodeExecutor extends BaseExecutor {
           },
         };
       default:
-        throw new UnknownNodeTypeError(String(node.type ?? 'unknown'));
+        throw new UnknownNodeTypeError(String(node.type ?? "unknown"));
     }
   }
 }
-
-

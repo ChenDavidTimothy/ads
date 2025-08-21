@@ -2,7 +2,7 @@
 import { createServiceClient } from "@/utils/supabase/service";
 
 export interface StorageHealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   timestamp: string;
   buckets: {
     images: BucketHealth;
@@ -31,13 +31,13 @@ export class StorageHealthMonitor {
   private readonly imagesBucket: string;
   private readonly videosBucket: string;
   private readonly logger: Console;
-  
+
   private uploadMetrics = {
     total: 0,
     successful: 0,
     failed: 0,
     uploadTimes: [] as number[],
-    lastUpload: null as string | null
+    lastUpload: null as string | null,
   };
 
   constructor() {
@@ -53,33 +53,42 @@ export class StorageHealthMonitor {
     try {
       // Check bucket health
       const [imagesHealth, videosHealth] = await Promise.allSettled([
-        this.checkBucketHealth(this.imagesBucket, 'images'),
-        this.checkBucketHealth(this.videosBucket, 'videos')
+        this.checkBucketHealth(this.imagesBucket, "images"),
+        this.checkBucketHealth(this.videosBucket, "videos"),
       ]);
 
       const buckets = {
-        images: imagesHealth.status === 'fulfilled' ? imagesHealth.value : {
-          accessible: false,
-          fileCount: 0,
-          totalSize: 0,
-          lastAccess: timestamp,
-          error: String(imagesHealth.reason ?? 'Unknown error')
-        },
-        videos: videosHealth.status === 'fulfilled' ? videosHealth.value : {
-          accessible: false,
-          fileCount: 0,
-          totalSize: 0,
-          lastAccess: timestamp,
-          error: String(videosHealth.reason ?? 'Unknown error')
-        }
+        images:
+          imagesHealth.status === "fulfilled"
+            ? imagesHealth.value
+            : {
+                accessible: false,
+                fileCount: 0,
+                totalSize: 0,
+                lastAccess: timestamp,
+                error: String(imagesHealth.reason ?? "Unknown error"),
+              },
+        videos:
+          videosHealth.status === "fulfilled"
+            ? videosHealth.value
+            : {
+                accessible: false,
+                fileCount: 0,
+                totalSize: 0,
+                lastAccess: timestamp,
+                error: String(videosHealth.reason ?? "Unknown error"),
+              },
       };
 
       // Determine overall status
-      let status: StorageHealthStatus['status'] = 'healthy';
+      let status: StorageHealthStatus["status"] = "healthy";
       if (!buckets.images.accessible || !buckets.videos.accessible) {
-        status = 'unhealthy';
-      } else if (this.uploadMetrics.failed > this.uploadMetrics.successful * 0.1) {
-        status = 'degraded';
+        status = "unhealthy";
+      } else if (
+        this.uploadMetrics.failed >
+        this.uploadMetrics.successful * 0.1
+      ) {
+        status = "degraded";
       }
 
       // Calculate metrics
@@ -87,10 +96,12 @@ export class StorageHealthMonitor {
         totalUploads: this.uploadMetrics.total,
         successfulUploads: this.uploadMetrics.successful,
         failedUploads: this.uploadMetrics.failed,
-        averageUploadTime: this.uploadMetrics.uploadTimes.length > 0 
-          ? this.uploadMetrics.uploadTimes.reduce((a, b) => a + b, 0) / this.uploadMetrics.uploadTimes.length
-          : 0,
-        lastUploadTime: this.uploadMetrics.lastUpload
+        averageUploadTime:
+          this.uploadMetrics.uploadTimes.length > 0
+            ? this.uploadMetrics.uploadTimes.reduce((a, b) => a + b, 0) /
+              this.uploadMetrics.uploadTimes.length
+            : 0,
+        lastUploadTime: this.uploadMetrics.lastUpload,
       };
 
       return {
@@ -98,40 +109,54 @@ export class StorageHealthMonitor {
         timestamp,
         buckets,
         metrics,
-        errors
+        errors,
       };
-
     } catch (error) {
-      this.logger.error('Health check failed:', error);
-      errors.push(error instanceof Error ? error.message : 'Unknown error');
-      
+      this.logger.error("Health check failed:", error);
+      errors.push(error instanceof Error ? error.message : "Unknown error");
+
       return {
-        status: 'unhealthy',
+        status: "unhealthy",
         timestamp,
         buckets: {
-          images: { accessible: false, fileCount: 0, totalSize: 0, lastAccess: timestamp, error: 'Health check failed' },
-          videos: { accessible: false, fileCount: 0, totalSize: 0, lastAccess: timestamp, error: 'Health check failed' }
+          images: {
+            accessible: false,
+            fileCount: 0,
+            totalSize: 0,
+            lastAccess: timestamp,
+            error: "Health check failed",
+          },
+          videos: {
+            accessible: false,
+            fileCount: 0,
+            totalSize: 0,
+            lastAccess: timestamp,
+            error: "Health check failed",
+          },
         },
         metrics: {
           totalUploads: this.uploadMetrics.total,
           successfulUploads: this.uploadMetrics.successful,
           failedUploads: this.uploadMetrics.failed,
           averageUploadTime: 0,
-          lastUploadTime: this.uploadMetrics.lastUpload
+          lastUploadTime: this.uploadMetrics.lastUpload,
         },
-        errors
+        errors,
       };
     }
   }
 
-  private async checkBucketHealth(bucketName: string, bucketType: 'images' | 'videos'): Promise<BucketHealth> {
+  private async checkBucketHealth(
+    bucketName: string,
+    bucketType: "images" | "videos",
+  ): Promise<BucketHealth> {
     try {
       const startTime = Date.now();
-      
+
       // List files to check accessibility and get metrics
       const { data: files, error } = await this.supabase.storage
         .from(bucketName)
-        .list('', { limit: 1000 }); // Limit to avoid timeout on large buckets
+        .list("", { limit: 1000 }); // Limit to avoid timeout on large buckets
 
       if (error) {
         throw error;
@@ -149,16 +174,17 @@ export class StorageHealthMonitor {
       }
 
       const lastAccess = new Date().toISOString();
-      
-      this.logger.debug(`Bucket ${bucketType} health check completed in ${Date.now() - startTime}ms`);
-      
+
+      this.logger.debug(
+        `Bucket ${bucketType} health check completed in ${Date.now() - startTime}ms`,
+      );
+
       return {
         accessible: true,
         fileCount,
         totalSize,
-        lastAccess
+        lastAccess,
       };
-
     } catch (error) {
       this.logger.error(`Bucket ${bucketType} health check failed:`, error);
       return {
@@ -166,7 +192,7 @@ export class StorageHealthMonitor {
         fileCount: 0,
         totalSize: 0,
         lastAccess: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -181,7 +207,7 @@ export class StorageHealthMonitor {
   recordUploadSuccess(uploadTimeMs: number): void {
     this.uploadMetrics.successful++;
     this.uploadMetrics.uploadTimes.push(uploadTimeMs);
-    
+
     // Keep only last 100 upload times for rolling average
     if (this.uploadMetrics.uploadTimes.length > 100) {
       this.uploadMetrics.uploadTimes.shift();
@@ -197,12 +223,15 @@ export class StorageHealthMonitor {
   getMetrics() {
     return {
       ...this.uploadMetrics,
-      successRate: this.uploadMetrics.total > 0 
-        ? (this.uploadMetrics.successful / this.uploadMetrics.total) * 100 
-        : 0,
-      averageUploadTime: this.uploadMetrics.uploadTimes.length > 0 
-        ? this.uploadMetrics.uploadTimes.reduce((a, b) => a + b, 0) / this.uploadMetrics.uploadTimes.length
-        : 0
+      successRate:
+        this.uploadMetrics.total > 0
+          ? (this.uploadMetrics.successful / this.uploadMetrics.total) * 100
+          : 0,
+      averageUploadTime:
+        this.uploadMetrics.uploadTimes.length > 0
+          ? this.uploadMetrics.uploadTimes.reduce((a, b) => a + b, 0) /
+            this.uploadMetrics.uploadTimes.length
+          : 0,
     };
   }
 
@@ -213,7 +242,7 @@ export class StorageHealthMonitor {
       successful: 0,
       failed: 0,
       uploadTimes: [],
-      lastUpload: null
+      lastUpload: null,
     };
   }
 }

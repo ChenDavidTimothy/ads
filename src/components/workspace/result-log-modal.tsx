@@ -6,12 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useDebugContext } from "./flow/debug-context";
 import { cn } from "@/lib/utils";
-import { 
-  Trash2, 
-  Download, 
-  Target,
-  Clock
-} from "lucide-react";
+import { Trash2, Download, Target, Clock } from "lucide-react";
 
 interface ResultLogEntry {
   value: unknown;
@@ -37,7 +32,7 @@ export function ResultLogModal({
   onClose,
   nodeId,
   nodeName,
-  nodeLabel
+  nodeLabel,
 }: ResultLogModalProps) {
   const [logs, setLogs] = useState<ResultLogEntry[]>([]);
 
@@ -45,29 +40,32 @@ export function ResultLogModal({
 
   // Format value for display - more efficient
   const formatValue = useCallback((value: unknown): string => {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'number') return value.toString();
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
+    if (typeof value === "string") return `"${value}"`;
+    if (typeof value === "number") return value.toString();
+    if (typeof value === "boolean") return value ? "true" : "false";
     if (Array.isArray(value)) {
-      if (value.length === 0) return '[]';
-      if (value.length <= 2) return `[${value.map(formatValue).join(', ')}]`;
-      return `[${value.slice(0, 2).map(formatValue).join(', ')}, ...] (${value.length} items)`;
+      if (value.length === 0) return "[]";
+      if (value.length <= 2) return `[${value.map(formatValue).join(", ")}]`;
+      return `[${value.slice(0, 2).map(formatValue).join(", ")}, ...] (${value.length} items)`;
     }
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       const keys = Object.keys(value as Record<string, unknown>);
-      if (keys.length === 0) return '{}';
+      if (keys.length === 0) return "{}";
       if (keys.length <= 2) {
-        const entries = keys.slice(0, 2).map(k => `${k}: ${formatValue((value as Record<string, unknown>)[k])}`);
-        return `{${entries.join(', ')}}`;
+        const entries = keys
+          .slice(0, 2)
+          .map(
+            (k) =>
+              `${k}: ${formatValue((value as Record<string, unknown>)[k])}`,
+          );
+        return `{${entries.join(", ")}}`;
       }
-      return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`;
+      return `{${keys.slice(0, 2).join(", ")}, ...} (${keys.length} keys)`;
     }
-    return '[Complex Type]';
+    return "[Complex Type]";
   }, []);
-
-
 
   // Load and refresh logs
   useEffect(() => {
@@ -75,7 +73,7 @@ export function ResultLogModal({
 
     const refreshLogs = () => {
       const allResults = debugContext.getAllDebugResults(nodeId);
-      const formattedLogs = allResults.map(result => ({
+      const formattedLogs = allResults.map((result) => ({
         value: result.value,
         type: result.type,
         timestamp: result.timestamp,
@@ -83,7 +81,7 @@ export function ResultLogModal({
         executionId: result.executionId ?? `exec-${result.timestamp}`,
         flowState: result.flowState,
         hasConnections: result.hasConnections,
-        inputCount: result.inputCount
+        inputCount: result.inputCount,
       }));
       setLogs(formattedLogs);
     };
@@ -98,14 +96,21 @@ export function ResultLogModal({
   // Value type colors
   const getValueTypeColor = (type: string): string => {
     switch (type) {
-      case 'string': return 'text-[var(--success-500)]';
-      case 'number': return 'text-[var(--accent-primary)]';
-      case 'boolean': return 'text-[var(--warning-600)]';
-      case 'array': return 'text-[var(--node-logic)]';
-      case 'object': return 'text-[var(--node-geometry)]';
-      case 'null':
-      case 'undefined': return 'text-[var(--text-tertiary)]';
-      default: return 'text-[var(--text-primary)]';
+      case "string":
+        return "text-[var(--success-500)]";
+      case "number":
+        return "text-[var(--accent-primary)]";
+      case "boolean":
+        return "text-[var(--warning-600)]";
+      case "array":
+        return "text-[var(--node-logic)]";
+      case "object":
+        return "text-[var(--node-geometry)]";
+      case "null":
+      case "undefined":
+        return "text-[var(--text-tertiary)]";
+      default:
+        return "text-[var(--text-primary)]";
     }
   };
 
@@ -117,15 +122,17 @@ export function ResultLogModal({
       nodeLabel,
       exportTimestamp: new Date().toISOString(),
       totalEntries: logs.length,
-      logs: logs.map(log => ({
+      logs: logs.map((log) => ({
         ...log,
-        timestamp: new Date(log.timestamp).toISOString()
-      }))
+        timestamp: new Date(log.timestamp).toISOString(),
+      })),
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `result-logs-${nodeName}-${Date.now()}.json`;
     document.body.appendChild(a);
@@ -140,11 +147,11 @@ export function ResultLogModal({
       onClose={onClose}
       title={
         <div className="flex items-center gap-[var(--space-3)]">
-          <div className="w-5 h-5 bg-[var(--node-output)] flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]">
+          <div className="flex h-5 w-5 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--node-output)] text-[var(--text-primary)]">
             <Target size={10} />
           </div>
           <div>
-            <div className="text-[13px] font-medium text-[var(--text-primary)] text-refined-medium">
+            <div className="text-refined-medium text-[13px] font-medium text-[var(--text-primary)]">
               {nodeName}
             </div>
             <div className="text-[10px] text-[var(--text-tertiary)]">
@@ -157,8 +164,7 @@ export function ResultLogModal({
       variant="glass"
     >
       {/* Toolbar */}
-      <div className="flex items-center justify-end py-[var(--space-2)] px-[var(--space-3)] border-b border-[var(--border-primary)] bg-[var(--surface-1)] flex-shrink-0">
-        
+      <div className="flex flex-shrink-0 items-center justify-end border-b border-[var(--border-primary)] bg-[var(--surface-1)] px-[var(--space-3)] py-[var(--space-2)]">
         <div className="flex items-center gap-[var(--space-1)]">
           <Button
             onClick={() => debugContext?.clearDebugResults(nodeId)}
@@ -184,17 +190,18 @@ export function ResultLogModal({
       {/* Logs Content */}
       <div className="flex-1 p-[var(--space-3)]">
         {logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-10 h-10 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-[var(--space-3)]">
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="mb-[var(--space-3)] flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-2)]">
               <Target size={16} className="text-[var(--text-tertiary)]" />
             </div>
-            <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-[var(--space-2)] text-refined-medium">
+            <h3 className="text-refined-medium mb-[var(--space-2)] text-[13px] font-medium text-[var(--text-primary)]">
               No Results Available
             </h3>
-            <p className="text-[11px] text-[var(--text-tertiary)] mb-[var(--space-3)] max-w-[18rem] text-refined">
-              Run your flow to capture values at this node. Results will appear here in real-time.
+            <p className="text-refined mb-[var(--space-3)] max-w-[18rem] text-[11px] text-[var(--text-tertiary)]">
+              Run your flow to capture values at this node. Results will appear
+              here in real-time.
             </p>
-            <div className="text-[10px] text-[var(--text-muted)] space-y-[var(--space-1)] text-refined">
+            <div className="text-refined space-y-[var(--space-1)] text-[10px] text-[var(--text-muted)]">
               <p>• Values are captured when data flows through</p>
               <p>• Monitor data flow and node outputs</p>
             </div>
@@ -202,21 +209,23 @@ export function ResultLogModal({
         ) : (
           <div className="space-y-[var(--space-2)]">
             {logs.map((log, index) => (
-              <div 
-                key={index} 
-                className="bg-[var(--surface-1)] rounded-[var(--radius-sm)] p-[var(--space-3)] border border-[var(--border-primary)]"
+              <div
+                key={index}
+                className="rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-3)]"
               >
                 {/* Compact Header */}
-                <div className="flex items-center justify-between mb-[var(--space-2)]">
+                <div className="mb-[var(--space-2)] flex items-center justify-between">
                   <div className="flex items-center gap-[var(--space-2)]">
-                    <span className={cn(
-                      "px-[var(--space-2)] py-[var(--space-half)] rounded-[var(--radius-sm)] text-[10px] font-mono font-medium",
-                      "bg-[var(--surface-2)] border border-[var(--border-primary)]",
-                      getValueTypeColor(log.type)
-                    )}>
+                    <span
+                      className={cn(
+                        "rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-half)] font-mono text-[10px] font-medium",
+                        "border border-[var(--border-primary)] bg-[var(--surface-2)]",
+                        getValueTypeColor(log.type),
+                      )}
+                    >
                       {log.type}
                     </span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] font-mono">
+                    <span className="font-mono text-[10px] text-[var(--text-tertiary)]">
                       #{index + 1}
                     </span>
                   </div>
@@ -227,16 +236,13 @@ export function ResultLogModal({
                 </div>
 
                 {/* Value Display */}
-                <div className="bg-[var(--surface-0)] p-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border-primary)]">
-                  <div className="font-mono text-[11px] text-[var(--text-primary)] break-all">
+                <div className="rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-0)] p-[var(--space-2)]">
+                  <div className="font-mono text-[11px] break-all text-[var(--text-primary)]">
                     {log.formattedValue}
                   </div>
                 </div>
-
-
               </div>
             ))}
-
           </div>
         )}
       </div>

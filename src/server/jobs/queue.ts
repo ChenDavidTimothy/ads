@@ -22,7 +22,10 @@ export class InMemoryQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
   private readonly queue: Array<PendingJob<TJob, TResult>> = [];
   private active = 0;
 
-  constructor(options: { concurrency: number; handler: (job: TJob) => Promise<TResult> }) {
+  constructor(options: {
+    concurrency: number;
+    handler: (job: TJob) => Promise<TResult>;
+  }) {
     this.concurrency = Math.max(1, options.concurrency);
     this.handler = options.handler;
   }
@@ -50,5 +53,3 @@ export class InMemoryQueue<TJob, TResult> implements JobQueue<TJob, TResult> {
     }
   }
 }
-
-

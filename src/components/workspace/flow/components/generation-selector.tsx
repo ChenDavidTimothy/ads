@@ -1,10 +1,10 @@
 "use client";
 
-import { SelectionList } from '@/components/ui/selection';
-import { Badge } from '@/components/ui/badge';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
-import type { Node } from 'reactflow';
-import type { NodeData } from '@/shared/types';
+import { SelectionList } from "@/components/ui/selection";
+import { Badge } from "@/components/ui/badge";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import type { Node } from "reactflow";
+import type { NodeData } from "@/shared/types";
 
 interface Props {
   sceneNodes: Node<NodeData>[];
@@ -12,7 +12,7 @@ interface Props {
   onToggleScene: (sceneId: string) => void;
   onSelectAllScenes: () => void;
   onSelectNoScenes: () => void;
-  
+
   frameNodes: Node<NodeData>[];
   selectedFrameIds: string[];
   onToggleFrame: (frameId: string) => void;
@@ -30,19 +30,18 @@ export function GenerationSelector({
   selectedFrameIds,
   onToggleFrame,
   onSelectAllFrames,
-  onSelectNoFrames
+  onSelectNoFrames,
 }: Props) {
-  
-  const sceneItems = sceneNodes.map(node => ({
+  const sceneItems = sceneNodes.map((node) => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition('scene')?.rendering.icon ?? '🎬'
+    icon: getNodeDefinition("scene")?.rendering.icon ?? "🎬",
   }));
-  
-  const frameItems = frameNodes.map(node => ({
+
+  const frameItems = frameNodes.map((node) => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition('frame')?.rendering.icon ?? '🖼️'
+    icon: getNodeDefinition("frame")?.rendering.icon ?? "🖼️",
   }));
 
   const hasScenes = sceneNodes.length > 0;
@@ -53,17 +52,17 @@ export function GenerationSelector({
     <div className="space-y-4">
       {/* Summary */}
       <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-        <Badge variant="default">
-          {selectedTotal} selected
-        </Badge>
+        <Badge variant="default">{selectedTotal} selected</Badge>
         {selectedSceneIds.length > 0 && (
           <Badge variant="result">
-            {selectedSceneIds.length} scene{selectedSceneIds.length !== 1 ? 's' : ''}
+            {selectedSceneIds.length} scene
+            {selectedSceneIds.length !== 1 ? "s" : ""}
           </Badge>
         )}
         {selectedFrameIds.length > 0 && (
           <Badge variant="bound">
-            {selectedFrameIds.length} frame{selectedFrameIds.length !== 1 ? 's' : ''}
+            {selectedFrameIds.length} frame
+            {selectedFrameIds.length !== 1 ? "s" : ""}
           </Badge>
         )}
       </div>
@@ -71,7 +70,7 @@ export function GenerationSelector({
       {/* Scene Selection */}
       {hasScenes && (
         <div>
-          <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2 flex items-center gap-2">
+          <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
             🎬 Scenes ({sceneNodes.length})
           </h4>
           <SelectionList
@@ -89,7 +88,7 @@ export function GenerationSelector({
       {/* Frame Selection */}
       {hasFrames && (
         <div>
-          <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2 flex items-center gap-2">
+          <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
             🖼️ Frames ({frameNodes.length})
           </h4>
           <SelectionList
@@ -105,7 +104,7 @@ export function GenerationSelector({
       )}
 
       {!hasScenes && !hasFrames && (
-        <div className="text-sm text-[var(--text-tertiary)] text-center py-[var(--space-4)]">
+        <div className="py-[var(--space-4)] text-center text-sm text-[var(--text-tertiary)]">
           Add Scene or Frame nodes to enable selective generation
         </div>
       )}

@@ -13,7 +13,11 @@ export class LocalPublicStorageProvider implements StorageProvider {
   private readonly publicBaseUrl: string;
   private readonly subDir: string;
 
-  constructor(options?: { publicDir?: string; publicBaseUrl?: string; subDir?: string }) {
+  constructor(options?: {
+    publicDir?: string;
+    publicBaseUrl?: string;
+    subDir?: string;
+  }) {
     this.publicDir = options?.publicDir ?? path.join(process.cwd(), "public");
     this.publicBaseUrl = options?.publicBaseUrl ?? "/";
     this.subDir = options?.subDir ?? "animations";
@@ -28,10 +32,11 @@ export class LocalPublicStorageProvider implements StorageProvider {
     return { filePath, remoteKey };
   }
 
-  async finalize(prepared: StoragePreparedTarget, _opts?: { contentType?: string }): Promise<{ publicUrl: string }> {
+  async finalize(
+    prepared: StoragePreparedTarget,
+    _opts?: { contentType?: string },
+  ): Promise<{ publicUrl: string }> {
     const publicUrl = path.posix.join("/", prepared.remoteKey);
     return { publicUrl };
   }
 }
-
-

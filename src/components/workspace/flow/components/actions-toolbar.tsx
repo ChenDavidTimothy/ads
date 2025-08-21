@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { ChevronDown } from 'lucide-react';
-import { GenerationSelector } from './generation-selector';
-import type { Node } from 'reactflow';
-import type { NodeData } from '@/shared/types';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { ChevronDown } from "lucide-react";
+import { GenerationSelector } from "./generation-selector";
+import type { Node } from "reactflow";
+import type { NodeData } from "@/shared/types";
 
 interface ValidationError {
-  type: 'error' | 'warning';
+  type: "error" | "warning";
   code: string;
   message: string;
   suggestions?: string[];
@@ -30,7 +30,7 @@ interface ValidationSummary {
 
 interface Props {
   allNodes: Node<NodeData>[];
-  
+
   onGenerate: () => void;
   canGenerate: boolean;
   isGenerating: boolean;
@@ -46,60 +46,63 @@ interface Props {
   validationSummary?: ValidationSummary | null;
 }
 
-export function ActionsToolbar({ 
+export function ActionsToolbar({
   allNodes,
-  onGenerate, 
-  canGenerate, 
-  isGenerating, 
+  onGenerate,
+  canGenerate,
+  isGenerating,
   onGenerateImage,
   canGenerateImage,
   isGeneratingImage,
   onGenerateSelected,
   lastError,
   onResetGeneration,
-  validationSummary
+  validationSummary,
 }: Props) {
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedSceneIds, setSelectedSceneIds] = useState<string[]>([]);
   const [selectedFrameIds, setSelectedFrameIds] = useState<string[]>([]);
 
-  const sceneNodes = allNodes.filter(n => n.type === 'scene');
-  const frameNodes = allNodes.filter(n => n.type === 'frame');
+  const sceneNodes = allNodes.filter((n) => n.type === "scene");
+  const frameNodes = allNodes.filter((n) => n.type === "frame");
   const hasSelectableContent = sceneNodes.length > 0 || frameNodes.length > 0;
 
-  const getButtonText = (isGenerating: boolean, type: 'video' | 'image') => {
-    if (isGenerating) return type === 'video' ? 'Generating...' : 'Generating...';
-    if (lastError || validationSummary?.hasErrors) return 'Fix Issues & Try Again';
-    return type === 'video' ? 'Generate All Videos' : 'Generate All Images';
+  const getButtonText = (isGenerating: boolean, type: "video" | "image") => {
+    if (isGenerating)
+      return type === "video" ? "Generating..." : "Generating...";
+    if (lastError || validationSummary?.hasErrors)
+      return "Fix Issues & Try Again";
+    return type === "video" ? "Generate All Videos" : "Generate All Images";
   };
 
   const getButtonVariant = () => {
-    if (lastError || validationSummary?.hasErrors) return 'danger' as const;
-    return 'success' as const;
+    if (lastError || validationSummary?.hasErrors) return "danger" as const;
+    return "success" as const;
   };
 
   const anyGenerating = isGenerating || isGeneratingImage;
 
   const handleToggleScene = (sceneId: string) => {
-    setSelectedSceneIds(prev => 
+    setSelectedSceneIds((prev) =>
       prev.includes(sceneId)
-        ? prev.filter(id => id !== sceneId)
-        : [...prev, sceneId]
+        ? prev.filter((id) => id !== sceneId)
+        : [...prev, sceneId],
     );
   };
 
   const handleToggleFrame = (frameId: string) => {
-    setSelectedFrameIds(prev => 
+    setSelectedFrameIds((prev) =>
       prev.includes(frameId)
-        ? prev.filter(id => id !== frameId)
-        : [...prev, frameId]
+        ? prev.filter((id) => id !== frameId)
+        : [...prev, frameId],
     );
   };
 
   const handleGenerate = () => {
-    const hasSelection = selectedSceneIds.length > 0 || selectedFrameIds.length > 0;
+    const hasSelection =
+      selectedSceneIds.length > 0 || selectedFrameIds.length > 0;
     if (!hasSelection) return;
-    
+
     onGenerateSelected(selectedSceneIds, selectedFrameIds);
     setShowSelectionModal(false);
     setSelectedSceneIds([]);
@@ -120,7 +123,7 @@ export function ActionsToolbar({
             size="sm"
             className="font-medium"
           >
-            {getButtonText(isGenerating, 'video')}
+            {getButtonText(isGenerating, "video")}
           </Button>
         )}
 
@@ -132,7 +135,7 @@ export function ActionsToolbar({
             size="sm"
             className="font-medium"
           >
-            {getButtonText(isGeneratingImage, 'image')}
+            {getButtonText(isGeneratingImage, "image")}
           </Button>
         )}
 
@@ -146,7 +149,7 @@ export function ActionsToolbar({
             className="font-medium"
           >
             Select & Generate
-            <ChevronDown className="w-4 h-4 ml-1" />
+            <ChevronDown className="ml-1 h-4 w-4" />
           </Button>
         )}
 
@@ -156,7 +159,7 @@ export function ActionsToolbar({
             onClick={onResetGeneration}
             variant="ghost"
             size="sm"
-            className="text-[var(--danger-500)] hover:text-[var(--danger-600)] border border-[var(--danger-600)]"
+            className="border border-[var(--danger-600)] text-[var(--danger-500)] hover:text-[var(--danger-600)]"
           >
             Reset Generation
           </Button>
@@ -176,29 +179,34 @@ export function ActionsToolbar({
             sceneNodes={sceneNodes}
             selectedSceneIds={selectedSceneIds}
             onToggleScene={handleToggleScene}
-            onSelectAllScenes={() => setSelectedSceneIds(sceneNodes.map(n => n.data.identifier.id))}
+            onSelectAllScenes={() =>
+              setSelectedSceneIds(sceneNodes.map((n) => n.data.identifier.id))
+            }
             onSelectNoScenes={() => setSelectedSceneIds([])}
-            
             frameNodes={frameNodes}
             selectedFrameIds={selectedFrameIds}
             onToggleFrame={handleToggleFrame}
-            onSelectAllFrames={() => setSelectedFrameIds(frameNodes.map(n => n.data.identifier.id))}
+            onSelectAllFrames={() =>
+              setSelectedFrameIds(frameNodes.map((n) => n.data.identifier.id))
+            }
             onSelectNoFrames={() => setSelectedFrameIds([])}
           />
-          
-          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[var(--border-primary)]">
-            <Button 
-              variant="ghost" 
+
+          <div className="mt-6 flex justify-end gap-2 border-t border-[var(--border-primary)] pt-4">
+            <Button
+              variant="ghost"
               onClick={() => setShowSelectionModal(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleGenerate}
               disabled={selectedTotal === 0 || anyGenerating}
               variant="success"
             >
-              {anyGenerating ? 'Generating...' : `Generate ${selectedTotal} Item${selectedTotal !== 1 ? 's' : ''}`}
+              {anyGenerating
+                ? "Generating..."
+                : `Generate ${selectedTotal} Item${selectedTotal !== 1 ? "s" : ""}`}
             </Button>
           </div>
         </div>

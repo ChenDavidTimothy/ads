@@ -12,29 +12,33 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 export const metadata: Metadata = {
   title: {
     default: "Batchion - No-Code Video Animation Platform",
-    template: "%s | Batchion"
+    template: "%s | Batchion",
   },
-      description: "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface for animation creation.",
+  description:
+    "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface for animation creation.",
   keywords: [
     "video animation",
     "no-code animation",
     "visual programming",
-    "video advertisements", 
+    "video advertisements",
     "marketing videos",
     "business automation",
     "data-driven videos",
-    "node-based editor"
+    "node-based editor",
   ],
-      authors: [{ name: "Batchion Team" }],
-    creator: "Batchion",
-    publisher: "Batchion",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  authors: [{ name: "Batchion Team" }],
+  creator: "Batchion",
+  publisher: "Batchion",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  ),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
     title: "Batchion - No-Code Video Animation Platform",
-    description: "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface.",
+    description:
+      "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface.",
     siteName: "Batchion",
     images: [
       {
@@ -48,7 +52,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Batchion - No-Code Video Animation Platform",
-    description: "Create stunning, data-driven video advertisements without coding.",
+    description:
+      "Create stunning, data-driven video advertisements without coding.",
     images: ["/og-image.png"],
     creator: "@batchion",
   },
@@ -101,21 +106,37 @@ export default function RootLayout({
       <head>
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+
         {/* Security headers */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-        <meta httpEquiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-        <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
-        
+        <meta
+          httpEquiv="Referrer-Policy"
+          content="strict-origin-when-cross-origin"
+        />
+        <meta
+          httpEquiv="Permissions-Policy"
+          content="camera=(), microphone=(), geolocation=()"
+        />
+
         {/* Viewport for responsive design */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+
         {/* Progressive Web App */}
         <meta name="application-name" content="Batchion" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <meta name="application-name" content="Batchion" />
         <meta name="msapplication-TileColor" content="#7c3aed" />
         <meta name="theme-color" content="#7c3aed" />
@@ -129,9 +150,9 @@ export default function RootLayout({
             </ThemeProvider>
           </TRPCReactProvider>
         </NotificationProvider>
-        
+
         {/* Analytics and monitoring scripts would go here */}
-        {process.env.NODE_ENV === 'production' && (
+        {process.env.NODE_ENV === "production" && (
           <>
             {/* Google Analytics */}
             {process.env.NEXT_PUBLIC_GA_ID && (
@@ -155,7 +176,7 @@ export default function RootLayout({
                 />
               </>
             )}
-            
+
             {/* Hotjar or other monitoring tools */}
             {process.env.NEXT_PUBLIC_HOTJAR_ID && (
               <script

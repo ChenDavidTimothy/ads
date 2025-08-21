@@ -7,33 +7,39 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { CanvasNodeData } from "@/shared/types/nodes";
 import { Palette } from "lucide-react";
 
-type CanvasNodeProps = NodeProps<CanvasNodeData> & { onOpenCanvas?: () => void };
+type CanvasNodeProps = NodeProps<CanvasNodeData> & {
+  onOpenCanvas?: () => void;
+};
 
 export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
-  const nodeDefinition = getNodeDefinition('canvas');
+  const nodeDefinition = getNodeDefinition("canvas");
 
   const handleDoubleClick = () => {
     if (onOpenCanvas) return onOpenCanvas();
     const params = new URLSearchParams(window.location.search);
-    const ws = params.get('workspace');
+    const ws = params.get("workspace");
     const url = new URL(window.location.href);
-    url.searchParams.set('tab', 'canvas');
-    url.searchParams.set('node', data?.identifier?.id ?? '');
-    if (ws) url.searchParams.set('workspace', ws);
-    window.history.pushState({}, '', url.toString());
+    url.searchParams.set("tab", "canvas");
+    url.searchParams.set("node", data?.identifier?.id ?? "");
+    if (ws) url.searchParams.set("workspace", ws);
+    window.history.pushState({}, "", url.toString());
   };
 
   const handleClass = "bg-[var(--node-geometry)]";
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)] cursor-pointer transition-all hover:bg-[var(--surface-interactive)]" onDoubleClick={handleDoubleClick}>
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)] transition-all hover:bg-[var(--surface-interactive)]"
+      onDoubleClick={handleDoubleClick}
+    >
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
@@ -43,26 +49,28 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `${50 + idx * 16}%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-geometry)] flex items-center justify-center rounded text-[var(--text-primary)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-geometry)] text-[var(--text-primary)]">
             <Palette size={12} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-[var(--text-primary)] truncate">
-              {data?.identifier?.displayName ?? 'Canvas'}
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold text-[var(--text-primary)]">
+              {data?.identifier?.displayName ?? "Canvas"}
             </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
-        <div className="text-[var(--text-tertiary)] text-[10px] pt-1">Double-click to edit in Canvas tab</div>
+      <CardContent className="space-y-2 p-0 text-xs text-[var(--text-secondary)]">
+        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
+          Double-click to edit in Canvas tab
+        </div>
       </CardContent>
     </Card>
   );

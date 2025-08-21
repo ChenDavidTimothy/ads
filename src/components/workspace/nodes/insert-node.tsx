@@ -7,12 +7,15 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { InsertNodeData } from "@/shared/types/nodes";
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
-  const nodeDefinition = getNodeDefinition('insert');
-  
+  const nodeDefinition = getNodeDefinition("insert");
+
   const handleClass = "bg-[var(--node-data)]";
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -20,14 +23,14 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-data)] flex items-center justify-center rounded text-[var(--text-primary)] font-bold text-sm">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-data)] text-sm font-bold text-[var(--text-primary)]">
             ⏰
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -36,12 +39,12 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div>Appears at: {data.appearanceTime}s</div>
         {data.appearanceTime === 0 ? (
           <div className="text-[var(--success-500)]">Instant presence</div>
         ) : (
-                          <div className="text-[var(--accent-primary)]">Delayed presence</div>
+          <div className="text-[var(--accent-primary)]">Delayed presence</div>
         )}
       </CardContent>
 
@@ -52,7 +55,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}

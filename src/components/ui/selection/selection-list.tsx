@@ -1,23 +1,23 @@
-import React from 'react';
-import { SelectionItem } from './selection-item';
+import React from "react";
+import { SelectionItem } from "./selection-item";
 
 interface SelectionListProps<T = string> {
   items: Array<{ id: T; label: string; icon?: string; color?: string }>;
-  
+
   // Single selection mode
   selectedId?: T | null;
   onSelect?: (id: T) => void;
-  
-  // Multi selection mode  
+
+  // Multi selection mode
   selectedIds?: T[];
   onToggle?: (id: T) => void;
-  
+
   // Multi selection actions
   onSelectAll?: () => void;
   onSelectNone?: () => void;
-  
+
   // Configuration
-  mode: 'single' | 'multi';
+  mode: "single" | "multi";
   showDefault?: boolean;
   defaultLabel?: string;
   emptyLabel?: string;
@@ -34,20 +34,20 @@ export function SelectionList<T = string>({
   onSelectNone,
   mode,
   showDefault = false,
-  defaultLabel = 'Default',
-  emptyLabel = 'No items available',
-  className = ''
+  defaultLabel = "Default",
+  emptyLabel = "No items available",
+  className = "",
 }: SelectionListProps<T>) {
   const handleSelect = (id: T) => {
-    if (mode === 'single' && onSelect) {
+    if (mode === "single" && onSelect) {
       onSelect(id);
-    } else if (mode === 'multi' && onToggle) {
+    } else if (mode === "multi" && onToggle) {
       onToggle(id);
     }
   };
 
   const isSelected = (id: T) => {
-    if (mode === 'single') {
+    if (mode === "single") {
       return selectedId === id;
     } else {
       return selectedIds.includes(id);
@@ -56,7 +56,7 @@ export function SelectionList<T = string>({
 
   const renderDefaultOption = () => {
     if (!showDefault) return null;
-    
+
     return (
       <SelectionItem
         id="default"
@@ -69,19 +69,19 @@ export function SelectionList<T = string>({
   };
 
   const renderMultiSelectionActions = () => {
-    if (mode !== 'multi' || !onSelectAll || !onSelectNone) return null;
-    
+    if (mode !== "multi" || !onSelectAll || !onSelectNone) return null;
+
     return (
-      <div className="flex gap-2 mb-2">
+      <div className="mb-2 flex gap-2">
         <button
           onClick={onSelectAll}
-          className="px-2 py-1 text-xs bg-[var(--surface-2)] border border-[var(--border-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--surface-interactive)] transition-colors"
+          className="rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs transition-colors hover:bg-[var(--surface-interactive)]"
         >
           Select All
         </button>
         <button
           onClick={onSelectNone}
-          className="px-2 py-1 text-xs bg-[var(--surface-2)] border border-[var(--border-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--surface-interactive)] transition-colors"
+          className="rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs transition-colors hover:bg-[var(--surface-interactive)]"
         >
           Select None
         </button>
@@ -91,7 +91,9 @@ export function SelectionList<T = string>({
 
   if (items.length === 0 && !showDefault) {
     return (
-      <div className={`text-sm text-[var(--foreground-muted)] p-2 ${className}`}>
+      <div
+        className={`p-2 text-sm text-[var(--foreground-muted)] ${className}`}
+      >
         {emptyLabel}
       </div>
     );

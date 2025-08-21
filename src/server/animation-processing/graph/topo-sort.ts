@@ -5,7 +5,7 @@ import { CircularDependencyError } from "@/shared/errors/domain";
 
 export function getTopologicalOrder(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[]
+  edges: ReactFlowEdge[],
 ): ReactFlowNode<NodeData>[] {
   const inDegree = new Map<string, number>();
   const adjList = new Map<string, string[]>();
@@ -38,7 +38,9 @@ export function getTopologicalOrder(
       inDegree.set(neighborId, newInDegree);
 
       if (newInDegree === 0) {
-        const neighborNode = nodes.find((n) => n.data.identifier.id === neighborId);
+        const neighborNode = nodes.find(
+          (n) => n.data.identifier.id === neighborId,
+        );
         if (neighborNode) {
           queue.push(neighborNode);
         }
@@ -52,5 +54,3 @@ export function getTopologicalOrder(
 
   return result;
 }
-
-

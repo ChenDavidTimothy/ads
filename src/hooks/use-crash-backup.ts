@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WorkspaceState } from '@/types/workspace-state';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { WorkspaceState } from "@/types/workspace-state";
 
-const BACKUP_PREFIX = 'workspace-emergency-backup-';
+const BACKUP_PREFIX = "workspace-emergency-backup-";
 
-export function useCrashBackup(workspaceId: string, getState: () => WorkspaceState | null, options?: { intervalMs?: number; maxAgeMs?: number }) {
+export function useCrashBackup(
+  workspaceId: string,
+  getState: () => WorkspaceState | null,
+  options?: { intervalMs?: number; maxAgeMs?: number },
+) {
   const [hasBackup, setHasBackup] = useState(false);
   const intervalMs = options?.intervalMs ?? 15000; // 15s periodic backup
   const maxAgeMs = options?.maxAgeMs ?? 24 * 60 * 60 * 1000; // 24 hours
@@ -17,7 +21,10 @@ export function useCrashBackup(workspaceId: string, getState: () => WorkspaceSta
     const raw = localStorage.getItem(key);
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as { state: WorkspaceState; timestamp: number };
+        const parsed = JSON.parse(raw) as {
+          state: WorkspaceState;
+          timestamp: number;
+        };
         setHasBackup(Date.now() - parsed.timestamp < maxAgeMs);
       } catch {
         localStorage.removeItem(key);
@@ -35,7 +42,10 @@ export function useCrashBackup(workspaceId: string, getState: () => WorkspaceSta
       const state = getState();
       if (!state) return;
       try {
-        localStorage.setItem(key, JSON.stringify({ state, timestamp: Date.now() }));
+        localStorage.setItem(
+          key,
+          JSON.stringify({ state, timestamp: Date.now() }),
+        );
         setHasBackup(true);
       } catch {
         // Best-effort; ignore quota errors
@@ -53,7 +63,10 @@ export function useCrashBackup(workspaceId: string, getState: () => WorkspaceSta
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     try {
-      const parsed = JSON.parse(raw) as { state: WorkspaceState; timestamp: number };
+      const parsed = JSON.parse(raw) as {
+        state: WorkspaceState;
+        timestamp: number;
+      };
       // Keep the backup until user dismisses
       return parsed.state;
     } catch {

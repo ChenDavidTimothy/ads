@@ -1,20 +1,20 @@
 // src/components/workspace/flow/components/FlowCanvas.tsx
-import React, { useState } from 'react';
-import 'reactflow/dist/style.css';
-import ReactFlow, { 
-  Background, 
-  MiniMap, 
+import React, { useState } from "react";
+import "reactflow/dist/style.css";
+import ReactFlow, {
+  Background,
+  MiniMap,
   ConnectionLineType,
   MarkerType,
-  type Edge, 
-  type Node, 
-  type NodeTypes, 
-  type NodeChange, 
-  type EdgeChange, 
-  type Connection, 
-  type NodeDragHandler 
-} from 'reactflow';
-import type { NodeData } from '@/shared/types';
+  type Edge,
+  type Node,
+  type NodeTypes,
+  type NodeChange,
+  type EdgeChange,
+  type Connection,
+  type NodeDragHandler,
+} from "reactflow";
+import type { NodeData } from "@/shared/types";
 
 // Edge and handle styling - ALL edges use identical styling
 // CRITICAL: All edges must have identical 3px stroke width for consistency across workspaces
@@ -122,120 +122,116 @@ const EDGE_STYLES = `
 `;
 
 interface Props {
-	nodes: Node<NodeData>[];
-	edges: Edge[];
-	nodeTypes: NodeTypes;
-	onNodesChange: (changes: NodeChange[]) => void;
-	onEdgesChange: (changes: EdgeChange[]) => void;
-	onConnect: (params: Connection) => void;
-	onNodeClick: (event: React.MouseEvent, node: Node) => void;
-	onPaneClick: () => void;
-	onNodesDelete: (nodes: Node[]) => void;
-	onEdgesDelete: (edges: Edge[]) => void;
-	disableDeletion: boolean;
-	onNodeDragStop?: NodeDragHandler;
-	onSelectionChange?: (params: { nodes: Node[]; edges: Edge[] }) => void;
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+  nodeTypes: NodeTypes;
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (params: Connection) => void;
+  onNodeClick: (event: React.MouseEvent, node: Node) => void;
+  onPaneClick: () => void;
+  onNodesDelete: (nodes: Node[]) => void;
+  onEdgesDelete: (edges: Edge[]) => void;
+  disableDeletion: boolean;
+  onNodeDragStop?: NodeDragHandler;
+  onSelectionChange?: (params: { nodes: Node[]; edges: Edge[] }) => void;
 }
 
 export function FlowCanvas(props: Props) {
-	const { 
-		nodes, 
-		edges, 
-		nodeTypes, 
-		onNodesChange, 
-		onEdgesChange, 
-		onConnect, 
-		onNodeClick, 
-		onPaneClick, 
-		onNodesDelete, 
-		onEdgesDelete, 
-		disableDeletion, 
-		onNodeDragStop, 
-		onSelectionChange 
-	} = props;
+  const {
+    nodes,
+    edges,
+    nodeTypes,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onNodeClick,
+    onPaneClick,
+    onNodesDelete,
+    onEdgesDelete,
+    disableDeletion,
+    onNodeDragStop,
+    onSelectionChange,
+  } = props;
 
-	const [showMinimap, setShowMinimap] = useState(true);
+  const [showMinimap, setShowMinimap] = useState(true);
 
-	return (
-		<>
-			<style dangerouslySetInnerHTML={{ __html: EDGE_STYLES }} />
-			
-			<ReactFlow
-				nodes={nodes}
-				edges={edges}
-				onNodesChange={onNodesChange}
-				onEdgesChange={onEdgesChange}
-				onConnect={onConnect}
-				onNodeClick={onNodeClick}
-				onPaneClick={onPaneClick}
-				onNodesDelete={onNodesDelete}
-				onEdgesDelete={onEdgesDelete}
-				onNodeDragStop={onNodeDragStop}
-				onSelectionChange={onSelectionChange}
-				nodeTypes={nodeTypes}
-				
-				// Edge styling - ALL edges use identical 3px stroke width for consistency
-				connectionLineType={ConnectionLineType.SmoothStep}
-													defaultEdgeOptions={{
-					type: 'smoothstep',
-					style: { stroke: 'var(--edge-stroke)', strokeWidth: 3 },
-					markerEnd: {
-						type: MarkerType.ArrowClosed,
-						width: 14,
-						height: 14,
-						color: 'var(--edge-stroke-hover)',
-					},
-				}}
-				
-				minZoom={0.1}
-				maxZoom={5}
-				zoomOnScroll={true}
-				zoomOnPinch={true}
-				zoomOnDoubleClick={false}
-				
-				fitView
-				panOnDrag
-				selectionOnDrag
-				selectNodesOnDrag={false}
-				className="bg-[var(--surface-0)]"
-				deleteKeyCode={['Delete', 'Backspace']}
-				multiSelectionKeyCode={disableDeletion ? null : 'Meta'}
-				proOptions={{ hideAttribution: true }}
-			>
-				<Background color="var(--border-secondary)" size={2} gap={20} />
-				
-				{/* Custom minimap toggle button - positioned inside ReactFlow */}
-				<button
-					onClick={() => setShowMinimap(!showMinimap)}
-					className="absolute bottom-4 right-4 bg-[var(--surface-1)] border border-[var(--border-primary)] rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-secondary)] shadow-glass hover:bg-[var(--surface-2)] transition-colors z-50"
-					title="Toggle minimap"
-				>
-					{showMinimap ? 'Hide Map' : 'Show Map'}
-				</button>
-				
-				{showMinimap && (
-					<MiniMap 
-						className="bg-[var(--surface-1)] border border-[var(--border-primary)] shadow-glass rounded-[var(--radius-sm)]" 
-						        nodeColor={(node) => {
-          const type = node.type!;
-          if (type.includes('animation')) return 'var(--node-animation)';
-          if (type.includes('logic')) return 'var(--node-logic)';
-          if (type.includes('geometry')) return 'var(--node-geometry)';
-          if (type.includes('text')) return 'var(--node-text)';
-          if (type.includes('data')) return 'var(--node-data)';
-          return 'var(--node-output)';
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: EDGE_STYLES }} />
+
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onNodeDragStop={onNodeDragStop}
+        onSelectionChange={onSelectionChange}
+        nodeTypes={nodeTypes}
+        // Edge styling - ALL edges use identical 3px stroke width for consistency
+        connectionLineType={ConnectionLineType.SmoothStep}
+        defaultEdgeOptions={{
+          type: "smoothstep",
+          style: { stroke: "var(--edge-stroke)", strokeWidth: 3 },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: "var(--edge-stroke-hover)",
+          },
         }}
-						maskColor="var(--surface-0)"
-						style={{
-							backgroundColor: 'var(--surface-1)',
-							border: '1px solid var(--border-primary)',
-							borderRadius: 'var(--radius-sm)',
-							boxShadow: 'var(--glass-shadow)'
-						}}
-					/>
-				)}
-			</ReactFlow>
-		</>
-	);
-}
+        minZoom={0.1}
+        maxZoom={5}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        fitView={nodes.length > 0}
+        panOnDrag
+        selectionOnDrag
+        selectNodesOnDrag={false}
+        className="bg-[var(--surface-0)]"
+        deleteKeyCode={["Delete", "Backspace"]}
+        multiSelectionKeyCode={disableDeletion ? null : "Meta"}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background color="var(--border-secondary)" size={2} gap={20} />
 
+        {/* Custom minimap toggle button - positioned inside ReactFlow */}
+        <button
+          onClick={() => setShowMinimap(!showMinimap)}
+          className="shadow-glass absolute right-4 bottom-4 z-50 rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]"
+          title="Toggle minimap"
+        >
+          {showMinimap ? "Hide Map" : "Show Map"}
+        </button>
+
+        {showMinimap && (
+          <MiniMap
+            className="shadow-glass rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)]"
+            nodeColor={(node) => {
+              const type = node.type!;
+              if (type.includes("animation")) return "var(--node-animation)";
+              if (type.includes("logic")) return "var(--node-logic)";
+              if (type.includes("geometry")) return "var(--node-geometry)";
+              if (type.includes("text")) return "var(--node-text)";
+              if (type.includes("data")) return "var(--node-data)";
+              return "var(--node-output)";
+            }}
+            maskColor="var(--surface-0)"
+            style={{
+              backgroundColor: "var(--surface-1)",
+              border: "1px solid var(--border-primary)",
+              borderRadius: "var(--radius-sm)",
+              boxShadow: "var(--glass-shadow)",
+            }}
+          />
+        )}
+      </ReactFlow>
+    </>
+  );
+}

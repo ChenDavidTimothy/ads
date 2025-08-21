@@ -1,21 +1,19 @@
 // src/animation/scene/timeline.ts
-import type { 
-  AnimationScene, 
-  ObjectState, 
-  SceneObject
-} from '@/shared/types/scene';
+import type {
+  AnimationScene,
+  ObjectState,
+  SceneObject,
+} from "@/shared/types/scene";
 
-import type { Point2D } from '@/shared/types/core';
-import type { 
-  SceneAnimationTrack
-} from '@/shared/types';
+import type { Point2D } from "@/shared/types/core";
+import type { SceneAnimationTrack } from "@/shared/types";
 
 // Import the new registry system
-import { 
+import {
   transformFactory,
   TransformEvaluator,
-  getTransformDefinition
-} from '@/shared/registry/transforms';
+  getTransformDefinition,
+} from "@/shared/registry/transforms";
 
 // Create an instance of the transform evaluator
 const transformEvaluator = new TransformEvaluator();
@@ -26,9 +24,11 @@ type AnimationValue = Point2D | number | string | boolean | null;
 // (Legacy easing and color helpers removed; modern evaluator handles interpolation)
 
 // Evaluate a single animation track at a specific time
-import type { SceneTransform } from '@/shared/types/transforms';
+import type { SceneTransform } from "@/shared/types/transforms";
 
-function sceneTrackToSceneTransform(track: SceneAnimationTrack): SceneTransform {
+function sceneTrackToSceneTransform(
+  track: SceneAnimationTrack,
+): SceneTransform {
   return {
     objectId: track.objectId,
     type: track.type,
@@ -39,23 +39,28 @@ function sceneTrackToSceneTransform(track: SceneAnimationTrack): SceneTransform 
   };
 }
 
-function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
-  return transformEvaluator.evaluateTransform(sceneTrackToSceneTransform(animation), time);
+function evaluateAnimation(
+  animation: SceneAnimationTrack,
+  time: number,
+): AnimationValue {
+  return transformEvaluator.evaluateTransform(
+    sceneTrackToSceneTransform(animation),
+    time,
+  );
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
   return transformEvaluator.getEndValue(sceneTrackToSceneTransform(animation));
 }
 
-
-
 function evaluateVisibility(object: SceneObject, time: number): number {
-  const appearanceTime = (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;
-  
+  const appearanceTime =
+    (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;
+
   if (time < appearanceTime) {
     return 0;
   }
-  
+
   return object.initialOpacity ?? 1;
 }
 
@@ -66,40 +71,44 @@ function clonePoint(p: Point2D): Point2D {
 
 // Get the state of an object at a specific time (pure, given animations for that object)
 export function getObjectStateAtTime(
-  object: SceneObject, 
-  animations: SceneAnimationTrack[], 
-  time: number
+  object: SceneObject,
+  animations: SceneAnimationTrack[],
+  time: number,
 ): ObjectState {
   const state: ObjectState = {
     position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
+    scale: object.initialScale
+      ? clonePoint(object.initialScale)
+      : { x: 1, y: 1 },
     opacity: evaluateVisibility(object, time),
     colors: {
       // ✅ CHANGE - Read from Canvas properties instead of hardcode
-      fill: object.initialFillColor ?? '#4444ff',
-      stroke: object.initialStrokeColor ?? '#ffffff'
+      fill: object.initialFillColor ?? "#4444ff",
+      stroke: object.initialStrokeColor ?? "#ffffff",
     },
-    strokeWidth: object.initialStrokeWidth ?? 2  // ✅ ADD
+    strokeWidth: object.initialStrokeWidth ?? 2, // ✅ ADD
   };
-  
+
   // animations is expected to contain only tracks for this object and be pre-sorted by startTime
   const objectAnimations = animations;
-  
+
   // Track the accumulated state from completed animations
   const accumulatedState: ObjectState = {
     position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
+    scale: object.initialScale
+      ? clonePoint(object.initialScale)
+      : { x: 1, y: 1 },
     opacity: object.initialOpacity ?? 1,
     colors: {
       // ✅ CHANGE - Read from Canvas properties
-      fill: object.initialFillColor ?? '#4444ff',
-      stroke: object.initialStrokeColor ?? '#ffffff'
+      fill: object.initialFillColor ?? "#4444ff",
+      stroke: object.initialStrokeColor ?? "#ffffff",
     },
-    strokeWidth: object.initialStrokeWidth ?? 2  // ✅ ADD
+    strokeWidth: object.initialStrokeWidth ?? 2, // ✅ ADD
   };
-  
+
   for (const animation of objectAnimations) {
     const animationEndTime = animation.startTime + animation.duration;
 
@@ -117,7 +126,7 @@ export function getObjectStateAtTime(
     if (time < animation.startTime) {
       break;
     }
-    
+
     // Apply the current animation value (if active) or use accumulated state
     const value = evaluateAnimation(animation, time);
     if (value !== null) {
@@ -126,50 +135,50 @@ export function getObjectStateAtTime(
       updateStateFromAnimation(state, animation, accumulatedState);
     }
   }
-  
+
   return state;
 }
 
 // Helper function to update accumulated state with end values
 function updateAccumulatedState(
-  accumulatedState: ObjectState, 
-  animation: SceneAnimationTrack, 
-  endValue: AnimationValue
+  accumulatedState: ObjectState,
+  animation: SceneAnimationTrack,
+  endValue: AnimationValue,
 ): void {
   const definition = getTransformDefinition(animation.type);
   if (!definition?.metadata?.targetProperty) return;
-  
+
   switch (definition.metadata.targetProperty) {
-    case 'position':
+    case "position":
       accumulatedState.position = clonePoint(endValue as Point2D);
       break;
-    case 'rotation':
+    case "rotation":
       accumulatedState.rotation = endValue as number;
       break;
-    case 'scale': {
+    case "scale": {
       const v = endValue as number | Point2D;
-      if (typeof v === 'number') {
+      if (typeof v === "number") {
         accumulatedState.scale = { x: v, y: v };
       } else {
         accumulatedState.scale = clonePoint(v);
       }
       break;
     }
-    case 'opacity':
+    case "opacity":
       accumulatedState.opacity = endValue as number;
       break;
-    case 'color':
-      if (animation.type === 'color') {
+    case "color":
+      if (animation.type === "color") {
         const colorProperty = animation.properties.property;
-        if (colorProperty === 'fill') {
-          accumulatedState.colors.fill = (endValue as string);
-        } else if (colorProperty === 'stroke') {
-          accumulatedState.colors.stroke = (endValue as string);
+        if (colorProperty === "fill") {
+          accumulatedState.colors.fill = endValue as string;
+        } else if (colorProperty === "stroke") {
+          accumulatedState.colors.stroke = endValue as string;
         }
       }
       break;
     // ✅ ADD - New case for strokeWidth animations
-    case 'strokeWidth':
+    case "strokeWidth":
       accumulatedState.strokeWidth = endValue as number;
       break;
   }
@@ -177,82 +186,89 @@ function updateAccumulatedState(
 
 // Helper function to update state from animation value or accumulated state
 function updateStateFromAnimation(
-  state: ObjectState, 
-  animation: SceneAnimationTrack, 
+  state: ObjectState,
+  animation: SceneAnimationTrack,
   value: AnimationValue | ObjectState,
-  targetProperty?: string
+  targetProperty?: string,
 ): void {
   const definition = getTransformDefinition(animation.type);
   const property = targetProperty ?? definition?.metadata?.targetProperty;
   if (!property) return;
-  
+
   function isObjectState(v: unknown): v is ObjectState {
-    return typeof v === 'object' && v !== null && 'position' in v && 'rotation' in v && 'scale' in v && 'opacity' in v;
+    return (
+      typeof v === "object" &&
+      v !== null &&
+      "position" in v &&
+      "rotation" in v &&
+      "scale" in v &&
+      "opacity" in v
+    );
   }
 
   if (isObjectState(value)) {
     // Value is an ObjectState, extract the specific property
     switch (property) {
-      case 'position':
+      case "position":
         state.position = clonePoint(value.position);
         break;
-      case 'rotation':
+      case "rotation":
         state.rotation = value.rotation;
         break;
-      case 'scale':
+      case "scale":
         state.scale = clonePoint(value.scale);
         break;
-      case 'opacity':
+      case "opacity":
         state.opacity = value.opacity;
         break;
-      case 'color':
-        if (animation.type === 'color') {
+      case "color":
+        if (animation.type === "color") {
           const colorProperty = animation.properties.property;
-          if (colorProperty === 'fill') {
+          if (colorProperty === "fill") {
             state.colors.fill = value.colors.fill;
-          } else if (colorProperty === 'stroke') {
+          } else if (colorProperty === "stroke") {
             state.colors.stroke = value.colors.stroke;
           }
         }
         break;
       // ✅ ADD - New case for strokeWidth animations
-      case 'strokeWidth':
+      case "strokeWidth":
         state.strokeWidth = value.strokeWidth;
         break;
     }
   } else {
     // Value is a direct animation value
     switch (property) {
-      case 'position':
+      case "position":
         state.position = clonePoint(value as Point2D);
         break;
-      case 'rotation':
+      case "rotation":
         state.rotation = value as number;
         break;
-      case 'scale': {
+      case "scale": {
         const v = value as number | Point2D;
-        if (typeof v === 'number') {
+        if (typeof v === "number") {
           state.scale = { x: v, y: v };
         } else {
           state.scale = clonePoint(v);
         }
         break;
       }
-      case 'opacity':
+      case "opacity":
         state.opacity = value as number;
         break;
-      case 'color':
-        if (animation.type === 'color') {
+      case "color":
+        if (animation.type === "color") {
           const colorProperty = animation.properties.property;
-          if (colorProperty === 'fill') {
+          if (colorProperty === "fill") {
             state.colors.fill = value as string;
-          } else if (colorProperty === 'stroke') {
+          } else if (colorProperty === "stroke") {
             state.colors.stroke = value as string;
           }
         }
         break;
       // ✅ ADD - New case for strokeWidth animations
-      case 'strokeWidth':
+      case "strokeWidth":
         state.strokeWidth = value as number;
         break;
     }
@@ -260,7 +276,10 @@ function updateStateFromAnimation(
 }
 
 // Get states of all objects at a specific time (one-shot)
-export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<string, ObjectState> {
+export function getSceneStateAtTime(
+  scene: AnimationScene,
+  time: number,
+): Map<string, ObjectState> {
   const sceneState = new Map<string, ObjectState>();
 
   // Build per-object animation index once
@@ -275,13 +294,13 @@ export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<st
     list.sort((a, b) => a.startTime - b.startTime);
     animationsByObject.set(key, list);
   }
-  
+
   for (const object of scene.objects) {
     const objectAnimations = animationsByObject.get(object.id) ?? [];
     const objectState = getObjectStateAtTime(object, objectAnimations, time);
     sceneState.set(object.id, objectState);
   }
-  
+
   return sceneState;
 }
 
@@ -307,7 +326,7 @@ export class Timeline {
   }
 
   getObjectState(objectId: string, time: number): ObjectState | undefined {
-    const object = this.scene.objects.find(o => o.id === objectId);
+    const object = this.scene.objects.find((o) => o.id === objectId);
     if (!object) return undefined;
     const tracks = this.animationsByObject.get(objectId) ?? [];
     return getObjectStateAtTime(object, tracks, time);
@@ -325,16 +344,20 @@ export class Timeline {
 
 // Helper to create common animation patterns - generic factory + thin wrappers
 function createAnimationTrack<TProps extends Record<string, unknown>>(
-  type: 'move' | 'rotate' | 'scale' | 'fade' | 'color',
+  type: "move" | "rotate" | "scale" | "fade" | "color",
   objectId: string,
   props: TProps,
   startTime: number,
   duration: number,
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut'
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut",
 ): SceneAnimationTrack {
   const transform = transformFactory.createTransform(type, props);
   transform.easing = easing;
-  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
+  const sceneTransform = transformFactory.createSceneTransform(
+    transform,
+    objectId,
+    startTime,
+  );
 
   const track = {
     id: `${objectId}::${type}::${startTime}`,
@@ -354,9 +377,16 @@ export function createMoveAnimation(
   to: Point2D,
   startTime: number,
   duration: number,
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "easeInOut",
 ): SceneAnimationTrack {
-  return createAnimationTrack('move', objectId, { from, to }, startTime, duration, easing);
+  return createAnimationTrack(
+    "move",
+    objectId,
+    { from, to },
+    startTime,
+    duration,
+    easing,
+  );
 }
 
 export function createRotateAnimation(
@@ -365,9 +395,16 @@ export function createRotateAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "linear",
 ): SceneAnimationTrack {
-  return createAnimationTrack('rotate', objectId, { from, to }, startTime, duration, easing);
+  return createAnimationTrack(
+    "rotate",
+    objectId,
+    { from, to },
+    startTime,
+    duration,
+    easing,
+  );
 }
 
 export function createScaleAnimation(
@@ -376,7 +413,14 @@ export function createScaleAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "easeInOut",
 ): SceneAnimationTrack {
-  return createAnimationTrack('scale', objectId, { from, to }, startTime, duration, easing);
+  return createAnimationTrack(
+    "scale",
+    objectId,
+    { from, to },
+    startTime,
+    duration,
+    easing,
+  );
 }

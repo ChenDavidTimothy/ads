@@ -20,6 +20,8 @@ export const ENCODER_TIMEOUTS: EncoderTimeoutsConfig = {
 
 export const RENDER_WATCHDOG: RenderWatchdogConfig = {
   maxRenderMs: Number(process.env.RENDER_MAX_MS ?? 5 * 60 * 1000), // 5 minutes
-  maxHeapUsedBytes: Number(process.env.RENDER_MAX_HEAP_BYTES ?? 700 * 1024 * 1024), // 700MB
+  maxHeapUsedBytes: Number(
+    process.env.RENDER_MAX_HEAP_BYTES ?? 700 * 1024 * 1024,
+  ), // 700MB
   sampleIntervalMs: Number(process.env.RENDER_WATCHDOG_INTERVAL_MS ?? 1000),
 };

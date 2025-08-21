@@ -1,6 +1,6 @@
 // src/shared/types/scene.ts
-import type { Point2D } from './core';
-import type { PropertySourceMap } from '@/shared/properties/precedence';
+import type { Point2D } from "./core";
+import type { PropertySourceMap } from "@/shared/properties/precedence";
 
 // Animation Scene
 export interface AnimationScene {
@@ -14,7 +14,7 @@ export interface AnimationScene {
 
 export interface SceneObject {
   id: string;
-  type: 'triangle' | 'circle' | 'rectangle' | 'text' | 'image';
+  type: "triangle" | "circle" | "rectangle" | "text" | "image";
   properties: GeometryProperties;
   initialPosition: Point2D;
   initialRotation?: number;
@@ -66,7 +66,12 @@ export interface TextProperties {
   fontSize: number;
 }
 
-export type GeometryProperties = TriangleProperties | CircleProperties | RectangleProperties | ImageProperties | TextProperties;
+export type GeometryProperties =
+  | TriangleProperties
+  | CircleProperties
+  | RectangleProperties
+  | ImageProperties
+  | TextProperties;
 
 // Object state at any point in time
 export interface ObjectState {
@@ -90,12 +95,12 @@ export interface BaseSceneAnimationTrack {
   objectId: string;
   startTime: number;
   duration: number;
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
 }
 
 // Individual scene track types - now generated from registry
 export interface SceneMoveTrack extends BaseSceneAnimationTrack {
-  type: 'move';
+  type: "move";
   properties: {
     from: Point2D;
     to: Point2D;
@@ -103,7 +108,7 @@ export interface SceneMoveTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneRotateTrack extends BaseSceneAnimationTrack {
-  type: 'rotate';
+  type: "rotate";
   properties: {
     from: number;
     to: number;
@@ -111,7 +116,7 @@ export interface SceneRotateTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneScaleTrack extends BaseSceneAnimationTrack {
-  type: 'scale';
+  type: "scale";
   properties: {
     from: number | Point2D;
     to: number | Point2D;
@@ -119,7 +124,7 @@ export interface SceneScaleTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneFadeTrack extends BaseSceneAnimationTrack {
-  type: 'fade';
+  type: "fade";
   properties: {
     from: number;
     to: number;
@@ -127,61 +132,72 @@ export interface SceneFadeTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneColorTrack extends BaseSceneAnimationTrack {
-  type: 'color';
+  type: "color";
   properties: {
     from: string;
     to: string;
-    property: 'fill' | 'stroke';
+    property: "fill" | "stroke";
   };
 }
 
 // Union type - now extensible through registry
-export type SceneAnimationTrack = 
-  | SceneMoveTrack 
-  | SceneRotateTrack 
-  | SceneScaleTrack 
-  | SceneFadeTrack 
+export type SceneAnimationTrack =
+  | SceneMoveTrack
+  | SceneRotateTrack
+  | SceneScaleTrack
+  | SceneFadeTrack
   | SceneColorTrack;
 
 // Type guard factory - generates type guards dynamically
-export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(type: T['type']) {
+export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(
+  type: T["type"],
+) {
   return (track: SceneAnimationTrack): track is T => track.type === type;
 }
 
 // Pre-generated type guards for existing types
-export const isSceneMoveTrack = createSceneTrackTypeGuard<SceneMoveTrack>('move');
-export const isSceneRotateTrack = createSceneTrackTypeGuard<SceneRotateTrack>('rotate');
-export const isSceneScaleTrack = createSceneTrackTypeGuard<SceneScaleTrack>('scale');
-export const isSceneFadeTrack = createSceneTrackTypeGuard<SceneFadeTrack>('fade');
-export const isSceneColorTrack = createSceneTrackTypeGuard<SceneColorTrack>('color');
+export const isSceneMoveTrack =
+  createSceneTrackTypeGuard<SceneMoveTrack>("move");
+export const isSceneRotateTrack =
+  createSceneTrackTypeGuard<SceneRotateTrack>("rotate");
+export const isSceneScaleTrack =
+  createSceneTrackTypeGuard<SceneScaleTrack>("scale");
+export const isSceneFadeTrack =
+  createSceneTrackTypeGuard<SceneFadeTrack>("fade");
+export const isSceneColorTrack =
+  createSceneTrackTypeGuard<SceneColorTrack>("color");
 
 // Validation helpers
 export function validateScene(scene: AnimationScene): string[] {
   const errors: string[] = [];
-  
+
   if (scene.duration <= 0) {
     errors.push("Scene duration must be positive");
   }
-  
+
   if (scene.objects.length === 0) {
     errors.push("Scene must contain at least one object");
   }
-  
-  const objectIds = new Set(scene.objects.map(obj => obj.id));
-  
+
+  const objectIds = new Set(scene.objects.map((obj) => obj.id));
+
   for (const animation of scene.animations) {
     if (!objectIds.has(animation.objectId)) {
       errors.push(`Animation references unknown object: ${animation.objectId}`);
     }
-    
+
     if (animation.startTime < 0) {
-      errors.push(`Animation start time cannot be negative: ${animation.objectId}`);
+      errors.push(
+        `Animation start time cannot be negative: ${animation.objectId}`,
+      );
     }
-    
+
     if (animation.startTime + animation.duration > scene.duration) {
-      errors.push(`Animation extends beyond scene duration: ${animation.objectId}`);
+      errors.push(
+        `Animation extends beyond scene duration: ${animation.objectId}`,
+      );
     }
   }
-  
+
   return errors;
 }

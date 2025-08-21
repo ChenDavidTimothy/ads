@@ -8,15 +8,18 @@ import type { TriangleNodeData } from "@/shared/types/nodes";
 import { Triangle as TriangleIcon } from "lucide-react";
 
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
-  const nodeDefinition = getNodeDefinition('triangle');
-  
+  const nodeDefinition = getNodeDefinition("triangle");
+
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div 
-            className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: '#4444ff' }} // Canvas default
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
+            style={{ backgroundColor: "#4444ff" }} // Canvas default
           >
             <TriangleIcon size={12} />
           </div>
@@ -26,7 +29,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div>Size: {data.size || 80}px</div>
       </CardContent>
 
@@ -37,7 +40,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 bg-[var(--node-geometry)] !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-geometry)]`}
           style={{ top: `50%` }}
         />
       ))}

@@ -7,13 +7,16 @@ import type { ImageNodeData } from "@/shared/types/nodes";
 import { Image } from "lucide-react";
 
 export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
-  const nodeDefinition = getNodeDefinition('image');
+  const nodeDefinition = getNodeDefinition("image");
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-input)] flex items-center justify-center rounded text-[var(--text-primary)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-input)] text-[var(--text-primary)]">
             <Image size={12} aria-label="Image node icon" />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -22,7 +25,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div className="text-[var(--text-tertiary)]">
           Connect to Media node for editing
         </div>
@@ -34,8 +37,8 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className="w-3 h-3 bg-[var(--node-input)] !border-2 !border-[var(--text-primary)]"
-          style={{ top: '50%' }}
+          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-input)]"
+          style={{ top: "50%" }}
         />
       ))}
     </Card>

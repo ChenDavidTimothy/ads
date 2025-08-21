@@ -7,7 +7,7 @@ import { createBrowserClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthStatus } from "@/components/auth/auth-status";
-import { 
+import {
   ArrowLeft,
   User,
   Lock,
@@ -19,7 +19,7 @@ import {
   EyeOff,
   Loader2,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
@@ -48,13 +48,13 @@ interface AuthUser {
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createBrowserClient();
-  
+
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Form states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -64,19 +64,24 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
-  
+
   // Active tab
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'danger'>('profile');
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "password" | "notifications" | "danger"
+  >("profile");
 
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-        
+        const {
+          data: { user: authUser },
+          error: authError,
+        } = await supabase.auth.getUser();
+
         if (authError || !authUser) {
           router.push("/login");
           return;
@@ -125,7 +130,7 @@ export default function SettingsPage() {
       }
 
       setSuccess("Profile updated successfully");
-      
+
       // Update local state
       if (user) {
         setUser({
@@ -196,31 +201,43 @@ export default function SettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update password");
+      setError(
+        err instanceof Error ? err.message : "Failed to update password",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete your account? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
-    if (!confirm("This will permanently delete all your workspaces and data. Type 'DELETE' to confirm.")) {
+    if (
+      !confirm(
+        "This will permanently delete all your workspaces and data. Type 'DELETE' to confirm.",
+      )
+    ) {
       return;
     }
 
     // Note: Account deletion would need to be implemented on the backend
     // This is just a placeholder for the UI
-    alert("Account deletion is not yet implemented. Please contact support to delete your account.");
+    alert(
+      "Account deletion is not yet implemented. Please contact support to delete your account.",
+    );
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0)]">
         <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading settings...</span>
         </div>
       </div>
@@ -228,30 +245,32 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'password', label: 'Password', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'danger', label: 'Danger Zone', icon: Shield },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "password", label: "Password", icon: Lock },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "danger", label: "Danger Zone", icon: Shield },
   ] as const;
 
   return (
     <div className="min-h-screen bg-[var(--surface-0)]">
       {/* Header */}
-      <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo & Back */}
             <div className="flex items-center gap-6">
               <Link href="/dashboard" className="flex items-center gap-3">
-                <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
+                <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
                 <div className="flex items-center gap-3">
-                  <Logo className="w-32 h-8" />
+                  <Logo className="h-8 w-32" />
                 </div>
               </Link>
-              
+
               <div className="text-[var(--text-tertiary)]">/</div>
-              
-              <h1 className="text-lg font-semibold text-[var(--text-primary)]">Settings</h1>
+
+              <h1 className="text-lg font-semibold text-[var(--text-primary)]">
+                Settings
+              </h1>
             </div>
 
             {/* User Menu */}
@@ -261,8 +280,8 @@ export default function SettingsPage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <nav className="space-y-1">
@@ -272,13 +291,13 @@ export default function SettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors ${
                       activeTab === tab.id
                         ? "bg-[var(--accent-primary)] text-white"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="h-4 w-4" />
                     {tab.label}
                   </button>
                 );
@@ -288,31 +307,40 @@ export default function SettingsPage() {
 
           {/* Content */}
           <div className="lg:col-span-3">
-            <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm">
+            <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 backdrop-blur-sm">
               {/* Status Messages */}
               {error && (
-                <div className="mb-6 p-3 bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-lg flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-[var(--danger-500)]" />
-                  <p className="text-sm text-[var(--danger-500)] font-medium">{error}</p>
+                <div className="mb-6 flex items-center gap-2 rounded-lg border border-[var(--danger-500)]/20 bg-[var(--danger-500)]/10 p-3">
+                  <AlertTriangle className="h-4 w-4 text-[var(--danger-500)]" />
+                  <p className="text-sm font-medium text-[var(--danger-500)]">
+                    {error}
+                  </p>
                 </div>
               )}
 
               {success && (
-                <div className="mb-6 p-3 bg-[var(--success-500)]/10 border border-[var(--success-500)]/20 rounded-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--success-500)]" />
-                  <p className="text-sm text-[var(--success-500)] font-medium">{success}</p>
+                <div className="mb-6 flex items-center gap-2 rounded-lg border border-[var(--success-500)]/20 bg-[var(--success-500)]/10 p-3">
+                  <CheckCircle2 className="h-4 w-4 text-[var(--success-500)]" />
+                  <p className="text-sm font-medium text-[var(--success-500)]">
+                    {success}
+                  </p>
                 </div>
               )}
 
               {/* Profile Tab */}
-              {activeTab === 'profile' && (
+              {activeTab === "profile" && (
                 <div>
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Profile Information</h2>
-                  
+                  <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
+                    Profile Information
+                  </h2>
+
                   <form onSubmit={handleUpdateProfile} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <label htmlFor="firstName" className="block text-sm font-medium text-[var(--text-primary)]">
+                        <label
+                          htmlFor="firstName"
+                          className="block text-sm font-medium text-[var(--text-primary)]"
+                        >
                           First name
                         </label>
                         <Input
@@ -325,7 +353,10 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label htmlFor="lastName" className="block text-sm font-medium text-[var(--text-primary)]">
+                        <label
+                          htmlFor="lastName"
+                          className="block text-sm font-medium text-[var(--text-primary)]"
+                        >
                           Last name
                         </label>
                         <Input
@@ -346,10 +377,11 @@ export default function SettingsPage() {
                         type="email"
                         value={user?.email ?? ""}
                         disabled
-                        className="bg-[var(--surface-2)] cursor-not-allowed"
+                        className="cursor-not-allowed bg-[var(--surface-2)]"
                       />
                       <p className="text-xs text-[var(--text-tertiary)]">
-                        Email address cannot be changed. Contact support if you need to update your email.
+                        Email address cannot be changed. Contact support if you
+                        need to update your email.
                       </p>
                     </div>
 
@@ -359,9 +391,13 @@ export default function SettingsPage() {
                       </label>
                       <Input
                         type="text"
-                        value={user ? new Date(user.created_at).toLocaleDateString() : ""}
+                        value={
+                          user
+                            ? new Date(user.created_at).toLocaleDateString()
+                            : ""
+                        }
                         disabled
-                        className="bg-[var(--surface-2)] cursor-not-allowed"
+                        className="cursor-not-allowed bg-[var(--surface-2)]"
                       />
                     </div>
 
@@ -372,12 +408,12 @@ export default function SettingsPage() {
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Saving...
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="mr-2 h-4 w-4" />
                           Save Changes
                         </>
                       )}
@@ -387,13 +423,18 @@ export default function SettingsPage() {
               )}
 
               {/* Password Tab */}
-              {activeTab === 'password' && (
+              {activeTab === "password" && (
                 <div>
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Change Password</h2>
-                  
+                  <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
+                    Change Password
+                  </h2>
+
                   <form onSubmit={handleUpdatePassword} className="space-y-6">
                     <div className="space-y-2">
-                      <label htmlFor="currentPassword" className="block text-sm font-medium text-[var(--text-primary)]">
+                      <label
+                        htmlFor="currentPassword"
+                        className="block text-sm font-medium text-[var(--text-primary)]"
+                      >
                         Current password
                       </label>
                       <div className="relative">
@@ -407,8 +448,10 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3"
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
                         >
                           {showCurrentPassword ? (
                             <EyeOff className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -420,7 +463,10 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="newPassword" className="block text-sm font-medium text-[var(--text-primary)]">
+                      <label
+                        htmlFor="newPassword"
+                        className="block text-sm font-medium text-[var(--text-primary)]"
+                      >
                         New password
                       </label>
                       <div className="relative">
@@ -434,7 +480,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
                           {showNewPassword ? (
@@ -447,7 +493,10 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-[var(--text-primary)]">
+                      <label
+                        htmlFor="confirmPassword"
+                        className="block text-sm font-medium text-[var(--text-primary)]"
+                      >
                         Confirm new password
                       </label>
                       <div className="relative">
@@ -461,8 +510,10 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -480,12 +531,12 @@ export default function SettingsPage() {
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Updating...
                         </>
                       ) : (
                         <>
-                          <Lock className="w-4 h-4 mr-2" />
+                          <Lock className="mr-2 h-4 w-4" />
                           Update Password
                         </>
                       )}
@@ -495,45 +546,57 @@ export default function SettingsPage() {
               )}
 
               {/* Notifications Tab */}
-              {activeTab === 'notifications' && (
+              {activeTab === "notifications" && (
                 <div>
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Notification Preferences</h2>
-                  
+                  <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
+                    Notification Preferences
+                  </h2>
+
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-medium text-[var(--text-primary)]">Email Notifications</h3>
-                        <p className="text-sm text-[var(--text-secondary)]">Receive emails about your account activity and updates</p>
+                        <h3 className="text-sm font-medium text-[var(--text-primary)]">
+                          Email Notifications
+                        </h3>
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          Receive emails about your account activity and updates
+                        </p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex cursor-pointer items-center">
                         <input
                           type="checkbox"
-                          className="sr-only peer"
+                          className="peer sr-only"
                           checked={emailNotifications}
-                          onChange={(e) => setEmailNotifications(e.target.checked)}
+                          onChange={(e) =>
+                            setEmailNotifications(e.target.checked)
+                          }
                         />
-                        <div className="w-11 h-6 bg-[var(--surface-2)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--accent-primary)]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent-primary)]"></div>
+                        <div className="peer h-6 w-11 rounded-full bg-[var(--surface-2)] peer-checked:bg-[var(--accent-primary)] peer-focus:ring-4 peer-focus:ring-[var(--accent-primary)]/20 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                       </label>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-medium text-[var(--text-primary)]">Marketing Emails</h3>
-                        <p className="text-sm text-[var(--text-secondary)]">Receive emails about new features and product updates</p>
+                        <h3 className="text-sm font-medium text-[var(--text-primary)]">
+                          Marketing Emails
+                        </h3>
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          Receive emails about new features and product updates
+                        </p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex cursor-pointer items-center">
                         <input
                           type="checkbox"
-                          className="sr-only peer"
+                          className="peer sr-only"
                           checked={marketingEmails}
                           onChange={(e) => setMarketingEmails(e.target.checked)}
                         />
-                        <div className="w-11 h-6 bg-[var(--surface-2)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--accent-primary)]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent-primary)]"></div>
+                        <div className="peer h-6 w-11 rounded-full bg-[var(--surface-2)] peer-checked:bg-[var(--accent-primary)] peer-focus:ring-4 peer-focus:ring-[var(--accent-primary)]/20 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                       </label>
                     </div>
 
                     <Button className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]">
-                      <Save className="w-4 h-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                       Save Preferences
                     </Button>
                   </div>
@@ -541,29 +604,31 @@ export default function SettingsPage() {
               )}
 
               {/* Danger Zone Tab */}
-              {activeTab === 'danger' && (
+              {activeTab === "danger" && (
                 <div>
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Danger Zone</h2>
-                  
-                  <div className="border border-[var(--danger-500)]/20 rounded-lg p-6 bg-[var(--danger-500)]/5">
+                  <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
+                    Danger Zone
+                  </h2>
+
+                  <div className="rounded-lg border border-[var(--danger-500)]/20 bg-[var(--danger-500)]/5 p-6">
                     <div className="flex items-start gap-4">
-                      <AlertTriangle className="w-6 h-6 text-[var(--danger-500)] flex-shrink-0 mt-1" />
+                      <AlertTriangle className="mt-1 h-6 w-6 flex-shrink-0 text-[var(--danger-500)]" />
                       <div className="flex-1">
-                        <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">Delete Account</h3>
-                        <p className="text-[var(--text-secondary)] mb-4">
-                          Once you delete your account, there is no going back. Please be certain. This will permanently delete:
+                        <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">
+                          Delete Account
+                        </h3>
+                        <p className="mb-4 text-[var(--text-secondary)]">
+                          Once you delete your account, there is no going back.
+                          Please be certain. This will permanently delete:
                         </p>
-                        <ul className="text-sm text-[var(--text-secondary)] mb-6 space-y-1">
+                        <ul className="mb-6 space-y-1 text-sm text-[var(--text-secondary)]">
                           <li>• All of your workspaces and projects</li>
                           <li>• All generated videos and animations</li>
                           <li>• Your account information and settings</li>
                           <li>• All associated data and files</li>
                         </ul>
-                        <Button 
-                          variant="danger"
-                          onClick={handleDeleteAccount}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                        <Button variant="danger" onClick={handleDeleteAccount}>
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete Account
                         </Button>
                       </div>

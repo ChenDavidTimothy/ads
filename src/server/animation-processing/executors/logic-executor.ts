@@ -1,130 +1,167 @@
 // src/server/animation-processing/executors/logic-executor.ts
 import type { NodeData } from "@/shared/types";
 import type { SceneAnimationTrack } from "@/shared/types/scene";
-import { setNodeOutput, getConnectedInputs, getTypedConnectedInput, getConnectedInput, type ExecutionContext, type ExecutionValue } from "../execution-context";
+import {
+  setNodeOutput,
+  getConnectedInputs,
+  getTypedConnectedInput,
+  getConnectedInput,
+  type ExecutionContext,
+  type ExecutionValue,
+} from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
-import { extractObjectIdsFromInputs, isPerObjectCursorMap, mergeCursorMaps, pickCursorsForIds } from "../scene/scene-assembler";
+import {
+  extractObjectIdsFromInputs,
+  isPerObjectCursorMap,
+  mergeCursorMaps,
+  pickCursorsForIds,
+} from "../scene/scene-assembler";
 import { TypeValidationError } from "@/shared/types/validation";
-import { MultipleResultValuesError, DuplicateNodeError, DuplicateCountExceededError } from "@/shared/errors/domain";
+import {
+  MultipleResultValuesError,
+  DuplicateNodeError,
+  DuplicateCountExceededError,
+} from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments, isObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import {
+  mergeObjectAssignments,
+  isObjectAssignments,
+  type ObjectAssignments,
+} from "@/shared/properties/assignments";
 
 export class LogicNodeExecutor extends BaseExecutor {
   // Register all logic node handlers
   protected registerHandlers(): void {
-    this.registerHandler('filter', this.executeFilter.bind(this));
-    this.registerHandler('merge', this.executeMerge.bind(this));
-    this.registerHandler('constants', this.executeConstants.bind(this));
-    this.registerHandler('result', this.executeResult.bind(this));
-    this.registerHandler('compare', this.executeCompare.bind(this));
-    this.registerHandler('if_else', this.executeIfElse.bind(this));
-    this.registerHandler('boolean_op', this.executeBooleanOp.bind(this));
-    this.registerHandler('math_op', this.executeMathOp.bind(this));
-    this.registerHandler('duplicate', this.executeDuplicate.bind(this));
+    this.registerHandler("filter", this.executeFilter.bind(this));
+    this.registerHandler("merge", this.executeMerge.bind(this));
+    this.registerHandler("constants", this.executeConstants.bind(this));
+    this.registerHandler("result", this.executeResult.bind(this));
+    this.registerHandler("compare", this.executeCompare.bind(this));
+    this.registerHandler("if_else", this.executeIfElse.bind(this));
+    this.registerHandler("boolean_op", this.executeBooleanOp.bind(this));
+    this.registerHandler("math_op", this.executeMathOp.bind(this));
+    this.registerHandler("duplicate", this.executeDuplicate.bind(this));
   }
-
-
 
   private async executeConstants(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    _connections: ReactFlowEdge[]
+    _connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const valueType = data.valueType as string;
-    
+
     let outputValue: unknown;
     let logicType: string;
-    
+
     switch (valueType) {
-      case 'number':
+      case "number":
         outputValue = Number(data.numberValue);
-        logicType = 'number';
+        logicType = "number";
         break;
-      case 'string':
-        outputValue = typeof data.stringValue === 'string' ? data.stringValue : (data.stringValue ?? '');
-        logicType = 'string';
+      case "string":
+        outputValue =
+          typeof data.stringValue === "string"
+            ? data.stringValue
+            : (data.stringValue ?? "");
+        logicType = "string";
         break;
-      case 'boolean':
-        outputValue = (data.booleanValue as string) === 'true';
-        logicType = 'boolean';
+      case "boolean":
+        outputValue = (data.booleanValue as string) === "true";
+        logicType = "boolean";
         break;
-      case 'color':
-        outputValue = typeof data.colorValue === 'string' ? data.colorValue : (data.colorValue ?? '#ffffff');
-        logicType = 'color';
+      case "color":
+        outputValue =
+          typeof data.colorValue === "string"
+            ? data.colorValue
+            : (data.colorValue ?? "#ffffff");
+        logicType = "color";
         break;
       default:
         outputValue = 0;
-        logicType = 'number';
+        logicType = "number";
         logger.warn(`Unknown value type: ${valueType}, defaulting to number 0`);
     }
 
-    logger.debug(`Constants ${node.data.identifier.displayName}: ${valueType} = ${String(outputValue)}`);
-    
+    logger.debug(
+      `Constants ${node.data.identifier.displayName}: ${valueType} = ${String(outputValue)}`,
+    );
+
     setNodeOutput(
       context,
       node.data.identifier.id,
-      'output',
-      'data',
+      "output",
+      "data",
       outputValue,
-      { logicType, validated: true }
+      { logicType, validated: true },
     );
   }
 
   private async executeResult(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const label = typeof data.label === 'string' ? data.label : 'Debug';
-  const nodeDisplayName = node.data.identifier.displayName;
-    
+    const label = typeof data.label === "string" ? data.label : "Debug";
+    const nodeDisplayName = node.data.identifier.displayName;
+
     const inputs = getConnectedInputs(
       context,
-      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
       node.data.identifier.id,
-      'input'
+      "input",
     );
 
     // VALIDATION: Exactly one value required at execution time
     if (inputs.length === 0) {
-      const noInputMessage = '<no input connected>';
+      const noInputMessage = "<no input connected>";
       logger.info(`[RESULT] ${label}: ${noInputMessage}`);
-      
+
       // Only capture debug logs if this node is the debug target
-      const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
-      
+      const isDebugTarget =
+        context.debugTargetNodeId === node.data.identifier.id;
+
       // Store "no input" state for production debugging
       if (context.debugMode && context.executionLog && isDebugTarget) {
         context.executionLog.push({
           nodeId: node.data.identifier.id,
           timestamp: Date.now(),
-          action: 'execute',
+          action: "execute",
           data: {
-            type: 'result_output',
+            type: "result_output",
             label,
             nodeDisplayName,
             value: null,
-            valueType: 'no_input',
+            valueType: "no_input",
             formattedValue: noInputMessage,
             executionContext: {
               hasConnections: false,
               inputCount: 0,
               executionId: `exec-${Date.now()}`,
-              flowState: 'no_input_connected'
-            }
-          }
+              flowState: "no_input_connected",
+            },
+          },
         });
       }
       return;
     }
 
     if (inputs.length > 1) {
-      const sourceNames = inputs.map(input => `${input.nodeId}:${input.portId}`).join(', ');
-      throw new MultipleResultValuesError(nodeDisplayName, sourceNames.split(', '));
+      const sourceNames = inputs
+        .map((input) => `${input.nodeId}:${input.portId}`)
+        .join(", ");
+      throw new MultipleResultValuesError(
+        nodeDisplayName,
+        sourceNames.split(", "),
+      );
     }
 
     // Process the single connected input
@@ -133,21 +170,21 @@ export class LogicNodeExecutor extends BaseExecutor {
     const valueType = this.getValueType(value);
     const formattedValue = this.formatValue(value);
     const executionId = `exec-${Date.now()}`;
-    
+
     // Enhanced console logging for development
     logger.info(`[RESULT] ${label}: ${formattedValue} (${valueType})`);
-    
+
     // Only capture debug logs if this node is the debug target
     const isDebugTarget = context.debugTargetNodeId === node.data.identifier.id;
-    
+
     // Production-ready debug storage with comprehensive metadata
     if (context.debugMode && context.executionLog && isDebugTarget) {
       context.executionLog.push({
         nodeId: node.data.identifier.id,
         timestamp: Date.now(),
-        action: 'execute',
+        action: "execute",
         data: {
-          type: 'result_output',
+          type: "result_output",
           label,
           nodeDisplayName,
           value,
@@ -157,58 +194,54 @@ export class LogicNodeExecutor extends BaseExecutor {
             hasConnections: true,
             inputCount: 1,
             executionId,
-            flowState: 'executed_successfully',
+            flowState: "executed_successfully",
             // Additional metadata for customer debugging
             dataSize: this.getDataSize(value),
             isComplexObject: this.isComplexObject(value),
             hasNestedData: this.hasNestedData(value),
-            sourceMetadata: input.metadata ?? {}
-          }
-        }
+            sourceMetadata: input.metadata ?? {},
+          },
+        },
       });
     }
 
     // Store result for potential debugging/display
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      'result',
-      'data',
-      value,
-      { resultType: valueType, displayValue: String(value) }
-    );
+    setNodeOutput(context, node.data.identifier.id, "result", "data", value, {
+      resultType: valueType,
+      displayValue: String(value),
+    });
 
     // Also expose on canonical 'output' port for variables
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      'output',
-      'data',
-      value,
-      { resultType: valueType, displayValue: String(value) }
-    );
+    setNodeOutput(context, node.data.identifier.id, "output", "data", value, {
+      resultType: valueType,
+      displayValue: String(value),
+    });
   }
 
   private getValueType(value: unknown): string {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
     if (Array.isArray(value)) return `array[${value.length}]`;
-    if (typeof value === 'object') return `object`;
+    if (typeof value === "object") return `object`;
     return typeof value;
   }
 
   private formatValue(value: unknown): string {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
+    if (typeof value === "string") return `"${value}"`;
+    if (
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      typeof value === "bigint"
+    ) {
       return String(value);
     }
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       try {
         return JSON.stringify(value, null, 2);
       } catch {
-        return '[Complex Object]';
+        return "[Complex Object]";
       }
     }
     // For other types (function, symbol, etc.)
@@ -217,24 +250,24 @@ export class LogicNodeExecutor extends BaseExecutor {
 
   // Enhanced helper methods for production debugging
   private getDataSize(value: unknown): string {
-    if (value === null || value === undefined) return '0 bytes';
-    
+    if (value === null || value === undefined) return "0 bytes";
+
     try {
       const str = JSON.stringify(value);
       const bytes = new Blob([str]).size;
-      
+
       if (bytes < 1024) return `${bytes} bytes`;
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     } catch {
-      return 'unknown size';
+      return "unknown size";
     }
   }
 
   private isComplexObject(value: unknown): boolean {
-    if (typeof value !== 'object' || value === null) return false;
+    if (typeof value !== "object" || value === null) return false;
     if (Array.isArray(value)) return value.length > 10;
-    
+
     try {
       const keys = Object.keys(value);
       return keys.length > 5;
@@ -244,15 +277,15 @@ export class LogicNodeExecutor extends BaseExecutor {
   }
 
   private hasNestedData(value: unknown): boolean {
-    if (typeof value !== 'object' || value === null) return false;
-    
+    if (typeof value !== "object" || value === null) return false;
+
     try {
       if (Array.isArray(value)) {
-        return value.some(item => typeof item === 'object' && item !== null);
+        return value.some((item) => typeof item === "object" && item !== null);
       }
-      
+
       const values = Object.values(value);
-      return values.some(val => typeof val === 'object' && val !== null);
+      return values.some((val) => typeof val === "object" && val !== null);
     } catch {
       return false;
     }
@@ -261,25 +294,39 @@ export class LogicNodeExecutor extends BaseExecutor {
   private async executeFilter(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
     const selectedObjectIds = (data.selectedObjectIds as string[]) || [];
 
     const inputs = getConnectedInputs(
       context,
-      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
       node.data.identifier.id,
-      'input'
+      "input",
     );
 
     if (inputs.length === 0) {
-      setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], { perObjectTimeCursor: {}, perObjectAssignments: {} });
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        "output",
+        "object_stream",
+        [],
+        { perObjectTimeCursor: {}, perObjectAssignments: {} },
+      );
       return;
     }
 
     const filteredResults: unknown[] = [];
-    const upstreamCursorMap = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
+    const upstreamCursorMap = this.extractCursorsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -298,24 +345,34 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     const filteredIds = extractObjectIdsFromInputs([{ data: filteredResults }]);
     const propagatedCursors = pickCursorsForIds(upstreamCursorMap, filteredIds);
-    const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], filteredIds);
-    const propagatedAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], filteredIds);
+    const propagatedAnimations = this.extractPerObjectAnimationsFromInputs(
+      inputs as unknown as ExecutionValue[],
+      filteredIds,
+    );
+    const propagatedAssignments = this.extractPerObjectAssignmentsFromInputs(
+      inputs as unknown as ExecutionValue[],
+      filteredIds,
+    );
     setNodeOutput(
       context,
       node.data.identifier.id,
-      'output',
-      'object_stream',
+      "output",
+      "object_stream",
       filteredResults,
-      { perObjectTimeCursor: propagatedCursors, perObjectAnimations: propagatedAnimations, perObjectAssignments: propagatedAssignments }
+      {
+        perObjectTimeCursor: propagatedCursors,
+        perObjectAnimations: propagatedAnimations,
+        perObjectAssignments: propagatedAssignments,
+      },
     );
   }
 
   private hasFilterableObjects(item: unknown): boolean {
-    return typeof item === 'object' && item !== null && 'id' in item;
+    return typeof item === "object" && item !== null && "id" in item;
   }
 
   private filterItem(item: unknown, selectedObjectIds: string[]): unknown {
-    if (typeof item === 'object' && item !== null && 'id' in item) {
+    if (typeof item === "object" && item !== null && "id" in item) {
       const objectId = (item as { id: string }).id;
       return selectedObjectIds.includes(objectId) ? item : null;
     }
@@ -326,23 +383,30 @@ export class LogicNodeExecutor extends BaseExecutor {
   private async executeMerge(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
-    logger.debug(`Starting merge execution for node: ${node.data.identifier.displayName}`);
-    
+    logger.debug(
+      `Starting merge execution for node: ${node.data.identifier.displayName}`,
+    );
+
     const data = node.data as unknown as Record<string, unknown>;
     const portCount = Number(data.inputPortCount) || 2;
-    
+
     logger.debug(`Merge port count: ${portCount}`);
-    
+
     // Collect inputs from all ports in priority order
     const portInputs: ExecutionValue[][] = [];
     for (let i = 1; i <= portCount; i++) {
       const inputs = getConnectedInputs(
         context,
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
         node.data.identifier.id,
-        `input${i}`
+        `input${i}`,
       );
       portInputs.push(inputs);
       logger.debug(`Merge port ${i} inputs`, { connections: inputs.length });
@@ -352,43 +416,53 @@ export class LogicNodeExecutor extends BaseExecutor {
     const mergedObjects = new Map<string, unknown>();
     const allCursorMaps: Record<string, number>[] = [];
 
-    logger.debug('Processing ports in reverse order for priority (Port 1 = highest priority)');
+    logger.debug(
+      "Processing ports in reverse order for priority (Port 1 = highest priority)",
+    );
 
     // Process ports in reverse order so Port 1 (index 0) has highest priority
     for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
       if (!inputs) continue;
-      logger.debug(`Processing port ${portIndex + 1}`, { inputs: inputs.length });
-      
+      logger.debug(`Processing port ${portIndex + 1}`, {
+        inputs: inputs.length,
+      });
+
       for (const input of inputs) {
         const inputData = Array.isArray(input.data) ? input.data : [input.data];
-        logger.debug(`Port ${portIndex + 1} input data`, { items: inputData.length });
-        
+        logger.debug(`Port ${portIndex + 1} input data`, {
+          items: inputData.length,
+        });
+
         // Extract cursor metadata
-        const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
+        const maybeMap = (
+          input.metadata as { perObjectTimeCursor?: unknown } | undefined
+        )?.perObjectTimeCursor;
         if (isPerObjectCursorMap(maybeMap)) {
           allCursorMaps.push(maybeMap);
         }
 
         for (const obj of inputData) {
-          if (typeof obj === 'object' && obj !== null && 'id' in obj) {
+          if (typeof obj === "object" && obj !== null && "id" in obj) {
             const objectId = (obj as { id: string }).id;
-            
+
             const existingObject = mergedObjects.get(objectId);
             if (existingObject) {
               logger.debug(`Object ID conflict detected: ${objectId}`, {
                 existingObject,
                 newObject: obj,
-                resolution: `Port ${portIndex + 1} overwrites previous`
+                resolution: `Port ${portIndex + 1} overwrites previous`,
               });
             } else {
-              logger.debug(`Adding new object ID: ${objectId} from port ${portIndex + 1}`);
+              logger.debug(
+                `Adding new object ID: ${objectId} from port ${portIndex + 1}`,
+              );
             }
-            
+
             // Port priority: later iteration (lower port index) overwrites
             mergedObjects.set(objectId, obj);
           } else {
-            logger.debug('Non-object or object without ID', { obj });
+            logger.debug("Non-object or object without ID", { obj });
           }
         }
       }
@@ -397,52 +471,86 @@ export class LogicNodeExecutor extends BaseExecutor {
     const mergedResult = Array.from(mergedObjects.values());
     const mergedCursors = mergeCursorMaps(allCursorMaps);
     const mergedIds = mergedResult
-      .map(obj => (typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null))
+      .map((obj) =>
+        typeof obj === "object" && obj !== null && "id" in obj
+          ? (obj as { id: string }).id
+          : null,
+      )
       .filter(Boolean) as string[];
-    const propagatedAnimations = this.extractPerObjectAnimationsFromInputsWithPriority(portInputs as unknown as ExecutionValue[][], mergedIds);
-    const propagatedAssignments = this.extractPerObjectAssignmentsFromInputsWithPriority(portInputs as unknown as ExecutionValue[][], mergedIds);
+    const propagatedAnimations =
+      this.extractPerObjectAnimationsFromInputsWithPriority(
+        portInputs as unknown as ExecutionValue[][],
+        mergedIds,
+      );
+    const propagatedAssignments =
+      this.extractPerObjectAssignmentsFromInputsWithPriority(
+        portInputs as unknown as ExecutionValue[][],
+        mergedIds,
+      );
 
     const inputObjectCount = portInputs.flat().reduce((acc, input) => {
       const data = Array.isArray(input.data) ? input.data : [input.data];
       return acc + data.length;
     }, 0);
-    const outputIds = mergedResult.map(obj => 
-      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null
-    ).filter(id => id !== null);
-    logger.debug('Final merged result', {
+    const outputIds = mergedResult
+      .map((obj) =>
+        typeof obj === "object" && obj !== null && "id" in obj
+          ? (obj as { id: string }).id
+          : null,
+      )
+      .filter((id) => id !== null);
+    logger.debug("Final merged result", {
       inputObjectCount,
       outputObjectCount: mergedResult.length,
-      uniqueObjectIds: outputIds
+      uniqueObjectIds: outputIds,
     });
-    
+
     // CRITICAL: Verify no duplicate IDs in output
-    
+
     const uniqueOutputIds = new Set(outputIds);
-    logger.debug('Output verification', { totalIds: outputIds.length, uniqueIds: uniqueOutputIds.size });
-    
+    logger.debug("Output verification", {
+      totalIds: outputIds.length,
+      uniqueIds: uniqueOutputIds.size,
+    });
+
     if (outputIds.length !== uniqueOutputIds.size) {
-      console.error(`[MERGE] ERROR: Merge node is outputting duplicate object IDs!`);
+      console.error(
+        `[MERGE] ERROR: Merge node is outputting duplicate object IDs!`,
+      );
       console.error(`[MERGE] All output IDs:`, outputIds);
-      console.error(`[MERGE] Duplicate IDs:`, outputIds.filter((id, index) => outputIds.indexOf(id) !== index));
-      throw new Error(`Merge node ${node.data.identifier.displayName} failed to deduplicate objects`);
+      console.error(
+        `[MERGE] Duplicate IDs:`,
+        outputIds.filter((id, index) => outputIds.indexOf(id) !== index),
+      );
+      throw new Error(
+        `Merge node ${node.data.identifier.displayName} failed to deduplicate objects`,
+      );
     }
 
     setNodeOutput(
       context,
       node.data.identifier.id,
-      'output',
-      'object_stream',
+      "output",
+      "object_stream",
       mergedResult,
-      { perObjectTimeCursor: mergedCursors, perObjectAnimations: propagatedAnimations, perObjectAssignments: propagatedAssignments }
+      {
+        perObjectTimeCursor: mergedCursors,
+        perObjectAnimations: propagatedAnimations,
+        perObjectAssignments: propagatedAssignments,
+      },
     );
-    
-    logger.debug('Merge execution completed successfully');
+
+    logger.debug("Merge execution completed successfully");
   }
 
-  private extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
+  private extractCursorsFromInputs(
+    inputs: ExecutionValue[],
+  ): Record<string, number> {
     const maps: Record<string, number>[] = [];
     for (const input of inputs) {
-      const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)?.perObjectTimeCursor;
+      const maybeMap = (
+        input.metadata as { perObjectTimeCursor?: unknown } | undefined
+      )?.perObjectTimeCursor;
       if (isPerObjectCursorMap(maybeMap)) {
         maps.push(maybeMap);
       }
@@ -450,10 +558,17 @@ export class LogicNodeExecutor extends BaseExecutor {
     return mergeCursorMaps(maps);
   }
 
-  private extractPerObjectAnimationsFromInputs(inputs: ExecutionValue[], allowIds: string[]): Record<string, SceneAnimationTrack[]> {
+  private extractPerObjectAnimationsFromInputs(
+    inputs: ExecutionValue[],
+    allowIds: string[],
+  ): Record<string, SceneAnimationTrack[]> {
     const merged: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+      const fromMeta = (
+        input.metadata as
+          | { perObjectAnimations?: Record<string, SceneAnimationTrack[]> }
+          | undefined
+      )?.perObjectAnimations;
       if (!fromMeta) continue;
       for (const [objectId, animations] of Object.entries(fromMeta)) {
         if (!allowIds.includes(objectId)) continue;
@@ -463,47 +578,57 @@ export class LogicNodeExecutor extends BaseExecutor {
     return merged;
   }
 
-  private extractPerObjectAnimationsFromInputsWithPriority(portInputs: ExecutionValue[][], allowIds: string[]): Record<string, SceneAnimationTrack[]> {
+  private extractPerObjectAnimationsFromInputsWithPriority(
+    portInputs: ExecutionValue[][],
+    allowIds: string[],
+  ): Record<string, SceneAnimationTrack[]> {
     const merged: Record<string, SceneAnimationTrack[]> = {};
-    
+
     // Process ports in reverse order so Port 1 (index 0) has highest priority
     // Same logic as object merging in executeMerge
     for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
       if (!inputs) continue;
-      
+
       for (const input of inputs) {
-        const fromMeta = (input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined)?.perObjectAnimations;
+        const fromMeta = (
+          input.metadata as
+            | { perObjectAnimations?: Record<string, SceneAnimationTrack[]> }
+            | undefined
+        )?.perObjectAnimations;
         if (!fromMeta) continue;
-        
+
         for (const [objectId, animations] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
-          
+
           // Clone animations to prevent shared reference mutations
           const clonedAnimations = animations.map((anim) => {
             switch (anim.type) {
-              case 'move':
-              case 'rotate':
-              case 'scale':
-              case 'fade':
-              case 'color':
-                return { ...anim, properties: { ...anim.properties } } as SceneAnimationTrack;
+              case "move":
+              case "rotate":
+              case "scale":
+              case "fade":
+              case "color":
+                return {
+                  ...anim,
+                  properties: { ...anim.properties },
+                } as SceneAnimationTrack;
               default:
                 return anim as SceneAnimationTrack;
             }
           });
-          
+
           // For each animation, check for conflicts with existing animations
           const existingAnimations = merged[objectId] ?? [];
           const newAnimations: SceneAnimationTrack[] = [];
-          
+
           for (const newAnim of clonedAnimations) {
             // Check if there's a conflicting animation (same type)
             // For merge node priority rules, identical animation types should prioritize Port 1
-            const conflictingAnimations = existingAnimations.filter(existingAnim => 
-              existingAnim.type === newAnim.type
+            const conflictingAnimations = existingAnimations.filter(
+              (existingAnim) => existingAnim.type === newAnim.type,
             );
-            
+
             if (conflictingAnimations.length === 0) {
               // No conflict, add the animation
               newAnimations.push(newAnim);
@@ -512,33 +637,46 @@ export class LogicNodeExecutor extends BaseExecutor {
               // Since we process in reverse order, later iteration (lower port index) wins
               // The new animation from higher priority port wins
               newAnimations.push(newAnim);
-              
-              logger.debug(`Animation conflict resolved: Port ${portIndex + 1} ${newAnim.type} animation overrides previous`, {
-                objectId,
-                animationType: newAnim.type,
-                winningPort: portIndex + 1,
-                conflictsRemoved: conflictingAnimations.length
-              });
+
+              logger.debug(
+                `Animation conflict resolved: Port ${portIndex + 1} ${newAnim.type} animation overrides previous`,
+                {
+                  objectId,
+                  animationType: newAnim.type,
+                  winningPort: portIndex + 1,
+                  conflictsRemoved: conflictingAnimations.length,
+                },
+              );
             }
           }
-          
+
           // Resolve animation conflicts by type: remove existing animations of same type before adding new ones
           const currentAnimations = merged[objectId] ?? [];
-          const nonConflictingExisting = currentAnimations.filter(existingAnim => 
-            !newAnimations.some(newAnim => newAnim.type === existingAnim.type)
+          const nonConflictingExisting = currentAnimations.filter(
+            (existingAnim) =>
+              !newAnimations.some(
+                (newAnim) => newAnim.type === existingAnim.type,
+              ),
           );
           merged[objectId] = [...nonConflictingExisting, ...newAnimations];
         }
       }
     }
-    
+
     return merged;
   }
 
-    private extractPerObjectAssignmentsFromInputs(inputs: ExecutionValue[], allowIds: string[]): PerObjectAssignments {
+  private extractPerObjectAssignmentsFromInputs(
+    inputs: ExecutionValue[],
+    allowIds: string[],
+  ): PerObjectAssignments {
     const merged: PerObjectAssignments = {};
     for (const input of inputs) {
-      const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+      const fromMeta = (
+        input.metadata as
+          | { perObjectAssignments?: PerObjectAssignments }
+          | undefined
+      )?.perObjectAssignments;
       if (!fromMeta) continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         if (!allowIds.includes(objectId)) continue;
@@ -552,13 +690,20 @@ export class LogicNodeExecutor extends BaseExecutor {
     return merged;
   }
 
-  private extractPerObjectAssignmentsFromInputsWithPriority(portInputs: ExecutionValue[][], allowIds: string[]): PerObjectAssignments {
+  private extractPerObjectAssignmentsFromInputsWithPriority(
+    portInputs: ExecutionValue[][],
+    allowIds: string[],
+  ): PerObjectAssignments {
     const merged: PerObjectAssignments = {};
     for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
       const inputs = portInputs[portIndex];
       if (!inputs) continue;
       for (const input of inputs) {
-        const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)?.perObjectAssignments;
+        const fromMeta = (
+          input.metadata as
+            | { perObjectAssignments?: PerObjectAssignments }
+            | undefined
+        )?.perObjectAssignments;
         if (!fromMeta) continue;
         for (const [objectId, assignment] of Object.entries(fromMeta)) {
           if (!allowIds.includes(objectId)) continue;
@@ -573,10 +718,13 @@ export class LogicNodeExecutor extends BaseExecutor {
     return merged;
   }
 
-  private animationsOverlap(anim1: SceneAnimationTrack, anim2: SceneAnimationTrack): boolean {
+  private animationsOverlap(
+    anim1: SceneAnimationTrack,
+    anim2: SceneAnimationTrack,
+  ): boolean {
     const end1 = anim1.startTime + anim1.duration;
     const end2 = anim2.startTime + anim2.duration;
-    
+
     // Check if time ranges overlap
     return !(end1 <= anim2.startTime || end2 <= anim1.startTime);
   }
@@ -584,126 +732,186 @@ export class LogicNodeExecutor extends BaseExecutor {
   private async executeCompare(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as {
-      operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
+      operator: "gt" | "lt" | "eq" | "neq" | "gte" | "lte";
     };
-    
+
     let inputA: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
     let inputB: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
-    
+
     try {
       inputA = getTypedConnectedInput<number>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input_a', 
-        'number'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input_a",
+        "number",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input A in Compare node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input A in Compare node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     try {
       inputB = getTypedConnectedInput<number>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input_b', 
-        'number'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input_b",
+        "number",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input B in Compare node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input B in Compare node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     if (!inputA || !inputB) {
-      throw new Error(`Compare node ${node.data.identifier.displayName} missing required inputs`);
+      throw new Error(
+        `Compare node ${node.data.identifier.displayName} missing required inputs`,
+      );
     }
-    
+
     const valueA = inputA.data;
     const valueB = inputB.data;
-      
-      let result: boolean;
-      switch (data.operator) {
-        case 'gt': result = valueA > valueB; break;
-        case 'lt': result = valueA < valueB; break;
-        case 'eq': result = valueA === valueB; break;
-        case 'neq': result = valueA !== valueB; break;
-        case 'gte': result = valueA >= valueB; break;
-        case 'lte': result = valueA <= valueB; break;
-        default: {
-          const _exhaustive: never = data.operator;
-          throw new Error(`Unknown operator: ${String(_exhaustive)}`);
-        }
+
+    let result: boolean;
+    switch (data.operator) {
+      case "gt":
+        result = valueA > valueB;
+        break;
+      case "lt":
+        result = valueA < valueB;
+        break;
+      case "eq":
+        result = valueA === valueB;
+        break;
+      case "neq":
+        result = valueA !== valueB;
+        break;
+      case "gte":
+        result = valueA >= valueB;
+        break;
+      case "lte":
+        result = valueA <= valueB;
+        break;
+      default: {
+        const _exhaustive: never = data.operator;
+        throw new Error(`Unknown operator: ${String(_exhaustive)}`);
       }
-      
-      logger.debug(`Compare ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
-      
-      setNodeOutput(
-        context,
-        node.data.identifier.id,
-        'output',
-        'data',
-        result,
-        { logicType: 'boolean', validated: true }
-      );
+    }
+
+    logger.debug(
+      `Compare ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`,
+    );
+
+    setNodeOutput(context, node.data.identifier.id, "output", "data", result, {
+      logicType: "boolean",
+      validated: true,
+    });
     // Note: Error handling is done above for individual inputs
   }
 
   private async executeIfElse(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
-    let condition: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
-    
+    let condition:
+      | ReturnType<typeof getTypedConnectedInput<boolean>>
+      | undefined;
+
     try {
       condition = getTypedConnectedInput<boolean>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'condition', 
-        'boolean'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "condition",
+        "boolean",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for condition in If/Else node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for condition in If/Else node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     if (!condition) {
-      throw new Error(`If/Else node ${node.data.identifier.displayName} missing condition input`);
+      throw new Error(
+        `If/Else node ${node.data.identifier.displayName} missing condition input`,
+      );
     }
     // Fetch required data input
     const dataInput = getConnectedInput(
       context,
-      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
       node.data.identifier.id,
-      'data'
+      "data",
     );
 
     if (!dataInput) {
-      throw new Error(`If/Else node ${node.data.identifier.displayName} missing data input`);
+      throw new Error(
+        `If/Else node ${node.data.identifier.displayName} missing data input`,
+      );
     }
 
     // Route actual data based on the boolean condition
     if (condition.data) {
-      setNodeOutput(context, node.data.identifier.id, 'true_path', 'data', dataInput.data);
-      logger.debug(`If/Else ${node.data.identifier.displayName}: condition=true, routing data to true_path`);
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        "true_path",
+        "data",
+        dataInput.data,
+      );
+      logger.debug(
+        `If/Else ${node.data.identifier.displayName}: condition=true, routing data to true_path`,
+      );
     } else {
-      setNodeOutput(context, node.data.identifier.id, 'false_path', 'data', dataInput.data);
-      logger.debug(`If/Else ${node.data.identifier.displayName}: condition=false, routing data to false_path`);
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        "false_path",
+        "data",
+        dataInput.data,
+      );
+      logger.debug(
+        `If/Else ${node.data.identifier.displayName}: condition=false, routing data to false_path`,
+      );
     }
     // Note: Error handling is done above for inputs
   }
@@ -711,102 +919,129 @@ export class LogicNodeExecutor extends BaseExecutor {
   private async executeBooleanOp(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as {
-      operator: 'and' | 'or' | 'not' | 'xor';
+      operator: "and" | "or" | "not" | "xor";
     };
-    
-    if (data.operator === 'not') {
+
+    if (data.operator === "not") {
       // NOT operation - single input
       let input: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
-      
+
       try {
         input = getTypedConnectedInput<boolean>(
-          context, 
-          connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-          node.data.identifier.id, 
-          'input1', 
-          'boolean'
+          context,
+          connections as unknown as Array<{
+            target: string;
+            targetHandle: string;
+            source: string;
+            sourceHandle: string;
+          }>,
+          node.data.identifier.id,
+          "input1",
+          "boolean",
         );
       } catch (error) {
         if (error instanceof TypeValidationError) {
-          logger.error(`Type validation failed for input in Boolean NOT node ${node.data.identifier.displayName}: ${error.message}`);
+          logger.error(
+            `Type validation failed for input in Boolean NOT node ${node.data.identifier.displayName}: ${error.message}`,
+          );
           throw error;
         }
         throw error;
       }
-      
+
       if (!input) {
-        throw new Error(`Boolean NOT node ${node.data.identifier.displayName} missing input`);
+        throw new Error(
+          `Boolean NOT node ${node.data.identifier.displayName} missing input`,
+        );
       }
-      
+
       const result = !input.data;
-      logger.debug(`Boolean NOT ${node.data.identifier.displayName}: !${input.data} = ${result}`);
-      
+      logger.debug(
+        `Boolean NOT ${node.data.identifier.displayName}: !${input.data} = ${result}`,
+      );
+
       setNodeOutput(
         context,
         node.data.identifier.id,
-        'output',
-        'data',
+        "output",
+        "data",
         result,
-        { logicType: 'boolean', validated: true }
+        { logicType: "boolean", validated: true },
       );
       return;
     }
-    
+
     // Binary operations (AND, OR, XOR) - two inputs
     let inputA: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
     let inputB: ReturnType<typeof getTypedConnectedInput<boolean>> | undefined;
-    
+
     try {
       inputA = getTypedConnectedInput<boolean>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input1', 
-        'boolean'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input1",
+        "boolean",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input A in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input A in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     try {
       inputB = getTypedConnectedInput<boolean>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input2', 
-        'boolean'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input2",
+        "boolean",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input B in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input B in Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     if (!inputA || !inputB) {
-      throw new Error(`Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`);
+      throw new Error(
+        `Boolean ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`,
+      );
     }
-    
+
     const valueA = inputA.data;
     const valueB = inputB.data;
-    
+
     let result: boolean;
     switch (data.operator) {
-      case 'and':
+      case "and":
         result = valueA && valueB;
         break;
-      case 'or':
+      case "or":
         result = valueA || valueB;
         break;
-      case 'xor':
+      case "xor":
         result = valueA !== valueB; // XOR: true when inputs differ
         break;
       default: {
@@ -814,200 +1049,252 @@ export class LogicNodeExecutor extends BaseExecutor {
         throw new Error(`Unknown boolean operator: ${String(_exhaustive)}`);
       }
     }
-    
-    logger.debug(`Boolean ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
-    
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      'output',
-      'data',
-      result,
-      { logicType: 'boolean', validated: true }
+
+    logger.debug(
+      `Boolean ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`,
     );
+
+    setNodeOutput(context, node.data.identifier.id, "output", "data", result, {
+      logicType: "boolean",
+      validated: true,
+    });
   }
 
   private async executeMathOp(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as {
-      operator: 'add' | 'subtract' | 'multiply' | 'divide' | 'modulo' | 'power' | 'sqrt' | 'abs' | 'min' | 'max';
+      operator:
+        | "add"
+        | "subtract"
+        | "multiply"
+        | "divide"
+        | "modulo"
+        | "power"
+        | "sqrt"
+        | "abs"
+        | "min"
+        | "max";
     };
-    
-    if (data.operator === 'sqrt' || data.operator === 'abs') {
+
+    if (data.operator === "sqrt" || data.operator === "abs") {
       // Unary operations - single input
       let input: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
-      
+
       try {
         input = getTypedConnectedInput<number>(
-          context, 
-          connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-          node.data.identifier.id, 
-          'input_a', 
-          'number'
+          context,
+          connections as unknown as Array<{
+            target: string;
+            targetHandle: string;
+            source: string;
+            sourceHandle: string;
+          }>,
+          node.data.identifier.id,
+          "input_a",
+          "number",
         );
       } catch (error) {
         if (error instanceof TypeValidationError) {
-          logger.error(`Type validation failed for input in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+          logger.error(
+            `Type validation failed for input in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`,
+          );
           throw error;
         }
         throw error;
       }
-      
+
       if (!input) {
-        throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing input`);
+        throw new Error(
+          `Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing input`,
+        );
       }
-      
+
       let result: number;
       switch (data.operator) {
-        case 'sqrt':
+        case "sqrt":
           if (input.data < 0) {
-            throw new Error(`Math SQRT node ${node.data.identifier.displayName}: Cannot take square root of negative number (${input.data})`);
+            throw new Error(
+              `Math SQRT node ${node.data.identifier.displayName}: Cannot take square root of negative number (${input.data})`,
+            );
           }
           result = Math.sqrt(input.data);
           break;
-        case 'abs':
+        case "abs":
           result = Math.abs(input.data);
           break;
         default: {
           const _exhaustive: never = data.operator;
-          throw new Error(`Unknown unary math operator: ${String(_exhaustive)}`);
+          throw new Error(
+            `Unknown unary math operator: ${String(_exhaustive)}`,
+          );
         }
       }
-      
-      logger.debug(`Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${data.operator}(${input.data}) = ${result}`);
-      
+
+      logger.debug(
+        `Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${data.operator}(${input.data}) = ${result}`,
+      );
+
       setNodeOutput(
         context,
         node.data.identifier.id,
-        'output',
-        'data',
+        "output",
+        "data",
         result,
-        { logicType: 'number', validated: true }
+        { logicType: "number", validated: true },
       );
       return;
     }
-    
+
     // Binary operations - two inputs
     let inputA: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
     let inputB: ReturnType<typeof getTypedConnectedInput<number>> | undefined;
-    
+
     try {
       inputA = getTypedConnectedInput<number>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input_a', 
-        'number'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input_a",
+        "number",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input A in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input A in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     try {
       inputB = getTypedConnectedInput<number>(
-        context, 
-        connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>, 
-        node.data.identifier.id, 
-        'input_b', 
-        'number'
+        context,
+        connections as unknown as Array<{
+          target: string;
+          targetHandle: string;
+          source: string;
+          sourceHandle: string;
+        }>,
+        node.data.identifier.id,
+        "input_b",
+        "number",
       );
     } catch (error) {
       if (error instanceof TypeValidationError) {
-        logger.error(`Type validation failed for input B in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`);
+        logger.error(
+          `Type validation failed for input B in Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: ${error.message}`,
+        );
         throw error;
       }
       throw error;
     }
-    
+
     if (!inputA || !inputB) {
-      throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`);
+      throw new Error(
+        `Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName} missing required inputs`,
+      );
     }
-    
+
     const valueA = inputA.data;
     const valueB = inputB.data;
-    
+
     let result: number;
     switch (data.operator) {
-      case 'add': 
-        result = valueA + valueB; 
+      case "add":
+        result = valueA + valueB;
         break;
-      case 'subtract': 
-        result = valueA - valueB; 
+      case "subtract":
+        result = valueA - valueB;
         break;
-      case 'multiply': 
-        result = valueA * valueB; 
+      case "multiply":
+        result = valueA * valueB;
         break;
-      case 'divide': 
+      case "divide":
         if (valueB === 0) {
-          throw new Error(`Math DIVIDE node ${node.data.identifier.displayName}: Division by zero (A=${valueA}, B=${valueB})`);
+          throw new Error(
+            `Math DIVIDE node ${node.data.identifier.displayName}: Division by zero (A=${valueA}, B=${valueB})`,
+          );
         }
-        result = valueA / valueB; 
+        result = valueA / valueB;
         break;
-      case 'modulo': 
+      case "modulo":
         if (valueB === 0) {
-          throw new Error(`Math MODULO node ${node.data.identifier.displayName}: Modulo by zero (A=${valueA}, B=${valueB})`);
+          throw new Error(
+            `Math MODULO node ${node.data.identifier.displayName}: Modulo by zero (A=${valueA}, B=${valueB})`,
+          );
         }
-        result = valueA % valueB; 
+        result = valueA % valueB;
         break;
-      case 'power':
+      case "power":
         result = Math.pow(valueA, valueB);
         break;
-      case 'min': 
-        result = Math.min(valueA, valueB); 
+      case "min":
+        result = Math.min(valueA, valueB);
         break;
-      case 'max': 
-        result = Math.max(valueA, valueB); 
+      case "max":
+        result = Math.max(valueA, valueB);
         break;
       default: {
         const _exhaustive: never = data.operator;
         throw new Error(`Unknown binary math operator: ${String(_exhaustive)}`);
       }
     }
-    
+
     // Handle special cases for result validation
     if (!Number.isFinite(result)) {
       if (Number.isNaN(result)) {
-        throw new Error(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in NaN (A=${valueA}, B=${valueB})`);
+        throw new Error(
+          `Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in NaN (A=${valueA}, B=${valueB})`,
+        );
       }
       if (!Number.isFinite(result)) {
-        logger.warn(`Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in ${result} (A=${valueA}, B=${valueB})`);
+        logger.warn(
+          `Math ${data.operator.toUpperCase()} node ${node.data.identifier.displayName}: Operation resulted in ${result} (A=${valueA}, B=${valueB})`,
+        );
       }
     }
-    
-    logger.debug(`Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`);
-    
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      'output',
-      'data',
-      result,
-      { logicType: 'number', validated: true }
+
+    logger.debug(
+      `Math ${data.operator.toUpperCase()} ${node.data.identifier.displayName}: ${String(valueA)} ${data.operator} ${String(valueB)} = ${result}`,
     );
+
+    setNodeOutput(context, node.data.identifier.id, "output", "data", result, {
+      logicType: "number",
+      validated: true,
+    });
   }
 
   private async executeDuplicate(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
-    logger.debug(`Starting duplicate execution for node: ${node.data.identifier.displayName}`);
-    
+    logger.debug(
+      `Starting duplicate execution for node: ${node.data.identifier.displayName}`,
+    );
+
     const data = node.data as unknown as Record<string, unknown>;
     const count = Math.min(Math.max(Number(data.count) || 1, 1), 50);
 
     const inputs = getConnectedInputs(
       context,
-      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
       node.data.identifier.id,
-      'input'
+      "input",
     );
 
     // Calculate total input objects for validation
@@ -1017,21 +1304,26 @@ export class LogicNodeExecutor extends BaseExecutor {
     }, 0);
 
     // Validate inputs with updated rules
-    this.validateDuplicateInputs(count, totalInputObjects, node.data.identifier.id, node.data.identifier.displayName);
+    this.validateDuplicateInputs(
+      count,
+      totalInputObjects,
+      node.data.identifier.id,
+      node.data.identifier.displayName,
+    );
 
     if (inputs.length === 0) {
-      logger.debug('No inputs connected to duplicate node');
+      logger.debug("No inputs connected to duplicate node");
       setNodeOutput(
-        context, 
-        node.data.identifier.id, 
-        'output', 
-        'object_stream', 
-        [], 
-        { 
-          perObjectTimeCursor: {}, 
-          perObjectAnimations: {}, 
-          perObjectAssignments: {} 
-        }
+        context,
+        node.data.identifier.id,
+        "output",
+        "object_stream",
+        [],
+        {
+          perObjectTimeCursor: {},
+          perObjectAnimations: {},
+          perObjectAssignments: {},
+        },
       );
       return;
     }
@@ -1048,11 +1340,17 @@ export class LogicNodeExecutor extends BaseExecutor {
     }
 
     // Extract upstream metadata with object ID filtering
-    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(inputs as unknown as ExecutionValue[], inputObjectIds);
-    const upstreamAnimations = this.extractPerObjectAnimationsFromInputs(inputs as unknown as ExecutionValue[], inputObjectIds);
-    const upstreamCursors = this.extractCursorsFromInputs(inputs as unknown as ExecutionValue[]);
-
-
+    const upstreamAssignments = this.extractPerObjectAssignmentsFromInputs(
+      inputs as unknown as ExecutionValue[],
+      inputObjectIds,
+    );
+    const upstreamAnimations = this.extractPerObjectAnimationsFromInputs(
+      inputs as unknown as ExecutionValue[],
+      inputObjectIds,
+    );
+    const upstreamCursors = this.extractCursorsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
 
     const allOutputObjects: unknown[] = [];
     const expandedAssignments: PerObjectAssignments = {};
@@ -1074,32 +1372,60 @@ export class LogicNodeExecutor extends BaseExecutor {
 
         // Add original object
         allOutputObjects.push(originalObject);
-        this.copyMetadataForObject(originalId, originalId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
+        this.copyMetadataForObject(
+          originalId,
+          originalId,
+          upstreamAssignments,
+          upstreamAnimations,
+          upstreamCursors,
+          expandedAssignments,
+          expandedAnimations,
+          expandedCursors,
+        );
 
         // Create duplicates - pure copy, only change ID
         for (let i = 1; i < count; i++) {
-          const duplicateId = this.generateUniqueId(originalId, i, allExistingIds, newlyCreatedIds);
-          const duplicate = this.createDuplicateObject(originalObject, duplicateId); // ✅ Pure copy
+          const duplicateId = this.generateUniqueId(
+            originalId,
+            i,
+            allExistingIds,
+            newlyCreatedIds,
+          );
+          const duplicate = this.createDuplicateObject(
+            originalObject,
+            duplicateId,
+          ); // ✅ Pure copy
           allOutputObjects.push(duplicate);
-          this.copyMetadataForObject(originalId, duplicateId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
+          this.copyMetadataForObject(
+            originalId,
+            duplicateId,
+            upstreamAssignments,
+            upstreamAnimations,
+            upstreamCursors,
+            expandedAssignments,
+            expandedAnimations,
+            expandedCursors,
+          );
           newlyCreatedIds.add(duplicateId);
         }
       }
     }
 
-    logger.debug(`Duplicate execution complete. Output: ${allOutputObjects.length} objects`);
+    logger.debug(
+      `Duplicate execution complete. Output: ${allOutputObjects.length} objects`,
+    );
 
     setNodeOutput(
       context,
       node.data.identifier.id,
-      'output',
-      'object_stream',
+      "output",
+      "object_stream",
       allOutputObjects,
       {
         perObjectTimeCursor: expandedCursors,
         perObjectAnimations: expandedAnimations,
-        perObjectAssignments: expandedAssignments
-      }
+        perObjectAssignments: expandedAssignments,
+      },
     );
   }
 
@@ -1107,11 +1433,15 @@ export class LogicNodeExecutor extends BaseExecutor {
     count: number,
     totalInputObjects: number,
     nodeId: string,
-    nodeDisplayName: string
+    nodeDisplayName: string,
   ): void {
     // Count validation
     if (count < 1) {
-      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Duplicate count must be at least 1');
+      throw new DuplicateNodeError(
+        nodeId,
+        nodeDisplayName,
+        "Duplicate count must be at least 1",
+      );
     }
     if (count > 50) {
       throw new DuplicateCountExceededError(nodeId, nodeDisplayName, count, 50);
@@ -1121,39 +1451,46 @@ export class LogicNodeExecutor extends BaseExecutor {
     const totalOutput = totalInputObjects * count;
     if (totalOutput > 200) {
       throw new DuplicateNodeError(
-        nodeId, 
-        nodeDisplayName, 
-        `Operation would create ${totalOutput} objects, exceeding system limit of 200`
+        nodeId,
+        nodeDisplayName,
+        `Operation would create ${totalOutput} objects, exceeding system limit of 200`,
       );
     }
   }
 
   private hasValidObjectStructure(obj: unknown): boolean {
-    return typeof obj === 'object' && 
-           obj !== null && 
-           'id' in obj && 
-           typeof (obj as { id: unknown }).id === 'string';
+    return (
+      typeof obj === "object" &&
+      obj !== null &&
+      "id" in obj &&
+      typeof (obj as { id: unknown }).id === "string"
+    );
   }
 
-  private generateUniqueId(originalId: string, index: number, existingIds: Set<string>, newIds: Set<string>): string {
-    const baseId = `${originalId}_dup_${index.toString().padStart(3, '0')}`;
+  private generateUniqueId(
+    originalId: string,
+    index: number,
+    existingIds: Set<string>,
+    newIds: Set<string>,
+  ): string {
+    const baseId = `${originalId}_dup_${index.toString().padStart(3, "0")}`;
     let candidateId = baseId;
     let suffix = 0;
-    
+
     while (existingIds.has(candidateId) || newIds.has(candidateId)) {
       suffix++;
       candidateId = `${baseId}_${suffix}`;
     }
-    
+
     return candidateId;
   }
 
   private getAllExistingObjectIds(context: ExecutionContext): Set<string> {
     const ids = new Set<string>();
-    
+
     for (const output of context.nodeOutputs.values()) {
-      if (output.type !== 'object_stream') continue;
-      
+      if (output.type !== "object_stream") continue;
+
       const objects = Array.isArray(output.data) ? output.data : [output.data];
       for (const obj of objects) {
         if (this.hasValidObjectStructure(obj)) {
@@ -1161,12 +1498,18 @@ export class LogicNodeExecutor extends BaseExecutor {
         }
       }
     }
-    
+
     return ids;
   }
 
-  private createDuplicateObject(original: unknown, duplicateId: string): unknown {
-    const duplicate = JSON.parse(JSON.stringify(original)) as Record<string, unknown>;
+  private createDuplicateObject(
+    original: unknown,
+    duplicateId: string,
+  ): unknown {
+    const duplicate = JSON.parse(JSON.stringify(original)) as Record<
+      string,
+      unknown
+    >;
     duplicate.id = duplicateId;
     return duplicate; // ✅ Pure copy, no positioning
   }
@@ -1179,14 +1522,19 @@ export class LogicNodeExecutor extends BaseExecutor {
     sourceCursors: Record<string, number>,
     targetAssignments: PerObjectAssignments,
     targetAnimations: Record<string, SceneAnimationTrack[]>,
-    targetCursors: Record<string, number>
+    targetCursors: Record<string, number>,
   ): void {
     // Copy assignments with deep clone
     if (sourceAssignments?.[sourceId]) {
       try {
-        targetAssignments[targetId] = JSON.parse(JSON.stringify(sourceAssignments[sourceId])) as ObjectAssignments;
+        targetAssignments[targetId] = JSON.parse(
+          JSON.stringify(sourceAssignments[sourceId]),
+        ) as ObjectAssignments;
       } catch (error) {
-        logger.warn(`Failed to clone assignments for ${sourceId}→${targetId}:`, { error: String(error) });
+        logger.warn(
+          `Failed to clone assignments for ${sourceId}→${targetId}:`,
+          { error: String(error) },
+        );
         targetAssignments[targetId] = {} as ObjectAssignments;
       }
     }
@@ -1194,14 +1542,18 @@ export class LogicNodeExecutor extends BaseExecutor {
     // Copy animations with objectId updates and DEEP CLONE properties
     if (sourceAnimations[sourceId]) {
       try {
-        targetAnimations[targetId] = sourceAnimations[sourceId].map(anim => ({
+        targetAnimations[targetId] = sourceAnimations[sourceId].map((anim) => ({
           ...anim,
           objectId: targetId,
           id: anim.id.replace(sourceId, targetId),
-          properties: JSON.parse(JSON.stringify(anim.properties)) as typeof anim.properties // ✅ FIX: Deep clone properties
+          properties: JSON.parse(
+            JSON.stringify(anim.properties),
+          ) as typeof anim.properties, // ✅ FIX: Deep clone properties
         })) as SceneAnimationTrack[];
       } catch (error) {
-        logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, { error: String(error) });
+        logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, {
+          error: String(error),
+        });
         targetAnimations[targetId] = [];
       }
     }

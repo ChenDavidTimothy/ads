@@ -1,51 +1,78 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from 'react';
-import type { Node } from 'reactflow';
-import { useWorkspace } from './workspace-context';
-import { FlowTracker } from '@/lib/flow/flow-tracking';
-import type { MediaNodeData } from '@/shared/types/nodes';
-import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
-import { NumberField } from '@/components/ui/form-fields';
-import { Button } from '@/components/ui/button';
-import { SelectionList } from '@/components/ui/selection';
-import { BindButton, useVariableBinding } from '@/components/workspace/binding/bindings';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
-import { Badge } from '@/components/ui/badge';
-import { AssetSelectionModal } from './media/asset-selection-modal';
-import { Image, ImageOff, Settings } from 'lucide-react';
-import { api } from '@/trpc/react';
-import type { AssetResponse } from '@/shared/types/assets';
-import NextImage from 'next/image';
+import React, { useMemo, useState, useCallback } from "react";
+import type { Node } from "reactflow";
+import { useWorkspace } from "./workspace-context";
+import { FlowTracker } from "@/lib/flow/flow-tracking";
+import type { MediaNodeData } from "@/shared/types/nodes";
+import type {
+  PerObjectAssignments,
+  ObjectAssignments,
+} from "@/shared/properties/assignments";
+import { NumberField } from "@/components/ui/form-fields";
+import { Button } from "@/components/ui/button";
+import { SelectionList } from "@/components/ui/selection";
+import {
+  BindButton,
+  useVariableBinding,
+} from "@/components/workspace/binding/bindings";
+import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import { Badge } from "@/components/ui/badge";
+import { AssetSelectionModal } from "./media/asset-selection-modal";
+import { Image, ImageOff, Settings } from "lucide-react";
+import { api } from "@/trpc/react";
+import type { AssetResponse } from "@/shared/types/assets";
+import NextImage from "next/image";
 
 // Badge Components (following typography pattern)
-function MediaBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+function MediaBindingBadge({
+  nodeId,
+  keyName,
+  objectId,
+}: {
+  nodeId: string;
+  keyName: string;
+  objectId?: string;
+}) {
   const { state } = useWorkspace();
   const { resetToDefault } = useVariableBinding(nodeId, objectId);
-  
-  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
+
+  const node = state.flow.nodes.find(
+    (n) => n.data?.identifier?.id === nodeId,
+  ) as Node<MediaNodeData> | undefined;
   if (!node) return null;
-  
+
   let bound: string | undefined;
   if (objectId) {
-    bound = node.data?.variableBindingsByObject?.[objectId]?.[keyName]?.boundResultNodeId;
+    bound =
+      node.data?.variableBindingsByObject?.[objectId]?.[keyName]
+        ?.boundResultNodeId;
   } else {
     bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
   }
   if (!bound) return null;
-  
-  const name = state.flow.nodes.find(n => n.data?.identifier?.id === bound)?.data?.identifier?.displayName;
-  
+
+  const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)
+    ?.data?.identifier?.displayName;
+
   return (
     <Badge variant="bound" onRemove={() => resetToDefault(keyName)}>
-      {name ? `Bound: ${name}` : 'Bound'}
+      {name ? `Bound: ${name}` : "Bound"}
     </Badge>
   );
 }
 
-function MediaOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
+function MediaOverrideBadge({
+  nodeId,
+  keyName,
+  objectId,
+}: {
+  nodeId: string;
+  keyName: string;
+  objectId?: string;
+}) {
   const { resetToDefault } = useVariableBinding(nodeId, objectId);
-  
+
   return (
     <Badge variant="manual" onRemove={() => resetToDefault(keyName)}>
       Manual
@@ -58,50 +85,59 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   const { state, updateFlow } = useWorkspace();
   const [showAssetModal, setShowAssetModal] = useState(false);
   const utils = api.useUtils();
-  
-  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
-  const data = node?.data;
-  const bindings = (data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-  const def = getNodeDefinition('media')?.defaults ?? {};
-  const defImageAssetId = (def.imageAssetId as string) ?? '';
+  const node = state.flow.nodes.find(
+    (n) => n.data?.identifier?.id === nodeId,
+  ) as Node<MediaNodeData> | undefined;
+  const data = node?.data;
+  const bindings = (data?.variableBindings ?? {}) as Record<
+    string,
+    { target?: string; boundResultNodeId?: string }
+  >;
+
+  const def = getNodeDefinition("media")?.defaults ?? {};
+  const defImageAssetId = (def.imageAssetId as string) ?? "";
 
   // Direct assignment pattern (following typography)
   const imageAssetId: string = data?.imageAssetId ?? defImageAssetId;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
-  
+
   // Helper to get value for bound fields - blank if bound, normal value if not
-  const getValue = function<T>(key: string, defaultValue: T): T | undefined {
+  const getValue = function <T>(key: string, defaultValue: T): T | undefined {
     if (isBound(key)) return undefined; // Blank when bound
-    return (data as unknown as Record<string, unknown>)?.[key] as T ?? defaultValue;
+    return (
+      ((data as unknown as Record<string, unknown>)?.[key] as T) ?? defaultValue
+    );
   };
-  
-  const leftBorderClass = (key: string) => (
-    isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
-  );
+
+  const leftBorderClass = (key: string) =>
+    isBound(key) ? "border-l-2 border-[var(--accent-secondary)]" : "";
 
   // Get current asset details
   const assetDetailsQuery = api.assets.list.useQuery(
     {
       limit: 100, // Get more assets to find the one we need
       offset: 0,
-      bucketName: 'images' // Only get images since we're looking for image assets
+      bucketName: "images", // Only get images since we're looking for image assets
     },
     {
       enabled: !!imageAssetId,
-      select: (response) => response.assets.find(asset => asset.id === imageAssetId)
-    }
+      select: (response) =>
+        response.assets.find((asset) => asset.id === imageAssetId),
+    },
   );
-  const { data: assetDetails, isLoading: isLoadingAssetDetails } = assetDetailsQuery;
+  const { data: assetDetails, isLoading: isLoadingAssetDetails } =
+    assetDetailsQuery;
 
   const handleAssetSelect = (asset: AssetResponse) => {
     // Update the flow state first
     updateFlow({
-      nodes: state.flow.nodes.map(n =>
-        n.data?.identifier?.id !== nodeId ? n :
-        ({ ...n, data: { ...n.data, imageAssetId: asset.id } })
-      )
+      nodes: state.flow.nodes.map((n) =>
+        n.data?.identifier?.id !== nodeId
+          ? n
+          : { ...n, data: { ...n.data, imageAssetId: asset.id } },
+      ),
     });
 
     // Invalidate and refetch the asset list to ensure fresh data
@@ -112,38 +148,43 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
 
   const clearAsset = () => {
     updateFlow({
-      nodes: state.flow.nodes.map(n =>
-        n.data?.identifier?.id !== nodeId ? n :
-        ({ ...n, data: { ...n.data, imageAssetId: '' } })
-      )
+      nodes: state.flow.nodes.map((n) =>
+        n.data?.identifier?.id !== nodeId
+          ? n
+          : { ...n, data: { ...n.data, imageAssetId: "" } },
+      ),
     });
   };
 
   return (
     <div className="space-y-[var(--space-4)]">
-      <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+      <div className="mb-[var(--space-3)] text-sm font-medium text-[var(--text-primary)]">
         Per-Object Media Overrides
       </div>
-      
+
       {/* Content Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Content</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Content
+        </div>
+
         {/* Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
+            <label className="text-xs text-[var(--text-tertiary)]">
+              Image Asset
+            </label>
             <BindButton nodeId={nodeId} bindingKey="imageAssetId" />
           </div>
-          
+
           {/* Current Asset Display */}
           <div
-            key={`asset-display-${imageAssetId || 'none'}`}
-            className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]"
+            key={`asset-display-${imageAssetId || "none"}`}
+            className="rounded border border-[var(--border-secondary)] bg-[var(--surface-2)] p-[var(--space-3)]"
           >
             {imageAssetId && assetDetails ? (
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
+                <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
                   {assetDetails.public_url && (
                     <NextImage
                       key={`asset-img-${assetDetails.id}`}
@@ -151,12 +192,12 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                       alt={assetDetails.original_name}
                       width={48}
                       height={48}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-[var(--text-primary)] font-medium truncate">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-[var(--text-primary)]">
                     {assetDetails.original_name}
                   </div>
                   <div className="text-xs text-[var(--text-tertiary)]">
@@ -170,8 +211,8 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
             ) : imageAssetId && isLoadingAssetDetails ? (
               // Asset is selected but details are loading
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-[var(--text-tertiary)]">
@@ -182,7 +223,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
             ) : imageAssetId && !assetDetails && !isLoadingAssetDetails ? (
               // Asset is selected but not found
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
                   <ImageOff size={16} className="text-[var(--text-tertiary)]" />
                 </div>
                 <div className="flex-1">
@@ -196,33 +237,35 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               </div>
             ) : (
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
                   <ImageOff size={16} className="text-[var(--text-tertiary)]" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-[var(--text-tertiary)]">
-                    {def.imageAssetId ? 'Using default asset' : 'No image selected'}
+                    {def.imageAssetId
+                      ? "Using default asset"
+                      : "No image selected"}
                   </div>
                 </div>
               </div>
             )}
           </div>
-          
+
           {/* Select Button */}
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setShowAssetModal(true)}
-            disabled={isBound('imageAssetId')}
-            className={`w-full ${leftBorderClass('imageAssetId')}`}
+            disabled={isBound("imageAssetId")}
+            className={`w-full ${leftBorderClass("imageAssetId")}`}
           >
             <Image size={14} className="mr-2" aria-label="Image icon" />
-            {imageAssetId ? 'Change Image' : 'Override Image'}
+            {imageAssetId ? "Change Image" : "Override Image"}
           </Button>
-          
+
           {/* Asset Binding Badge - Typography Pattern */}
-          {isBound('imageAssetId') && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+          {isBound("imageAssetId") && (
+            <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" />
               </div>
@@ -233,23 +276,33 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
 
       {/* Crop Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Crop Settings</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Crop Settings
+        </div>
+
         {/* Crop Position Row */}
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <NumberField
               label="X"
-              value={getValue('cropX', 0)}
-              onChange={(cropX) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropX } })) })}
+              value={getValue("cropX", 0)}
+              onChange={(cropX) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, cropX } },
+                  ),
+                })
+              }
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" />}
-              disabled={isBound('cropX')}
-              inputClassName={leftBorderClass('cropX')}
+              disabled={isBound("cropX")}
+              inputClassName={leftBorderClass("cropX")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('cropX') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("cropX") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="cropX" />
                 </div>
@@ -259,16 +312,24 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Y"
-              value={getValue('cropY', 0)}
-              onChange={(cropY) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropY } })) })}
+              value={getValue("cropY", 0)}
+              onChange={(cropY) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, cropY } },
+                  ),
+                })
+              }
               min={0}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" />}
-              disabled={isBound('cropY')}
-              inputClassName={leftBorderClass('cropY')}
+              disabled={isBound("cropY")}
+              inputClassName={leftBorderClass("cropY")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('cropY') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("cropY") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="cropY" />
                 </div>
@@ -282,16 +343,26 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Width (0=full)"
-              value={getValue('cropWidth', 0)}
-              onChange={(cropWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropWidth } })) })}
+              value={getValue("cropWidth", 0)}
+              onChange={(cropWidth) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, cropWidth } },
+                  ),
+                })
+              }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" />}
-              disabled={isBound('cropWidth')}
-              inputClassName={leftBorderClass('cropWidth')}
+              bindAdornment={
+                <BindButton nodeId={nodeId} bindingKey="cropWidth" />
+              }
+              disabled={isBound("cropWidth")}
+              inputClassName={leftBorderClass("cropWidth")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('cropWidth') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("cropWidth") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" />
                 </div>
@@ -301,16 +372,26 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Height (0=full)"
-              value={getValue('cropHeight', 0)}
-              onChange={(cropHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropHeight } })) })}
+              value={getValue("cropHeight", 0)}
+              onChange={(cropHeight) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, cropHeight } },
+                  ),
+                })
+              }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" />}
-              disabled={isBound('cropHeight')}
-              inputClassName={leftBorderClass('cropHeight')}
+              bindAdornment={
+                <BindButton nodeId={nodeId} bindingKey="cropHeight" />
+              }
+              disabled={isBound("cropHeight")}
+              inputClassName={leftBorderClass("cropHeight")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('cropHeight') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("cropHeight") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" />
                 </div>
@@ -322,23 +403,35 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
 
       {/* Display Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Display Size</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Display Size
+        </div>
+
         {/* Display Size Row */}
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <NumberField
               label="Width (0=auto)"
-              value={getValue('displayWidth', 0)}
-              onChange={(displayWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayWidth } })) })}
+              value={getValue("displayWidth", 0)}
+              onChange={(displayWidth) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, displayWidth } },
+                  ),
+                })
+              }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" />}
-              disabled={isBound('displayWidth')}
-              inputClassName={leftBorderClass('displayWidth')}
+              bindAdornment={
+                <BindButton nodeId={nodeId} bindingKey="displayWidth" />
+              }
+              disabled={isBound("displayWidth")}
+              inputClassName={leftBorderClass("displayWidth")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('displayWidth') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("displayWidth") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" />
                 </div>
@@ -348,16 +441,26 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <NumberField
               label="Height (0=auto)"
-              value={getValue('displayHeight', 0)}
-              onChange={(displayHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayHeight } })) })}
+              value={getValue("displayHeight", 0)}
+              onChange={(displayHeight) =>
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : { ...n, data: { ...n.data, displayHeight } },
+                  ),
+                })
+              }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" />}
-              disabled={isBound('displayHeight')}
-              inputClassName={leftBorderClass('displayHeight')}
+              bindAdornment={
+                <BindButton nodeId={nodeId} bindingKey="displayHeight" />
+              }
+              disabled={isBound("displayHeight")}
+              inputClassName={leftBorderClass("displayHeight")}
             />
             {/* Badge - Only show when bound */}
-            {isBound('displayHeight') && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {isBound("displayHeight") && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" />
                 </div>
@@ -372,7 +475,9 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
         isOpen={showAssetModal}
         onClose={() => setShowAssetModal(false)}
         onSelect={handleAssetSelect}
-        selectedAssetId={imageAssetId && imageAssetId !== '' ? imageAssetId : undefined}
+        selectedAssetId={
+          imageAssetId && imageAssetId !== "" ? imageAssetId : undefined
+        }
       />
     </div>
   );
@@ -383,7 +488,7 @@ function MediaPerObjectProperties({
   nodeId,
   objectId,
   assignments,
-  onChange
+  onChange,
 }: {
   nodeId: string;
   objectId: string;
@@ -393,19 +498,22 @@ function MediaPerObjectProperties({
   const { state } = useWorkspace();
   const [showAssetModal, setShowAssetModal] = useState(false);
   const utils = api.useUtils();
-  
-  const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
+
+  const node = state.flow.nodes.find(
+    (n) => n.data?.identifier?.id === nodeId,
+  ) as Node<MediaNodeData> | undefined;
   const data = node?.data;
-  const def = getNodeDefinition('media')?.defaults ?? {};
-  const defImageAssetId = (def.imageAssetId as string) ?? '';
-  
+  const def = getNodeDefinition("media")?.defaults ?? {};
+  const defImageAssetId = (def.imageAssetId as string) ?? "";
+
   const assignment: ObjectAssignments = assignments[objectId] ?? {};
   const initial = assignment.initial ?? {};
-  const base = data ?? {} as MediaNodeData; // Node-level values as fallback
+  const base = data ?? ({} as MediaNodeData); // Node-level values as fallback
 
   // Binding detection
   const isBound = (key: string): boolean => {
-    return !!(data?.variableBindingsByObject?.[objectId]?.[key]?.boundResultNodeId);
+    return !!data?.variableBindingsByObject?.[objectId]?.[key]
+      ?.boundResultNodeId;
   };
 
   const isOverridden = (key: string): boolean => {
@@ -413,41 +521,73 @@ function MediaPerObjectProperties({
   };
 
   const leftBorderClass = (key: string) => {
-    if (isBound(key)) return 'border-l-2 border-[var(--accent-secondary)]';
-    if (isOverridden(key)) return 'border-l-2 border-[var(--warning-600)]';
-    return '';
+    if (isBound(key)) return "border-l-2 border-[var(--accent-secondary)]";
+    if (isOverridden(key)) return "border-l-2 border-[var(--warning-600)]";
+    return "";
   };
 
   // Value resolution with proper precedence
   const getValue = (key: keyof MediaNodeData, fallbackValue: unknown) => {
     if (isBound(key)) return fallbackValue; // Show placeholder when bound
-    
+
     switch (key) {
-      case 'imageAssetId': return initial.imageAssetId ?? base.imageAssetId ?? defImageAssetId ?? fallbackValue;
-      case 'cropX': return initial.cropX ?? base.cropX ?? def.cropX ?? fallbackValue;
-      case 'cropY': return initial.cropY ?? base.cropY ?? def.cropY ?? fallbackValue;
-      case 'cropWidth': return initial.cropWidth ?? base.cropWidth ?? def.cropWidth ?? fallbackValue;
-      case 'cropHeight': return initial.cropHeight ?? base.cropHeight ?? def.cropHeight ?? fallbackValue;
-      case 'displayWidth': return initial.displayWidth ?? base.displayWidth ?? def.displayWidth ?? fallbackValue;
-      case 'displayHeight': return initial.displayHeight ?? base.displayHeight ?? def.displayHeight ?? fallbackValue;
-      default: return fallbackValue;
+      case "imageAssetId":
+        return (
+          initial.imageAssetId ??
+          base.imageAssetId ??
+          defImageAssetId ??
+          fallbackValue
+        );
+      case "cropX":
+        return initial.cropX ?? base.cropX ?? def.cropX ?? fallbackValue;
+      case "cropY":
+        return initial.cropY ?? base.cropY ?? def.cropY ?? fallbackValue;
+      case "cropWidth":
+        return (
+          initial.cropWidth ?? base.cropWidth ?? def.cropWidth ?? fallbackValue
+        );
+      case "cropHeight":
+        return (
+          initial.cropHeight ??
+          base.cropHeight ??
+          def.cropHeight ??
+          fallbackValue
+        );
+      case "displayWidth":
+        return (
+          initial.displayWidth ??
+          base.displayWidth ??
+          def.displayWidth ??
+          fallbackValue
+        );
+      case "displayHeight":
+        return (
+          initial.displayHeight ??
+          base.displayHeight ??
+          def.displayHeight ??
+          fallbackValue
+        );
+      default:
+        return fallbackValue;
     }
   };
 
   // Get current asset details for this object
-  const currentAssetId = getValue('imageAssetId', '') as string;
+  const currentAssetId = getValue("imageAssetId", "") as string;
   const assetDetailsQuery = api.assets.list.useQuery(
     {
       limit: 100, // Get more assets to find the one we need
       offset: 0,
-      bucketName: 'images' // Only get images since we're looking for image assets
+      bucketName: "images", // Only get images since we're looking for image assets
     },
     {
       enabled: !!currentAssetId,
-      select: (response) => response.assets.find(asset => asset.id === currentAssetId)
-    }
+      select: (response) =>
+        response.assets.find((asset) => asset.id === currentAssetId),
+    },
   );
-  const { data: assetDetails, isLoading: isLoadingAssetDetails } = assetDetailsQuery;
+  const { data: assetDetails, isLoading: isLoadingAssetDetails } =
+    assetDetailsQuery;
 
   const handleAssetSelect = (asset: AssetResponse) => {
     onChange({ imageAssetId: asset.id });
@@ -458,34 +598,42 @@ function MediaPerObjectProperties({
   };
 
   const clearAsset = () => {
-    onChange({ imageAssetId: '' });
+    onChange({ imageAssetId: "" });
   };
 
   return (
     <div className="space-y-[var(--space-4)]">
-      <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
+      <div className="mb-[var(--space-3)] text-sm font-medium text-[var(--text-primary)]">
         Per-Object Media Overrides
       </div>
-      
+
       {/* Content Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Content</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Content
+        </div>
+
         {/* Per-Object Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
-            <BindButton nodeId={nodeId} bindingKey="imageAssetId" objectId={objectId} />
+            <label className="text-xs text-[var(--text-tertiary)]">
+              Image Asset
+            </label>
+            <BindButton
+              nodeId={nodeId}
+              bindingKey="imageAssetId"
+              objectId={objectId}
+            />
           </div>
-          
+
           {/* Current Asset Display */}
           <div
-            key={`asset-display-per-object-${currentAssetId || 'none'}`}
-            className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]"
+            key={`asset-display-per-object-${currentAssetId || "none"}`}
+            className="rounded border border-[var(--border-secondary)] bg-[var(--surface-2)] p-[var(--space-3)]"
           >
             {currentAssetId && assetDetails ? (
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
+                <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
                   {assetDetails.public_url && (
                     <NextImage
                       key={`asset-img-per-object-${assetDetails.id}`}
@@ -493,12 +641,12 @@ function MediaPerObjectProperties({
                       alt={assetDetails.original_name}
                       width={48}
                       height={48}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-[var(--text-primary)] font-medium truncate">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-[var(--text-primary)]">
                     {assetDetails.original_name}
                   </div>
                   <div className="text-xs text-[var(--text-tertiary)]">
@@ -512,8 +660,8 @@ function MediaPerObjectProperties({
             ) : currentAssetId && isLoadingAssetDetails ? (
               // Asset is selected but details are loading
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-[var(--text-tertiary)]">
@@ -524,7 +672,7 @@ function MediaPerObjectProperties({
             ) : currentAssetId && !assetDetails && !isLoadingAssetDetails ? (
               // Asset is selected but not found
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
                   <ImageOff size={16} className="text-[var(--text-tertiary)]" />
                 </div>
                 <div className="flex-1">
@@ -538,36 +686,48 @@ function MediaPerObjectProperties({
               </div>
             ) : (
               <div className="flex items-center gap-[var(--space-3)]">
-                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
                   <ImageOff size={16} className="text-[var(--text-tertiary)]" />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-[var(--text-tertiary)]">
-                    {base.imageAssetId ? 'Using default asset' : 'No image selected'}
+                    {base.imageAssetId
+                      ? "Using default asset"
+                      : "No image selected"}
                   </div>
                 </div>
               </div>
             )}
           </div>
-          
+
           {/* Select Button */}
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setShowAssetModal(true)}
-            disabled={isBound('imageAssetId')}
-            className={`w-full ${leftBorderClass('imageAssetId')}`}
+            disabled={isBound("imageAssetId")}
+            className={`w-full ${leftBorderClass("imageAssetId")}`}
           >
             <Image size={14} className="mr-2" aria-label="Image icon" />
-            {currentAssetId ? 'Change Image' : 'Override Image'}
+            {currentAssetId ? "Change Image" : "Override Image"}
           </Button>
-          
+
           {/* Asset Binding Badge - Typography Pattern */}
-          {(isOverridden('imageAssetId') || isBound('imageAssetId')) && (
-            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+          {(isOverridden("imageAssetId") || isBound("imageAssetId")) && (
+            <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('imageAssetId') && !isBound('imageAssetId') && <MediaOverrideBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />}
-                <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
+                {isOverridden("imageAssetId") && !isBound("imageAssetId") && (
+                  <MediaOverrideBadge
+                    nodeId={nodeId}
+                    keyName="imageAssetId"
+                    objectId={objectId}
+                  />
+                )}
+                <MediaBindingBadge
+                  nodeId={nodeId}
+                  keyName="imageAssetId"
+                  objectId={objectId}
+                />
               </div>
             </div>
           )}
@@ -576,90 +736,156 @@ function MediaPerObjectProperties({
 
       {/* Crop Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Crop Settings</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Crop Settings
+        </div>
+
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <NumberField
               label="X"
-              value={getValue('cropX', 0) as number}
+              value={getValue("cropX", 0) as number}
               onChange={(cropX) => onChange({ cropX })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" objectId={objectId} />}
-              disabled={isBound('cropX')}
-              inputClassName={leftBorderClass('cropX')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="cropX"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("cropX")}
+              inputClassName={leftBorderClass("cropX")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('cropX') || isBound('cropX')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("cropX") || isBound("cropX")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropX') && !isBound('cropX') && <MediaOverrideBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
+                  {isOverridden("cropX") && !isBound("cropX") && (
+                    <MediaOverrideBadge
+                      nodeId={nodeId}
+                      keyName="cropX"
+                      objectId={objectId}
+                    />
+                  )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="cropX"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
           </div>
-          
+
           <div>
             <NumberField
               label="Y"
-              value={getValue('cropY', 0) as number}
+              value={getValue("cropY", 0) as number}
               onChange={(cropY) => onChange({ cropY })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" objectId={objectId} />}
-              disabled={isBound('cropY')}
-              inputClassName={leftBorderClass('cropY')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="cropY"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("cropY")}
+              inputClassName={leftBorderClass("cropY")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('cropY') || isBound('cropY')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("cropY") || isBound("cropY")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropY') && !isBound('cropY') && <MediaOverrideBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
+                  {isOverridden("cropY") && !isBound("cropY") && (
+                    <MediaOverrideBadge
+                      nodeId={nodeId}
+                      keyName="cropY"
+                      objectId={objectId}
+                    />
+                  )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="cropY"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <NumberField
               label="Width (0=full)"
-              value={getValue('cropWidth', 0) as number}
+              value={getValue("cropWidth", 0) as number}
               onChange={(cropWidth) => onChange({ cropWidth })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" objectId={objectId} />}
-              disabled={isBound('cropWidth')}
-              inputClassName={leftBorderClass('cropWidth')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="cropWidth"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("cropWidth")}
+              inputClassName={leftBorderClass("cropWidth")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('cropWidth') || isBound('cropWidth')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("cropWidth") || isBound("cropWidth")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropWidth') && !isBound('cropWidth') && <MediaOverrideBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
+                  {isOverridden("cropWidth") && !isBound("cropWidth") && (
+                    <MediaOverrideBadge
+                      nodeId={nodeId}
+                      keyName="cropWidth"
+                      objectId={objectId}
+                    />
+                  )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="cropWidth"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
           </div>
-          
+
           <div>
             <NumberField
               label="Height (0=full)"
-              value={getValue('cropHeight', 0) as number}
+              value={getValue("cropHeight", 0) as number}
               onChange={(cropHeight) => onChange({ cropHeight })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" objectId={objectId} />}
-              disabled={isBound('cropHeight')}
-              inputClassName={leftBorderClass('cropHeight')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="cropHeight"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("cropHeight")}
+              inputClassName={leftBorderClass("cropHeight")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('cropHeight') || isBound('cropHeight')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("cropHeight") || isBound("cropHeight")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropHeight') && !isBound('cropHeight') && <MediaOverrideBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
+                  {isOverridden("cropHeight") && !isBound("cropHeight") && (
+                    <MediaOverrideBadge
+                      nodeId={nodeId}
+                      keyName="cropHeight"
+                      objectId={objectId}
+                    />
+                  )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="cropHeight"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
@@ -669,46 +895,81 @@ function MediaPerObjectProperties({
 
       {/* Display Section */}
       <div className="space-y-[var(--space-3)]">
-        <div className="text-sm font-medium text-[var(--text-primary)]">Display Size</div>
-        
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          Display Size
+        </div>
+
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
             <NumberField
               label="Width (0=auto)"
-              value={getValue('displayWidth', 0) as number}
+              value={getValue("displayWidth", 0) as number}
               onChange={(displayWidth) => onChange({ displayWidth })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" objectId={objectId} />}
-              disabled={isBound('displayWidth')}
-              inputClassName={leftBorderClass('displayWidth')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="displayWidth"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("displayWidth")}
+              inputClassName={leftBorderClass("displayWidth")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('displayWidth') || isBound('displayWidth')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("displayWidth") || isBound("displayWidth")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('displayWidth') && !isBound('displayWidth') && <MediaOverrideBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />
+                  {isOverridden("displayWidth") && !isBound("displayWidth") && (
+                    <MediaOverrideBadge
+                      nodeId={nodeId}
+                      keyName="displayWidth"
+                      objectId={objectId}
+                    />
+                  )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="displayWidth"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
           </div>
-          
+
           <div>
             <NumberField
               label="Height (0=auto)"
-              value={getValue('displayHeight', 0) as number}
+              value={getValue("displayHeight", 0) as number}
               onChange={(displayHeight) => onChange({ displayHeight })}
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" objectId={objectId} />}
-              disabled={isBound('displayHeight')}
-              inputClassName={leftBorderClass('displayHeight')}
+              bindAdornment={
+                <BindButton
+                  nodeId={nodeId}
+                  bindingKey="displayHeight"
+                  objectId={objectId}
+                />
+              }
+              disabled={isBound("displayHeight")}
+              inputClassName={leftBorderClass("displayHeight")}
             />
             {/* Badge - Only show when needed */}
-            {(isOverridden('displayHeight') || isBound('displayHeight')) && (
-              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+            {(isOverridden("displayHeight") || isBound("displayHeight")) && (
+              <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('displayHeight') && !isBound('displayHeight') && <MediaOverrideBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />}
-                  <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />
+                  {isOverridden("displayHeight") &&
+                    !isBound("displayHeight") && (
+                      <MediaOverrideBadge
+                        nodeId={nodeId}
+                        keyName="displayHeight"
+                        objectId={objectId}
+                      />
+                    )}
+                  <MediaBindingBadge
+                    nodeId={nodeId}
+                    keyName="displayHeight"
+                    objectId={objectId}
+                  />
                 </div>
               </div>
             )}
@@ -721,7 +982,9 @@ function MediaPerObjectProperties({
         isOpen={showAssetModal}
         onClose={() => setShowAssetModal(false)}
         onSelect={handleAssetSelect}
-        selectedAssetId={currentAssetId && currentAssetId !== '' ? currentAssetId : undefined}
+        selectedAssetId={
+          currentAssetId && currentAssetId !== "" ? currentAssetId : undefined
+        }
       />
     </div>
   );
@@ -733,85 +996,96 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
 
   // Find the media node and its assignments
   const mediaNode = useMemo(
-    () => state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined,
-    [state.flow.nodes, nodeId]
+    () =>
+      state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId) as
+        | Node<MediaNodeData>
+        | undefined,
+    [state.flow.nodes, nodeId],
   );
-  
+
   const assignments: PerObjectAssignments = useMemo(
     () => mediaNode?.data?.perObjectAssignments ?? {},
-    [mediaNode]
+    [mediaNode],
   );
 
   // Get upstream image objects (following typography pattern)
   const upstreamObjects = useMemo(() => {
     const tracker = new FlowTracker();
-    const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
-    
+    const objectDescriptors = tracker.getUpstreamObjects(
+      nodeId,
+      state.flow.nodes,
+      state.flow.edges,
+    );
+
     return objectDescriptors
-      .filter(obj => obj.type === 'image') // Only show image objects
-      .map(obj => ({
+      .filter((obj) => obj.type === "image") // Only show image objects
+      .map((obj) => ({
         data: {
           identifier: {
             id: obj.id,
             displayName: obj.displayName,
-            type: obj.type
-          }
+            type: obj.type,
+          },
         },
-        type: obj.type
+        type: obj.type,
       }));
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
   // Handle per-object assignment updates
-  const handleUpdateAssignment = useCallback((updates: Record<string, unknown>) => {
-    if (!selectedObjectId) return;
+  const handleUpdateAssignment = useCallback(
+    (updates: Record<string, unknown>) => {
+      if (!selectedObjectId) return;
 
-    const next: PerObjectAssignments = { ...assignments };
-    const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) };
-    const baseInitial = current.initial ?? {};
+      const next: PerObjectAssignments = { ...assignments };
+      const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) };
+      const baseInitial = current.initial ?? {};
 
-    // Merge updates into initial assignments
-    const mergedInitial = { ...baseInitial, ...updates };
-    
-    // Remove undefined values
-    Object.keys(mergedInitial).forEach(key => {
-      if (mergedInitial[key] === undefined) {
-        delete mergedInitial[key];
+      // Merge updates into initial assignments
+      const mergedInitial = { ...baseInitial, ...updates };
+
+      // Remove undefined values
+      Object.keys(mergedInitial).forEach((key) => {
+        if (mergedInitial[key] === undefined) {
+          delete mergedInitial[key];
+        }
+      });
+
+      if (Object.keys(mergedInitial).length === 0) {
+        // Remove assignment if empty
+        delete next[selectedObjectId];
+      } else {
+        next[selectedObjectId] = {
+          ...current,
+          initial: mergedInitial,
+        };
       }
-    });
 
-    if (Object.keys(mergedInitial).length === 0) {
-      // Remove assignment if empty
-      delete next[selectedObjectId];
-    } else {
-      next[selectedObjectId] = {
-        ...current,
-        initial: mergedInitial
-      };
-    }
-
-    // Update node data
-    updateFlow({
-      nodes: state.flow.nodes.map(n =>
-        n.data?.identifier?.id !== nodeId ? n :
-        ({ ...n, data: { ...n.data, perObjectAssignments: next } })
-      )
-    });
-  }, [selectedObjectId, assignments, nodeId, state.flow.nodes, updateFlow]);
+      // Update node data
+      updateFlow({
+        nodes: state.flow.nodes.map((n) =>
+          n.data?.identifier?.id !== nodeId
+            ? n
+            : { ...n, data: { ...n.data, perObjectAssignments: next } },
+        ),
+      });
+    },
+    [selectedObjectId, assignments, nodeId, state.flow.nodes, updateFlow],
+  );
 
   return (
-    <div className="h-full flex bg-[var(--surface-0)]">
+    <div className="flex h-full bg-[var(--surface-0)]">
       {/* Left Sidebar - Object Selection */}
-      <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">
+      <div className="w-[var(--sidebar-width)] overflow-y-auto border-r border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]">
+        <h3 className="mb-[var(--space-4)] text-lg font-semibold text-[var(--text-primary)]">
           Objects
         </h3>
-        
+
         <SelectionList
-          items={upstreamObjects.map(obj => ({
+          items={upstreamObjects.map((obj) => ({
             id: obj.data.identifier.id,
-            label: obj.data.identifier.displayName
+            label: obj.data.identifier.displayName,
           }))}
           selectedId={selectedObjectId}
           onSelect={setSelectedObjectId}
@@ -820,9 +1094,9 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
           defaultLabel="Default"
           emptyLabel="No image objects found"
         />
-        
+
         {upstreamObjects.length === 0 && (
-          <div className="mt-[var(--space-4)] p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]">
+          <div className="mt-[var(--space-4)] rounded border border-[var(--border-secondary)] bg-[var(--surface-2)] p-[var(--space-3)]">
             <div className="text-xs text-[var(--text-tertiary)]">
               Connect image nodes to this media node to see them here.
             </div>
@@ -831,25 +1105,26 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
       </div>
 
       {/* Center Content */}
-      <div className="flex-1 min-w-0 p-[var(--space-4)] overflow-y-auto">
+      <div className="min-w-0 flex-1 overflow-y-auto p-[var(--space-4)]">
         <div className="max-w-2xl">
-          <div className="text-center py-[var(--space-8)]">
-            <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mx-auto mb-[var(--space-4)]">
+          <div className="py-[var(--space-8)] text-center">
+            <div className="mx-auto mb-[var(--space-4)] flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)]">
               <Settings size={24} className="text-[var(--text-tertiary)]" />
             </div>
             <div className="text-sm text-[var(--text-tertiary)]">
-              Select Default or an image object on the left to edit its properties.
+              Select Default or an image object on the left to edit its
+              properties.
             </div>
           </div>
         </div>
       </div>
 
       {/* Right Sidebar - Properties */}
-      <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">
+      <div className="w-[var(--sidebar-width)] overflow-y-auto border-l border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]">
+        <h3 className="mb-[var(--space-4)] text-lg font-semibold text-[var(--text-primary)]">
           Properties
         </h3>
-        
+
         {selectedObjectId ? (
           <MediaPerObjectProperties
             nodeId={nodeId}

@@ -7,17 +7,21 @@ import type { TextNodeData } from "@/shared/types/nodes";
 import { Type } from "lucide-react";
 
 export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
-  const nodeDefinition = getNodeDefinition('text');
-  
-  const displayContent = data.content?.length > 20 
-    ? data.content.substring(0, 20) + '...'
-    : data.content || 'Hello World';
+  const nodeDefinition = getNodeDefinition("text");
+
+  const displayContent =
+    data.content?.length > 20
+      ? data.content.substring(0, 20) + "..."
+      : data.content || "Hello World";
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-text)] flex items-center justify-center rounded text-[var(--text-primary)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-text)] text-[var(--text-primary)]">
             <Type size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -26,8 +30,8 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
-        <div className="font-mono bg-[var(--surface-2)] p-1 rounded text-[10px]">
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
+        <div className="rounded bg-[var(--surface-2)] p-1 font-mono text-[10px]">
           &ldquo;{displayContent}&rdquo;
         </div>
         <div>Size: {data.fontSize || 24}px</div>
@@ -39,8 +43,8 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className="w-3 h-3 bg-[var(--node-text)] !border-2 !border-[var(--text-primary)]"
-          style={{ top: '50%' }}
+          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-text)]"
+          style={{ top: "50%" }}
         />
       ))}
     </Card>

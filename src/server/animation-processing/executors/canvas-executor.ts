@@ -1,11 +1,23 @@
 // src/server/animation-processing/executors/canvas-executor.ts
 import type { NodeData } from "@/shared/types";
-import { setNodeOutput, getConnectedInputs, type ExecutionContext } from "../execution-context";
+import {
+  setNodeOutput,
+  getConnectedInputs,
+  type ExecutionContext,
+} from "../execution-context";
 import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
 import { BaseExecutor } from "./base-executor";
 import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
-import { resolveInitialObject, type CanvasOverrides } from "@/shared/properties/resolver";
-import { mergeObjectAssignments, isObjectAssignments, type PerObjectAssignments, type ObjectAssignments } from "@/shared/properties/assignments";
+import {
+  resolveInitialObject,
+  type CanvasOverrides,
+} from "@/shared/properties/resolver";
+import {
+  mergeObjectAssignments,
+  isObjectAssignments,
+  type PerObjectAssignments,
+  type ObjectAssignments,
+} from "@/shared/properties/assignments";
 import { deleteByPath } from "@/shared/utils/object-path";
 
 // Helper types for better type safety
@@ -39,33 +51,36 @@ interface InputWithMetadata {
 // Type guard for scene objects
 function isSceneObject(obj: unknown): obj is SceneObject {
   return (
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     obj !== null &&
-    'id' in obj &&
-    'type' in obj &&
-    'properties' in obj &&
-    'initialPosition' in obj
+    "id" in obj &&
+    "type" in obj &&
+    "properties" in obj &&
+    "initialPosition" in obj
   );
 }
 
-
-
 export class CanvasNodeExecutor extends BaseExecutor {
   protected registerHandlers(): void {
-    this.registerHandler('canvas', this.executeCanvas.bind(this));
+    this.registerHandler("canvas", this.executeCanvas.bind(this));
   }
 
   private async executeCanvas(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as NodeDataWithBindings;
     const inputs = getConnectedInputs(
       context,
-      connections as unknown as Array<{ target: string; targetHandle: string; source: string; sourceHandle: string }>,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
       node.data.identifier.id,
-      'input'
+      "input",
     ) as InputWithMetadata[];
 
     // Resolve variable bindings (Result nodes) at node level
@@ -74,14 +89,23 @@ export class CanvasNodeExecutor extends BaseExecutor {
     const readVarGlobal = (key: string): unknown => {
       const rid = bindings[key]?.boundResultNodeId;
       if (!rid) return undefined;
-      return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
+      return (
+        context.nodeOutputs.get(`${rid}.output`) ??
+        context.nodeOutputs.get(`${rid}.result`)
+      )?.data;
     };
-    const readVarForObject = (objectId: string | undefined) => (key: string): unknown => {
-      if (!objectId) return readVarGlobal(key);
-      const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
-      if (rid) return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))?.data;
-      return readVarGlobal(key);
-    };
+    const readVarForObject =
+      (objectId: string | undefined) =>
+      (key: string): unknown => {
+        if (!objectId) return readVarGlobal(key);
+        const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
+        if (rid)
+          return (
+            context.nodeOutputs.get(`${rid}.output`) ??
+            context.nodeOutputs.get(`${rid}.result`)
+          )?.data;
+        return readVarGlobal(key);
+      };
     // Apply bound values to node defaults
 
     // Start with node defaults as overrides
@@ -97,41 +121,43 @@ export class CanvasNodeExecutor extends BaseExecutor {
 
     // Apply all global binding keys generically into baseOverrides
     const globalKeys = Object.keys(bindings);
-    const nodeOverrides: CanvasOverrides = JSON.parse(JSON.stringify(baseOverrides)) as CanvasOverrides;
+    const nodeOverrides: CanvasOverrides = JSON.parse(
+      JSON.stringify(baseOverrides),
+    ) as CanvasOverrides;
     for (const key of globalKeys) {
       const val = readVarGlobal(key);
       if (val === undefined) continue;
-      
+
       // Type-safe property setting for CanvasOverrides
-      if (key === 'position.x' && typeof val === 'number') {
-        nodeOverrides.position = { 
-          x: val, 
-          y: nodeOverrides.position?.y ?? 540 
+      if (key === "position.x" && typeof val === "number") {
+        nodeOverrides.position = {
+          x: val,
+          y: nodeOverrides.position?.y ?? 540,
         };
-      } else if (key === 'position.y' && typeof val === 'number') {
-        nodeOverrides.position = { 
-          x: nodeOverrides.position?.x ?? 960, 
-          y: val 
+      } else if (key === "position.y" && typeof val === "number") {
+        nodeOverrides.position = {
+          x: nodeOverrides.position?.x ?? 960,
+          y: val,
         };
-      } else if (key === 'scale.x' && typeof val === 'number') {
-        nodeOverrides.scale = { 
-          x: val, 
-          y: nodeOverrides.scale?.y ?? 1 
+      } else if (key === "scale.x" && typeof val === "number") {
+        nodeOverrides.scale = {
+          x: val,
+          y: nodeOverrides.scale?.y ?? 1,
         };
-      } else if (key === 'scale.y' && typeof val === 'number') {
-        nodeOverrides.scale = { 
-          x: nodeOverrides.scale?.x ?? 1, 
-          y: val 
+      } else if (key === "scale.y" && typeof val === "number") {
+        nodeOverrides.scale = {
+          x: nodeOverrides.scale?.x ?? 1,
+          y: val,
         };
-      } else if (key === 'rotation' && typeof val === 'number') {
+      } else if (key === "rotation" && typeof val === "number") {
         nodeOverrides.rotation = val;
-      } else if (key === 'opacity' && typeof val === 'number') {
+      } else if (key === "opacity" && typeof val === "number") {
         nodeOverrides.opacity = val;
-      } else if (key === 'fillColor' && typeof val === 'string') {
+      } else if (key === "fillColor" && typeof val === "string") {
         nodeOverrides.fillColor = val;
-      } else if (key === 'strokeColor' && typeof val === 'string') {
+      } else if (key === "strokeColor" && typeof val === "string") {
         nodeOverrides.strokeColor = val;
-      } else if (key === 'strokeWidth' && typeof val === 'number') {
+      } else if (key === "strokeWidth" && typeof val === "number") {
         nodeOverrides.strokeWidth = val;
       }
     }
@@ -139,9 +165,11 @@ export class CanvasNodeExecutor extends BaseExecutor {
     const passThrough: unknown[] = [];
 
     // Read optional per-object assignments metadata (from upstream)
-    const upstreamAssignments: PerObjectAssignments | undefined = this.extractPerObjectAssignments(inputs);
+    const upstreamAssignments: PerObjectAssignments | undefined =
+      this.extractPerObjectAssignments(inputs);
     // Read node-level assignments stored on the Canvas node itself
-    const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments;
+    const nodeAssignments: PerObjectAssignments | undefined =
+      data.perObjectAssignments;
 
     // Merge upstream + node-level; node-level takes precedence per object
     const mergedAssignments: PerObjectAssignments | undefined = (() => {
@@ -166,60 +194,67 @@ export class CanvasNodeExecutor extends BaseExecutor {
         if (isSceneObject(obj)) {
           const original = obj;
           const objectId = original.id;
-          
+
           // NEW: Add type-aware color property filtering
-          const isTextObject = original.type === 'text';
-          
+          const isTextObject = original.type === "text";
+
           const reader = readVarForObject(objectId);
-          const objectOverrides: CanvasOverrides = JSON.parse(JSON.stringify(nodeOverrides)) as CanvasOverrides;
-          
+          const objectOverrides: CanvasOverrides = JSON.parse(
+            JSON.stringify(nodeOverrides),
+          ) as CanvasOverrides;
+
           // NEW: Remove color properties for text objects
           if (isTextObject) {
             delete objectOverrides.fillColor;
             delete objectOverrides.strokeColor;
             delete objectOverrides.strokeWidth;
           }
-          
+
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
           for (const key of objectKeys) {
             const val = reader(key);
             if (val === undefined) continue;
-            
+
             // NEW: Skip color binding keys for text objects
-            if (isTextObject && (key === 'fillColor' || key === 'strokeColor' || key === 'strokeWidth')) {
+            if (
+              isTextObject &&
+              (key === "fillColor" ||
+                key === "strokeColor" ||
+                key === "strokeWidth")
+            ) {
               continue;
             }
-            
+
             // EXISTING: Keep all existing property binding logic unchanged
-            if (key === 'position.x' && typeof val === 'number') {
-              objectOverrides.position = { 
-                x: val, 
-                y: objectOverrides.position?.y ?? 540 
+            if (key === "position.x" && typeof val === "number") {
+              objectOverrides.position = {
+                x: val,
+                y: objectOverrides.position?.y ?? 540,
               };
-            } else if (key === 'position.y' && typeof val === 'number') {
-              objectOverrides.position = { 
-                x: objectOverrides.position?.x ?? 960, 
-                y: val 
+            } else if (key === "position.y" && typeof val === "number") {
+              objectOverrides.position = {
+                x: objectOverrides.position?.x ?? 960,
+                y: val,
               };
-            } else if (key === 'scale.x' && typeof val === 'number') {
-              objectOverrides.scale = { 
-                x: val, 
-                y: objectOverrides.scale?.y ?? 1 
+            } else if (key === "scale.x" && typeof val === "number") {
+              objectOverrides.scale = {
+                x: val,
+                y: objectOverrides.scale?.y ?? 1,
               };
-            } else if (key === 'scale.y' && typeof val === 'number') {
-              objectOverrides.scale = { 
-                x: objectOverrides.scale?.x ?? 1, 
-                y: val 
+            } else if (key === "scale.y" && typeof val === "number") {
+              objectOverrides.scale = {
+                x: objectOverrides.scale?.x ?? 1,
+                y: val,
               };
-            } else if (key === 'rotation' && typeof val === 'number') {
+            } else if (key === "rotation" && typeof val === "number") {
               objectOverrides.rotation = val;
-            } else if (key === 'opacity' && typeof val === 'number') {
+            } else if (key === "opacity" && typeof val === "number") {
               objectOverrides.opacity = val;
-            } else if (key === 'fillColor' && typeof val === 'string') {
+            } else if (key === "fillColor" && typeof val === "string") {
               objectOverrides.fillColor = val;
-            } else if (key === 'strokeColor' && typeof val === 'string') {
+            } else if (key === "strokeColor" && typeof val === "string") {
               objectOverrides.strokeColor = val;
-            } else if (key === 'strokeWidth' && typeof val === 'number') {
+            } else if (key === "strokeWidth" && typeof val === "number") {
               objectOverrides.strokeWidth = val;
             }
           }
@@ -229,39 +264,72 @@ export class CanvasNodeExecutor extends BaseExecutor {
             if (!assignmentsForObject) return undefined;
             const keys = objectKeys; // ✅ Only use per-object bindings, not global keys
             const next: ObjectAssignments = { ...assignmentsForObject };
-            const initial = { ...(next.initial ?? {}) } as Record<string, unknown>;
-            
+            const initial = { ...(next.initial ?? {}) } as Record<
+              string,
+              unknown
+            >;
+
             // Remove properties that are bound by variables
             for (const key of keys) {
               switch (key) {
-                case 'position.x': deleteByPath(initial, 'position.x'); break;
-                case 'position.y': deleteByPath(initial, 'position.y'); break;
-                case 'scale.x': deleteByPath(initial, 'scale.x'); break;
-                case 'scale.y': deleteByPath(initial, 'scale.y'); break;
-                case 'rotation': delete initial.rotation; break;
-                case 'opacity': delete initial.opacity; break;
-                case 'fillColor': delete initial.fillColor; break;
-                case 'strokeColor': delete initial.strokeColor; break;
-                case 'strokeWidth': delete initial.strokeWidth; break;
-                default: break;
+                case "position.x":
+                  deleteByPath(initial, "position.x");
+                  break;
+                case "position.y":
+                  deleteByPath(initial, "position.y");
+                  break;
+                case "scale.x":
+                  deleteByPath(initial, "scale.x");
+                  break;
+                case "scale.y":
+                  deleteByPath(initial, "scale.y");
+                  break;
+                case "rotation":
+                  delete initial.rotation;
+                  break;
+                case "opacity":
+                  delete initial.opacity;
+                  break;
+                case "fillColor":
+                  delete initial.fillColor;
+                  break;
+                case "strokeColor":
+                  delete initial.strokeColor;
+                  break;
+                case "strokeWidth":
+                  delete initial.strokeWidth;
+                  break;
+                default:
+                  break;
               }
             }
-            
+
             // NEW: Also remove color assignments for text objects (even if not bound)
             if (isTextObject) {
               delete initial.fillColor;
               delete initial.strokeColor;
               delete initial.strokeWidth;
             }
-            
+
             // Prune empty objects recursively
             const prunedInitial = (() => {
-              const obj = JSON.parse(JSON.stringify(initial)) as Record<string, unknown>;
-              const prune = (o: Record<string, unknown>): Record<string, unknown> => {
+              const obj = JSON.parse(JSON.stringify(initial)) as Record<
+                string,
+                unknown
+              >;
+              const prune = (
+                o: Record<string, unknown>,
+              ): Record<string, unknown> => {
                 for (const k of Object.keys(o)) {
-                  if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) {
+                  if (
+                    o[k] &&
+                    typeof o[k] === "object" &&
+                    !Array.isArray(o[k])
+                  ) {
                     o[k] = prune(o[k] as Record<string, unknown>);
-                    if (Object.keys(o[k] as Record<string, unknown>).length === 0) {
+                    if (
+                      Object.keys(o[k] as Record<string, unknown>).length === 0
+                    ) {
                       delete o[k];
                     }
                   }
@@ -270,7 +338,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
               };
               return prune(obj);
             })();
-            
+
             if (Object.keys(prunedInitial).length > 0) {
               next.initial = prunedInitial;
             } else {
@@ -279,10 +347,19 @@ export class CanvasNodeExecutor extends BaseExecutor {
             return next;
           })();
 
-          const { initialPosition, initialRotation, initialScale, initialOpacity, initialFillColor, initialStrokeColor, initialStrokeWidth, properties } = resolveInitialObject(
+          const {
+            initialPosition,
+            initialRotation,
+            initialScale,
+            initialOpacity,
+            initialFillColor,
+            initialStrokeColor,
+            initialStrokeWidth,
+            properties,
+          } = resolveInitialObject(
             original,
             objectOverrides,
-            maskedAssignmentsForObject
+            maskedAssignmentsForObject,
           );
 
           const styled: SceneObject = {
@@ -309,18 +386,21 @@ export class CanvasNodeExecutor extends BaseExecutor {
     setNodeOutput(
       context,
       node.data.identifier.id,
-      'output',
-      'object_stream',
+      "output",
+      "object_stream",
       passThrough,
       {
         perObjectTimeCursor: firstMeta?.perObjectTimeCursor,
         perObjectAnimations: firstMeta?.perObjectAnimations,
-        perObjectAssignments: mergedAssignments ?? firstMeta?.perObjectAssignments,
-      }
+        perObjectAssignments:
+          mergedAssignments ?? firstMeta?.perObjectAssignments,
+      },
     );
   }
 
-  private extractPerObjectAssignments(inputs: InputWithMetadata[]): PerObjectAssignments | undefined {
+  private extractPerObjectAssignments(
+    inputs: InputWithMetadata[],
+  ): PerObjectAssignments | undefined {
     const merged: PerObjectAssignments = {};
     let found = false;
     for (const input of inputs) {

@@ -10,7 +10,7 @@ export interface UserAsset {
   mime_type: string;
   bucket_name: string;
   storage_path: string;
-  asset_type: 'uploaded' | 'generated_saved';
+  asset_type: "uploaded" | "generated_saved";
   metadata: Record<string, unknown>;
   created_at: string;
   // removed: updated_at: string;
@@ -30,16 +30,19 @@ export const uploadAssetInputSchema = z.object({
   originalName: z.string().min(1).max(255),
   fileSize: z.number().int().positive(),
   mimeType: z.string().min(1),
-  assetType: z.enum(['uploaded', 'generated_saved']).default('uploaded'),
+  assetType: z.enum(["uploaded", "generated_saved"]).default("uploaded"),
   metadata: z.record(z.unknown()).optional().default({}),
 });
 
 export const listAssetsInputSchema = z.object({
-  assetType: z.enum(['uploaded', 'generated_saved', 'all']).optional().default('all'),
+  assetType: z
+    .enum(["uploaded", "generated_saved", "all"])
+    .optional()
+    .default("all"),
   limit: z.number().int().positive().max(100).optional().default(50),
   offset: z.number().int().nonnegative().optional().default(0),
   search: z.string().optional(),
-  bucketName: z.enum(['images', 'videos']).optional(),
+  bucketName: z.enum(["images", "videos"]).optional(),
 });
 
 export const deleteAssetInputSchema = z.object({
@@ -67,7 +70,7 @@ export const assetResponseSchema = z.object({
   mime_type: z.string(),
   bucket_name: z.string(),
   storage_path: z.string(),
-  asset_type: z.enum(['uploaded', 'generated_saved']),
+  asset_type: z.enum(["uploaded", "generated_saved"]),
   metadata: z.record(z.unknown()),
   created_at: z.string(),
   // removed: updated_at: string;
@@ -110,32 +113,32 @@ export type UploadUrlResponse = z.infer<typeof uploadUrlResponseSchema>;
 export type StorageQuotaResponse = z.infer<typeof storageQuotaResponseSchema>;
 
 // Utility types
-export type AssetType = UserAsset['asset_type'];
-export type BucketName = 'images' | 'videos';
+export type AssetType = UserAsset["asset_type"];
+export type BucketName = "images" | "videos";
 
 // File validation constants (matching STORAGE_CONFIG)
 export const ASSET_VALIDATION = {
   MAX_IMAGE_SIZE: 50 * 1024 * 1024, // 50MB
   MAX_VIDEO_SIZE: 500 * 1024 * 1024, // 500MB
   SUPPORTED_IMAGE_TYPES: [
-    'image/png',
-    'image/jpeg', 
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'image/bmp',
-    'image/tiff'
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "image/bmp",
+    "image/tiff",
   ],
   SUPPORTED_VIDEO_TYPES: [
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/x-ms-wmv',
-    'video/x-flv',
-    'video/x-matroska',
-    'video/x-m4v',
-    'video/3gpp'
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/x-ms-wmv",
+    "video/x-flv",
+    "video/x-matroska",
+    "video/x-m4v",
+    "video/3gpp",
   ],
 } as const;
 
@@ -149,12 +152,12 @@ export function isVideoMimeType(mimeType: string): boolean {
 }
 
 export function getBucketForMimeType(mimeType: string): BucketName {
-  return isImageMimeType(mimeType) ? 'images' : 'videos';
+  return isImageMimeType(mimeType) ? "images" : "videos";
 }
 
 export function getMaxSizeForMimeType(mimeType: string): number {
-  return isImageMimeType(mimeType) 
-    ? ASSET_VALIDATION.MAX_IMAGE_SIZE 
+  return isImageMimeType(mimeType)
+    ? ASSET_VALIDATION.MAX_IMAGE_SIZE
     : ASSET_VALIDATION.MAX_VIDEO_SIZE;
 }
 
@@ -168,17 +171,17 @@ export function validateMimeType(mimeType: string): boolean {
 }
 
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  
+  if (bytes === 0) return "0 B";
+
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export function getFileExtension(filename: string): string {
-  return filename.split('.').pop()?.toLowerCase() ?? '';
+  return filename.split(".").pop()?.toLowerCase() ?? "";
 }
 
 export function isImage(asset: AssetResponse): boolean {

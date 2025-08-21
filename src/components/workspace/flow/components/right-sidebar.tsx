@@ -1,18 +1,18 @@
 // src/components/workspace/flow/components/right-sidebar.tsx
-import type { Edge, Node } from 'reactflow';
-import { Play, Settings, Folder } from 'lucide-react';
-import { PropertyPanel } from '@/components/workspace/property-panel';
-import { CollapsibleSection } from './collapsible-section';
-import { PreviewPanel } from './preview-panel';
-import { AssetsPanel } from './assets-panel';
-import type { NodeData } from '@/shared/types';
-import type { FlowTracker } from '@/lib/flow/flow-tracking';
+import type { Edge, Node } from "reactflow";
+import { Play, Settings, Folder } from "lucide-react";
+import { PropertyPanel } from "@/components/workspace/property-panel";
+import { CollapsibleSection } from "./collapsible-section";
+import { PreviewPanel } from "./preview-panel";
+import { AssetsPanel } from "./assets-panel";
+import type { NodeData } from "@/shared/types";
+import type { FlowTracker } from "@/lib/flow/flow-tracking";
 
 interface VideoJob {
   jobId: string;
   sceneName: string;
   sceneId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   videoUrl?: string;
   error?: string;
 }
@@ -21,7 +21,7 @@ interface ImageJob {
   jobId: string;
   frameName: string;
   frameId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   imageUrl?: string;
   error?: string;
 }
@@ -47,16 +47,16 @@ interface Props {
   onDownloadAllImages?: () => void;
 }
 
-export function RightSidebar({ 
+export function RightSidebar({
   // Property panel props
-  node, 
-  allNodes, 
-  allEdges, 
-  onChange, 
-  onDisplayNameChange, 
-  validateDisplayName, 
+  node,
+  allNodes,
+  allEdges,
+  onChange,
+  onDisplayNameChange,
+  validateDisplayName,
   flowTracker,
-  
+
   // Preview panel props
   videoUrl = null,
   videos = [],
@@ -65,18 +65,14 @@ export function RightSidebar({
   imageUrl = null,
   images = [],
   onDownloadImage,
-  onDownloadAllImages
+  onDownloadAllImages,
 }: Props) {
   const hasPreviewContent = Boolean(
-    (!!videoUrl) ||
-    (videos.length > 0) ||
-    (!!imageUrl) ||
-    (images.length > 0)
+    !!videoUrl || videos.length > 0 || !!imageUrl || images.length > 0,
   );
 
   return (
-    <div className="w-[var(--sidebar-width)] bg-[var(--surface-1)] border-l border-[var(--border-primary)] overflow-y-auto">
-      
+    <div className="w-[var(--sidebar-width)] overflow-y-auto border-l border-[var(--border-primary)] bg-[var(--surface-1)]">
       {/* Properties Section - Always visible */}
       <CollapsibleSection
         title="Properties"
@@ -97,9 +93,11 @@ export function RightSidebar({
           />
         ) : (
           // No node selected - show helpful message
-          <div className="text-center py-[var(--space-6)] text-[var(--text-tertiary)]">
+          <div className="py-[var(--space-6)] text-center text-[var(--text-tertiary)]">
             <div className="text-sm">Click a node to see properties</div>
-            <div className="text-xs mt-[var(--space-1)]">Select any node in the flow to edit its properties</div>
+            <div className="mt-[var(--space-1)] text-xs">
+              Select any node in the flow to edit its properties
+            </div>
           </div>
         )}
       </CollapsibleSection>
@@ -132,7 +130,6 @@ export function RightSidebar({
       >
         <AssetsPanel />
       </CollapsibleSection>
-
     </div>
   );
 }

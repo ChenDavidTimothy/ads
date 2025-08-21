@@ -12,9 +12,9 @@ if (supabaseUrl) {
   try {
     const { hostname } = new URL(supabaseUrl);
     imageRemotePatterns.push({
-      protocol: 'https',
+      protocol: "https",
       hostname,
-      pathname: '/storage/v1/object/**',
+      pathname: "/storage/v1/object/**",
     });
   } catch {}
 }
@@ -27,24 +27,24 @@ const config = {
   async redirects() {
     return [
       {
-        source: '/editor',
+        source: "/editor",
         has: [
           {
-            type: 'query',
-            key: 'workspace',
+            type: "query",
+            key: "workspace",
           },
         ],
-        destination: '/workspace',
+        destination: "/workspace",
         permanent: false,
       },
       {
-        source: '/editor',
-        destination: '/dashboard',
+        source: "/editor",
+        destination: "/dashboard",
         permanent: false,
       },
       {
-        source: '/editor/timeline/:nodeId',
-        destination: '/workspace/timeline/:nodeId',
+        source: "/editor/timeline/:nodeId",
+        destination: "/workspace/timeline/:nodeId",
         permanent: false,
       },
     ];

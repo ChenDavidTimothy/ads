@@ -1,12 +1,12 @@
 // src/shared/properties/precedence.ts
 
-export type PropertySource = 'base' | 'canvas' | 'animation' | 'assignment';
+export type PropertySource = "base" | "canvas" | "animation" | "assignment";
 
 export const DefaultPrecedence: PropertySource[] = [
-  'base',
-  'canvas',
-  'animation',
-  'assignment',
+  "base",
+  "canvas",
+  "animation",
+  "assignment",
 ];
 
 export interface PropertySourceMap {

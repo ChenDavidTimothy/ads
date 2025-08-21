@@ -1,5 +1,5 @@
 // src/animation/geometry/triangle.ts
-import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
+import type { Point2D, NodeCanvasContext } from "@/shared/types/core";
 
 export interface TriangleStyle {
   fillColor: string;
@@ -12,7 +12,7 @@ export function drawTriangle(
   center: Point2D,
   size: number,
   rotation = 0,
-  style: TriangleStyle
+  style: TriangleStyle,
 ): void {
   ctx.save();
   ctx.translate(Math.round(center.x), Math.round(center.y));
@@ -35,10 +35,10 @@ export function drawEquilateralTriangle(
   center: Point2D,
   sideLength: number,
   rotation = 0,
-  style: TriangleStyle
+  style: TriangleStyle,
 ): void {
-  const height = sideLength * Math.sqrt(3) / 2;
-  const size = height * 2 / 3; // Distance from center to vertex
+  const height = (sideLength * Math.sqrt(3)) / 2;
+  const size = (height * 2) / 3; // Distance from center to vertex
   drawTriangle(ctx, center, size, rotation, style);
 }
 
@@ -47,7 +47,7 @@ export function drawTriangleFromPoints(
   p1: Point2D,
   p2: Point2D,
   p3: Point2D,
-  style: TriangleStyle
+  style: TriangleStyle,
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;
@@ -66,29 +66,29 @@ export function drawTriangleFromPoints(
 export function getTriangleVertices(
   center: Point2D,
   size: number,
-  rotation = 0
+  rotation = 0,
 ): [Point2D, Point2D, Point2D] {
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
-  
+
   // Equilateral triangle vertices (before rotation)
   const v1 = { x: 0, y: -size };
   const v2 = { x: -size * 0.866, y: size * 0.5 };
   const v3 = { x: size * 0.866, y: size * 0.5 };
-  
+
   // Apply rotation and translation
   return [
     {
       x: center.x + (v1.x * cos - v1.y * sin),
-      y: center.y + (v1.x * sin + v1.y * cos)
+      y: center.y + (v1.x * sin + v1.y * cos),
     },
     {
       x: center.x + (v2.x * cos - v2.y * sin),
-      y: center.y + (v2.x * sin + v2.y * cos)
+      y: center.y + (v2.x * sin + v2.y * cos),
     },
     {
       x: center.x + (v3.x * cos - v3.y * sin),
-      y: center.y + (v3.x * sin + v3.y * cos)
-    }
+      y: center.y + (v3.x * sin + v3.y * cos),
+    },
   ];
 }

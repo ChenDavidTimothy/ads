@@ -1,4 +1,4 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, type ReactNode } from "react";
 
 interface DebugResult {
   value: unknown;
@@ -32,8 +32,6 @@ interface DebugProviderProps {
 
 export function DebugProvider({ children, value }: DebugProviderProps) {
   return (
-    <DebugContext.Provider value={value}>
-      {children}
-    </DebugContext.Provider>
+    <DebugContext.Provider value={value}>{children}</DebugContext.Provider>
   );
 }

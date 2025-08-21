@@ -1,5 +1,5 @@
 // src/shared/registry/transform-validation.ts - Validate transform definition registry
-import { TRANSFORM_DEFINITIONS } from './transform-definitions';
+import { TRANSFORM_DEFINITIONS } from "./transform-definitions";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -31,5 +31,3 @@ export function validateTransformRegistry(): ValidationResult {
 
   return { isValid: errors.length === 0, errors, warnings };
 }
-
-

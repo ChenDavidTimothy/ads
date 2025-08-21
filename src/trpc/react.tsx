@@ -58,7 +58,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           headers: () => {
             const headers = new Headers();
             headers.set("x-trpc-source", "nextjs-react");
-              // Supabase auth cookies are handled by the Next.js cookie jar; no header needed
+            // Supabase auth cookies are handled by the Next.js cookie jar; no header needed
             return headers;
           },
         }),

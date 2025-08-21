@@ -3,7 +3,7 @@
  * Supports single file downloads and ZIP compression for multiple files
  */
 
-import JSZip from 'jszip';
+import JSZip from "jszip";
 
 export interface DownloadableFile {
   url: string;
@@ -30,7 +30,7 @@ export interface BatchDownloadOptions extends DownloadOptions {
  */
 async function downloadSupabaseFile(
   file: DownloadableFile,
-  options: DownloadOptions = {}
+  options: DownloadOptions = {},
 ): Promise<void> {
   const { onComplete, onError, timeout = 90000 } = options; // ✅ CRITICAL FIX: Increased to 90s
 
@@ -38,7 +38,7 @@ async function downloadSupabaseFile(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-      const error = 'Download timeout for Supabase file';
+      const error = "Download timeout for Supabase file";
       onError?.(error, file.filename);
       reject(new Error(error));
     }, timeout);
@@ -46,14 +46,14 @@ async function downloadSupabaseFile(
     fetch(file.url, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType ?? '*/*',
+        Accept: file.mimeType ?? "*/*",
         // Critical for Supabase downloads
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
       },
-      mode: 'cors',
+      mode: "cors",
     })
-      .then(response => {
+      .then((response) => {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
@@ -62,18 +62,19 @@ async function downloadSupabaseFile(
 
         return response.blob();
       })
-      .then(blob => {
+      .then((blob) => {
         // Force download with special handling
         forceSupabaseDownload(blob, file.filename);
         onComplete?.();
         resolve();
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeoutId);
-        const errorMessage = error instanceof Error && error.name === 'AbortError'
-          ? 'Download was cancelled'
-          : `Supabase download failed: ${error instanceof Error ? error.message : String(error)}`;
-        console.error('❌ Supabase download error:', error);
+        const errorMessage =
+          error instanceof Error && error.name === "AbortError"
+            ? "Download was cancelled"
+            : `Supabase download failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error("❌ Supabase download error:", error);
         onError?.(errorMessage, file.filename);
         reject(new Error(errorMessage));
       });
@@ -87,18 +88,16 @@ function forceSupabaseDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
 
   // Create a hidden link element with special attributes
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.style.display = 'none';
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.style.display = "none";
 
   // Set attributes that force download behavior
-  link.setAttribute('download', filename);
-  link.setAttribute('type', blob.type || 'application/octet-stream');
-
-
+  link.setAttribute("download", filename);
+  link.setAttribute("type", blob.type || "application/octet-stream");
 
   // Add to DOM temporarily
   document.body.appendChild(link);
@@ -109,24 +108,24 @@ function forceSupabaseDownload(blob: Blob, filename: string): void {
     try {
       link.click();
     } catch (clickError) {
-      console.warn('Supabase direct click failed:', clickError);
+      console.warn("Supabase direct click failed:", clickError);
 
       // Method 2: Event dispatch
       try {
-        const event = new MouseEvent('click', {
+        const event = new MouseEvent("click", {
           bubbles: true,
           cancelable: true,
-          view: window
+          view: window,
         });
         link.dispatchEvent(event);
       } catch (eventError) {
-        console.warn('Supabase event dispatch failed:', eventError);
+        console.warn("Supabase event dispatch failed:", eventError);
 
         // Method 3: Direct navigation as last resort
         try {
           window.location.href = url;
         } catch (navError) {
-          console.warn('Supabase direct navigation failed:', navError);
+          console.warn("Supabase direct navigation failed:", navError);
         }
       }
     }
@@ -138,7 +137,6 @@ function forceSupabaseDownload(blob: Blob, filename: string): void {
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 15000);
-
   }, 100);
 }
 
@@ -149,17 +147,15 @@ function forceDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
 
   // Method 1: Create and click anchor element (most compatible)
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
 
   // Additional attributes to force download behavior
-  link.setAttribute('download', filename);
-  link.style.display = 'none';
-
-
+  link.setAttribute("download", filename);
+  link.style.display = "none";
 
   // Add to DOM and click
   document.body.appendChild(link);
@@ -174,13 +170,13 @@ function forceDownload(blob: Blob, filename: string): void {
       link.click();
       downloadAttempted = true;
     } catch (error) {
-      console.warn('Download click failed:', error);
+      console.warn("Download click failed:", error);
     }
 
     // Method 2: Simulate user click event (fallback)
     if (!downloadAttempted) {
       try {
-        const clickEvent = new MouseEvent('click', {
+        const clickEvent = new MouseEvent("click", {
           view: window,
           bubbles: true,
           cancelable: true,
@@ -190,7 +186,7 @@ function forceDownload(blob: Blob, filename: string): void {
         link.dispatchEvent(clickEvent);
         downloadAttempted = true;
       } catch (error) {
-        console.warn('Download event dispatch failed:', error);
+        console.warn("Download event dispatch failed:", error);
       }
     }
 
@@ -199,7 +195,7 @@ function forceDownload(blob: Blob, filename: string): void {
       try {
         window.location.href = url;
       } catch (error) {
-        console.warn('Download direct navigation failed:', error);
+        console.warn("Download direct navigation failed:", error);
       }
     }
 
@@ -207,12 +203,12 @@ function forceDownload(blob: Blob, filename: string): void {
     document.body.removeChild(link);
 
     // Method 4: Iframe fallback for stubborn browsers
-    if (typeof window !== 'undefined') {
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.style.visibility = 'hidden';
-      iframe.style.width = '1px';
-      iframe.style.height = '1px';
+    if (typeof window !== "undefined") {
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.style.visibility = "hidden";
+      iframe.style.width = "1px";
+      iframe.style.height = "1px";
       iframe.src = url;
       document.body.appendChild(iframe);
 
@@ -225,7 +221,6 @@ function forceDownload(blob: Blob, filename: string): void {
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 10000);
-
   }, 100);
 }
 
@@ -234,14 +229,17 @@ function forceDownload(blob: Blob, filename: string): void {
  */
 export async function downloadFile(
   file: DownloadableFile,
-  options: DownloadOptions = {}
+  options: DownloadOptions = {},
 ): Promise<void> {
   const { onProgress, onComplete, onError, timeout = 60000 } = options; // ✅ CRITICAL FIX: Increased to 60s
 
   // Special handling for Supabase signed URLs
-  const isSupabaseUrl = file.url.includes('supabase.co') && file.url.includes('token=');
+  const isSupabaseUrl =
+    file.url.includes("supabase.co") && file.url.includes("token=");
   if (isSupabaseUrl) {
-    console.log('🔥 Detected Supabase signed URL, using direct download approach');
+    console.log(
+      "🔥 Detected Supabase signed URL, using direct download approach",
+    );
     return downloadSupabaseFile(file, options);
   }
 
@@ -249,33 +247,35 @@ export async function downloadFile(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-      const error = 'Download timeout';
+      const error = "Download timeout";
       onError?.(error, file.filename);
       reject(new Error(error));
     }, timeout);
 
     // Use API endpoint if assetId is provided, otherwise use direct URL
-    const downloadUrl = file.assetId ? `/api/download/${file.assetId}` : file.url;
+    const downloadUrl = file.assetId
+      ? `/api/download/${file.assetId}`
+      : file.url;
 
     fetch(downloadUrl, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType ?? '*/*',
+        Accept: file.mimeType ?? "*/*",
         // Force the response to be treated as a download
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
       },
       // Use same-origin for API calls, cors for external URLs
-      mode: file.assetId ? 'same-origin' : 'cors',
+      mode: file.assetId ? "same-origin" : "cors",
     })
-      .then(response => {
+      .then((response) => {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const contentLength = response.headers.get('content-length');
+        const contentLength = response.headers.get("content-length");
         const total = contentLength ? parseInt(contentLength, 10) : 0;
         let loaded = 0;
 
@@ -283,43 +283,52 @@ export async function downloadFile(
         const chunks: BlobPart[] = [];
 
         if (!reader) {
-          throw new Error('Response body is not readable');
+          throw new Error("Response body is not readable");
         }
 
         return new Promise<Blob>((resolveBlob, rejectBlob) => {
           function read() {
-            reader!.read().then(({ done, value }) => {
-              if (done) {
-                const blob = new Blob(chunks, { type: file.mimeType ?? 'application/octet-stream' });
-                resolveBlob(blob);
-                return;
-              }
+            reader!
+              .read()
+              .then(({ done, value }) => {
+                if (done) {
+                  const blob = new Blob(chunks, {
+                    type: file.mimeType ?? "application/octet-stream",
+                  });
+                  resolveBlob(blob);
+                  return;
+                }
 
-              chunks.push(value);
-              loaded += value.length;
+                chunks.push(value);
+                loaded += value.length;
 
-              if (total > 0) {
-                onProgress?.(Math.round((loaded / total) * 100), file.filename);
-              }
+                if (total > 0) {
+                  onProgress?.(
+                    Math.round((loaded / total) * 100),
+                    file.filename,
+                  );
+                }
 
-              read();
-            }).catch(rejectBlob);
+                read();
+              })
+              .catch(rejectBlob);
           }
           read();
         });
       })
-      .then(blob => {
+      .then((blob) => {
         // Use the force download function
         forceDownload(blob, file.filename);
 
         onComplete?.();
         resolve();
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeoutId);
-        const errorMessage = error instanceof Error && error.name === 'AbortError'
-          ? 'Download was cancelled'
-          : `Download failed: ${error instanceof Error ? error.message : String(error)}`;
+        const errorMessage =
+          error instanceof Error && error.name === "AbortError"
+            ? "Download was cancelled"
+            : `Download failed: ${error instanceof Error ? error.message : String(error)}`;
         onError?.(errorMessage, file.filename);
         reject(new Error(errorMessage));
       });
@@ -331,26 +340,26 @@ export async function downloadFile(
  */
 export async function downloadFilesAsZip(
   files: DownloadableFile[],
-  options: BatchDownloadOptions = {}
+  options: BatchDownloadOptions = {},
 ): Promise<void> {
   const {
-    zipFilename = 'download.zip',
+    zipFilename = "download.zip",
     compress = true,
     onProgress,
     onComplete,
     onError,
-    timeout = 60000
+    timeout = 60000,
   } = options;
 
   if (files.length === 0) {
-    throw new Error('No files to download');
+    throw new Error("No files to download");
   }
 
   // For single file, download directly without ZIP
   if (files.length === 1) {
     const file = files[0];
     if (!file) {
-      throw new Error('File not found');
+      throw new Error("File not found");
     }
     return downloadFile(file, { onProgress, onComplete, onError, timeout });
   }
@@ -362,7 +371,7 @@ export async function downloadFilesAsZip(
   const downloadPromises = files.map(async (file) => {
     try {
       const response = await fetch(file.url, {
-        headers: { 'Accept': file.mimeType ?? '*/*' },
+        headers: { Accept: file.mimeType ?? "*/*" },
       });
 
       if (!response.ok) {
@@ -372,12 +381,14 @@ export async function downloadFilesAsZip(
       const blob = await response.blob();
 
       // Add file to ZIP with proper path handling
-      const fileName = file.filename.replace(/[<>:"/\\|?*]/g, '_');
-      zip.file(fileName, blob, { compression: compress ? 'DEFLATE' : 'STORE' });
+      const fileName = file.filename.replace(/[<>:"/\\|?*]/g, "_");
+      zip.file(fileName, blob, { compression: compress ? "DEFLATE" : "STORE" });
 
       completedFiles++;
-      onProgress?.(Math.round((completedFiles / totalFiles) * 100), file.filename);
-
+      onProgress?.(
+        Math.round((completedFiles / totalFiles) * 100),
+        file.filename,
+      );
     } catch (error) {
       const errorMessage = `Failed to download ${file.filename}: ${error instanceof Error ? error.message : String(error)}`;
       onError?.(errorMessage, file.filename);
@@ -389,19 +400,18 @@ export async function downloadFilesAsZip(
     await Promise.all(downloadPromises);
 
     // Generate and download ZIP file
-    onProgress?.(100, 'Creating ZIP file...');
+    onProgress?.(100, "Creating ZIP file...");
 
     const zipBlob = await zip.generateAsync({
-      type: 'blob',
-      compression: compress ? 'DEFLATE' : 'STORE',
-      compressionOptions: { level: 6 }
+      type: "blob",
+      compression: compress ? "DEFLATE" : "STORE",
+      compressionOptions: { level: 6 },
     });
 
-      // Use the force download function to ensure file downloads
+    // Use the force download function to ensure file downloads
     forceDownload(zipBlob, zipFilename);
 
     onComplete?.();
-
   } catch (error) {
     const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : String(error)}`;
     onError?.(errorMessage);
@@ -414,16 +424,16 @@ export async function downloadFilesAsZip(
  */
 export function shouldCompressFile(mimeType: string): boolean {
   const compressibleTypes = [
-    'text/',
-    'application/json',
-    'application/xml',
-    'application/javascript',
-    'application/typescript',
-    'application/yaml',
-    'application/toml'
+    "text/",
+    "application/json",
+    "application/xml",
+    "application/javascript",
+    "application/typescript",
+    "application/yaml",
+    "application/toml",
   ];
 
-  return compressibleTypes.some(type => mimeType.startsWith(type));
+  return compressibleTypes.some((type) => mimeType.startsWith(type));
 }
 
 /**
@@ -431,36 +441,36 @@ export function shouldCompressFile(mimeType: string): boolean {
  */
 export function getExtensionFromMimeType(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
-    'image/svg+xml': '.svg',
-    'video/mp4': '.mp4',
-    'video/webm': '.webm',
-    'video/ogg': '.ogv',
-    'audio/mp3': '.mp3',
-    'audio/wav': '.wav',
-    'audio/ogg': '.ogg',
-    'application/pdf': '.pdf',
-    'application/zip': '.zip',
-    'text/plain': '.txt',
-    'text/html': '.html',
-    'text/css': '.css',
-    'application/json': '.json',
-    'application/javascript': '.js',
-    'application/typescript': '.ts'
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "image/svg+xml": ".svg",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/ogg": ".ogv",
+    "audio/mp3": ".mp3",
+    "audio/wav": ".wav",
+    "audio/ogg": ".ogg",
+    "application/pdf": ".pdf",
+    "application/zip": ".zip",
+    "text/plain": ".txt",
+    "text/html": ".html",
+    "text/css": ".css",
+    "application/json": ".json",
+    "application/javascript": ".js",
+    "application/typescript": ".ts",
   };
 
-  return mimeToExt[mimeType] ?? '';
+  return mimeToExt[mimeType] ?? "";
 }
 
 /**
  * Generate a safe filename with timestamp
  */
-export function generateSafeFilename(baseName: string, extension = '') {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const safeName = baseName.replace(/[<>:"/\\|?*]/g, '_');
+export function generateSafeFilename(baseName: string, extension = "") {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const safeName = baseName.replace(/[<>:"/\\|?*]/g, "_");
   return `${safeName}_${timestamp}${extension}`;
 }
 
@@ -468,10 +478,10 @@ export function generateSafeFilename(baseName: string, extension = '') {
  * Format file size for display
  */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
 
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
@@ -480,41 +490,47 @@ export function formatFileSize(bytes: number): string {
 /**
  * Check if the browser supports the File API and download capabilities
  */
-export function checkDownloadSupport(): { supported: boolean; issues: string[] } {
+export function checkDownloadSupport(): {
+  supported: boolean;
+  issues: string[];
+} {
   const issues: string[] = [];
 
   if (!window.fetch) {
-    issues.push('Fetch API not supported');
+    issues.push("Fetch API not supported");
   }
 
   if (!window.Blob) {
-    issues.push('Blob API not supported');
+    issues.push("Blob API not supported");
   }
 
   if (!window.URL || !URL.createObjectURL) {
-    issues.push('URL API not supported');
+    issues.push("URL API not supported");
   }
 
-  if (!document.createElement('a').download) {
-    issues.push('Download attribute not supported');
+  if (!document.createElement("a").download) {
+    issues.push("Download attribute not supported");
   }
 
   // Check for specific browser quirks
   const userAgent = navigator.userAgent.toLowerCase();
-  if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
-    issues.push('Safari download behavior may be limited');
+  if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+    issues.push("Safari download behavior may be limited");
   }
 
   return {
     supported: issues.length === 0,
-    issues
+    issues,
   };
 }
 
 /**
  * Validate file size before download
  */
-export function validateFileSize(fileSizeBytes: number, maxSizeBytes: number = 100 * 1024 * 1024): boolean {
+export function validateFileSize(
+  fileSizeBytes: number,
+  maxSizeBytes: number = 100 * 1024 * 1024,
+): boolean {
   return fileSizeBytes <= maxSizeBytes;
 }
 
@@ -540,28 +556,28 @@ export function shouldUseStreaming(fileSizeBytes: number): boolean {
  */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    if (error.name === 'AbortError') {
-      return 'Download was cancelled';
+    if (error.name === "AbortError") {
+      return "Download was cancelled";
     }
 
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      return 'Network error - please check your internet connection';
+    if (error.name === "TypeError" && error.message.includes("fetch")) {
+      return "Network error - please check your internet connection";
     }
 
-    if (error.message.includes('HTTP')) {
-      return 'File not available or access denied';
+    if (error.message.includes("HTTP")) {
+      return "File not available or access denied";
     }
 
-    if (error.message.includes('quota')) {
-      return 'Storage quota exceeded';
+    if (error.message.includes("quota")) {
+      return "Storage quota exceeded";
     }
 
-    if (error.message.includes('timeout')) {
-      return 'Download timeout - file may be too large';
+    if (error.message.includes("timeout")) {
+      return "Download timeout - file may be too large";
     }
   }
 
-  return 'Download failed - please try again';
+  return "Download failed - please try again";
 }
 
 /**
@@ -569,19 +585,14 @@ export function getErrorMessage(error: unknown): string {
  */
 export async function downloadFileEnhanced(
   file: DownloadableFile,
-  options: DownloadOptions = {}
+  options: DownloadOptions = {},
 ): Promise<void> {
-  const {
-    onProgress,
-    onComplete,
-    onError,
-    timeout = 120000
-  } = options;
+  const { onProgress, onComplete, onError, timeout = 120000 } = options;
 
   // Check browser support
   const support = checkDownloadSupport();
   if (!support.supported) {
-    const error = `Browser not supported: ${support.issues.join(', ')}`;
+    const error = `Browser not supported: ${support.issues.join(", ")}`;
     onError?.(error, file.filename);
     throw new Error(error);
   }
@@ -602,10 +613,10 @@ export async function downloadFileEnhanced(
     const response = await fetch(file.url, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType ?? '*/*',
-        'Cache-Control': 'no-cache',
+        Accept: file.mimeType ?? "*/*",
+        "Cache-Control": "no-cache",
       },
-      mode: 'cors',
+      mode: "cors",
     });
 
     clearTimeout(timeoutId);
@@ -614,8 +625,10 @@ export async function downloadFileEnhanced(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const contentLength = response.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : file.size ?? 0;
+    const contentLength = response.headers.get("content-length");
+    const total = contentLength
+      ? parseInt(contentLength, 10)
+      : (file.size ?? 0);
 
     // Use streaming for large files
     if (shouldUseStreaming(total)) {
@@ -625,7 +638,6 @@ export async function downloadFileEnhanced(
     }
 
     onComplete?.();
-
   } catch (error) {
     clearTimeout(timeoutId);
     const errorMessage = getErrorMessage(error);
@@ -639,7 +651,7 @@ export async function downloadFileEnhanced(
  */
 async function handleStandardDownload(
   response: Response,
-  file: DownloadableFile
+  file: DownloadableFile,
 ): Promise<void> {
   const blob = await response.blob();
 
@@ -654,11 +666,11 @@ async function handleStreamingDownload(
   response: Response,
   file: DownloadableFile,
   total: number,
-  onProgress?: (progress: number, file?: string) => void
+  onProgress?: (progress: number, file?: string) => void,
 ): Promise<void> {
   const reader = response.body?.getReader();
   if (!reader) {
-    throw new Error('Response body is not readable');
+    throw new Error("Response body is not readable");
   }
 
   const chunks: BlobPart[] = [];
@@ -677,7 +689,9 @@ async function handleStreamingDownload(
     }
   }
 
-  const blob = new Blob(chunks, { type: file.mimeType ?? 'application/octet-stream' });
+  const blob = new Blob(chunks, {
+    type: file.mimeType ?? "application/octet-stream",
+  });
 
   // Use the force download function
   forceDownload(blob, file.filename);
@@ -686,7 +700,10 @@ async function handleStreamingDownload(
 /**
  * Estimate download time based on file size and connection speed
  */
-export function estimateDownloadTime(fileSizeBytes: number, connectionSpeedKbps = 1024): number {
+export function estimateDownloadTime(
+  fileSizeBytes: number,
+  connectionSpeedKbps = 1024,
+): number {
   // Convert to bits and estimate time in seconds
   const fileSizeBits = fileSizeBytes * 8;
   const connectionSpeedBps = connectionSpeedKbps * 1024;

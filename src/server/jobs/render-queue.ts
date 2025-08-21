@@ -1,7 +1,7 @@
 // src/server/jobs/render-queue.ts
 import type { AnimationScene } from "@/shared/types/scene";
 import type { SceneAnimationConfig as RendererSceneAnimationConfig } from "@/server/rendering/renderer";
-import { GraphileQueue } from './graphile-queue';
+import { GraphileQueue } from "./graphile-queue";
 
 export interface RenderJobInput {
   scene: AnimationScene;
@@ -20,5 +20,5 @@ export async function ensureWorkerReady(): Promise<void> {
 }
 
 export const renderQueue = new GraphileQueue<RenderJobInput, RenderJobResult>({
-  taskIdentifier: 'render-video',
+  taskIdentifier: "render-video",
 });

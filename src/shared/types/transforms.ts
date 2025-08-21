@@ -1,23 +1,28 @@
 // src/shared/types/transforms.ts - Robust transform registry system
-import type { Point2D } from './core';
- 
+import type { Point2D } from "./core";
+
 // Identifier and lineage for transforms (mirrors NodeIdentifier/NodeLineage)
 export interface TransformIdentifier {
-  readonly id: string;           // e.g., "mov_2024_001_ab12cd34"
-  readonly type: string;         // transform type, e.g., "move"
-  readonly createdAt: number;    // timestamp (ms)
-  readonly sequence: number;     // per-type sequence within the hosting animation node
-  displayName: string;           // user-editable name
+  readonly id: string; // e.g., "mov_2024_001_ab12cd34"
+  readonly type: string; // transform type, e.g., "move"
+  readonly createdAt: number; // timestamp (ms)
+  readonly sequence: number; // per-type sequence within the hosting animation node
+  displayName: string; // user-editable name
 }
 
 export interface TransformLineage {
-  animationNodeId: string;       // which animation node contains this transform
-  trackIndex: number;            // position within animation tracks array
-  dependencies: string[];        // transform ids this depends on (optional usage)
+  animationNodeId: string; // which animation node contains this transform
+  trackIndex: number; // position within animation tracks array
+  dependencies: string[]; // transform ids this depends on (optional usage)
 }
 
 // Property type definitions for validation and UI generation
-export type PropertyType = 'number' | 'point2d' | 'color' | 'string' | 'boolean';
+export type PropertyType =
+  | "number"
+  | "point2d"
+  | "color"
+  | "string"
+  | "boolean";
 
 export interface PropertyDefinition {
   key: string;
@@ -42,14 +47,14 @@ export interface TransformDefinition {
   type: string;
   label: string;
   description: string;
-  category: 'movement' | 'appearance' | 'transformation' | 'custom';
+  category: "movement" | "appearance" | "transformation" | "custom";
   properties: PropertyDefinition[];
   defaults: Record<string, unknown>;
   version?: string;
   migrate?: (properties: Record<string, unknown>) => Record<string, unknown>;
   metadata?: {
     supportsEasing?: boolean;
-    defaultEasing?: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+    defaultEasing?: "linear" | "easeInOut" | "easeIn" | "easeOut";
     targetProperty?: string;
     trackColor?: string;
     trackIcon?: string;
@@ -58,7 +63,11 @@ export interface TransformDefinition {
 }
 
 // Interpolator function signature - handles all value interpolation
-export type InterpolatorFunction<T = unknown> = (from: T, to: T, progress: number) => T;
+export type InterpolatorFunction<T = unknown> = (
+  from: T,
+  to: T,
+  progress: number,
+) => T;
 
 // Interpolator registry entry
 export interface InterpolatorEntry<T = unknown> {
@@ -68,7 +77,9 @@ export interface InterpolatorEntry<T = unknown> {
 }
 
 // Transform registry entry - combines definition with runtime behavior
-export interface TransformRegistryEntry<T extends TransformProperties = TransformProperties> {
+export interface TransformRegistryEntry<
+  T extends TransformProperties = TransformProperties,
+> {
   definition: TransformDefinition;
   interpolator: InterpolatorEntry<T>;
 }
@@ -79,7 +90,7 @@ export interface AnimationTransform {
   type: string;
   startTime: number;
   duration: number;
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
   properties: TransformProperties;
 }
 
@@ -89,18 +100,27 @@ export interface SceneTransform {
   type: string;
   startTime: number;
   duration: number;
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
   properties: TransformProperties;
 }
 
 // Transform factory interface
 export interface TransformFactory {
-  createTransform(type: string, properties: Record<string, unknown>): AnimationTransform;
-  createSceneTransform(transform: AnimationTransform, objectId: string, baselineTime: number): SceneTransform;
+  createTransform(
+    type: string,
+    properties: Record<string, unknown>,
+  ): AnimationTransform;
+  createSceneTransform(
+    transform: AnimationTransform,
+    objectId: string,
+    baselineTime: number,
+  ): SceneTransform;
   validateTransform(type: string, properties: Record<string, unknown>): boolean;
   getTransformDefinition(type: string): TransformDefinition | undefined;
   getAllTransformTypes(): string[];
-  getTransformsByCategory(category: TransformDefinition['category']): TransformDefinition[];
+  getTransformsByCategory(
+    category: TransformDefinition["category"],
+  ): TransformDefinition[];
   // Helpers for identifier and UI
   getDefaultProperties(type: string): Record<string, unknown> | undefined;
   getTrackColors(): Record<string, string>;

@@ -1,23 +1,23 @@
 // src/shared/types/nodes.ts
-import type { Point2D } from './core';
-import type { TransformIdentifier, TransformLineage } from './transforms';
-import type { NodeType } from './definitions';
-import type { PerObjectAssignments } from '@/shared/properties/assignments';
+import type { Point2D } from "./core";
+import type { TransformIdentifier, TransformLineage } from "./transforms";
+import type { NodeType } from "./definitions";
+import type { PerObjectAssignments } from "@/shared/properties/assignments";
 
 // Node identifier system
 export interface NodeIdentifier {
-  readonly id: string;           // Immutable: "tri_2024_001_a1b2c3d4"
-  readonly type: NodeType;       // "triangle", "circle", etc.
-  readonly createdAt: number;    // Timestamp
-  readonly sequence: number;     // Auto-incrementing per type
-  displayName: string;           // User-editable: "Marketing Triangle"
+  readonly id: string; // Immutable: "tri_2024_001_a1b2c3d4"
+  readonly type: NodeType; // "triangle", "circle", etc.
+  readonly createdAt: number; // Timestamp
+  readonly sequence: number; // Auto-incrementing per type
+  displayName: string; // User-editable: "Marketing Triangle"
 }
 
 // Flow tracking for nodes
 export interface NodeLineage {
-  parentNodes: string[];         // Which nodes created this
-  childNodes: string[];          // Which nodes this creates
-  flowPath: string[];            // Edge IDs this node flows through
+  parentNodes: string[]; // Which nodes created this
+  childNodes: string[]; // Which nodes this creates
+  flowPath: string[]; // Edge IDs this node flows through
 }
 
 // Base node data interface with tracking
@@ -40,7 +40,10 @@ export interface RectangleNodeData extends BaseNodeData {
   height: number;
 }
 
-export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
+export type GeometryNodeData =
+  | TriangleNodeData
+  | CircleNodeData
+  | RectangleNodeData;
 
 // Text node data types
 export interface TextNodeData extends BaseNodeData {
@@ -55,14 +58,23 @@ export interface TypographyNodeData extends BaseNodeData {
   lineHeight: number;
   letterSpacing: number;
   // Variable binding support (follows Canvas pattern)
-  variableBindings?: Record<string, {
-    target?: string;
-    boundResultNodeId?: string;
-  }>;
-  variableBindingsByObject?: Record<string, Record<string, {
-    target?: string;
-    boundResultNodeId?: string;
-  }>>;
+  variableBindings?: Record<
+    string,
+    {
+      target?: string;
+      boundResultNodeId?: string;
+    }
+  >;
+  variableBindingsByObject?: Record<
+    string,
+    Record<
+      string,
+      {
+        target?: string;
+        boundResultNodeId?: string;
+      }
+    >
+  >;
   perObjectAssignments?: PerObjectAssignments;
   fontStyle: string; // 'normal' | 'italic' | 'oblique'
   textBaseline: string; // 'top' | 'hanging' | 'middle' | 'alphabetic' | 'bottom'
@@ -94,7 +106,7 @@ export interface MergeNodeData extends BaseNodeData {
 
 // Constants node data
 export interface ConstantsNodeData extends BaseNodeData {
-  valueType: 'number' | 'string' | 'boolean' | 'color';
+  valueType: "number" | "string" | "boolean" | "color";
   numberValue: number;
   stringValue: string;
   booleanValue: string; // 'true' | 'false' as string from select
@@ -132,14 +144,14 @@ export interface FadeTrackProperties {
 export interface ColorTrackProperties {
   from: string;
   to: string;
-  property: 'fill' | 'stroke';
+  property: "fill" | "stroke";
 }
 
 // Animation track types - now using the registry system
 export interface BaseAnimationTrack {
   startTime: number;
   duration: number;
-  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
   // Required identifier
   identifier: TransformIdentifier;
   lineage?: TransformLineage;
@@ -147,44 +159,51 @@ export interface BaseAnimationTrack {
 
 // Individual track types - now generated from registry
 export interface MoveTrack extends BaseAnimationTrack {
-  type: 'move';
+  type: "move";
   properties: MoveTrackProperties;
 }
 
 export interface RotateTrack extends BaseAnimationTrack {
-  type: 'rotate';
+  type: "rotate";
   properties: RotateTrackProperties;
 }
 
 export interface ScaleTrack extends BaseAnimationTrack {
-  type: 'scale';
+  type: "scale";
   properties: ScaleTrackProperties;
 }
 
 export interface FadeTrack extends BaseAnimationTrack {
-  type: 'fade';
+  type: "fade";
   properties: FadeTrackProperties;
 }
 
 export interface ColorTrack extends BaseAnimationTrack {
-  type: 'color';
+  type: "color";
   properties: ColorTrackProperties;
 }
 
 // Union type - now extensible through registry
-export type AnimationTrack = MoveTrack | RotateTrack | ScaleTrack | FadeTrack | ColorTrack;
+export type AnimationTrack =
+  | MoveTrack
+  | RotateTrack
+  | ScaleTrack
+  | FadeTrack
+  | ColorTrack;
 
 // Type guard factory - generates type guards dynamically
-export function createTrackTypeGuard<T extends AnimationTrack>(type: T['type']) {
+export function createTrackTypeGuard<T extends AnimationTrack>(
+  type: T["type"],
+) {
   return (track: AnimationTrack): track is T => track.type === type;
 }
 
 // Pre-generated type guards for existing types
-export const isMoveTrack = createTrackTypeGuard<MoveTrack>('move');
-export const isRotateTrack = createTrackTypeGuard<RotateTrack>('rotate');
-export const isScaleTrack = createTrackTypeGuard<ScaleTrack>('scale');
-export const isFadeTrack = createTrackTypeGuard<FadeTrack>('fade');
-export const isColorTrack = createTrackTypeGuard<ColorTrack>('color');
+export const isMoveTrack = createTrackTypeGuard<MoveTrack>("move");
+export const isRotateTrack = createTrackTypeGuard<RotateTrack>("rotate");
+export const isScaleTrack = createTrackTypeGuard<ScaleTrack>("scale");
+export const isFadeTrack = createTrackTypeGuard<FadeTrack>("fade");
+export const isColorTrack = createTrackTypeGuard<ColorTrack>("color");
 
 // Animation node data
 export interface AnimationNodeData extends BaseNodeData {
@@ -192,16 +211,25 @@ export interface AnimationNodeData extends BaseNodeData {
   tracks: AnimationTrack[];
   perObjectAssignments?: PerObjectAssignments;
   // Node-level variable bindings (defaults) for transform properties
-  variableBindings?: Record<string, {
-    // propertyKey e.g., "duration", "move.from.x", "color.property"
-    target?: string;
-    boundResultNodeId?: string; // selected Result node identifier.id
-  }>;
+  variableBindings?: Record<
+    string,
+    {
+      // propertyKey e.g., "duration", "move.from.x", "color.property"
+      target?: string;
+      boundResultNodeId?: string; // selected Result node identifier.id
+    }
+  >;
   // Per-object variable bindings overriding defaults
-  variableBindingsByObject?: Record<string, Record<string, {
-    target?: string;
-    boundResultNodeId?: string;
-  }>>;
+  variableBindingsByObject?: Record<
+    string,
+    Record<
+      string,
+      {
+        target?: string;
+        boundResultNodeId?: string;
+      }
+    >
+  >;
 }
 
 // Scene node data
@@ -226,15 +254,24 @@ export interface CanvasNodeData extends BaseNodeData {
   strokeWidth: number;
   perObjectAssignments?: PerObjectAssignments;
   // Node-level variable bindings for canvas defaults
-  variableBindings?: Record<string, {
-    target?: string;
-    boundResultNodeId?: string;
-  }>;
+  variableBindings?: Record<
+    string,
+    {
+      target?: string;
+      boundResultNodeId?: string;
+    }
+  >;
   // Per-object variable bindings overriding defaults
-  variableBindingsByObject?: Record<string, Record<string, {
-    target?: string;
-    boundResultNodeId?: string;
-  }>>;
+  variableBindingsByObject?: Record<
+    string,
+    Record<
+      string,
+      {
+        target?: string;
+        boundResultNodeId?: string;
+      }
+    >
+  >;
 }
 
 // Frame node data (static image output configuration)
@@ -242,13 +279,13 @@ export interface FrameNodeData extends BaseNodeData {
   width: number;
   height: number;
   backgroundColor: string;
-  format: 'png' | 'jpeg';
+  format: "png" | "jpeg";
   quality: number; // 1-100 for JPEG; ignored for PNG
 }
 
 // Compare node data
 export interface CompareNodeData extends BaseNodeData {
-  operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
+  operator: "gt" | "lt" | "eq" | "neq" | "gte" | "lte";
 }
 
 // If/Else node data
@@ -260,12 +297,22 @@ export interface IfElseNodeData extends BaseNodeData {
 
 // Boolean Operation node data
 export interface BooleanOpNodeData extends BaseNodeData {
-  operator: 'and' | 'or' | 'not' | 'xor';
+  operator: "and" | "or" | "not" | "xor";
 }
 
 // Math Operation node data
 export interface MathOpNodeData extends BaseNodeData {
-  operator: 'add' | 'subtract' | 'multiply' | 'divide' | 'modulo' | 'power' | 'sqrt' | 'abs' | 'min' | 'max';
+  operator:
+    | "add"
+    | "subtract"
+    | "multiply"
+    | "divide"
+    | "modulo"
+    | "power"
+    | "sqrt"
+    | "abs"
+    | "min"
+    | "max";
 }
 
 // Duplicate node data
@@ -283,24 +330,49 @@ export interface ImageNodeData extends BaseNodeData {
 export interface MediaNodeData extends BaseNodeData {
   // Content
   imageAssetId: string;
-  
+
   // Crop Properties
   cropX: number;
   cropY: number;
   cropWidth: number;
   cropHeight: number;
-  
+
   // Display Properties
   displayWidth: number;
   displayHeight: number;
-  
+
   // Binding System Support
-  variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
-  variableBindingsByObject?: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+  variableBindings?: Record<
+    string,
+    { target?: string; boundResultNodeId?: string }
+  >;
+  variableBindingsByObject?: Record<
+    string,
+    Record<string, { target?: string; boundResultNodeId?: string }>
+  >;
   perObjectAssignments?: PerObjectAssignments;
 }
 
 // Union type for all node data
-export type NodeData = GeometryNodeData | TextNodeData | TypographyNodeData | InsertNodeData | FilterNodeData | MergeNodeData | ConstantsNodeData | ResultNodeData | AnimationNodeData | SceneNodeData | CanvasNodeData | FrameNodeData | CompareNodeData | IfElseNodeData | BooleanOpNodeData | MathOpNodeData | DuplicateNodeData | ImageNodeData | MediaNodeData;
+export type NodeData =
+  | GeometryNodeData
+  | TextNodeData
+  | TypographyNodeData
+  | InsertNodeData
+  | FilterNodeData
+  | MergeNodeData
+  | ConstantsNodeData
+  | ResultNodeData
+  | AnimationNodeData
+  | SceneNodeData
+  | CanvasNodeData
+  | FrameNodeData
+  | CompareNodeData
+  | IfElseNodeData
+  | BooleanOpNodeData
+  | MathOpNodeData
+  | DuplicateNodeData
+  | ImageNodeData
+  | MediaNodeData;
 
 // NodeType is derived from the registry (definitions)

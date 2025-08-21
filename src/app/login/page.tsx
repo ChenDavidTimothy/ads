@@ -35,22 +35,26 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createBrowserClient();
-  
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Get redirect URL from search params
-  const redirectTo = searchParams?.get('redirectTo');
+  const redirectTo = searchParams?.get("redirectTo");
 
   // Check if user is already authenticated
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session) {
           // Redirect to the originally requested page or dashboard
-          const destination = redirectTo?.startsWith('/') ? redirectTo : "/dashboard";
+          const destination = redirectTo?.startsWith("/")
+            ? redirectTo
+            : "/dashboard";
           router.push(destination);
           return;
         }
@@ -70,12 +74,12 @@ function LoginForm() {
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`,
+          redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            access_type: "offline",
+            prompt: "consent",
           },
         },
       });
@@ -87,7 +91,9 @@ function LoginForm() {
       // If successful, user will be redirected to Google
     } catch (err) {
       console.error("Google sign in error:", err);
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
       setLoading(false);
     }
   };
@@ -95,9 +101,9 @@ function LoginForm() {
   // Show loading state while checking authentication
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0)]">
         <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <Loader2 className="h-5 w-5 animate-spin" />
           <span>Checking authentication...</span>
         </div>
       </div>
@@ -105,26 +111,29 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-0)] flex flex-col">
+    <div className="flex min-h-screen flex-col bg-[var(--surface-0)]">
       {/* Header */}
       <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-[var(--space-6)] py-[var(--space-4)] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-[var(--space-6)] py-[var(--space-4)]">
+          <Link
+            href="/"
+            className="flex items-center gap-3 transition-opacity hover:opacity-80"
+          >
+            <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
-              <Logo className="w-32 h-8" />
+              <Logo className="h-8 w-32" />
             </div>
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-[var(--space-6)] py-12">
+      <div className="flex flex-1 items-center justify-center px-[var(--space-6)] py-12">
         <div className="w-full max-w-md">
           {/* Form Container */}
-          <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm shadow-[var(--glass-shadow-lg)]">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 shadow-[var(--glass-shadow-lg)] backdrop-blur-sm">
+            <div className="mb-8 text-center">
+              <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
                 Welcome to Batchion
               </h1>
               <p className="text-[var(--text-secondary)]">
@@ -134,9 +143,9 @@ function LoginForm() {
 
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-4 bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-lg">
+              <div className="mb-6 rounded-lg border border-[var(--danger-500)]/20 bg-[var(--danger-500)]/10 p-4">
                 <div className="flex items-center gap-3 text-[var(--danger-500)]">
-                  <AlertCircle className="w-4 h-4" />
+                  <AlertCircle className="h-4 w-4" />
                   <p className="text-sm font-medium">{error}</p>
                 </div>
               </div>
@@ -146,24 +155,30 @@ function LoginForm() {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 font-semibold text-gray-700 transition-all hover:bg-gray-50 focus:border-transparent focus:ring-2 focus:ring-[var(--accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <GoogleIcon className="w-5 h-5" />
+                <GoogleIcon className="h-5 w-5" />
               )}
               {loading ? "Signing in..." : "Sign in with Google"}
             </button>
 
             {/* Terms and Privacy */}
-            <p className="mt-6 text-xs text-center text-[var(--text-tertiary)]">
+            <p className="mt-6 text-center text-xs text-[var(--text-tertiary)]">
               By signing in, you agree to our{" "}
-              <Link href="/terms" className="text-[var(--accent-primary)] hover:underline">
+              <Link
+                href="/terms"
+                className="text-[var(--accent-primary)] hover:underline"
+              >
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-[var(--accent-primary)] hover:underline">
+              <Link
+                href="/privacy"
+                className="text-[var(--accent-primary)] hover:underline"
+              >
                 Privacy Policy
               </Link>
               .
@@ -177,11 +192,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[var(--surface-0)] flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0)]">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

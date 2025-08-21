@@ -13,23 +13,26 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          "w-full text-[var(--text-primary)] text-[12px] text-refined transition-all",
+          "text-refined w-full text-[12px] text-[var(--text-primary)] transition-all",
           "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
-          "focus:outline-none focus:ring-1 focus:ring-[var(--ring-color)]",
+          "focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none",
           {
-            "default": "bg-[var(--surface-2)] border border-[var(--border-primary)] rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
-            "glass": "glass-input rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
-            "minimal": "bg-transparent border-0 border-b border-[var(--border-primary)] rounded-none px-0 py-[var(--space-1)]"
+            default:
+              "rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)]",
+            glass:
+              "glass-input rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
+            minimal:
+              "rounded-none border-0 border-b border-[var(--border-primary)] bg-transparent px-0 py-[var(--space-1)]",
           }[variant],
           props.disabled ? "opacity-60" : undefined,
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </select>
     );
-  }
+  },
 );
 
 Select.displayName = "Select";

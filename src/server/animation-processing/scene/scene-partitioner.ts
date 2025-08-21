@@ -16,45 +16,54 @@ export interface ScenePartition {
  * This is the core logic for multi-scene support
  */
 export function partitionObjectsByScenes(
-  context: ExecutionContext, 
+  context: ExecutionContext,
   sceneNodes: ReactFlowNode<NodeData>[],
-  edges?: Array<{ source: string; target: string; sourceHandle?: string; targetHandle?: string }>
+  edges?: Array<{
+    source: string;
+    target: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+  }>,
 ): ScenePartition[] {
-  logger.info('Partitioning objects by scenes', { 
+  logger.info("Partitioning objects by scenes", {
     totalScenes: sceneNodes.length,
     scenesWithObjects: context.sceneObjectsByScene.size,
-    totalAnimations: context.sceneAnimations.length
+    totalAnimations: context.sceneAnimations.length,
   });
 
   const partitions: ScenePartition[] = [];
 
   for (const sceneNode of sceneNodes) {
     const sceneId = sceneNode.data.identifier.id;
-    
+
     // CRITICAL FIX: Get path-specific objects directly from per-scene storage
     // OLD: context.sceneObjects.filter(...) // Global array filtering - WRONG
     // NEW: Direct retrieval of scene-specific objects with correct properties
     const sceneObjects = context.sceneObjectsByScene.get(sceneId) ?? [];
-    
+
     // Object IDs are available directly from sceneObjects if needed
-    
+
     // FIXED: Get animations for this scene with hybrid approach
     let sceneAnimations: SceneAnimationTrack[] = [];
-    
+
     // CRITICAL FIX: Prioritize metadata over global context for animation retrieval
     // Problem: Global context animations were being modified by merge nodes, affecting direct connections
     // Solution: Check input metadata first, fallback to global context only for merge node outputs
     if (edges) {
       // Fallback: For scenes with no assigned animations, try to get them from input metadata
       // This handles direct animation->scene connections that bypass merge nodes
-      const incomingEdges = edges.filter(edge => edge.target === sceneId);
-      
+      const incomingEdges = edges.filter((edge) => edge.target === sceneId);
 
-      
       for (const edge of incomingEdges) {
-        const sourceOutput = context.nodeOutputs.get(`${edge.source}.${edge.sourceHandle ?? 'output'}`);
+        const sourceOutput = context.nodeOutputs.get(
+          `${edge.source}.${edge.sourceHandle ?? "output"}`,
+        );
         if (sourceOutput?.metadata) {
-          const perObjectAnimations = (sourceOutput.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> })?.perObjectAnimations;
+          const perObjectAnimations = (
+            sourceOutput.metadata as {
+              perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+            }
+          )?.perObjectAnimations;
           if (perObjectAnimations) {
             for (const animations of Object.values(perObjectAnimations)) {
               sceneAnimations.push(...animations);
@@ -63,44 +72,43 @@ export function partitionObjectsByScenes(
         }
       }
     }
-    
+
     // Fallback: If no animations found from metadata, try the global context method
     // This handles merge node outputs that rely on assigned animations
     if (sceneAnimations.length === 0) {
-      const assignedAnimations = context.sceneAnimations.filter(anim => {
+      const assignedAnimations = context.sceneAnimations.filter((anim) => {
         const assignedSceneId = context.animationSceneMap.get(anim.id);
         return assignedSceneId === sceneId;
       });
       sceneAnimations = assignedAnimations;
     }
-    
 
-    
     logger.debug(`Scene ${sceneNode.data.identifier.displayName}`, {
       sceneId,
       objectCount: sceneObjects.length,
       animationCount: sceneAnimations.length,
-      objectIds: sceneObjects.map(obj => obj.id),
-      objectProperties: sceneObjects.map(obj => ({ 
-        id: obj.id, 
+      objectIds: sceneObjects.map((obj) => obj.id),
+      objectProperties: sceneObjects.map((obj) => ({
+        id: obj.id,
         type: obj.type,
-        hasAnimations: sceneAnimations.filter(anim => anim.objectId === obj.id).length > 0
-      }))
+        hasAnimations:
+          sceneAnimations.filter((anim) => anim.objectId === obj.id).length > 0,
+      })),
     });
-    
+
     // Only include scenes that have objects
     if (sceneObjects.length > 0) {
       partitions.push({
         sceneNode,
         objects: sceneObjects,
-        animations: sceneAnimations
+        animations: sceneAnimations,
       });
     }
   }
 
-  logger.info('Scene partitioning completed', { 
+  logger.info("Scene partitioning completed", {
     validScenes: partitions.length,
-    totalScenes: sceneNodes.length 
+    totalScenes: sceneNodes.length,
   });
 
   return partitions;
@@ -111,17 +119,19 @@ export function partitionObjectsByScenes(
  */
 export function calculateSceneDuration(
   animations: SceneAnimationTrack[],
-  sceneData: Record<string, unknown>
+  sceneData: Record<string, unknown>,
 ): number {
   // Calculate maximum animation end time
-  const maxAnimationTime = animations.length > 0
-    ? Math.max(...animations.map(anim => anim.startTime + anim.duration))
-    : 0;
+  const maxAnimationTime =
+    animations.length > 0
+      ? Math.max(...animations.map((anim) => anim.startTime + anim.duration))
+      : 0;
 
   // Use scene-specific duration if set, otherwise use animation duration with minimum padding
-  const sceneDuration = typeof sceneData.duration === 'number' ? sceneData.duration : undefined;
+  const sceneDuration =
+    typeof sceneData.duration === "number" ? sceneData.duration : undefined;
   const minDuration = 1; // Minimum 1 second duration
-  
+
   return sceneDuration ?? Math.max(maxAnimationTime + 0.5, minDuration);
 }
 
@@ -129,19 +139,23 @@ export function calculateSceneDuration(
  * Builds an AnimationScene from a scene partition
  */
 export function buildAnimationSceneFromPartition(
-  partition: ScenePartition
+  partition: ScenePartition,
 ): AnimationScene {
-  const sceneData = partition.sceneNode.data as unknown as Record<string, unknown>;
+  const sceneData = partition.sceneNode.data as unknown as Record<
+    string,
+    unknown
+  >;
   const duration = calculateSceneDuration(partition.animations, sceneData);
-  
+
   return {
     duration,
     objects: partition.objects,
     animations: partition.animations,
     background: {
-      color: typeof sceneData.backgroundColor === 'string' 
-        ? sceneData.backgroundColor 
-        : '#000000'
-    }
+      color:
+        typeof sceneData.backgroundColor === "string"
+          ? sceneData.backgroundColor
+          : "#000000",
+    },
   };
 }

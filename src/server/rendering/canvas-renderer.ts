@@ -1,7 +1,13 @@
 // src/server/rendering/canvas-renderer.ts
 import type { AnimationScene } from "@/shared/types/scene";
-import { FrameGenerator, type FrameConfig } from "@/animation/renderer/frame-generator";
-import { SceneRenderer, type SceneRenderConfig } from "@/animation/execution/scene-renderer";
+import {
+  FrameGenerator,
+  type FrameConfig,
+} from "@/animation/renderer/frame-generator";
+import {
+  SceneRenderer,
+  type SceneRenderConfig,
+} from "@/animation/execution/scene-renderer";
 import { linear } from "@/animation/core/interpolation";
 import type { Renderer, SceneAnimationConfig, RenderOutput } from "./renderer";
 import type { StorageProvider } from "@/server/storage/provider";
@@ -12,8 +18,10 @@ interface CleanupableStorageProvider extends StorageProvider {
 }
 
 // Type guard to check if storage provider supports cleanup
-function supportsCleanup(provider: StorageProvider): provider is CleanupableStorageProvider {
-  return typeof (provider as CleanupableStorageProvider).cleanup === 'function';
+function supportsCleanup(
+  provider: StorageProvider,
+): provider is CleanupableStorageProvider {
+  return typeof (provider as CleanupableStorageProvider).cleanup === "function";
 }
 
 export class CanvasRenderer implements Renderer {
@@ -23,7 +31,10 @@ export class CanvasRenderer implements Renderer {
     this.storageProvider = storageProvider;
   }
 
-  async render(scene: AnimationScene, config: SceneAnimationConfig): Promise<RenderOutput> {
+  async render(
+    scene: AnimationScene,
+    config: SceneAnimationConfig,
+  ): Promise<RenderOutput> {
     const frameConfig: FrameConfig = {
       width: config.width,
       height: config.height,
@@ -52,7 +63,7 @@ export class CanvasRenderer implements Renderer {
         {
           preset: config.videoPreset,
           crf: config.videoCrf,
-        }
+        },
       );
 
       const { publicUrl } = await this.storageProvider.finalize(prepared);
@@ -61,7 +72,7 @@ export class CanvasRenderer implements Renderer {
       // ✅ CRITICAL FIX: Dispose SceneRenderer to clear image cache
       sceneRenderer.dispose();
       frameGenerator.dispose();
-      
+
       if (supportsCleanup(this.storageProvider)) {
         await this.storageProvider.cleanup();
       }

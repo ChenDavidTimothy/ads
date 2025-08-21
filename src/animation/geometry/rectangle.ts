@@ -1,5 +1,5 @@
 // src/animation/geometry/rectangle.ts
-import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
+import type { Point2D, NodeCanvasContext } from "@/shared/types/core";
 
 export interface RectangleStyle {
   fillColor: string;
@@ -12,7 +12,7 @@ export function drawRectangle(
   position: Point2D,
   width: number,
   height: number,
-  style: RectangleStyle
+  style: RectangleStyle,
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;
@@ -29,7 +29,7 @@ export function drawCenteredRectangle(
   width: number,
   height: number,
   rotation = 0,
-  style: RectangleStyle
+  style: RectangleStyle,
 ): void {
   ctx.save();
   ctx.translate(center.x, center.y);
@@ -48,25 +48,45 @@ export function drawRoundedRectangle(
   width: number,
   height: number,
   cornerRadius: number,
-  style: RectangleStyle
+  style: RectangleStyle,
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;
   ctx.strokeStyle = style.strokeColor;
   ctx.lineWidth = style.strokeWidth;
-  
+
   ctx.beginPath();
   ctx.moveTo(position.x + cornerRadius, position.y);
   ctx.lineTo(position.x + width - cornerRadius, position.y);
-  ctx.quadraticCurveTo(position.x + width, position.y, position.x + width, position.y + cornerRadius);
+  ctx.quadraticCurveTo(
+    position.x + width,
+    position.y,
+    position.x + width,
+    position.y + cornerRadius,
+  );
   ctx.lineTo(position.x + width, position.y + height - cornerRadius);
-  ctx.quadraticCurveTo(position.x + width, position.y + height, position.x + width - cornerRadius, position.y + height);
+  ctx.quadraticCurveTo(
+    position.x + width,
+    position.y + height,
+    position.x + width - cornerRadius,
+    position.y + height,
+  );
   ctx.lineTo(position.x + cornerRadius, position.y + height);
-  ctx.quadraticCurveTo(position.x, position.y + height, position.x, position.y + height - cornerRadius);
+  ctx.quadraticCurveTo(
+    position.x,
+    position.y + height,
+    position.x,
+    position.y + height - cornerRadius,
+  );
   ctx.lineTo(position.x, position.y + cornerRadius);
-  ctx.quadraticCurveTo(position.x, position.y, position.x + cornerRadius, position.y);
+  ctx.quadraticCurveTo(
+    position.x,
+    position.y,
+    position.x + cornerRadius,
+    position.y,
+  );
   ctx.closePath();
-  
+
   ctx.fill();
   ctx.stroke();
   ctx.restore();
@@ -77,7 +97,7 @@ export function drawSquare(
   center: Point2D,
   size: number,
   rotation = 0,
-  style: RectangleStyle
+  style: RectangleStyle,
 ): void {
   drawCenteredRectangle(ctx, center, size, size, rotation, style);
 }

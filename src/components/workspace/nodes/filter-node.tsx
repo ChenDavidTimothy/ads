@@ -8,15 +8,18 @@ import type { FilterNodeData } from "@/shared/types/nodes";
 import { Filter } from "lucide-react";
 
 export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
-  const nodeDefinition = getNodeDefinition('filter');
-  
+  const nodeDefinition = getNodeDefinition("filter");
+
   const selectedCount = data.selectedObjectIds?.length || 0;
   const hasSelection = selectedCount > 0;
 
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -24,14 +27,14 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
             <Filter size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -40,15 +43,20 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2">
+      <CardContent className="space-y-2 p-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
-          <span className="text-xs text-[var(--text-primary)] font-medium">{selectedCount}</span>
+          <span className="text-xs text-[var(--text-secondary)]">
+            Selected:
+          </span>
+          <span className="text-xs font-medium text-[var(--text-primary)]">
+            {selectedCount}
+          </span>
         </div>
-        
+
         {hasSelection ? (
           <div className="text-xs text-[var(--success-500)]">
-            {selectedCount} object{selectedCount !== 1 ? 's' : ''} passing through
+            {selectedCount} object{selectedCount !== 1 ? "s" : ""} passing
+            through
           </div>
         ) : (
           <div className="text-xs text-[var(--warning-600)]">
@@ -64,7 +72,7 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}

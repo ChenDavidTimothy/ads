@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  
+
   // Add these debug lines:
   console.log("🔍 Auth Callback Debug:");
   console.log("request.url:", request.url);
   console.log("origin:", origin);
   console.log("NEXT_PUBLIC_SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL);
-  
+
   const code = searchParams.get("code");
   const redirectTo = searchParams.get("redirectTo");
   const error = searchParams.get("error");
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   try {
-    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
       console.error("Code exchange error:", exchangeError);
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Determine redirect destination
     let destination = "/dashboard";
-    
+
     if (redirectTo?.startsWith("/")) {
       // Validate redirect URL to prevent open redirects
       try {
@@ -75,7 +76,10 @@ export async function GET(request: NextRequest) {
     // Before the final redirect, add:
     console.log("🔍 Final redirect destination:", destination);
     console.log("🔍 Final redirect origin:", origin);
-    console.log("🔍 Final redirect URL:", new URL(destination, origin).toString());
+    console.log(
+      "🔍 Final redirect URL:",
+      new URL(destination, origin).toString(),
+    );
 
     // Mark successful login for auth status component
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? origin;
@@ -88,7 +92,6 @@ export async function GET(request: NextRequest) {
     });
 
     return response;
-
   } catch (error) {
     console.error("Unexpected error during OAuth callback:", error);
     const errorUrl = new URL("/login", origin);

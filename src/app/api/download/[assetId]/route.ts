@@ -1,6 +1,6 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-import { createServiceClient } from '@/utils/supabase/service';
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { createServiceClient } from "@/utils/supabase/service";
 
 interface Asset {
   id: string;
@@ -14,15 +14,15 @@ interface Asset {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ assetId: string }> }
+  { params }: { params: Promise<{ assetId: string }> },
 ) {
   try {
     const { assetId } = await params;
 
     if (!assetId) {
       return NextResponse.json(
-        { error: 'Asset ID is required' },
-        { status: 400 }
+        { error: "Asset ID is required" },
+        { status: 400 },
       );
     }
 
@@ -31,16 +31,13 @@ export async function GET(
 
     // Fetch asset metadata from database
     const result = await supabaseClient
-      .from('user_assets')
-      .select('*')
-      .eq('id', assetId)
+      .from("user_assets")
+      .select("*")
+      .eq("id", assetId)
       .single();
 
     if (result.error || !result.data) {
-      return NextResponse.json(
-        { error: 'Asset not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
     // Type assertion to ensure asset has expected structure
@@ -49,21 +46,22 @@ export async function GET(
     // Type guard to ensure asset has required properties
     if (!asset.bucket_name || !asset.storage_path) {
       return NextResponse.json(
-        { error: 'Invalid asset data' },
-        { status: 400 }
+        { error: "Invalid asset data" },
+        { status: 400 },
       );
     }
 
     // Get the file from Supabase storage
-    const { data: fileData, error: downloadError } = await supabaseClient.storage
-      .from(asset.bucket_name)
-      .download(asset.storage_path);
+    const { data: fileData, error: downloadError } =
+      await supabaseClient.storage
+        .from(asset.bucket_name)
+        .download(asset.storage_path);
 
     if (downloadError || !fileData) {
-      console.error('Download error:', downloadError);
+      console.error("Download error:", downloadError);
       return NextResponse.json(
-        { error: 'Failed to download file from storage' },
-        { status: 500 }
+        { error: "Failed to download file from storage" },
+        { status: 500 },
       );
     }
 
@@ -73,29 +71,31 @@ export async function GET(
       start(controller) {
         controller.enqueue(new Uint8Array(buffer));
         controller.close();
-      }
+      },
     });
 
     // Set proper download headers
     const headers = new Headers();
-    headers.set('Content-Type', asset.mime_type ?? 'application/octet-stream');
-    headers.set('Content-Disposition', `attachment; filename="${asset.original_name}"`);
-    headers.set('Content-Length', buffer.byteLength.toString());
-    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    headers.set('Pragma', 'no-cache');
-    headers.set('Expires', '0');
+    headers.set("Content-Type", asset.mime_type ?? "application/octet-stream");
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename="${asset.original_name}"`,
+    );
+    headers.set("Content-Length", buffer.byteLength.toString());
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
 
     // Return the file with proper headers
     return new Response(stream, {
       status: 200,
-      headers
+      headers,
     });
-
   } catch (error) {
-    console.error('Download API error:', error);
+    console.error("Download API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

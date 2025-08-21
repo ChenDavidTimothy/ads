@@ -6,12 +6,18 @@ import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { DuplicateNodeData } from "@/shared/types/nodes";
 import { Copy } from "lucide-react";
 
-export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) {
-  const nodeDefinition = getNodeDefinition('duplicate');
+export function DuplicateNode({
+  data,
+  selected,
+}: NodeProps<DuplicateNodeData>) {
+  const nodeDefinition = getNodeDefinition("duplicate");
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
-    <Card selected={selected} className="p-[var(--card-padding)] min-w-[var(--node-min-width)]">
+    <Card
+      selected={selected}
+      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+    >
       {/* Input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -19,14 +25,14 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
           type="target"
           position={Position.Left}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
-          <div className="w-6 h-6 bg-[var(--node-logic)] flex items-center justify-center rounded text-[var(--text-primary)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
             <Copy size={12} />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
@@ -35,14 +41,18 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2">
+      <CardContent className="space-y-2 p-0">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">Count:</span>
-          <span className="text-xs text-[var(--text-primary)] font-medium">{data.count}</span>
+          <span className="text-xs font-medium text-[var(--text-primary)]">
+            {data.count}
+          </span>
         </div>
-        
+
         <div className="text-xs text-[var(--success-500)]">
-          {data.count === 1 ? 'Pass-through mode' : `Creating ${data.count - 1} duplicate${data.count > 2 ? 's' : ''}`}
+          {data.count === 1
+            ? "Pass-through mode"
+            : `Creating ${data.count - 1} duplicate${data.count > 2 ? "s" : ""}`}
         </div>
 
         <div className="text-xs text-[var(--text-tertiary)] italic">
@@ -57,7 +67,7 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
           type="source"
           position={Position.Right}
           id={port.id}
-          className={`w-3 h-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
           style={{ top: `50%` }}
         />
       ))}

@@ -1,7 +1,7 @@
 // src/server/storage/cleanup-service.ts
-import { SmartStorageProvider } from './smart-storage-provider';
-import * as fs from 'fs';
-import * as path from 'path';
+import { SmartStorageProvider } from "./smart-storage-provider";
+import * as fs from "fs";
+import * as path from "path";
 
 class CleanupService {
   private storageProvider: SmartStorageProvider | null = null;
@@ -13,13 +13,13 @@ class CleanupService {
   constructor() {
     // Create a unique identifier for this process
     this.processId = `${process.pid}-${Date.now()}`;
-    this.lockFile = path.join(process.cwd(), '.cleanup-service.lock');
+    this.lockFile = path.join(process.cwd(), ".cleanup-service.lock");
 
     // Ensure lock file is released on process exit
-    process.on('exit', () => this.releaseLock());
-    process.on('SIGINT', () => this.releaseLock());
-    process.on('SIGTERM', () => this.releaseLock());
-    process.on('SIGUSR2', () => this.releaseLock()); // nodemon restart
+    process.on("exit", () => this.releaseLock());
+    process.on("SIGINT", () => this.releaseLock());
+    process.on("SIGTERM", () => this.releaseLock());
+    process.on("SIGUSR2", () => this.releaseLock()); // nodemon restart
 
     // Storage provider will be created lazily when needed
   }
@@ -33,8 +33,8 @@ class CleanupService {
     try {
       // Check if lock file exists and is valid
       if (fs.existsSync(this.lockFile)) {
-        const lockData = fs.readFileSync(this.lockFile, 'utf8');
-        const [lockPid] = lockData.split('-');
+        const lockData = fs.readFileSync(this.lockFile, "utf8");
+        const [lockPid] = lockData.split("-");
 
         // Check if the process is still running
         try {
@@ -45,7 +45,9 @@ class CleanupService {
           }
         } catch {
           // Process is not running, we can acquire the lock
-          console.log(`🔓 Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`);
+          console.log(
+            `🔓 Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`,
+          );
         }
       }
 
@@ -53,7 +55,7 @@ class CleanupService {
       fs.writeFileSync(this.lockFile, this.processId);
       return true;
     } catch (error) {
-      console.error('❌ Failed to acquire cleanup service lock:', error);
+      console.error("❌ Failed to acquire cleanup service lock:", error);
       return false;
     }
   }
@@ -61,47 +63,54 @@ class CleanupService {
   private releaseLock(): void {
     try {
       if (fs.existsSync(this.lockFile)) {
-        const lockData = fs.readFileSync(this.lockFile, 'utf8');
+        const lockData = fs.readFileSync(this.lockFile, "utf8");
         if (lockData === this.processId) {
           fs.unlinkSync(this.lockFile);
-          console.log('🔓 Cleanup service lock released');
+          console.log("🔓 Cleanup service lock released");
         }
       }
     } catch (error) {
-      console.error('❌ Failed to release cleanup service lock:', error);
+      console.error("❌ Failed to release cleanup service lock:", error);
     }
   }
 
   start(): void {
     if (this.isRunning) {
-      console.log('✅ Cleanup service is already running - skipping duplicate start');
+      console.log(
+        "✅ Cleanup service is already running - skipping duplicate start",
+      );
       return;
     }
 
     // Try to acquire the lock
     if (!this.acquireLock()) {
-      console.log('🔒 Another cleanup service is already running - skipping start');
+      console.log(
+        "🔒 Another cleanup service is already running - skipping start",
+      );
       return;
     }
 
-    console.log('🚀 Starting background cleanup service...');
+    console.log("🚀 Starting background cleanup service...");
     this.isRunning = true;
 
     // Start the cleanup interval
-    this.cleanupInterval = setInterval(() => {
-      void this.runCleanup();
-    }, 3 * 60 * 1000); // Every 3 minutes
+    this.cleanupInterval = setInterval(
+      () => {
+        void this.runCleanup();
+      },
+      3 * 60 * 1000,
+    ); // Every 3 minutes
 
-    console.log('✅ Background cleanup service started successfully');
+    console.log("✅ Background cleanup service started successfully");
   }
 
   stop(): void {
     if (!this.isRunning) {
-      console.log('Cleanup service is not running');
+      console.log("Cleanup service is not running");
       return;
     }
 
-    console.log('Stopping background cleanup service...');
+    console.log("Stopping background cleanup service...");
     this.isRunning = false;
 
     if (this.cleanupInterval) {
@@ -110,20 +119,20 @@ class CleanupService {
     }
 
     this.releaseLock();
-    console.log('Background cleanup service stopped');
+    console.log("Background cleanup service stopped");
   }
 
   private async runCleanup(): Promise<void> {
     try {
-      console.log('🔄 Background cleanup cycle starting...');
-      
+      console.log("🔄 Background cleanup cycle starting...");
+
       // Run the comprehensive cleanup
       const storageProvider = this.getStorageProvider();
       await storageProvider.performComprehensiveCleanup();
-      
-      console.log('✅ Background cleanup cycle completed');
+
+      console.log("✅ Background cleanup cycle completed");
     } catch (error) {
-      console.error('❌ Background cleanup cycle failed:', error);
+      console.error("❌ Background cleanup cycle failed:", error);
     }
   }
 

@@ -14,10 +14,10 @@ export function cn(...inputs: ClassValue[]) {
 // FIX: Replace 'any' with proper generic types
 export function debounce<TArgs extends readonly unknown[], TReturn>(
   func: (...args: TArgs) => TReturn,
-  wait: number
+  wait: number,
 ): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout | null = null;
-  
+
   // FIX: Use TArgs type instead of Parameters<T> with any
   return (...args: TArgs) => {
     if (timeout) {

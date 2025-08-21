@@ -1,33 +1,46 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useEffect } from 'react';
-import type { Node } from 'reactflow';
-import { useWorkspace } from './workspace-context';
-import { TimelineEditorCore } from './timeline-editor-core';
-import { Button } from '@/components/ui/button';
-import type { TimelineEditorData } from '@/types/workspace-state';
-import { FlowTracker } from '@/lib/flow/flow-tracking';
-import type { NodeData, AnimationNodeData, AnimationTrack } from '@/shared/types/nodes';
-import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
-import { SelectionList } from '@/components/ui/selection';
-import { TrackProperties } from './timeline-editor-core';
-import { validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
+import React, { useCallback, useMemo, useRef, useEffect } from "react";
+import type { Node } from "reactflow";
+import { useWorkspace } from "./workspace-context";
+import { TimelineEditorCore } from "./timeline-editor-core";
+import { Button } from "@/components/ui/button";
+import type { TimelineEditorData } from "@/types/workspace-state";
+import { FlowTracker } from "@/lib/flow/flow-tracking";
+import type {
+  NodeData,
+  AnimationNodeData,
+  AnimationTrack,
+} from "@/shared/types/nodes";
+import type {
+  PerObjectAssignments,
+  ObjectAssignments,
+  TrackOverride,
+} from "@/shared/properties/assignments";
+import { SelectionList } from "@/components/ui/selection";
+import { TrackProperties } from "./timeline-editor-core";
+import { validateTransformDisplayName as validateNameHelper } from "@/lib/defaults/transforms";
 
 export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const { state, updateTimeline, updateUI, updateFlow } = useWorkspace();
-  
+
   // All hooks must be called before any conditional returns
   const pendingRef = useRef<TimelineEditorData | null>(null);
   const rafRef = useRef<number | null>(null);
-  const [selectedObjectId, setSelectedObjectId] = React.useState<string | null>(null);
-  const [selectedTrack, setSelectedTrack] = React.useState<AnimationTrack | null>(null);
+  const [selectedObjectId, setSelectedObjectId] = React.useState<string | null>(
+    null,
+  );
+  const [selectedTrack, setSelectedTrack] =
+    React.useState<AnimationTrack | null>(null);
 
   // Get the data - this will be undefined if not found, but hooks are already called
   const data = state.editors.timeline[nodeId];
 
   // Find the animation node in the flow and its current assignments
   const animationNode = React.useMemo(() => {
-    return state.flow.nodes.find(n => n.data.identifier.id === nodeId) as Node<AnimationNodeData> | undefined;
+    return state.flow.nodes.find((n) => n.data.identifier.id === nodeId) as
+      | Node<AnimationNodeData>
+      | undefined;
   }, [state.flow.nodes, nodeId]);
 
   const currentAssignments: PerObjectAssignments = React.useMemo(() => {
@@ -37,122 +50,168 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   // Use enhanced object detection that understands duplication
   const upstreamObjects = React.useMemo(() => {
     const tracker = new FlowTracker();
-    
+
     // Use new duplicate-aware method
-    const objectDescriptors = tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
-    
+    const objectDescriptors = tracker.getUpstreamObjects(
+      nodeId,
+      state.flow.nodes,
+      state.flow.edges,
+    );
+
     // Convert to display format expected by SelectionList
-    return objectDescriptors.map(obj => ({
+    return objectDescriptors.map((obj) => ({
       data: {
         identifier: {
           id: obj.id,
           displayName: obj.displayName,
-          type: obj.type
-        }
+          type: obj.type,
+        },
       },
-      type: obj.type
+      type: obj.type,
     }));
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
   // Log for debugging
   React.useEffect(() => {
-    console.log(`[Timeline] Detected ${upstreamObjects.length} objects for animation node ${nodeId}:`, 
-      upstreamObjects.map(o => ({
+    console.log(
+      `[Timeline] Detected ${upstreamObjects.length} objects for animation node ${nodeId}:`,
+      upstreamObjects.map((o) => ({
         id: o.data.identifier.id,
         name: o.data.identifier.displayName,
-        type: o.data.identifier.type
-      }))
+        type: o.data.identifier.type,
+      })),
     );
   }, [upstreamObjects, nodeId]);
 
-  const updateAssignmentsForTrack = React.useCallback((objectId: string, trackId: string, updates: Partial<TrackOverride>) => {
-    const next: PerObjectAssignments = { ...currentAssignments };
-    const obj: ObjectAssignments = { ...(next[objectId] ?? {}) };
-    const list: TrackOverride[] = Array.isArray(obj.tracks) ? [...obj.tracks] : [];
-    const idx = list.findIndex(t => t.trackId === trackId);
-    const base = idx >= 0 ? list[idx]! : { trackId };
-    const baseProps: Record<string, unknown> = base.properties ?? {};
-    const updateProps: Record<string, unknown> = updates.properties ?? {};
-    const mergedProps = {
-      ...baseProps,
-      ...updateProps,
-      ...(typeof baseProps.from === 'object' && baseProps.from !== null && typeof updateProps.from === 'object' && updateProps.from !== null
-        ? { from: { ...(baseProps.from as Record<string, unknown>), ...(updateProps.from as Record<string, unknown>) } }
-        : {}),
-      ...(typeof baseProps.to === 'object' && baseProps.to !== null && typeof updateProps.to === 'object' && updateProps.to !== null
-        ? { to: { ...(baseProps.to as Record<string, unknown>), ...(updateProps.to as Record<string, unknown>) } }
-        : {}),
-    } as Record<string, unknown>;
+  const updateAssignmentsForTrack = React.useCallback(
+    (objectId: string, trackId: string, updates: Partial<TrackOverride>) => {
+      const next: PerObjectAssignments = { ...currentAssignments };
+      const obj: ObjectAssignments = { ...(next[objectId] ?? {}) };
+      const list: TrackOverride[] = Array.isArray(obj.tracks)
+        ? [...obj.tracks]
+        : [];
+      const idx = list.findIndex((t) => t.trackId === trackId);
+      const base = idx >= 0 ? list[idx]! : { trackId };
+      const baseProps: Record<string, unknown> = base.properties ?? {};
+      const updateProps: Record<string, unknown> = updates.properties ?? {};
+      const mergedProps = {
+        ...baseProps,
+        ...updateProps,
+        ...(typeof baseProps.from === "object" &&
+        baseProps.from !== null &&
+        typeof updateProps.from === "object" &&
+        updateProps.from !== null
+          ? {
+              from: {
+                ...(baseProps.from as Record<string, unknown>),
+                ...(updateProps.from as Record<string, unknown>),
+              },
+            }
+          : {}),
+        ...(typeof baseProps.to === "object" &&
+        baseProps.to !== null &&
+        typeof updateProps.to === "object" &&
+        updateProps.to !== null
+          ? {
+              to: {
+                ...(baseProps.to as Record<string, unknown>),
+                ...(updateProps.to as Record<string, unknown>),
+              },
+            }
+          : {}),
+      } as Record<string, unknown>;
 
-    // Prune fields equal to base track defaults so only explicit changes remain
-    const baseTrack = data?.tracks.find(t => t.identifier.id === trackId);
-    const prunedProps = (() => {
-      if (!baseTrack) return mergedProps;
-      const baseTrackProps = baseTrack.properties as unknown as Record<string, unknown>;
-      const copy: Record<string, unknown> = { ...mergedProps };
+      // Prune fields equal to base track defaults so only explicit changes remain
+      const baseTrack = data?.tracks.find((t) => t.identifier.id === trackId);
+      const prunedProps = (() => {
+        if (!baseTrack) return mergedProps;
+        const baseTrackProps = baseTrack.properties as unknown as Record<
+          string,
+          unknown
+        >;
+        const copy: Record<string, unknown> = { ...mergedProps };
 
-      // Helper to prune nested point2d-like objects (from/to)
-      const pruneNested = (key: string) => {
-        const mergedVal = copy[key] as Record<string, unknown> | undefined;
-        const baseVal = baseTrackProps[key] as Record<string, unknown> | undefined;
-        if (mergedVal && typeof mergedVal === 'object' && baseVal && typeof baseVal === 'object') {
-          const out: Record<string, unknown> = {};
-          for (const k of Object.keys(mergedVal)) {
-            const mv = mergedVal[k];
-            const bv = baseVal[k];
-            if (mv !== bv) out[k] = mv;
+        // Helper to prune nested point2d-like objects (from/to)
+        const pruneNested = (key: string) => {
+          const mergedVal = copy[key] as Record<string, unknown> | undefined;
+          const baseVal = baseTrackProps[key] as
+            | Record<string, unknown>
+            | undefined;
+          if (
+            mergedVal &&
+            typeof mergedVal === "object" &&
+            baseVal &&
+            typeof baseVal === "object"
+          ) {
+            const out: Record<string, unknown> = {};
+            for (const k of Object.keys(mergedVal)) {
+              const mv = mergedVal[k];
+              const bv = baseVal[k];
+              if (mv !== bv) out[k] = mv;
+            }
+            if (Object.keys(out).length > 0) copy[key] = out;
+            else delete copy[key];
+          } else if (mergedVal === baseVal) {
+            delete copy[key];
           }
-          if (Object.keys(out).length > 0) copy[key] = out; else delete copy[key];
-        } else if (mergedVal === baseVal) {
-          delete copy[key];
+        };
+
+        for (const key of Object.keys(copy)) {
+          if (key === "from" || key === "to") pruneNested(key);
+          else if (copy[key] === baseTrackProps[key]) delete copy[key];
         }
+        return copy;
+      })();
+
+      const merged: TrackOverride = {
+        ...base,
+        ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
+        ...(updates.startTime !== undefined
+          ? { startTime: updates.startTime }
+          : {}),
+        ...(updates.duration !== undefined
+          ? { duration: updates.duration }
+          : {}),
+        properties: prunedProps,
       };
 
-      for (const key of Object.keys(copy)) {
-        if (key === 'from' || key === 'to') pruneNested(key);
-        else if (copy[key] === baseTrackProps[key]) delete copy[key];
+      // Also prune timing/easing if equal to base track
+      if (baseTrack) {
+        if (merged.easing === baseTrack.easing) delete merged.easing;
+        if (merged.startTime === baseTrack.startTime) delete merged.startTime;
+        if (merged.duration === baseTrack.duration) delete merged.duration;
       }
-      return copy;
-    })();
 
-    const merged: TrackOverride = {
-      ...base,
-      ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
-      ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
-      ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
-      properties: prunedProps,
-    };
+      // If no properties and no timing/easing overrides remain, drop this override entry entirely
+      const hasProps =
+        merged.properties && Object.keys(merged.properties).length > 0;
+      const hasMeta =
+        merged.easing !== undefined ||
+        merged.startTime !== undefined ||
+        merged.duration !== undefined;
 
-    // Also prune timing/easing if equal to base track
-    if (baseTrack) {
-      if (merged.easing === baseTrack.easing) delete merged.easing;
-      if (merged.startTime === baseTrack.startTime) delete merged.startTime;
-      if (merged.duration === baseTrack.duration) delete merged.duration;
-    }
+      if (!hasProps && !hasMeta) {
+        if (idx >= 0) list.splice(idx, 1);
+      } else {
+        if (idx >= 0) list[idx] = merged;
+        else list.push(merged);
+      }
 
-    // If no properties and no timing/easing overrides remain, drop this override entry entirely
-    const hasProps = merged.properties && Object.keys(merged.properties).length > 0;
-    const hasMeta = merged.easing !== undefined || merged.startTime !== undefined || merged.duration !== undefined;
+      obj.tracks = list;
+      next[objectId] = obj;
 
-    if (!hasProps && !hasMeta) {
-      if (idx >= 0) list.splice(idx, 1);
-    } else {
-      if (idx >= 0) list[idx] = merged; else list.push(merged);
-    }
-
-    obj.tracks = list;
-    next[objectId] = obj;
-
-    updateFlow({
-      nodes: state.flow.nodes.map((n) => {
-        if (n.data.identifier.id !== nodeId) return n;
-        return {
-          ...n,
-          data: { ...n.data, perObjectAssignments: next },
-        } as Node<NodeData>;
-      })
-    });
-  }, [currentAssignments, state.flow.nodes, nodeId, updateFlow, data?.tracks]);
+      updateFlow({
+        nodes: state.flow.nodes.map((n) => {
+          if (n.data.identifier.id !== nodeId) return n;
+          return {
+            ...n,
+            data: { ...n.data, perObjectAssignments: next },
+          } as Node<NodeData>;
+        }),
+      });
+    },
+    [currentAssignments, state.flow.nodes, nodeId, updateFlow, data?.tracks],
+  );
 
   const scheduleUpdate = useCallback(() => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -181,62 +240,88 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     };
   }, [nodeId, updateTimeline]);
 
-  const handleChange = useCallback((updates: Partial<TimelineEditorData>) => {
-    if (!data) return;
-    const base: TimelineEditorData = pendingRef.current ?? { duration: data.duration, tracks: data.tracks };
-    const merged: TimelineEditorData = {
-      duration: updates.duration ?? base.duration,
-      tracks: updates.tracks ?? base.tracks,
-    };
-    pendingRef.current = merged;
-    scheduleUpdate();
-  }, [data, scheduleUpdate]);
+  const handleChange = useCallback(
+    (updates: Partial<TimelineEditorData>) => {
+      if (!data) return;
+      const base: TimelineEditorData = pendingRef.current ?? {
+        duration: data.duration,
+        tracks: data.tracks,
+      };
+      const merged: TimelineEditorData = {
+        duration: updates.duration ?? base.duration,
+        tracks: updates.tracks ?? base.tracks,
+      };
+      pendingRef.current = merged;
+      scheduleUpdate();
+    },
+    [data, scheduleUpdate],
+  );
 
   // Keep props stable unless nodeId changes (prevents core from reinitializing on every parent re-render)
-  const coreProps = useMemo(() => ({
-    animationNodeId: nodeId,
-    duration: data?.duration ?? 0,
-    tracks: data?.tracks ?? [],
-  }), [nodeId, data?.duration, data?.tracks]);
+  const coreProps = useMemo(
+    () => ({
+      animationNodeId: nodeId,
+      duration: data?.duration ?? 0,
+      tracks: data?.tracks ?? [],
+    }),
+    [nodeId, data?.duration, data?.tracks],
+  );
 
   // Early return after all hooks have been called
   if (!data) {
-    return <div className="h-full w-full flex items-center justify-center text-[var(--text-tertiary)]">Timeline data not found</div>;
+    return (
+      <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
+        Timeline data not found
+      </div>
+    );
   }
 
   return (
-    <div className="h-full flex">
+    <div className="flex h-full">
       {/* Left Sidebar - Object Selection */}
-      <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] p-[var(--space-3)] bg-[var(--surface-1)]">
-                  <div className="space-y-[var(--space-3)]">
-            <SelectionList
-              mode="single"
-              items={upstreamObjects.map(o => ({ 
-                id: o.data.identifier.id, 
-                label: o.data.identifier.displayName 
-              }))}
-              selectedId={selectedObjectId}
-              onSelect={setSelectedObjectId}
-              showDefault={true}
-              defaultLabel="Default"
-              emptyLabel="No upstream objects"
-            />
-            
-            {/* Show object count for debugging */}
-            <div className="text-xs text-[var(--text-tertiary)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
-              Detected: {upstreamObjects.length} object{upstreamObjects.length !== 1 ? 's' : ''}
-            </div>
+      <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-3)]">
+        <div className="space-y-[var(--space-3)]">
+          <SelectionList
+            mode="single"
+            items={upstreamObjects.map((o) => ({
+              id: o.data.identifier.id,
+              label: o.data.identifier.displayName,
+            }))}
+            selectedId={selectedObjectId}
+            onSelect={setSelectedObjectId}
+            showDefault={true}
+            defaultLabel="Default"
+            emptyLabel="No upstream objects"
+          />
+
+          {/* Show object count for debugging */}
+          <div className="border-t border-[var(--border-primary)] pt-[var(--space-2)] text-xs text-[var(--text-tertiary)]">
+            Detected: {upstreamObjects.length} object
+            {upstreamObjects.length !== 1 ? "s" : ""}
           </div>
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         {/* Header */}
-        <div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
+        <div className="flex h-12 items-center justify-between border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60 px-4">
           <div className="flex items-center gap-3">
-            <div className="text-[var(--text-primary)] font-medium">Timeline</div>
+            <div className="font-medium text-[var(--text-primary)]">
+              Timeline
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => updateUI({ activeTab: 'flow', selectedNodeId: undefined, selectedNodeType: undefined })}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              updateUI({
+                activeTab: "flow",
+                selectedNodeId: undefined,
+                selectedNodeType: undefined,
+              })
+            }
+          >
             Back to Workspace
           </Button>
         </div>
@@ -261,8 +346,10 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       </div>
 
       {/* Right Sidebar - Properties */}
-      <div className="w-[var(--sidebar-width)] border-l border-[var(--border-primary)] p-[var(--space-4)] bg-[var(--surface-1)] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-[var(--space-4)]">Properties</h3>
+      <div className="w-[var(--sidebar-width)] overflow-y-auto border-l border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]">
+        <h3 className="mb-[var(--space-4)] text-lg font-semibold text-[var(--text-primary)]">
+          Properties
+        </h3>
         {selectedTrack ? (
           <TrackProperties
             track={selectedTrack}
@@ -270,17 +357,32 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
               if (selectedObjectId) {
                 // Convert AnimationTrack updates to TrackOverride format
                 const trackOverride: Partial<TrackOverride> = {
-                  ...(updates.properties ? { properties: updates.properties as unknown as Record<string, unknown> } : {}),
+                  ...(updates.properties
+                    ? {
+                        properties: updates.properties as unknown as Record<
+                          string,
+                          unknown
+                        >,
+                      }
+                    : {}),
                   ...(updates.easing ? { easing: updates.easing } : {}),
-                  ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
-                  ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
+                  ...(updates.startTime !== undefined
+                    ? { startTime: updates.startTime }
+                    : {}),
+                  ...(updates.duration !== undefined
+                    ? { duration: updates.duration }
+                    : {}),
                 };
-                updateAssignmentsForTrack(selectedObjectId, selectedTrack.identifier.id, trackOverride);
+                updateAssignmentsForTrack(
+                  selectedObjectId,
+                  selectedTrack.identifier.id,
+                  trackOverride,
+                );
               } else {
-                const nextTracks = data.tracks.map(t => 
-                  t.identifier.id === selectedTrack.identifier.id 
-                    ? { ...t, ...updates } as AnimationTrack 
-                    : t
+                const nextTracks = data.tracks.map((t) =>
+                  t.identifier.id === selectedTrack.identifier.id
+                    ? ({ ...t, ...updates } as AnimationTrack)
+                    : t,
                 );
                 handleChange({ tracks: nextTracks });
               }
@@ -288,26 +390,35 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
             onDisplayNameChange={(trackId, newName) => {
               const error = validateNameHelper(newName, trackId, data.tracks);
               if (error) return false;
-              const nextTracks = data.tracks.map(t => 
-                t.identifier.id === trackId 
-                  ? { ...t, identifier: { ...t.identifier, displayName: newName } } 
-                  : t
+              const nextTracks = data.tracks.map((t) =>
+                t.identifier.id === trackId
+                  ? {
+                      ...t,
+                      identifier: { ...t.identifier, displayName: newName },
+                    }
+                  : t,
               );
               handleChange({ tracks: nextTracks });
               return true;
             }}
-            validateDisplayName={(name, trackId) => validateNameHelper(name, trackId, data.tracks)}
+            validateDisplayName={(name, trackId) =>
+              validateNameHelper(name, trackId, data.tracks)
+            }
             trackOverride={(() => {
               if (!selectedObjectId || !currentAssignments) return undefined;
               const obj = currentAssignments[selectedObjectId];
-              const tr = obj?.tracks?.find(t => t.trackId === selectedTrack.identifier.id);
+              const tr = obj?.tracks?.find(
+                (t) => t.trackId === selectedTrack.identifier.id,
+              );
               return tr;
             })()}
             animationNodeId={nodeId}
             selectedObjectId={selectedObjectId ?? undefined}
           />
         ) : (
-          <div className="text-[var(--text-tertiary)] text-sm">Click a track to select and edit its properties</div>
+          <div className="text-sm text-[var(--text-tertiary)]">
+            Click a track to select and edit its properties
+          </div>
         )}
       </div>
     </div>

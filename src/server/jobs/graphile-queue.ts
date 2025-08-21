@@ -1,8 +1,8 @@
 // src/server/jobs/graphile-queue.ts
-import type { JobQueue } from './queue';
-import { Client } from 'pg';
-import type { AnimationScene } from '@/shared/types/scene';
-import type { SceneAnimationConfig } from '@/server/rendering/renderer';
+import type { JobQueue } from "./queue";
+import { Client } from "pg";
+import type { AnimationScene } from "@/shared/types/scene";
+import type { SceneAnimationConfig } from "@/server/rendering/renderer";
 
 export interface RenderJobInput {
   scene: AnimationScene;
@@ -25,10 +25,12 @@ interface QueueStatsRow {
 
 // Type guard for queue stats
 function isValidQueueStatsRow(row: unknown): row is QueueStatsRow {
-  return typeof row === 'object' && row !== null;
+  return typeof row === "object" && row !== null;
 }
 
-export class GraphileQueue<TJob extends { jobId: string }, TResult> implements JobQueue<TJob, TResult> {
+export class GraphileQueue<TJob extends { jobId: string }, TResult>
+  implements JobQueue<TJob, TResult>
+{
   private readonly taskIdentifier: string;
 
   constructor(options: { taskIdentifier: string }) {
@@ -37,15 +39,18 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
 
   async enqueueOnly(job: TJob): Promise<{ jobId: string }> {
     const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error('DATABASE_URL is not set');
+    if (!connectionString) throw new Error("DATABASE_URL is not set");
 
     const client = new Client({ connectionString });
     try {
       await client.connect();
-      await client.query('select graphile_worker.add_job($1, $2, $3)', [
+      await client.query("select graphile_worker.add_job($1, $2, $3)", [
         this.taskIdentifier,
         job,
-        { job_key: job.jobId, max_attempts: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5') },
+        {
+          job_key: job.jobId,
+          max_attempts: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? "5"),
+        },
       ]);
       // Signal the worker to wake up immediately (in case its polling interval is long)
       try {
@@ -64,12 +69,19 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
 
   async enqueue(job: TJob): Promise<TResult> {
     await this.enqueueOnly(job);
-    throw new Error('Synchronous enqueue wait is not supported; use waitForRenderJobEvent');
+    throw new Error(
+      "Synchronous enqueue wait is not supported; use waitForRenderJobEvent",
+    );
   }
 
-  async getQueueStats(): Promise<{ pending: number; active: number; completed: number; failed: number }> {
+  async getQueueStats(): Promise<{
+    pending: number;
+    active: number;
+    completed: number;
+    failed: number;
+  }> {
     const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error('DATABASE_URL is not set');
+    if (!connectionString) throw new Error("DATABASE_URL is not set");
 
     const client = new Client({ connectionString });
     try {
@@ -84,15 +96,15 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult> implements J
          join graphile_worker.job_queues q on j.queue_name = q.queue_name
          join graphile_worker.job_run_stats r on r.job_id = j.id
          where j.task_identifier = $1`,
-        [this.taskIdentifier]
+        [this.taskIdentifier],
       );
-      
+
       // Type-safe row access instead of using any
       const row: unknown = rows[0];
       if (!isValidQueueStatsRow(row)) {
         return { pending: 0, active: 0, completed: 0, failed: 0 };
       }
-      
+
       return {
         pending: Number(row.pending ?? 0),
         active: Number(row.active ?? 0),

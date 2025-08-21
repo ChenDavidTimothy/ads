@@ -8,7 +8,7 @@ export interface NodeExecutor {
   execute(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[]
+    connections: ReactFlowEdge[],
   ): Promise<void>;
 }
 
@@ -27,5 +27,3 @@ export class ExecutorRegistry {
     return [...this.executors];
   }
 }
-
-

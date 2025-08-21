@@ -14,7 +14,5 @@ export interface ReactFlowEdge {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  kind?: 'data' | 'control';
+  kind?: "data" | "control";
 }
-
-

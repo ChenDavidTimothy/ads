@@ -1,13 +1,7 @@
 // src/shared/registry/interpolator-registry.ts - Interpolator registry system
-import type { 
-  InterpolatorEntry, 
-  PropertyType
-} from '../types/transforms';
-import type { Point2D } from '../types/core';
-import { 
-  lerp,
-  lerpPoint 
-} from '../../animation/core/interpolation';
+import type { InterpolatorEntry, PropertyType } from "../types/transforms";
+import type { Point2D } from "../types/core";
+import { lerp, lerpPoint } from "../../animation/core/interpolation";
 
 // Color interpolation helper with hex, rgb(), and rgba() support
 function lerpColor(startColor: string, endColor: string, t: number): string {
@@ -21,27 +15,38 @@ function lerpColor(startColor: string, endColor: string, t: number): string {
   return formatColor({ r, g, b, a });
 }
 
-function parseAnyColor(input: string): { r: number; g: number; b: number; a: number } | null {
-  if (input.startsWith('#')) {
+function parseAnyColor(
+  input: string,
+): { r: number; g: number; b: number; a: number } | null {
+  if (input.startsWith("#")) {
     const rgb = hexToRgb(input);
     return rgb ? { ...rgb, a: 1 } : null;
   }
-  if (input.startsWith('rgb')) {
-    const rgbaRegex = /^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i;
+  if (input.startsWith("rgb")) {
+    const rgbaRegex =
+      /^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i;
     const m = rgbaRegex.exec(input);
     if (!m) return null;
     const r = clamp255(parseInt(m[1]!, 10));
     const g = clamp255(parseInt(m[2]!, 10));
     const b = clamp255(parseInt(m[3]!, 10));
-    const a = m[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(m[4]))) : 1;
+    const a =
+      m[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(m[4]))) : 1;
     return { r, g, b, a };
   }
   return null;
 }
 
-function clamp255(n: number): number { return Math.max(0, Math.min(255, n)); }
+function clamp255(n: number): number {
+  return Math.max(0, Math.min(255, n));
+}
 
-function formatColor(c: { r: number; g: number; b: number; a: number }): string {
+function formatColor(c: {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}): string {
   if (c.a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
   const a = Math.round(c.a * 1000) / 1000; // stable concise alpha
   return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
@@ -49,11 +54,13 @@ function formatColor(c: { r: number; g: number; b: number; a: number }): string 
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1]!, 16),
-    g: parseInt(result[2]!, 16),
-    b: parseInt(result[3]!, 16)
-  } : null;
+  return result
+    ? {
+        r: parseInt(result[1]!, 16),
+        g: parseInt(result[2]!, 16),
+        b: parseInt(result[3]!, 16),
+      }
+    : null;
 }
 
 // Number interpolator
@@ -62,7 +69,7 @@ const numberInterpolator: InterpolatorEntry<number> = {
     return lerp(from, to, progress);
   },
   validate: (value: unknown): value is number => {
-    return typeof value === 'number' && !isNaN(value);
+    return typeof value === "number" && !isNaN(value);
   },
   getEndValue: (from: number, to: number): number => {
     return to;
@@ -75,9 +82,9 @@ const point2dInterpolator: InterpolatorEntry<Point2D> = {
     return lerpPoint(from, to, progress);
   },
   validate: (value: unknown): value is Point2D => {
-    if (typeof value !== 'object' || value === null) return false;
+    if (typeof value !== "object" || value === null) return false;
     const point = value as Record<string, unknown>;
-    return typeof point.x === 'number' && typeof point.y === 'number';
+    return typeof point.x === "number" && typeof point.y === "number";
   },
   getEndValue: (from: Point2D, to: Point2D): Point2D => {
     return to;
@@ -90,8 +97,8 @@ const colorInterpolator: InterpolatorEntry<string> = {
     return lerpColor(from, to, progress);
   },
   validate: (value: unknown): value is string => {
-    if (typeof value !== 'string') return false;
-    return value.startsWith('#') || /^rgba?\s*\(/i.test(value);
+    if (typeof value !== "string") return false;
+    return value.startsWith("#") || /^rgba?\s*\(/i.test(value);
   },
   getEndValue: (from: string, to: string): string => {
     return to;
@@ -106,7 +113,7 @@ const stringInterpolator: InterpolatorEntry<string> = {
     return progress >= 0.5 ? to : from;
   },
   validate: (value: unknown): value is string => {
-    return typeof value === 'string';
+    return typeof value === "string";
   },
   getEndValue: (from: string, to: string): string => {
     return to;
@@ -121,7 +128,7 @@ const booleanInterpolator: InterpolatorEntry<boolean> = {
     return progress >= 0.5 ? to : from;
   },
   validate: (value: unknown): value is boolean => {
-    return typeof value === 'boolean';
+    return typeof value === "boolean";
   },
   getEndValue: (from: boolean, to: boolean): boolean => {
     return to;
@@ -129,7 +136,10 @@ const booleanInterpolator: InterpolatorEntry<boolean> = {
 };
 
 // Interpolator registry - maps property types to their interpolators
-export const INTERPOLATOR_REGISTRY: Record<PropertyType, InterpolatorEntry<unknown>> = {
+export const INTERPOLATOR_REGISTRY: Record<
+  PropertyType,
+  InterpolatorEntry<unknown>
+> = {
   number: numberInterpolator as InterpolatorEntry<unknown>,
   point2d: point2dInterpolator as InterpolatorEntry<unknown>,
   color: colorInterpolator as InterpolatorEntry<unknown>,
@@ -143,7 +153,9 @@ export function getInterpolator(propertyType: PropertyType): InterpolatorEntry {
 }
 
 // Get interpolator for a value (auto-detect type)
-export function getInterpolatorForValue(value: unknown): InterpolatorEntry | null {
+export function getInterpolatorForValue(
+  value: unknown,
+): InterpolatorEntry | null {
   for (const interpolator of Object.values(INTERPOLATOR_REGISTRY)) {
     if (interpolator.validate(value)) {
       return interpolator;

@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from '@/components/ui/button';
-import { HardDriveDownload } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { HardDriveDownload } from "lucide-react";
 
 interface SaveButtonProps {
   onSave: () => void | Promise<void>;
@@ -10,11 +10,21 @@ interface SaveButtonProps {
   disabled?: boolean;
 }
 
-export function SaveButton({ onSave, isSaving, hasUnsavedChanges, disabled }: SaveButtonProps) {
+export function SaveButton({
+  onSave,
+  isSaving,
+  hasUnsavedChanges,
+  disabled,
+}: SaveButtonProps) {
   return (
-    <Button onClick={() => void onSave()} disabled={(disabled ?? false) || isSaving || !hasUnsavedChanges} variant="primary" size="sm">
+    <Button
+      onClick={() => void onSave()}
+      disabled={(disabled ?? false) || isSaving || !hasUnsavedChanges}
+      variant="primary"
+      size="sm"
+    >
       <HardDriveDownload size={16} className="mr-2" />
-      {isSaving ? 'Saving…' : 'Save'}
+      {isSaving ? "Saving…" : "Save"}
     </Button>
   );
 }

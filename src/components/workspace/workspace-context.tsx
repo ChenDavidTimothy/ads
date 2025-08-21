@@ -1,20 +1,30 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { api } from '@/trpc/react';
-import type { WorkspaceState, TimelineEditorData } from '@/types/workspace-state';
-import { extractWorkspaceState } from '@/utils/workspace-state';
-import { useWorkspaceSave } from '@/hooks/use-workspace-save';
-import { useNotifications } from '@/hooks/use-notifications';
-import { useCrashBackup } from '@/hooks/use-crash-backup';
-import { useNavigationGuard } from '@/hooks/use-navigation-guard';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
+import { api } from "@/trpc/react";
+import type {
+  WorkspaceState,
+  TimelineEditorData,
+} from "@/types/workspace-state";
+import { extractWorkspaceState } from "@/utils/workspace-state";
+import { useWorkspaceSave } from "@/hooks/use-workspace-save";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useCrashBackup } from "@/hooks/use-crash-backup";
+import { useNavigationGuard } from "@/hooks/use-navigation-guard";
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
-  updateFlow: (updates: Partial<WorkspaceState['flow']>) => void;
+  updateFlow: (updates: Partial<WorkspaceState["flow"]>) => void;
   updateTimeline: (nodeId: string, data: Partial<TimelineEditorData>) => void;
-  updateUI: (updates: Partial<WorkspaceState['ui']>) => void;
+  updateUI: (updates: Partial<WorkspaceState["ui"]>) => void;
   saveNow: () => Promise<void>;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
@@ -22,19 +32,37 @@ interface WorkspaceContextValue {
   hasBackup: boolean;
 }
 
-export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+export const WorkspaceContext = createContext<WorkspaceContextValue | null>(
+  null,
+);
 
-export function WorkspaceProvider({ children, workspaceId }: { children: ReactNode; workspaceId: string }) {
+export function WorkspaceProvider({
+  children,
+  workspaceId,
+}: {
+  children: ReactNode;
+  workspaceId: string;
+}) {
   const { toast } = useNotifications();
-  const { data: workspace, isLoading } = api.workspace.get.useQuery({ id: workspaceId }, { refetchOnWindowFocus: false });
+  const { data: workspace, isLoading } = api.workspace.get.useQuery(
+    { id: workspaceId },
+    { refetchOnWindowFocus: false },
+  );
 
   const [state, setState] = useState<WorkspaceState | null>(null);
 
-  const { saveNow: saveToBackend, isSaving, hasUnsavedChanges, lastSaved, initializeFromWorkspace } = useWorkspaceSave({
+  const {
+    saveNow: saveToBackend,
+    isSaving,
+    hasUnsavedChanges,
+    lastSaved,
+    initializeFromWorkspace,
+  } = useWorkspaceSave({
     workspaceId,
     initialVersion: workspace?.version ?? 0,
-    onSaveSuccess: () => toast.success('Workspace saved'),
-    onSaveError: (error) => toast.error('Save failed', (error as Error)?.message ?? 'Unknown error'),
+    onSaveSuccess: () => toast.success("Workspace saved"),
+    onSaveError: (error) =>
+      toast.error("Save failed", (error as Error)?.message ?? "Unknown error"),
   });
 
   useEffect(() => {
@@ -45,69 +73,79 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
     }
   }, [workspace, state, initializeFromWorkspace]);
 
-  const updateFlow = useCallback((updates: Partial<WorkspaceState['flow']>) => {
+  const updateFlow = useCallback((updates: Partial<WorkspaceState["flow"]>) => {
     setState((prev) => {
       if (!prev) return prev;
-      
+
       // For node updates, always apply the change since the overhead is minimal
       // and ensures correctness for complex nested object mutations
-      if ('nodes' in updates) {
+      if ("nodes" in updates) {
         return { ...prev, flow: { ...prev.flow, ...updates } };
       }
-      
+
       // Keep existing logic for other flow updates (edges, etc.)
-      const hasChanges = Object.keys(updates).some(key => {
+      const hasChanges = Object.keys(updates).some((key) => {
         const updateValue = updates[key as keyof typeof updates];
         const currentValue = prev.flow[key as keyof typeof prev.flow];
         return JSON.stringify(updateValue) !== JSON.stringify(currentValue);
       });
-      
+
       if (!hasChanges) return prev;
-      
+
       return { ...prev, flow: { ...prev.flow, ...updates } };
     });
   }, []);
 
-  const updateTimeline = useCallback((nodeId: string, data: Partial<TimelineEditorData>) => {
-    setState((prev) => {
-      if (!prev) return prev;
+  const updateTimeline = useCallback(
+    (nodeId: string, data: Partial<TimelineEditorData>) => {
+      setState((prev) => {
+        if (!prev) return prev;
 
-      const existing = prev.editors.timeline[nodeId] ?? { duration: 3, tracks: [] };
-      const merged: TimelineEditorData = {
-        duration: data.duration ?? existing.duration,
-        tracks: data.tracks ?? existing.tracks,
-      };
+        const existing = prev.editors.timeline[nodeId] ?? {
+          duration: 3,
+          tracks: [],
+        };
+        const merged: TimelineEditorData = {
+          duration: data.duration ?? existing.duration,
+          tracks: data.tracks ?? existing.tracks,
+        };
 
-      // Mirror changes into the corresponding animation node in flow
-      const updatedNodes = prev.flow.nodes.map((node) => {
-        const isTarget = (node as unknown as { data?: { identifier?: { id?: string } } }).data?.identifier?.id === nodeId;
-        if (!isTarget) return node;
+        // Mirror changes into the corresponding animation node in flow
+        const updatedNodes = prev.flow.nodes.map((node) => {
+          const isTarget =
+            (node as unknown as { data?: { identifier?: { id?: string } } })
+              .data?.identifier?.id === nodeId;
+          if (!isTarget) return node;
+          return {
+            ...node,
+            data: {
+              ...(node as unknown as { data: Record<string, unknown> }).data,
+              duration: merged.duration,
+              tracks: merged.tracks,
+            } as unknown,
+          } as typeof node;
+        });
+
         return {
-          ...node,
-          data: {
-            ...(node as unknown as { data: Record<string, unknown> }).data,
-            duration: merged.duration,
-            tracks: merged.tracks,
-          } as unknown,
-        } as typeof node;
-      });
-
-      return {
-        ...prev,
-        flow: { ...prev.flow, nodes: updatedNodes },
-        editors: {
-          ...prev.editors,
-          timeline: {
-            ...prev.editors.timeline,
-            [nodeId]: merged,
+          ...prev,
+          flow: { ...prev.flow, nodes: updatedNodes },
+          editors: {
+            ...prev.editors,
+            timeline: {
+              ...prev.editors.timeline,
+              [nodeId]: merged,
+            },
           },
-        },
-      } as WorkspaceState;
-    });
-  }, []);
+        } as WorkspaceState;
+      });
+    },
+    [],
+  );
 
-  const updateUI = useCallback((updates: Partial<WorkspaceState['ui']>) => {
-    setState((prev) => (prev ? { ...prev, ui: { ...prev.ui, ...updates } } : prev));
+  const updateUI = useCallback((updates: Partial<WorkspaceState["ui"]>) => {
+    setState((prev) =>
+      prev ? { ...prev, ui: { ...prev.ui, ...updates } } : prev,
+    );
   }, []);
 
   const saveNow = useCallback(async () => {
@@ -132,17 +170,36 @@ export function WorkspaceProvider({ children, workspaceId }: { children: ReactNo
       lastSaved,
       hasBackup: backup.hasBackup,
     };
-  }, [state, updateFlow, updateTimeline, updateUI, saveNow, isSaving, hasUnsavedChanges, lastSaved, backup.hasBackup]);
+  }, [
+    state,
+    updateFlow,
+    updateTimeline,
+    updateUI,
+    saveNow,
+    isSaving,
+    hasUnsavedChanges,
+    lastSaved,
+    backup.hasBackup,
+  ]);
 
   if (isLoading || !contextValue) {
-    return <div className="h-screen w-full bg-[var(--surface-0)] text-[var(--text-secondary)] p-6">Loading workspace…</div>;
+    return (
+      <div className="h-screen w-full bg-[var(--surface-0)] p-6 text-[var(--text-secondary)]">
+        Loading workspace…
+      </div>
+    );
   }
 
-  return <WorkspaceContext.Provider value={contextValue}>{children}</WorkspaceContext.Provider>;
+  return (
+    <WorkspaceContext.Provider value={contextValue}>
+      {children}
+    </WorkspaceContext.Provider>
+  );
 }
 
 export function useWorkspace() {
   const ctx = useContext(WorkspaceContext);
-  if (!ctx) throw new Error('useWorkspace must be used within WorkspaceProvider');
+  if (!ctx)
+    throw new Error("useWorkspace must be used within WorkspaceProvider");
   return ctx;
 }

@@ -1,15 +1,21 @@
 // src/shared/utils/object-path.ts
 
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown> {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
-    Object.prototype.toString.call(value) === '[object Object]'
+    Object.prototype.toString.call(value) === "[object Object]"
   );
 }
 
-export function setByPath(target: Record<string, unknown>, path: string, value: unknown): void {
-  const parts = path.split('.');
+export function setByPath(
+  target: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
+  const parts = path.split(".");
   let cursor: Record<string, unknown> = target;
   for (let i = 0; i < parts.length - 1; i++) {
     const key = parts[i]!;
@@ -20,8 +26,11 @@ export function setByPath(target: Record<string, unknown>, path: string, value: 
   cursor[parts[parts.length - 1]!] = value;
 }
 
-export function deleteByPath(target: Record<string, unknown>, path: string): void {
-  const parts = path.split('.');
+export function deleteByPath(
+  target: Record<string, unknown>,
+  path: string,
+): void {
+  const parts = path.split(".");
   let cursor: Record<string, unknown> = target;
   for (let i = 0; i < parts.length - 1; i++) {
     const key = parts[i]!;
@@ -36,8 +45,12 @@ export function deepMerge<T>(base: T, override: Partial<T>): T {
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override as T) ?? base;
   }
-  const result: Record<string, unknown> = { ...(base as Record<string, unknown>) };
-  for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
+  const result: Record<string, unknown> = {
+    ...(base as Record<string, unknown>),
+  };
+  for (const [key, value] of Object.entries(
+    override as Record<string, unknown>,
+  )) {
     const existing = result[key];
     if (isPlainObject(existing) && isPlainObject(value)) {
       result[key] = deepMerge(existing, value);
