@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     console.log("🔍 Final redirect URL:", new URL(destination, origin).toString());
 
     // Mark successful login for auth status component
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || origin;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? origin;
     const response = NextResponse.redirect(new URL(destination, baseUrl));
     response.cookies.set("justSignedIn", "1", {
       maxAge: 60, // 1 minute
