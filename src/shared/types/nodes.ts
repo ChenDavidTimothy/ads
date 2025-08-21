@@ -271,8 +271,6 @@ export interface MathOpNodeData extends BaseNodeData {
 // Duplicate node data
 export interface DuplicateNodeData extends BaseNodeData {
   count: number;
-  pattern: 'none' | 'linear' | 'grid';
-  spacing: number;
 }
 
 // Image node data

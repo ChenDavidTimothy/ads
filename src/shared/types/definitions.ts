@@ -722,7 +722,7 @@ export const NODE_DEFINITIONS = {
   duplicate: {
     type: 'duplicate',
     label: 'Duplicate',
-    description: 'Creates multiple copies of objects with unique IDs while preserving all properties and metadata',
+    description: 'Creates multiple copies of objects with unique IDs while preserving all properties and metadata. Works with any node type.',
     execution: {
       category: 'logic',
       executor: 'logic',
@@ -745,26 +745,6 @@ export const NODE_DEFINITIONS = {
           max: 50, 
           defaultValue: 3,
           description: 'Total number of objects (including original)'
-        },
-        { 
-          key: 'pattern', 
-          type: 'select', 
-          label: 'Layout Pattern', 
-          options: [
-            { value: 'none', label: 'None (Same Position)' },
-            { value: 'linear', label: 'Linear (Horizontal)' },
-            { value: 'grid', label: 'Grid (Future)' }
-          ],
-          defaultValue: 'none' 
-        },
-        { 
-          key: 'spacing', 
-          type: 'number', 
-          label: 'Spacing', 
-          min: 0, 
-          max: 500, 
-          defaultValue: 50,
-          description: 'Distance between duplicates (pixels)'
         }
       ]
     },
@@ -776,9 +756,7 @@ export const NODE_DEFINITIONS = {
       }
     },
     defaults: {
-      count: 3,
-      pattern: 'none',
-      spacing: 50
+      count: 3
     }
   },
 

@@ -1001,9 +1001,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     logger.debug(`Starting duplicate execution for node: ${node.data.identifier.displayName}`);
     
     const data = node.data as unknown as Record<string, unknown>;
-    const count = Math.min(Math.max(Number(data.count) || 1, 1), 50); // Enforce limits
-    const pattern = (data.pattern as string) || 'none';
-    const spacing = Number(data.spacing) || 50;
+    const count = Math.min(Math.max(Number(data.count) || 1, 1), 50);
 
     const inputs = getConnectedInputs(
       context,
@@ -1012,8 +1010,14 @@ export class LogicNodeExecutor extends BaseExecutor {
       'input'
     );
 
-    // Validate inputs before processing
-    this.validateDuplicateInputs(count, pattern, spacing, inputs.length, node.data.identifier.id, node.data.identifier.displayName);
+    // Calculate total input objects for validation
+    const totalInputObjects = inputs.reduce((acc, input) => {
+      const data = Array.isArray(input.data) ? input.data : [input.data];
+      return acc + data.length;
+    }, 0);
+
+    // Validate inputs with updated rules
+    this.validateDuplicateInputs(count, totalInputObjects, node.data.identifier.id, node.data.identifier.displayName);
 
     if (inputs.length === 0) {
       logger.debug('No inputs connected to duplicate node');
@@ -1050,58 +1054,36 @@ export class LogicNodeExecutor extends BaseExecutor {
 
 
 
-    // Initialize output collections
     const allOutputObjects: unknown[] = [];
     const expandedAssignments: PerObjectAssignments = {};
     const expandedAnimations: Record<string, SceneAnimationTrack[]> = {};
     const expandedCursors: Record<string, number> = {};
-
-    // Track created IDs for collision detection
     const allExistingIds = this.getAllExistingObjectIds(context);
     const newlyCreatedIds = new Set<string>();
 
-    let totalObjectsProcessed = 0;
-    const maxTotalObjects = 200; // System-wide safety limit
-
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
-      logger.debug(`Processing input with ${inputData.length} objects`);
 
       for (const originalObject of inputData) {
-        // Safety check for total object count
-        if (totalObjectsProcessed * count > maxTotalObjects) {
-          logger.warn(`Duplicate operation would exceed maximum object limit (${maxTotalObjects})`);
-          throw new Error('Duplicate operation would create too many objects. Reduce count or input objects.');
-        }
-
         if (!this.hasValidObjectStructure(originalObject)) {
-          // Pass through non-object data unchanged
           allOutputObjects.push(originalObject);
           continue;
         }
 
         const originalId = (originalObject as { id: string }).id;
-        logger.debug(`Duplicating object ${originalId} with count ${count}`);
 
         // Add original object
         allOutputObjects.push(originalObject);
         this.copyMetadataForObject(originalId, originalId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
 
-        // Create duplicates
+        // Create duplicates - pure copy, only change ID
         for (let i = 1; i < count; i++) {
           const duplicateId = this.generateUniqueId(originalId, i, allExistingIds, newlyCreatedIds);
-          
-          // Create duplicate object with pattern-based positioning
-          const duplicate = this.createDuplicateObject(originalObject, duplicateId, i, pattern, spacing);
+          const duplicate = this.createDuplicateObject(originalObject, duplicateId); // ✅ Pure copy
           allOutputObjects.push(duplicate);
-
-          // Copy and adapt all metadata
           this.copyMetadataForObject(originalId, duplicateId, upstreamAssignments, upstreamAnimations, upstreamCursors, expandedAssignments, expandedAnimations, expandedCursors);
-          
           newlyCreatedIds.add(duplicateId);
         }
-
-        totalObjectsProcessed++;
       }
     }
 
@@ -1122,9 +1104,7 @@ export class LogicNodeExecutor extends BaseExecutor {
   }
 
   private validateDuplicateInputs(
-    count: number, 
-    pattern: string, 
-    spacing: number,
+    count: number,
     totalInputObjects: number,
     nodeId: string,
     nodeDisplayName: string
@@ -1137,25 +1117,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       throw new DuplicateCountExceededError(nodeId, nodeDisplayName, count, 50);
     }
 
-    // Pattern validation
-    const validPatterns = ['none', 'linear', 'grid'];
-    if (!validPatterns.includes(pattern)) {
-      throw new DuplicateNodeError(
-        nodeId, 
-        nodeDisplayName, 
-        `Invalid pattern: ${pattern}. Must be one of: ${validPatterns.join(', ')}`
-      );
-    }
-
-    // Spacing validation
-    if (spacing < 0) {
-      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Spacing cannot be negative');
-    }
-    if (spacing > 1000) {
-      throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Spacing cannot exceed 1000 pixels');
-    }
-
-    // Total output validation
+    // CRITICAL: Total output validation (system safety limit)
     const totalOutput = totalInputObjects * count;
     if (totalOutput > 200) {
       throw new DuplicateNodeError(
@@ -1203,18 +1165,10 @@ export class LogicNodeExecutor extends BaseExecutor {
     return ids;
   }
 
-  private createDuplicateObject(original: unknown, duplicateId: string, index: number, pattern: string, spacing: number): unknown {
-    const duplicate = JSON.parse(JSON.stringify(original)) as Record<string, unknown>; // Deep clone
+  private createDuplicateObject(original: unknown, duplicateId: string): unknown {
+    const duplicate = JSON.parse(JSON.stringify(original)) as Record<string, unknown>;
     duplicate.id = duplicateId;
-    
-    // Apply positioning patterns
-    if (pattern === 'linear' && 'initialPosition' in duplicate) {
-      const pos = duplicate.initialPosition as { x: number; y: number };
-      pos.x += index * spacing;
-    }
-    // Future: grid pattern implementation
-    
-    return duplicate;
+    return duplicate; // ✅ Pure copy, no positioning
   }
 
   private copyMetadataForObject(
@@ -1237,14 +1191,14 @@ export class LogicNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Copy animations with objectId updates and trackId consistency
+    // Copy animations with objectId updates and DEEP CLONE properties
     if (sourceAnimations[sourceId]) {
       try {
         targetAnimations[targetId] = sourceAnimations[sourceId].map(anim => ({
           ...anim,
           objectId: targetId,
-          id: anim.id.replace(sourceId, targetId), // Update trackId for consistency
-          properties: anim.properties
+          id: anim.id.replace(sourceId, targetId),
+          properties: JSON.parse(JSON.stringify(anim.properties)) // ✅ FIX: Deep clone properties
         })) as SceneAnimationTrack[];
       } catch (error) {
         logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, { error: String(error) });

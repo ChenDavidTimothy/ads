@@ -8,15 +8,6 @@ import { Copy } from "lucide-react";
 
 export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) {
   const nodeDefinition = getNodeDefinition('duplicate');
-  
-  const getPatternLabel = (pattern: string) => {
-    switch (pattern) {
-      case 'linear': return 'Linear';
-      case 'grid': return 'Grid';
-      default: return 'None';
-    }
-  };
-
   const handleClass = "bg-[var(--node-logic)]";
 
   return (
@@ -50,22 +41,12 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
           <span className="text-xs text-[var(--text-primary)] font-medium">{data.count}</span>
         </div>
         
-        {data.pattern !== 'none' && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">Pattern:</span>
-              <span className="text-xs text-[var(--text-primary)] font-medium">{getPatternLabel(data.pattern)}</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">Spacing:</span>
-              <span className="text-xs text-[var(--text-primary)] font-medium">{data.spacing}px</span>
-            </div>
-          </>
-        )}
-        
         <div className="text-xs text-[var(--success-500)]">
           {data.count === 1 ? 'Pass-through mode' : `Creating ${data.count - 1} duplicate${data.count > 2 ? 's' : ''}`}
+        </div>
+
+        <div className="text-xs text-[var(--text-tertiary)] italic">
+          Generic duplication - works with any node type
         </div>
       </CardContent>
 
