@@ -46,8 +46,8 @@ export class CanvasRenderer implements Renderer {
     try {
       await frameGenerator.generateAnimation(
         prepared.filePath,
-        (ctx, frame) => {
-          sceneRenderer.renderFrame(ctx, frame.time);
+        async (ctx, frame) => {
+          await sceneRenderer.renderFrame(ctx, frame.time);
         },
         {
           preset: config.videoPreset,

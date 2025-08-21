@@ -23,7 +23,7 @@ export type RenderCallback = (
   ctx: NodeCanvasContext,
   frame: AnimationFrame,
   config: FrameConfig
-) => void;
+) => void | Promise<void>;
 
 interface WatchdogConfig {
   maxRenderMs: number; // total render time limit
@@ -102,15 +102,25 @@ export class FrameGenerator {
           time
         };
 
-        // Clear canvas
-        this.clearCanvas();
+        // Render frame (SceneRenderer handles its own canvas clearing)
+        await renderCallback(this.ctx, frame, this.config);
 
-        // Render frame
-        renderCallback(this.ctx, frame, this.config);
+        // Debug: Check canvas state before buffer capture
+        console.log(`[FRAME-GEN] Frame ${frameNumber}: Canvas context state before buffer capture`);
+        if ('getTransform' in this.ctx) {
+          const matrix = this.ctx.getTransform();
+          console.log(`[FRAME-GEN] Frame ${frameNumber}: Transform matrix:`, matrix.toString());
+        }
 
         // Write raw RGBA directly
         const rgbaBuffer = this.canvas.toBuffer('raw');
+        console.log(`[FRAME-GEN] Frame ${frameNumber}: Buffer size:`, rgbaBuffer.length, 'bytes');
         await encoder.writeFrame(rgbaBuffer);
+        
+        // Reset canvas context for next frame to prevent state corruption
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.globalAlpha = 1;
+        this.ctx.globalCompositeOperation = 'source-over';
       }
 
       if (this.watchdogError) {
@@ -129,7 +139,7 @@ export class FrameGenerator {
     }
   }
 
-  generateFrames(renderCallback: RenderCallback): ImageData[] {
+  async generateFrames(renderCallback: RenderCallback): Promise<ImageData[]> {
     const totalFrames = this.config.fps * this.config.duration;
     const frames: ImageData[] = [];
 
@@ -145,8 +155,8 @@ export class FrameGenerator {
         time
       };
 
-      this.clearCanvas();
-      renderCallback(this.ctx, frame, this.config);
+      // SceneRenderer handles its own canvas clearing
+      await renderCallback(this.ctx, frame, this.config);
 
       const imageData = this.ctx.getImageData(0, 0, this.config.width, this.config.height);
       frames.push(imageData as ImageData);
