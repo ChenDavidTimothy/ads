@@ -210,7 +210,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext
   ): Promise<SceneObject> {
     const objectId = obj.id;
-    
+
     // Debug logging to check object structure
     logger.debug(`Processing image object ${objectId}:`, {
       hasInitialPosition: !!obj.initialPosition,
@@ -258,9 +258,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     // Apply per-object assignments (manual overrides)
-    const assignment = assignments?.[objectId];
+    // Handle object ID prefix mismatch - try both prefixed and non-prefixed versions
+    const assignment = assignments?.[objectId] || assignments?.[objectId.replace(/^image_/, '')];
     const initial = assignment?.initial ?? {};
-    
+
     // Merge in the assignment overrides
     const finalOverrides = { ...objectOverrides, ...initial };
 

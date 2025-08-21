@@ -767,11 +767,11 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
   // Handle per-object assignment updates
   const handleUpdateAssignment = useCallback((updates: Record<string, unknown>) => {
     if (!selectedObjectId) return;
-    
+
     const next: PerObjectAssignments = { ...assignments };
     const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) };
     const baseInitial = current.initial ?? {};
-    
+
     // Merge updates into initial assignments
     const mergedInitial = { ...baseInitial, ...updates };
     
