@@ -249,54 +249,78 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
 					<NumberField label="" value={posX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), position: { ...(n.data as CanvasNodeData)?.position, x } } })) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
+					{/* Badge - Only show when bound */}
+					{isBound('position.x') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="position.x" />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
 					<NumberField label="" value={posY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), position: { ...(n.data as CanvasNodeData)?.position, y } } })) })} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="position.x" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="position.y" />
+					{/* Badge - Only show when bound */}
+					{isBound('position.y') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="position.y" />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
 					<NumberField label="" value={scaleX} onChange={(x) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), scale: { ...(n.data as CanvasNodeData)?.scale, x } } })) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
+					{/* Badge - Only show when bound */}
+					{isBound('scale.x') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
 					<NumberField label="" value={scaleY} onChange={(y) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...(n.data as CanvasNodeData), scale: { ...(n.data as CanvasNodeData)?.scale, y } } })) })} defaultValue={1} min={0} step={0.1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" />
+					{/* Badge - Only show when bound */}
+					{isBound('scale.y') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-[var(--space-2)]">
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
 					<NumberField label="" value={rotation} onChange={(rotation) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, rotation } })) })} step={0.1} defaultValue={0} bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
+					{/* Badge - Only show when bound */}
+					{isBound('rotation') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="rotation" />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
 					<NumberField label="" value={opacity} onChange={(opacity) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, opacity } })) })} min={0} max={1} step={0.05} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="rotation" />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					<CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
+					{/* Badge - Only show when bound */}
+					{isBound('opacity') && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								<CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 			{/* CHANGE: Wrap color properties with conditional rendering */}
@@ -305,23 +329,36 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
 					<div className="grid grid-cols-3 gap-[var(--space-2)] items-end">
 						<div>
 							<ColorField label="Fill" value={fillColor} onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+							{/* Badge - Only show when bound */}
+							{isBound('fillColor') && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
+									</div>
+								</div>
+							)}
 						</div>
 						<div>
 							<ColorField label="Stroke" value={strokeColor} onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
+							{/* Badge - Only show when bound */}
+							{isBound('strokeColor') && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
+									</div>
+								</div>
+							)}
 						</div>
 						<div>
 							<NumberField label="Stroke W" value={strokeWidth} onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })} min={0} step={0.5} defaultValue={1} bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
-						</div>
-					</div>
-					<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-						<div className="flex items-center gap-[var(--space-1)]">
-							<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+							{/* Badge - Only show when bound */}
+							{isBound('strokeWidth') && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 				</>
@@ -448,21 +485,29 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 					<label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
 					<NumberField label="" value={getValue('position.x', 0)} onChange={(x) => onChange({ position: { x } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" objectId={objectId} />} disabled={isBound('position.x')} inputClassName={leftBorderClass('position.x')} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('position.x') || isBound('position.x')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('position.x') && !isBound('position.x') && <OverrideBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
 					<NumberField label="" value={getValue('position.y', 0)} onChange={(y) => onChange({ position: { y } })} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.y" objectId={objectId} />} disabled={isBound('position.y')} inputClassName={leftBorderClass('position.y')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('position.x') && !isBound('position.x') && <OverrideBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('position.y') && !isBound('position.y') && <OverrideBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('position.y') || isBound('position.y')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('position.y') && !isBound('position.y') && <OverrideBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -471,21 +516,29 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
 					<NumberField label="" value={getValue('scale.x', 1)} onChange={(x) => onChange({ scale: { x } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" objectId={objectId} />} disabled={isBound('scale.x')} inputClassName={leftBorderClass('scale.x')} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('scale.x') || isBound('scale.x')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('scale.x') && !isBound('scale.x') && <OverrideBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
 					<NumberField label="" value={getValue('scale.y', 1)} onChange={(y) => onChange({ scale: { y } })} defaultValue={1} min={0} step={0.1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" objectId={objectId} />} disabled={isBound('scale.y')} inputClassName={leftBorderClass('scale.y')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('scale.x') && !isBound('scale.x') && <OverrideBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('scale.y') && !isBound('scale.y') && <OverrideBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('scale.y') || isBound('scale.y')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('scale.y') && !isBound('scale.y') && <OverrideBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -494,21 +547,29 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 					<label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
 					<NumberField label="" value={getValue('rotation', 0)} onChange={(rotation) => onChange({ rotation })} step={0.1} defaultValue={0} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" objectId={objectId} />} disabled={isBound('rotation')} inputClassName={leftBorderClass('rotation')} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('rotation') || isBound('rotation')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('rotation') && !isBound('rotation') && <OverrideBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 				<div>
 					<label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
 					<NumberField label="" value={getValue('opacity', 1)} onChange={(opacity) => onChange({ opacity })} min={0} max={1} step={0.05} defaultValue={1} 
 						bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" objectId={objectId} />} disabled={isBound('opacity')} inputClassName={leftBorderClass('opacity')} />
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('rotation') && !isBound('rotation') && <OverrideBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
-				</div>
-				<div className="flex items-center gap-[var(--space-1)]">
-					{isOverridden('opacity') && !isBound('opacity') && <OverrideBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />}
-					<CanvasBindingBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
+					{/* Badge - Only show when needed */}
+					{(isOverridden('opacity') || isBound('opacity')) && (
+						<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+							<div className="flex items-center gap-[var(--space-1)]">
+								{isOverridden('opacity') && !isBound('opacity') && <OverrideBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />}
+								<CanvasBindingBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -519,28 +580,41 @@ function CanvasPerObjectProperties({ nodeId, objectId, assignments, onChange, _o
 						<div>
 							<ColorField label="Fill" value={getStringValue('fillColor', '')} onChange={(fillColor) => onChange({ fillColor })} 
 								bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" objectId={objectId} />} disabled={isBound('fillColor')} inputClassName={leftBorderClass('fillColor')} />
+							{/* Badge - Only show when needed */}
+							{(isOverridden('fillColor') || isBound('fillColor')) && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										{isOverridden('fillColor') && !isBound('fillColor') && <OverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
+										<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+									</div>
+								</div>
+							)}
 						</div>
 						<div>
 							<ColorField label="Stroke" value={getStringValue('strokeColor', '')} onChange={(strokeColor) => onChange({ strokeColor })} 
 								bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" objectId={objectId} />} disabled={isBound('strokeColor')} inputClassName={leftBorderClass('strokeColor')} />
+							{/* Badge - Only show when needed */}
+							{(isOverridden('strokeColor') || isBound('strokeColor')) && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										{isOverridden('strokeColor') && !isBound('strokeColor') && <OverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
+										<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+									</div>
+								</div>
+							)}
 						</div>
 						<div>
 							<NumberField label="Stroke W" value={getValue('strokeWidth', 1)} onChange={(strokeWidth) => onChange({ strokeWidth })} min={0} step={0.5} defaultValue={1} 
 								bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" objectId={objectId} />} disabled={isBound('strokeWidth')} inputClassName={leftBorderClass('strokeWidth')} />
-						</div>
-					</div>
-					<div className="grid grid-cols-3 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('fillColor') && !isBound('fillColor') && <OverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />}
-							<CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('strokeColor') && !isBound('strokeColor') && <OverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />}
-							<CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
-						</div>
-						<div className="flex items-center gap-[var(--space-1)]">
-							{isOverridden('strokeWidth') && !isBound('strokeWidth') && <OverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
-							<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+							{/* Badge - Only show when needed */}
+							{(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
+								<div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+									<div className="flex items-center gap-[var(--space-1)]">
+										{isOverridden('strokeWidth') && !isBound('strokeWidth') && <OverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />}
+										<CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 				</>
