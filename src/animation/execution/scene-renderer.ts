@@ -7,6 +7,8 @@ import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
 import { drawText, type Typography } from '../geometry/text';
 import { loadImage, type Image } from 'canvas';
+// ADD this import after the existing canvas import
+import { withTimeout } from '@/server/utils/timeout-utils';
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -182,10 +184,14 @@ export class SceneRenderer {
     const height = finalHeight ?? 100;
     
     try {
-      // ✅ CRITICAL FIX: Check cache first, load only if not cached
+      // ✅ CRITICAL FIX: Check cache first, load with timeout if not cached
       let img = this.imageCache.get(props.imageUrl);
       if (!img) {
-        img = await loadImage(props.imageUrl);
+        img = await withTimeout(
+          loadImage(props.imageUrl),
+          30000, // 30 second timeout
+          `Image load timeout: ${props.imageUrl}`
+        );
         this.imageCache.set(props.imageUrl, img);
       }
       

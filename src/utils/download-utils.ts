@@ -32,7 +32,7 @@ async function downloadSupabaseFile(
   file: DownloadableFile,
   options: DownloadOptions = {}
 ): Promise<void> {
-  const { onComplete, onError, timeout = 60000 } = options;
+  const { onComplete, onError, timeout = 90000 } = options; // ✅ CRITICAL FIX: Increased to 90s
 
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -236,7 +236,7 @@ export async function downloadFile(
   file: DownloadableFile,
   options: DownloadOptions = {}
 ): Promise<void> {
-  const { onProgress, onComplete, onError, timeout = 30000 } = options;
+  const { onProgress, onComplete, onError, timeout = 60000 } = options; // ✅ CRITICAL FIX: Increased to 60s
 
   // Special handling for Supabase signed URLs
   const isSupabaseUrl = file.url.includes('supabase.co') && file.url.includes('token=');

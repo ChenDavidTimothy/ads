@@ -6,7 +6,7 @@ export const STORAGE_CONFIG = {
   MAX_RETRY_DELAY_MS: 10000,
   
   // Timeout configuration
-  UPLOAD_TIMEOUT_MS: 30000,
+  UPLOAD_TIMEOUT_MS: 60000, // ✅ CRITICAL FIX: Increased from 30s to 60s for production stability
   SIGNED_URL_EXPIRY_SECONDS: 60 * 60 * 24 * 7, // 7 days
   
   // Cleanup configuration

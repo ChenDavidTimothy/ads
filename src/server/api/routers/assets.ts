@@ -248,17 +248,36 @@ export const assetsRouter = createTRPCRouter({
       // Type guard to ensure assets array contains valid data
       const typedAssets = (assets ?? []) as DatabaseUserAsset[];
       
-      // Generate public URLs for assets
+      // ✅ CRITICAL FIX: Generate public URLs concurrently with individual timeouts
       const assetsWithUrls: AssetResponse[] = await Promise.all(
         typedAssets.map(async (asset: DatabaseUserAsset) => {
-          const { data: signedUrl } = await supabase.storage
-            .from(asset.bucket_name)
-            .createSignedUrl(asset.storage_path, 60 * 60 * 24) as DatabaseResponse<StorageResponse>; // 24 hours
-            
-          return {
-            ...asset,
-            public_url: signedUrl?.signedUrl,
-          };
+          try {
+            // Apply 10 second timeout to each signed URL request
+            const signedUrlPromise = supabase.storage
+              .from(asset.bucket_name)
+              .createSignedUrl(asset.storage_path, 60 * 60 * 24); // 24 hours
+
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error('Signed URL timeout')), 10000);
+            });
+
+            const { data: signedUrl } = await Promise.race([
+              signedUrlPromise,
+              timeoutPromise
+            ]) as DatabaseResponse<StorageResponse>;
+
+            return {
+              ...asset,
+              public_url: signedUrl?.signedUrl,
+            };
+          } catch (error) {
+            // Log error but don't fail entire request
+            console.warn(`Failed to generate signed URL for asset ${asset.id}:`, error);
+            return {
+              ...asset,
+              public_url: undefined, // Client handles missing URLs gracefully
+            };
+          }
         })
       );
       
