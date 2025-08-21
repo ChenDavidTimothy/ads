@@ -105,18 +105,10 @@ export class FrameGenerator {
         // Render frame (SceneRenderer handles its own canvas clearing)
         await renderCallback(this.ctx, frame, this.config);
 
-        // Debug: Check canvas state before buffer capture
-        console.log(`[FRAME-GEN] Frame ${frameNumber}: Canvas context state before buffer capture`);
-        if ('getTransform' in this.ctx) {
-          const matrix = this.ctx.getTransform();
-          console.log(`[FRAME-GEN] Frame ${frameNumber}: Transform matrix:`, matrix.toString());
-        }
-
         // Write raw RGBA directly
         const rgbaBuffer = this.canvas.toBuffer('raw');
-        console.log(`[FRAME-GEN] Frame ${frameNumber}: Buffer size:`, rgbaBuffer.length, 'bytes');
         await encoder.writeFrame(rgbaBuffer);
-        
+
         // Reset canvas context for next frame to prevent state corruption
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.globalAlpha = 1;
