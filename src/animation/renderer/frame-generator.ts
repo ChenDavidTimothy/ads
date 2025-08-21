@@ -78,15 +78,22 @@ export class FrameGenerator {
         const elapsed = Date.now() - startedAt;
         const mem = process.memoryUsage();
         if (!this.watchdogError && elapsed > watchdogCfg.maxRenderMs) {
+          const elapsedSec = Math.round(elapsed / 1000);
+          const limitSec = Math.round(watchdogCfg.maxRenderMs / 1000);
+          console.log(`⏰ WATCHDOG TRIGGERED: Time limit exceeded! ${elapsedSec}s > ${limitSec}s`);
           this.watchdogError = new Error(`Render exceeded max duration ${watchdogCfg.maxRenderMs}ms`);
         }
         if (!this.watchdogError && mem.heapUsed > watchdogCfg.maxHeapUsedBytes) {
-          this.watchdogError = new Error(`Render exceeded heap usage ${(watchdogCfg.maxHeapUsedBytes / (1024 * 1024)).toFixed(0)}MB`);
+          const currentMB = Math.round(mem.heapUsed / 1024 / 1024);
+          const limitMB = Math.round(watchdogCfg.maxHeapUsedBytes / 1024 / 1024);
+          console.log(`🚨 WATCHDOG TRIGGERED: Memory limit exceeded! ${currentMB}MB > ${limitMB}MB`);
+          this.watchdogError = new Error(`Render exceeded heap usage ${limitMB}MB`);
         }
       }, watchdogCfg.sampleIntervalMs);
 
       for (let frameNumber = 0; frameNumber < totalFrames; frameNumber++) {
         if (this.watchdogError) {
+          console.log(`💥 WATCHDOG ERROR THROWN: ${this.watchdogError.message}`);
           encoder.kill();
           throw this.watchdogError;
         }
@@ -108,6 +115,25 @@ export class FrameGenerator {
         // Write raw RGBA directly
         const rgbaBuffer = this.canvas.toBuffer('raw');
         await encoder.writeFrame(rgbaBuffer);
+
+        // 🐕 WATCHDOG DEBUG: Log comprehensive memory every 30 frames
+        if (frameNumber % 30 === 0) {
+          const mem = process.memoryUsage();
+          const elapsed = Date.now() - startedAt;
+          const heapUsedMB = Math.round(mem.heapUsed / 1024 / 1024);
+          const heapTotalMB = Math.round(mem.heapTotal / 1024 / 1024);
+          const rssMB = Math.round(mem.rss / 1024 / 1024);
+          const externalMB = Math.round(mem.external / 1024 / 1024);
+          const progressPercent = Math.round(progress * 100);
+
+          console.log(`🐕 WATCHDOG: Frame ${frameNumber}/${totalFrames} (${progressPercent}%) | V8 Heap: ${heapUsedMB}MB/${heapTotalMB}MB | RSS: ${rssMB}MB | External: ${externalMB}MB | Time: ${Math.round(elapsed/1000)}s`);
+
+          // Log peak RSS for tracking
+          if (!global.peakRSS || rssMB > global.peakRSS) {
+            global.peakRSS = rssMB;
+            console.log(`📊 PEAK RSS UPDATED: ${rssMB}MB (frame ${frameNumber})`);
+          }
+        }
 
         // Reset canvas context for next frame to prevent state corruption
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
