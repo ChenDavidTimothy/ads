@@ -58,28 +58,50 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   const [showAssetModal, setShowAssetModal] = useState(false);
   
   const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
-  const data = (node?.data ?? {}) as MediaNodeData;
-  const bindings = (data.variableBindings ?? {});
+  const data = (node?.data ?? {}) as Record<string, unknown> & {
+    imageAssetId?: string;
+    cropX?: number;
+    cropY?: number;
+    cropWidth?: number;
+    cropHeight?: number;
+    displayWidth?: number;
+    displayHeight?: number;
+    variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+  };
+  const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-  const def = getNodeDefinition('media')?.defaults ?? {};
+  const def = (getNodeDefinition('media')?.defaults as Record<string, unknown> & {
+    imageAssetId?: string;
+    cropX?: number;
+    cropY?: number;
+    cropWidth?: number;
+    cropHeight?: number;
+    displayWidth?: number;
+    displayHeight?: number;
+  }) ?? {};
+
+  // Direct assignment pattern (following typography)
+  const imageAssetId = data.imageAssetId ?? def.imageAssetId ?? '';
+  const cropX = data.cropX ?? def.cropX ?? 0;
+  const cropY = data.cropY ?? def.cropY ?? 0;
+  const cropWidth = data.cropWidth ?? def.cropWidth ?? 0;
+  const cropHeight = data.cropHeight ?? def.cropHeight ?? 0;
+  const displayWidth = data.displayWidth ?? def.displayWidth ?? 0;
+  const displayHeight = data.displayHeight ?? def.displayHeight ?? 0;
+
+  const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+  const leftBorderClass = (key: string) => (
+    isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
+  );
 
   // Get current asset details
   const { data: assetDetails } = api.assets.list.useQuery(
     { limit: 1, offset: 0 },
     {
-      enabled: !!data.imageAssetId,
-      select: (response) => response.assets.find(asset => asset.id === data.imageAssetId)
+      enabled: !!imageAssetId,
+      select: (response) => response.assets.find(asset => asset.id === imageAssetId)
     }
   );
-
-  // Value resolution with binding awareness
-  const getValue = (key: keyof MediaNodeData, fallback: unknown) => {
-    if (isBound(key)) return fallback; // Show placeholder when bound
-    return data[key] ?? def[key] ?? fallback;
-  };
-
-  const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
-  const leftBorderClass = (key: string) => isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '';
 
   const handleAssetSelect = (asset: AssetResponse) => {
     updateFlow({
@@ -102,7 +124,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="text-sm font-medium text-[var(--text-primary)] mb-[var(--space-3)]">
-        Global Media Defaults
+        Per-Object Media Overrides
       </div>
       
       {/* Content Section */}
@@ -118,7 +140,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           
           {/* Current Asset Display */}
           <div className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]">
-            {data.imageAssetId && assetDetails ? (
+            {imageAssetId && assetDetails ? (
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
                   {assetDetails.public_url && (
@@ -147,7 +169,9 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                   <ImageOff size={16} className="text-[var(--text-tertiary)]" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-[var(--text-tertiary)]">No image selected</div>
+                  <div className="text-sm text-[var(--text-tertiary)]">
+                    {def.imageAssetId ? 'Using default asset' : 'No image selected'}
+                  </div>
                 </div>
               </div>
             )}
@@ -162,13 +186,15 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
             className={`w-full ${leftBorderClass('imageAssetId')}`}
           >
             <Image size={14} className="mr-2" />
-            {data.imageAssetId ? 'Change Image' : 'Select Image'}
+            {imageAssetId ? 'Change Image' : 'Override Image'}
           </Button>
           
-          {/* Asset Binding Badge */}
+          {/* Asset Binding Badge - Typography Pattern */}
           {isBound('imageAssetId') && (
-            <div className="text-[10px] text-[var(--text-tertiary)]">
-              <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" />
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" />
+              </div>
             </div>
           )}
         </div>
@@ -178,79 +204,87 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Crop Settings</div>
         
+        {/* Crop Position Row */}
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Crop X"
-            value={getValue('cropX', 0) as number}
-            onChange={(cropX) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, cropX } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" />}
-            disabled={isBound('cropX')}
-            inputClassName={leftBorderClass('cropX')}
-          />
-          
-          <NumberField
-            label="Crop Y"
-            value={getValue('cropY', 0) as number}
-            onChange={(cropY) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, cropY } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" />}
-            disabled={isBound('cropY')}
-            inputClassName={leftBorderClass('cropY')}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Crop Width (0=full)"
-            value={getValue('cropWidth', 0) as number}
-            onChange={(cropWidth) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, cropWidth } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" />}
-            disabled={isBound('cropWidth')}
-            inputClassName={leftBorderClass('cropWidth')}
-          />
-          
-          <NumberField
-            label="Crop Height (0=full)"
-            value={getValue('cropHeight', 0) as number}
-            onChange={(cropHeight) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, cropHeight } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" />}
-            disabled={isBound('cropHeight')}
-            inputClassName={leftBorderClass('cropHeight')}
-          />
-        </div>
-        
-        {/* Crop Badges */}
-        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <div className="space-y-1">
-            <MediaBindingBadge nodeId={nodeId} keyName="cropX" />
-            <MediaBindingBadge nodeId={nodeId} keyName="cropY" />
+          <div>
+            <NumberField
+              label="X"
+              value={cropX}
+              onChange={(cropX) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropX } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" />}
+              disabled={isBound('cropX')}
+              inputClassName={leftBorderClass('cropX')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('cropX') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropX" />
+                </div>
+              </div>
+            )}
           </div>
-          <div className="space-y-1">
-            <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" />
-            <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" />
+          <div>
+            <NumberField
+              label="Y"
+              value={cropY}
+              onChange={(cropY) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropY } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" />}
+              disabled={isBound('cropY')}
+              inputClassName={leftBorderClass('cropY')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('cropY') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropY" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Crop Size Row */}
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
+          <div>
+            <NumberField
+              label="Width (0=full)"
+              value={cropWidth}
+              onChange={(cropWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropWidth } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" />}
+              disabled={isBound('cropWidth')}
+              inputClassName={leftBorderClass('cropWidth')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('cropWidth') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" />
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <NumberField
+              label="Height (0=full)"
+              value={cropHeight}
+              onChange={(cropHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, cropHeight } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" />}
+              disabled={isBound('cropHeight')}
+              inputClassName={leftBorderClass('cropHeight')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('cropHeight') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -259,42 +293,46 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
       <div className="space-y-[var(--space-3)]">
         <div className="text-sm font-medium text-[var(--text-primary)]">Display Size</div>
         
+        {/* Display Size Row */}
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Display Width (0=auto)"
-            value={getValue('displayWidth', 0) as number}
-            onChange={(displayWidth) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, displayWidth } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" />}
-            disabled={isBound('displayWidth')}
-            inputClassName={leftBorderClass('displayWidth')}
-          />
-          
-          <NumberField
-            label="Display Height (0=auto)"
-            value={getValue('displayHeight', 0) as number}
-            onChange={(displayHeight) => updateFlow({
-              nodes: state.flow.nodes.map(n =>
-                n.data?.identifier?.id !== nodeId ? n :
-                ({ ...n, data: { ...n.data, displayHeight } })
-              )
-            })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" />}
-            disabled={isBound('displayHeight')}
-            inputClassName={leftBorderClass('displayHeight')}
-          />
-        </div>
-        
-        {/* Display Badges */}
-        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" />
-          <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" />
+          <div>
+            <NumberField
+              label="Width (0=auto)"
+              value={displayWidth}
+              onChange={(displayWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayWidth } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" />}
+              disabled={isBound('displayWidth')}
+              inputClassName={leftBorderClass('displayWidth')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('displayWidth') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" />
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <NumberField
+              label="Height (0=auto)"
+              value={displayHeight}
+              onChange={(displayHeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, displayHeight } })) })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" />}
+              disabled={isBound('displayHeight')}
+              inputClassName={leftBorderClass('displayHeight')}
+            />
+            {/* Badge - Only show when bound */}
+            {isBound('displayHeight') && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -303,7 +341,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
         isOpen={showAssetModal}
         onClose={() => setShowAssetModal(false)}
         onSelect={handleAssetSelect}
-        selectedAssetId={data.imageAssetId}
+        selectedAssetId={imageAssetId}
       />
     </div>
   );
@@ -449,13 +487,13 @@ function MediaPerObjectProperties({
             {currentAssetId ? 'Change Image' : 'Override Image'}
           </Button>
           
-          {/* Badges */}
+          {/* Asset Binding Badge - Typography Pattern */}
           {(isOverridden('imageAssetId') || isBound('imageAssetId')) && (
-            <div className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-[var(--space-1)]">
-              {isOverridden('imageAssetId') && !isBound('imageAssetId') && (
-                <MediaOverrideBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
-              )}
-              <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
+            <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+              <div className="flex items-center gap-[var(--space-1)]">
+                {isOverridden('imageAssetId') && !isBound('imageAssetId') && <MediaOverrideBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />}
+                <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
+              </div>
             </div>
           )}
         </div>
@@ -466,84 +504,88 @@ function MediaPerObjectProperties({
         <div className="text-sm font-medium text-[var(--text-primary)]">Crop Settings</div>
         
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Crop X"
-            value={getValue('cropX', 0) as number}
-            onChange={(cropX) => onChange({ cropX })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" objectId={objectId} />}
-            disabled={isBound('cropX')}
-            inputClassName={leftBorderClass('cropX')}
-          />
-          
-          <NumberField
-            label="Crop Y"
-            value={getValue('cropY', 0) as number}
-            onChange={(cropY) => onChange({ cropY })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" objectId={objectId} />}
-            disabled={isBound('cropY')}
-            inputClassName={leftBorderClass('cropY')}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Crop Width (0=full)"
-            value={getValue('cropWidth', 0) as number}
-            onChange={(cropWidth) => onChange({ cropWidth })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" objectId={objectId} />}
-            disabled={isBound('cropWidth')}
-            inputClassName={leftBorderClass('cropWidth')}
-          />
-          
-          <NumberField
-            label="Crop Height (0=full)"
-            value={getValue('cropHeight', 0) as number}
-            onChange={(cropHeight) => onChange({ cropHeight })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" objectId={objectId} />}
-            disabled={isBound('cropHeight')}
-            inputClassName={leftBorderClass('cropHeight')}
-          />
-        </div>
-        
-        {/* Crop Badges */}
-        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-          <div className="space-y-1">
+          <div>
+            <NumberField
+              label="X"
+              value={getValue('cropX', 0) as number}
+              onChange={(cropX) => onChange({ cropX })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" objectId={objectId} />}
+              disabled={isBound('cropX')}
+              inputClassName={leftBorderClass('cropX')}
+            />
+            {/* Badge - Only show when needed */}
             {(isOverridden('cropX') || isBound('cropX')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('cropX') && !isBound('cropX') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
-              </div>
-            )}
-            {(isOverridden('cropY') || isBound('cropY')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('cropY') && !isBound('cropY') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('cropX') && !isBound('cropX') && <MediaOverrideBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
+                </div>
               </div>
             )}
           </div>
-          <div className="space-y-1">
-            {(isOverridden('cropWidth') || isBound('cropWidth')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('cropWidth') && !isBound('cropWidth') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
+          
+          <div>
+            <NumberField
+              label="Y"
+              value={getValue('cropY', 0) as number}
+              onChange={(cropY) => onChange({ cropY })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" objectId={objectId} />}
+              disabled={isBound('cropY')}
+              inputClassName={leftBorderClass('cropY')}
+            />
+            {/* Badge - Only show when needed */}
+            {(isOverridden('cropY') || isBound('cropY')) && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('cropY') && !isBound('cropY') && <MediaOverrideBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
+                </div>
               </div>
             )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-[var(--space-2)]">
+          <div>
+            <NumberField
+              label="Width (0=full)"
+              value={getValue('cropWidth', 0) as number}
+              onChange={(cropWidth) => onChange({ cropWidth })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropWidth" objectId={objectId} />}
+              disabled={isBound('cropWidth')}
+              inputClassName={leftBorderClass('cropWidth')}
+            />
+            {/* Badge - Only show when needed */}
+            {(isOverridden('cropWidth') || isBound('cropWidth')) && (
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('cropWidth') && !isBound('cropWidth') && <MediaOverrideBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <NumberField
+              label="Height (0=full)"
+              value={getValue('cropHeight', 0) as number}
+              onChange={(cropHeight) => onChange({ cropHeight })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropHeight" objectId={objectId} />}
+              disabled={isBound('cropHeight')}
+              inputClassName={leftBorderClass('cropHeight')}
+            />
+            {/* Badge - Only show when needed */}
             {(isOverridden('cropHeight') || isBound('cropHeight')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('cropHeight') && !isBound('cropHeight') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('cropHeight') && !isBound('cropHeight') && <MediaOverrideBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
+                </div>
               </div>
             )}
           </div>
@@ -555,46 +597,44 @@ function MediaPerObjectProperties({
         <div className="text-sm font-medium text-[var(--text-primary)]">Display Size</div>
         
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
-          <NumberField
-            label="Display Width (0=auto)"
-            value={getValue('displayWidth', 0) as number}
-            onChange={(displayWidth) => onChange({ displayWidth })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" objectId={objectId} />}
-            disabled={isBound('displayWidth')}
-            inputClassName={leftBorderClass('displayWidth')}
-          />
-          
-          <NumberField
-            label="Display Height (0=auto)"
-            value={getValue('displayHeight', 0) as number}
-            onChange={(displayHeight) => onChange({ displayHeight })}
-            min={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" objectId={objectId} />}
-            disabled={isBound('displayHeight')}
-            inputClassName={leftBorderClass('displayHeight')}
-          />
-        </div>
-        
-        {/* Display Badges */}
-        <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
           <div>
+            <NumberField
+              label="Width (0=auto)"
+              value={getValue('displayWidth', 0) as number}
+              onChange={(displayWidth) => onChange({ displayWidth })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayWidth" objectId={objectId} />}
+              disabled={isBound('displayWidth')}
+              inputClassName={leftBorderClass('displayWidth')}
+            />
+            {/* Badge - Only show when needed */}
             {(isOverridden('displayWidth') || isBound('displayWidth')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('displayWidth') && !isBound('displayWidth') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('displayWidth') && !isBound('displayWidth') && <MediaOverrideBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />
+                </div>
               </div>
             )}
           </div>
+          
           <div>
+            <NumberField
+              label="Height (0=auto)"
+              value={getValue('displayHeight', 0) as number}
+              onChange={(displayHeight) => onChange({ displayHeight })}
+              min={0}
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="displayHeight" objectId={objectId} />}
+              disabled={isBound('displayHeight')}
+              inputClassName={leftBorderClass('displayHeight')}
+            />
+            {/* Badge - Only show when needed */}
             {(isOverridden('displayHeight') || isBound('displayHeight')) && (
-              <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('displayHeight') && !isBound('displayHeight') && (
-                  <MediaOverrideBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />
-                )}
-                <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                <div className="flex items-center gap-[var(--space-1)]">
+                  {isOverridden('displayHeight') && !isBound('displayHeight') && <MediaOverrideBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />}
+                  <MediaBindingBadge nodeId={nodeId} keyName="displayHeight" objectId={objectId} />
+                </div>
               </div>
             )}
           </div>
@@ -694,17 +734,15 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
         </h3>
         
         <SelectionList
-          items={[
-            { id: 'default', label: 'Default' },
-            ...upstreamObjects.map(obj => ({
-              id: obj.data.identifier.id,
-              label: obj.data.identifier.displayName
-            }))
-          ]}
-          selectedId={selectedObjectId ?? 'default'}
-          onSelect={(id) => setSelectedObjectId(id === 'default' ? null : id)}
+          items={upstreamObjects.map(obj => ({
+            id: obj.data.identifier.id,
+            label: obj.data.identifier.displayName
+          }))}
+          selectedId={selectedObjectId}
+          onSelect={setSelectedObjectId}
           mode="single"
           showDefault={true}
+          defaultLabel="Default"
           emptyLabel="No image objects found"
         />
         
@@ -719,20 +757,16 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
 
       {/* Center Content */}
       <div className="flex-1 min-w-0 p-[var(--space-4)] overflow-y-auto">
-        {selectedObjectId ? (
-          <div className="max-w-2xl">
-            <div className="text-center py-[var(--space-8)]">
-              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mx-auto mb-[var(--space-4)]">
-                <Settings size={24} className="text-[var(--text-tertiary)]" />
-              </div>
-              <div className="text-sm text-[var(--text-tertiary)]">
-                Select Default or an image object on the left to edit its properties.
-              </div>
+        <div className="max-w-2xl">
+          <div className="text-center py-[var(--space-8)]">
+            <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mx-auto mb-[var(--space-4)]">
+              <Settings size={24} className="text-[var(--text-tertiary)]" />
+            </div>
+            <div className="text-sm text-[var(--text-tertiary)]">
+              Select Default or an image object on the left to edit its properties.
             </div>
           </div>
-        ) : (
-          <MediaDefaultProperties nodeId={nodeId} />
-        )}
+        </div>
       </div>
 
       {/* Right Sidebar - Properties */}
@@ -749,9 +783,7 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
             onChange={handleUpdateAssignment}
           />
         ) : (
-          <div className="text-sm text-[var(--text-tertiary)]">
-            Select an object on the left to edit its specific properties, or use the center panel to edit global defaults.
-          </div>
+          <MediaDefaultProperties nodeId={nodeId} />
         )}
       </div>
     </div>

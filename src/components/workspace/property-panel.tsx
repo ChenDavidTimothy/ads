@@ -216,6 +216,13 @@ export function PropertyPanel({
         </div>
       )}
 
+      {/* Media special handling */}
+      {node.type === 'media' && (
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
+          <div>Double-click the Media node to edit media in its dedicated tab.</div>
+        </div>
+      )}
+
       {/* Image special handling - only show asset selection */}
       {node.type === 'image' && (
         <div className="space-y-[var(--space-4)]">
@@ -247,7 +254,7 @@ function SchemaBasedProperties({
   nodeType
 }: SchemaBasedProps) {
   // Skip rendering properties for nodes with dedicated editor tabs - they should only be edited in the dedicated tab
-  if (nodeType === 'canvas' || nodeType === 'typography' || nodeType === 'image') {
+  if (nodeType === 'canvas' || nodeType === 'typography' || nodeType === 'image' || nodeType === 'media') {
     return null;
   }
 

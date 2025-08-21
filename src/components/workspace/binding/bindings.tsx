@@ -4,7 +4,7 @@ import { Link as LinkIcon, Search } from 'lucide-react';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { deleteByPath } from '@/shared/utils/object-path';
-import type { NodeData, AnimationNodeData, CanvasNodeData, TypographyNodeData } from '@/shared/types/nodes';
+import type { NodeData, AnimationNodeData, CanvasNodeData, TypographyNodeData, MediaNodeData } from '@/shared/types/nodes';
 import type { PerObjectAssignments, ObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,11 @@ function isTypographyNodeData(data: NodeData): data is TypographyNodeData {
 	return data.identifier.type === 'typography';
 }
 
+// NEW: Add Media support
+function isMediaNodeData(data: NodeData): data is MediaNodeData {
+	return data.identifier.type === 'media';
+}
+
 // Helper type for variable binding structure
 interface VariableBinding {
 	target?: string;
@@ -52,14 +57,14 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 		if (!node?.data) return undefined;
 		
 		if (objectId) {
-			if (isAnimationNodeData(node.data) || isCanvasNodeData(node.data) || isTypographyNodeData(node.data)) {
+			if (isAnimationNodeData(node.data) || isCanvasNodeData(node.data) || isTypographyNodeData(node.data) || isMediaNodeData(node.data)) {
 				const prevAll = node.data.variableBindingsByObject ?? {};
 				return prevAll[objectId]?.[key]?.boundResultNodeId;
 			}
 			return undefined;
 		}
 		
-		if (isAnimationNodeData(node.data) || isCanvasNodeData(node.data) || isTypographyNodeData(node.data)) {
+		if (isAnimationNodeData(node.data) || isCanvasNodeData(node.data) || isTypographyNodeData(node.data) || isMediaNodeData(node.data)) {
 			const vb = node.data.variableBindings ?? {};
 			return vb[key]?.boundResultNodeId;
 		}
@@ -129,7 +134,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 				if (n.data?.identifier?.id !== nodeId) return n;
 				
 				const nodeData = n.data;
-				if (!nodeData || (!isAnimationNodeData(nodeData) && !isCanvasNodeData(nodeData) && !isTypographyNodeData(nodeData))) {
+				if (!nodeData || (!isAnimationNodeData(nodeData) && !isCanvasNodeData(nodeData) && !isTypographyNodeData(nodeData) && !isMediaNodeData(nodeData))) {
 					return n;
 				}
 				
@@ -164,7 +169,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 				const data = n.data;
 				if (!data || data.identifier?.id !== nodeId) return n;
 				
-				if (!isAnimationNodeData(data) && !isCanvasNodeData(data) && !isTypographyNodeData(data)) {
+				if (!isAnimationNodeData(data) && !isCanvasNodeData(data) && !isTypographyNodeData(data) && !isMediaNodeData(data)) {
 					return n;
 				}
 
@@ -255,6 +260,28 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 						nextData.perObjectAssignments = poa;
 					} else {
 						// Node-level Typography value is the node's default; do not change it here
+					}
+				} else if (isMediaNodeData(nextData)) {
+					const key = rawKey; // e.g., 'imageAssetId', 'cropWidth', 'displayWidth'
+					if (objectId) {
+						const poa: PerObjectAssignments = { ...(nextData.perObjectAssignments ?? {}) };
+						const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) };
+						const initial = { ...(entry.initial ?? {}) };
+						deleteByPath(initial, key);
+						const prunedInitial = pruneEmpty(initial);
+						if (Object.keys(prunedInitial).length === 0) {
+							delete entry.initial;
+						} else {
+							entry.initial = prunedInitial;
+						}
+						if ((entry.initial === undefined) && (!entry.tracks || entry.tracks.length === 0)) {
+							delete poa[objectId];
+						} else {
+							poa[objectId] = entry;
+						}
+						nextData.perObjectAssignments = poa;
+					} else {
+						// Node-level Media value is the node's default; do not change it here
 					}
 				}
 
