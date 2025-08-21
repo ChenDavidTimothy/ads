@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { api } from '@/trpc/react';
 import type { 
   AssetResponse
@@ -31,6 +31,16 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const utils = api.useUtils();
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // API mutations
   const getUploadUrlMutation = api.assets.getUploadUrl.useMutation();
@@ -203,26 +213,152 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     return deleteAssetMutation.mutateAsync({ assetId });
   }, [deleteAssetMutation]);
 
-  // Drag and drop handlers
+  // Drag state management with proper debouncing
+  const [dragCounter, setDragCounter] = useState(0);
+  const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dragResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Safety timeout to reset stuck drag states
+  const resetStuckDragState = useCallback(() => {
+    if (isDragOver) {
+      setIsDragOver(false);
+      setDragCounter(0);
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
+    }
+  }, [isDragOver]);
+
+  // Debounced drag state setter to prevent jitter
+  const setDragState = useCallback((isDragging: boolean) => {
+    // Clear existing timeout
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+
+    // Clear any existing safety timeout
+    if (dragResetTimeoutRef.current) {
+      clearTimeout(dragResetTimeoutRef.current);
+      dragResetTimeoutRef.current = null;
+    }
+
+    const timeout = setTimeout(() => {
+      setIsDragOver(isDragging);
+
+      // If setting to true, set a safety timeout to reset if stuck
+      if (isDragging) {
+        dragResetTimeoutRef.current = setTimeout(() => {
+          resetStuckDragState();
+        }, 5000); // Reset after 5 seconds if still stuck
+      }
+    }, isDragging ? 0 : 50); // Immediate for enter, delayed for leave to prevent false positives
+
+    dragTimeoutRef.current = timeout;
+  }, [resetStuckDragState]);
+
+  // Drag and drop handlers with proper event handling
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(true);
-  }, []);
+    e.stopPropagation();
+
+    // Show drag feedback if any files are being dragged (validate on drop)
+    if (e.dataTransfer.types.includes('Files')) {
+      // Only update state if it's not already true to prevent unnecessary re-renders
+      if (!isDragOver) {
+        setDragState(true);
+      }
+    }
+  }, [setDragState, isDragOver]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.dataTransfer.types.includes('Files')) {
+      setDragCounter(prev => prev + 1);
+      // Only update state if it's not already true
+      if (!isDragOver) {
+        setDragState(true);
+      }
+    }
+  }, [setDragState, isDragOver]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
-  }, []);
+    e.stopPropagation();
+
+    // More robust boundary checking
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    // Check if the mouse is actually leaving the element boundaries
+    // Add some tolerance to handle edge cases
+    const tolerance = 5;
+    if (x < rect.left - tolerance || x > rect.right + tolerance ||
+        y < rect.top - tolerance || y > rect.bottom + tolerance) {
+
+      setDragCounter(prev => {
+        const newCount = Math.max(0, prev - 1);
+        if (newCount === 0) {
+          setDragState(false);
+        }
+        return newCount;
+      });
+    }
+  }, [setDragState]);
+
+  // Fallback mouse leave handler to catch stuck states
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
+    // Only reset if we're not actually dragging (to avoid conflicts)
+    if (!e.buttons && isDragOver) {
+      // Small delay to ensure this isn't a false positive
+      setTimeout(() => {
+        if (!e.buttons) { // Double-check
+          resetStuckDragState();
+        }
+      }, 100);
+    }
+  }, [isDragOver, resetStuckDragState]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
+    e.stopPropagation();
+
+    // Reset drag state
+    setDragCounter(0);
+    setDragState(false);
+
+    // Clear any pending timeouts
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+    if (dragResetTimeoutRef.current) {
+      clearTimeout(dragResetTimeoutRef.current);
+      dragResetTimeoutRef.current = null;
+    }
 
     const droppedFiles = Array.from(e.dataTransfer.files);
+
     if (droppedFiles.length > 0) {
-      void uploadFiles(droppedFiles);
+      // Filter out invalid files and show feedback
+      const validFiles = droppedFiles.filter(file => {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+          // Show error for invalid files
+          options.onUploadError?.(validation.error!, file);
+        }
+        return validation.valid;
+      });
+
+      if (validFiles.length > 0) {
+        void uploadFiles(validFiles);
+      }
     }
-  }, [uploadFiles]);
+  }, [uploadFiles, setDragState, validateFile, options]);
 
   // File input handler
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,26 +370,43 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     e.target.value = '';
   }, [uploadFiles]);
 
+  // Reset drag state function
+  const resetDragState = useCallback(() => {
+    setIsDragOver(false);
+    setDragCounter(0);
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+    if (dragResetTimeoutRef.current) {
+      clearTimeout(dragResetTimeoutRef.current);
+      dragResetTimeoutRef.current = null;
+    }
+  }, []);
+
   return {
     // Upload state
     uploadProgress: Array.from(uploadProgress.values()),
     isUploading: Array.from(uploadProgress.values()).some(p => p.status === 'uploading'),
-    
+
     // Drag state
     isDragOver,
-    
+
     // Actions
     uploadFile,
     uploadFiles,
     deleteAsset,
     validateFile,
-    
+    resetDragState,
+
     // Event handlers
     handleDragOver,
+    handleDragEnter,
     handleDragLeave,
+    handleMouseLeave,
     handleDrop,
     handleFileInput,
-    
+
     // Mutation states
     isDeleting: deleteAssetMutation.isPending,
     deleteError: deleteAssetMutation.error?.message,

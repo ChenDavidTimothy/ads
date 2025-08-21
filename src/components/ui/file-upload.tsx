@@ -16,7 +16,9 @@ interface UploadProgress {
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
   onDragOver: (e: React.DragEvent) => void;
+  onDragEnter: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
+  onMouseLeave?: (e: React.MouseEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   isDragOver: boolean;
   uploadProgress: UploadProgress[];
@@ -24,12 +26,15 @@ interface FileUploadProps {
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
+  onResetDragState?: () => void;
 }
 
 export function FileUpload({
   onFilesSelected,
   onDragOver,
+  onDragEnter,
   onDragLeave,
+  onMouseLeave,
   onDrop,
   isDragOver,
   uploadProgress,
@@ -37,6 +42,7 @@ export function FileUpload({
   multiple = true,
   disabled = false,
   className,
+  onResetDragState,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,14 +66,16 @@ export function FileUpload({
       {/* Upload Zone */}
       <div
         onDragOver={onDragOver}
+        onDragEnter={onDragEnter}
         onDragLeave={onDragLeave}
+        onMouseLeave={onMouseLeave}
         onDrop={onDrop}
         onClick={handleClick}
         className={cn(
-          "relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all",
-          isDragOver 
-            ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/5" 
-            : "border-[var(--border-secondary)] hover:border-[var(--border-primary)]",
+          "relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200",
+          isDragOver
+            ? "border-[var(--accent-primary)] bg-[var(--purple-shadow-subtle)] shadow-[0_0_5px_var(--purple-shadow-subtle)]"
+            : "border-[var(--border-secondary)] hover:border-[var(--accent-primary)] hover:bg-[var(--purple-shadow-subtle)] hover:shadow-[0_0_5px_var(--purple-shadow-subtle)]",
           disabled && "opacity-50 cursor-not-allowed",
           "group"
         )}
@@ -84,28 +92,22 @@ export function FileUpload({
 
         <div className="flex flex-col items-center gap-3">
           <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
-            isDragOver 
-              ? "bg-[var(--accent-primary)] text-white" 
-              : "bg-[var(--surface-2)] text-[var(--text-secondary)] group-hover:bg-[var(--surface-3)]"
+            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200",
+            isDragOver
+              ? "bg-[var(--accent-primary)] text-white"
+              : "bg-[var(--surface-2)] text-[var(--text-secondary)] group-hover:bg-[var(--purple-shadow-subtle)] group-hover:text-[var(--accent-primary)]"
           )}>
             <Upload size={20} />
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              {isDragOver ? 'Drop files here' : 'Drop files or click to upload'}
-            </p>
-            <p className="text-xs text-[var(--text-tertiary)]">
-              Images up to 50MB, videos up to 500MB
-            </p>
-          </div>
-
-          {!disabled && (
-            <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
-              Browse Files
-            </Button>
-          )}
+                  <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-[var(--accent-primary)]">
+            {isDragOver ? '🎯 Drop files here' : 'Drop files or click to upload'}
+          </p>
+          <p className="text-xs text-[var(--text-tertiary)] transition-all duration-200 group-hover:text-[var(--accent-primary)]">
+            {isDragOver ? 'Release to start uploading' : 'Images up to 50MB, videos up to 500MB'}
+          </p>
+        </div>
         </div>
       </div>
 

@@ -169,10 +169,13 @@ export function AssetsPanel() {
           <FileUpload
             onFilesSelected={assetManagement.uploadFiles}
             onDragOver={assetManagement.handleDragOver}
+            onDragEnter={assetManagement.handleDragEnter}
             onDragLeave={assetManagement.handleDragLeave}
+            onMouseLeave={assetManagement.handleMouseLeave}
             onDrop={assetManagement.handleDrop}
             isDragOver={assetManagement.isDragOver}
             uploadProgress={assetManagement.uploadProgress}
+            onResetDragState={assetManagement.resetDragState}
           />
         </div>
       )}
