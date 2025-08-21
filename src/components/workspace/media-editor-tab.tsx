@@ -56,45 +56,30 @@ function MediaOverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; key
 function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   const { state, updateFlow } = useWorkspace();
   const [showAssetModal, setShowAssetModal] = useState(false);
+  const utils = api.useUtils();
   
   const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
-  const data = (node?.data ?? {}) as Record<string, unknown> & {
-    imageAssetId?: string;
-    cropX?: number;
-    cropY?: number;
-    cropWidth?: number;
-    cropHeight?: number;
-    displayWidth?: number;
-    displayHeight?: number;
-    variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
-  };
-  const bindings = (data.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
+  const data = node?.data;
+  const bindings = (data?.variableBindings ?? {}) as Record<string, { target?: string; boundResultNodeId?: string }>;
 
-  const def = (getNodeDefinition('media')?.defaults as Record<string, unknown> & {
-    imageAssetId?: string;
-    cropX?: number;
-    cropY?: number;
-    cropWidth?: number;
-    cropHeight?: number;
-    displayWidth?: number;
-    displayHeight?: number;
-  }) ?? {};
+  const def = getNodeDefinition('media')?.defaults ?? {};
+  const defImageAssetId = (def.imageAssetId as string) ?? '';
 
   // Direct assignment pattern (following typography)
-  const imageAssetId = data.imageAssetId ?? def.imageAssetId ?? '';
-  const cropX = data.cropX ?? def.cropX ?? 0;
-  const cropY = data.cropY ?? def.cropY ?? 0;
-  const cropWidth = data.cropWidth ?? def.cropWidth ?? 0;
-  const cropHeight = data.cropHeight ?? def.cropHeight ?? 0;
-  const displayWidth = data.displayWidth ?? def.displayWidth ?? 0;
-  const displayHeight = data.displayHeight ?? def.displayHeight ?? 0;
+  const imageAssetId: string = data?.imageAssetId ?? defImageAssetId;
+  const cropX = data?.cropX ?? def.cropX ?? 0;
+  const cropY = data?.cropY ?? def.cropY ?? 0;
+  const cropWidth = data?.cropWidth ?? def.cropWidth ?? 0;
+  const cropHeight = data?.cropHeight ?? def.cropHeight ?? 0;
+  const displayWidth = data?.displayWidth ?? def.displayWidth ?? 0;
+  const displayHeight = data?.displayHeight ?? def.displayHeight ?? 0;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
   
   // Helper to get value for bound fields - blank if bound, normal value if not
   const getValue = function<T>(key: string, defaultValue: T): T | undefined {
     if (isBound(key)) return undefined; // Blank when bound
-    return (data[key] as T) ?? defaultValue;
+    return (data as any)?.[key] ?? defaultValue;
   };
   
   const leftBorderClass = (key: string) => (
@@ -102,21 +87,32 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
   );
 
   // Get current asset details
-  const { data: assetDetails } = api.assets.list.useQuery(
-    { limit: 1, offset: 0 },
+  const assetDetailsQuery = api.assets.list.useQuery(
+    {
+      limit: 100, // Get more assets to find the one we need
+      offset: 0,
+      bucketName: 'images' // Only get images since we're looking for image assets
+    },
     {
       enabled: !!imageAssetId,
       select: (response) => response.assets.find(asset => asset.id === imageAssetId)
     }
   );
+  const { data: assetDetails, isLoading: isLoadingAssetDetails } = assetDetailsQuery;
 
   const handleAssetSelect = (asset: AssetResponse) => {
+    // Update the flow state first
     updateFlow({
       nodes: state.flow.nodes.map(n =>
         n.data?.identifier?.id !== nodeId ? n :
         ({ ...n, data: { ...n.data, imageAssetId: asset.id } })
       )
     });
+
+    // Invalidate and refetch the asset list to ensure fresh data
+    void utils.assets.list.invalidate();
+    // Also refetch the specific asset details query
+    void assetDetailsQuery.refetch();
   };
 
   const clearAsset = () => {
@@ -146,12 +142,16 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
           </div>
           
           {/* Current Asset Display */}
-          <div className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]">
+          <div
+            key={`asset-display-${imageAssetId || 'none'}`}
+            className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]"
+          >
             {imageAssetId && assetDetails ? (
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
                   {assetDetails.public_url && (
                     <img
+                      key={`asset-img-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
                       className="w-full h-full object-cover"
@@ -164,6 +164,33 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                   </div>
                   <div className="text-xs text-[var(--text-tertiary)]">
                     {Math.round(assetDetails.file_size / 1024)} KB
+                  </div>
+                </div>
+                <Button variant="secondary" size="xs" onClick={clearAsset}>
+                  Remove
+                </Button>
+              </div>
+            ) : imageAssetId && isLoadingAssetDetails ? (
+              // Asset is selected but details are loading
+              <div className="flex items-center gap-[var(--space-3)]">
+                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-[var(--text-tertiary)]">
+                    Loading asset details...
+                  </div>
+                </div>
+              </div>
+            ) : imageAssetId && !assetDetails && !isLoadingAssetDetails ? (
+              // Asset is selected but not found
+              <div className="flex items-center gap-[var(--space-3)]">
+                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                  <ImageOff size={16} className="text-[var(--text-tertiary)]" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-[var(--text-tertiary)]">
+                    Asset not found
                   </div>
                 </div>
                 <Button variant="secondary" size="xs" onClick={clearAsset}>
@@ -348,7 +375,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
         isOpen={showAssetModal}
         onClose={() => setShowAssetModal(false)}
         onSelect={handleAssetSelect}
-        selectedAssetId={imageAssetId}
+        selectedAssetId={imageAssetId && imageAssetId !== '' ? imageAssetId : undefined}
       />
     </div>
   );
@@ -368,18 +395,20 @@ function MediaPerObjectProperties({
 }) {
   const { state } = useWorkspace();
   const [showAssetModal, setShowAssetModal] = useState(false);
+  const utils = api.useUtils();
   
   const node = state.flow.nodes.find(n => n.data?.identifier?.id === nodeId) as Node<MediaNodeData> | undefined;
-  const data = (node?.data ?? {}) as MediaNodeData;
+  const data = node?.data;
   const def = getNodeDefinition('media')?.defaults ?? {};
+  const defImageAssetId = (def.imageAssetId as string) ?? '';
   
   const assignment: ObjectAssignments = assignments[objectId] ?? {};
   const initial = assignment.initial ?? {};
-  const base = data; // Node-level values as fallback
+  const base = data as MediaNodeData; // Node-level values as fallback
 
   // Binding detection
   const isBound = (key: string): boolean => {
-    return !!(data.variableBindingsByObject?.[objectId]?.[key]?.boundResultNodeId);
+    return !!(data?.variableBindingsByObject?.[objectId]?.[key]?.boundResultNodeId);
   };
 
   const isOverridden = (key: string): boolean => {
@@ -397,7 +426,7 @@ function MediaPerObjectProperties({
     if (isBound(key)) return fallbackValue; // Show placeholder when bound
     
     switch (key) {
-      case 'imageAssetId': return initial.imageAssetId ?? base.imageAssetId ?? def.imageAssetId ?? fallbackValue;
+      case 'imageAssetId': return initial.imageAssetId ?? base.imageAssetId ?? defImageAssetId ?? fallbackValue;
       case 'cropX': return initial.cropX ?? base.cropX ?? def.cropX ?? fallbackValue;
       case 'cropY': return initial.cropY ?? base.cropY ?? def.cropY ?? fallbackValue;
       case 'cropWidth': return initial.cropWidth ?? base.cropWidth ?? def.cropWidth ?? fallbackValue;
@@ -410,16 +439,25 @@ function MediaPerObjectProperties({
 
   // Get current asset details for this object
   const currentAssetId = getValue('imageAssetId', '') as string;
-  const { data: assetDetails } = api.assets.list.useQuery(
-    { limit: 1, offset: 0 },
+  const assetDetailsQuery = api.assets.list.useQuery(
+    {
+      limit: 100, // Get more assets to find the one we need
+      offset: 0,
+      bucketName: 'images' // Only get images since we're looking for image assets
+    },
     {
       enabled: !!currentAssetId,
       select: (response) => response.assets.find(asset => asset.id === currentAssetId)
     }
   );
+  const { data: assetDetails, isLoading: isLoadingAssetDetails } = assetDetailsQuery;
 
   const handleAssetSelect = (asset: AssetResponse) => {
     onChange({ imageAssetId: asset.id });
+    // Invalidate and refetch the asset list to ensure fresh data
+    void utils.assets.list.invalidate();
+    // Also refetch the specific asset details query
+    void assetDetailsQuery.refetch();
   };
 
   const clearAsset = () => {
@@ -444,12 +482,16 @@ function MediaPerObjectProperties({
           </div>
           
           {/* Current Asset Display */}
-          <div className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]">
+          <div
+            key={`asset-display-per-object-${currentAssetId || 'none'}`}
+            className="p-[var(--space-3)] bg-[var(--surface-2)] rounded border border-[var(--border-secondary)]"
+          >
             {currentAssetId && assetDetails ? (
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
                   {assetDetails.public_url && (
                     <img
+                      key={`asset-img-per-object-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
                       className="w-full h-full object-cover"
@@ -462,6 +504,33 @@ function MediaPerObjectProperties({
                   </div>
                   <div className="text-xs text-[var(--text-tertiary)]">
                     {Math.round(assetDetails.file_size / 1024)} KB
+                  </div>
+                </div>
+                <Button variant="secondary" size="xs" onClick={clearAsset}>
+                  Remove
+                </Button>
+              </div>
+            ) : currentAssetId && isLoadingAssetDetails ? (
+              // Asset is selected but details are loading
+              <div className="flex items-center gap-[var(--space-3)]">
+                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-[var(--text-tertiary)]">
+                    Loading asset details...
+                  </div>
+                </div>
+              </div>
+            ) : currentAssetId && !assetDetails && !isLoadingAssetDetails ? (
+              // Asset is selected but not found
+              <div className="flex items-center gap-[var(--space-3)]">
+                <div className="w-12 h-12 bg-[var(--surface-1)] rounded flex items-center justify-center">
+                  <ImageOff size={16} className="text-[var(--text-tertiary)]" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-[var(--text-tertiary)]">
+                    Asset not found
                   </div>
                 </div>
                 <Button variant="secondary" size="xs" onClick={clearAsset}>
@@ -653,7 +722,7 @@ function MediaPerObjectProperties({
         isOpen={showAssetModal}
         onClose={() => setShowAssetModal(false)}
         onSelect={handleAssetSelect}
-        selectedAssetId={currentAssetId}
+        selectedAssetId={currentAssetId && currentAssetId !== '' ? currentAssetId : undefined}
       />
     </div>
   );
@@ -701,7 +770,7 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
     
     const next: PerObjectAssignments = { ...assignments };
     const current: ObjectAssignments = { ...(next[selectedObjectId] ?? {}) };
-    const baseInitial = (current.initial ?? {}) as Record<string, unknown>;
+    const baseInitial = current.initial ?? {};
     
     // Merge updates into initial assignments
     const mergedInitial = { ...baseInitial, ...updates };
