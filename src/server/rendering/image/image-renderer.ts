@@ -37,24 +37,30 @@ export class ImageRenderer {
     };
 
     const sceneRenderer = new SceneRenderer(scene, renderConfig);
-    await sceneRenderer.renderFrame(ctx as never, cfg.time ?? 0);
-
-    const prepared = await this.storageProvider.prepareTarget(cfg.format);
-
+    
     try {
-      const buffer = cfg.format === 'png'
-        ? canvas.toBuffer('image/png')
-        : canvas.toBuffer('image/jpeg', {
-            quality: Math.max(0, Math.min(1, (cfg.quality ?? 90) / 100)),
-          } as JpegConfig);
+      await sceneRenderer.renderFrame(ctx as never, cfg.time ?? 0);
 
-      await fs.promises.writeFile(prepared.filePath, buffer);
-      const { publicUrl } = await this.storageProvider.finalize(prepared, {
-        contentType: cfg.format === 'png' ? 'image/png' : 'image/jpeg',
-      } as never);
-      return { filePath: prepared.filePath, publicUrl };
+      const prepared = await this.storageProvider.prepareTarget(cfg.format);
+
+      try {
+        const buffer = cfg.format === 'png'
+          ? canvas.toBuffer('image/png')
+          : canvas.toBuffer('image/jpeg', {
+              quality: Math.max(0, Math.min(1, (cfg.quality ?? 90) / 100)),
+            } as JpegConfig);
+
+        await fs.promises.writeFile(prepared.filePath, buffer);
+        const { publicUrl } = await this.storageProvider.finalize(prepared, {
+          contentType: cfg.format === 'png' ? 'image/png' : 'image/jpeg',
+        } as never);
+        return { filePath: prepared.filePath, publicUrl };
+      } finally {
+        // no explicit dispose required for prepared target
+      }
     } finally {
-      // no explicit dispose required
+      // ✅ CRITICAL FIX: Dispose SceneRenderer to clear image cache
+      sceneRenderer.dispose();
     }
   }
 }

@@ -58,8 +58,10 @@ export class CanvasRenderer implements Renderer {
       const { publicUrl } = await this.storageProvider.finalize(prepared);
       return { filePath: prepared.filePath, publicUrl };
     } finally {
+      // ✅ CRITICAL FIX: Dispose SceneRenderer to clear image cache
+      sceneRenderer.dispose();
       frameGenerator.dispose();
-      // Best-effort provider cleanup (removes temp dir on worker shutdowns or if needed)
+      
       if (supportsCleanup(this.storageProvider)) {
         await this.storageProvider.cleanup();
       }

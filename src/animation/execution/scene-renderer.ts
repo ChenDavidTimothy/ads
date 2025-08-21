@@ -6,7 +6,7 @@ import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
 import { drawCircle, type CircleStyle } from '../geometry/circle';
 import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
 import { drawText, type Typography } from '../geometry/text';
-import { loadImage } from 'canvas';
+import { loadImage, type Image } from 'canvas';
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -66,6 +66,8 @@ export class SceneRenderer {
   private scene: AnimationScene;
   private config: SceneRenderConfig;
   private timeline: Timeline;
+  // ✅ CRITICAL FIX: Add image cache
+  private imageCache = new Map<string, Image>();
 
   constructor(scene: AnimationScene, config: SceneRenderConfig) {
     this.scene = scene;
@@ -165,26 +167,27 @@ export class SceneRenderer {
     drawRectangle(ctx, { x: -props.width / 2, y: -props.height / 2 }, props.width, props.height, style);
   }
 
+  // ✅ CRITICAL FIX: Optimized image rendering with caching
   private async renderImage(ctx: NodeCanvasContext, props: ImageProperties, _state: ObjectState): Promise<void> {
     // Skip rendering if no image URL
     if (!props.imageUrl) return;
 
     // Calculate final dimensions based on crop and display settings
-    // cropWidth/Height = 0 means "use original size"
-    // displayWidth/Height = 0 means "use crop size"
     const cropWidth = props.cropWidth !== 0 ? props.cropWidth : (props.originalWidth ?? 100);
     const cropHeight = props.cropHeight !== 0 ? props.cropHeight : (props.originalHeight ?? 100);
     const finalWidth = props.displayWidth !== 0 ? props.displayWidth : cropWidth;
     const finalHeight = props.displayHeight !== 0 ? props.displayHeight : cropHeight;
     
-    // Ensure we have valid dimensions
     const width = finalWidth ?? 100;
     const height = finalHeight ?? 100;
     
-    // Try to load and render the actual image
     try {
-      // Load the image and wait for it to complete
-      const img = await loadImage(props.imageUrl);
+      // ✅ CRITICAL FIX: Check cache first, load only if not cached
+      let img = this.imageCache.get(props.imageUrl);
+      if (!img) {
+        img = await loadImage(props.imageUrl);
+        this.imageCache.set(props.imageUrl, img);
+      }
       
       // Calculate crop and display parameters
       const srcX = props.cropX ?? 0;
@@ -192,15 +195,14 @@ export class SceneRenderer {
       const srcWidth = props.cropWidth !== 0 ? props.cropWidth : img.width;
       const srcHeight = props.cropHeight !== 0 ? props.cropHeight : img.height;
       
-      // Ensure source dimensions are valid numbers
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;
       
-      // Draw the image at top-left corner (0, 0)
+      // Draw the image at origin (transforms already applied)
       ctx.drawImage(
         img,
         srcX, srcY, finalSrcWidth, finalSrcHeight,  // Source rectangle
-        0, 0, width, height  // Destination rectangle: top-left corner
+        0, 0, width, height  // Destination rectangle
       );
       
     } catch {
@@ -244,6 +246,11 @@ export class SceneRenderer {
 
     // Cast to CanvasRenderingContext2D for text rendering
     drawText(ctx as unknown as CanvasRenderingContext2D, { x: 0, y: 0 }, props.content, style);
+  }
+
+  // ✅ CRITICAL FIX: Dispose cache to prevent memory leaks
+  dispose(): void {
+    this.imageCache.clear();
   }
 }
 
