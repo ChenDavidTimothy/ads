@@ -64,16 +64,16 @@ export default function TermsPage() {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">3. User Account and Registration</h2>
+                <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">3. User Account and Authentication</h2>
                 <p>
-                  To use certain features of the Service, you must register for an account. You agree to:
+                  To use certain features of the Service, you must sign in with your Google account. You agree to:
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Provide accurate, current, and complete information during registration</li>
-                  <li>Maintain and update your information to keep it accurate and current</li>
-                  <li>Maintain the security of your password and account</li>
+                  <li>Use only your own Google account for authentication</li>
+                  <li>Maintain the security of your Google account</li>
                   <li>Accept responsibility for all activities under your account</li>
                   <li>Notify us immediately of any unauthorized use of your account</li>
+                  <li>Comply with Google&apos;s terms of service for your account</li>
                 </ul>
               </section>
 

@@ -60,7 +60,7 @@ export default function PrivacyPage() {
                   We may collect personal information that you voluntarily provide to us when you:
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Register for an account</li>
+                  <li>Sign in with your Google account</li>
                   <li>Subscribe to our services</li>
                   <li>Contact us for support</li>
                   <li>Participate in surveys or feedback requests</li>
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
                   <li>Posting the new Privacy Policy on this page</li>
-                  <li>Sending an email notification to registered users</li>
+                  <li>Sending an email notification to authenticated users</li>
                   <li>Displaying a prominent notice in the Service</li>
                 </ul>
                 <p className="mt-2">

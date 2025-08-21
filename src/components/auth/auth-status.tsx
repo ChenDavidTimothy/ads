@@ -8,6 +8,7 @@ type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
 export function AuthStatus() {
 	const [email, setEmail] = useState<string | null>(null);
+	const [displayName, setDisplayName] = useState<string | null>(null);
 	const [authState, setAuthState] = useState<AuthState>('loading');
 	const [sessionExpiresAt, setSessionExpiresAt] = useState<Date | null>(null);
 	const { toast } = useNotifications();
@@ -31,7 +32,6 @@ export function AuthStatus() {
 		if (lastToastRef.current !== key) {
 			lastToastRef.current = key;
 			toastFn();
-			// Clear the toast key after 5 seconds to allow showing it again later
 			setTimeout(() => {
 				if (lastToastRef.current === key) {
 					lastToastRef.current = null;
@@ -47,7 +47,7 @@ export function AuthStatus() {
 
 		const now = new Date();
 		const timeUntilExpiry = expiresAt.getTime() - now.getTime();
-		const refreshTime = Math.max(timeUntilExpiry - (5 * 60 * 1000), 60 * 1000); // Refresh 5 minutes early, but at least 1 minute from now
+		const refreshTime = Math.max(timeUntilExpiry - (5 * 60 * 1000), 60 * 1000);
 
 		console.log(`[AUTH] Scheduling session refresh in ${Math.round(refreshTime / 1000)} seconds`);
 
@@ -77,6 +77,25 @@ export function AuthStatus() {
 		}, refreshTime);
 	}, [showToastOnce, toast]);
 
+	const extractUserInfo = useCallback((user: any) => {
+		// Handle OAuth user data structure
+		const email = user.email || null;
+		let displayName = null;
+
+		// Try to get display name from various OAuth provider metadata
+		if (user.user_metadata?.full_name) {
+			displayName = user.user_metadata.full_name;
+		} else if (user.user_metadata?.name) {
+			displayName = user.user_metadata.name;
+		} else if (user.user_metadata?.first_name && user.user_metadata?.last_name) {
+			displayName = `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
+		} else if (user.user_metadata?.first_name) {
+			displayName = user.user_metadata.first_name;
+		}
+
+		return { email, displayName };
+	}, []);
+
 	const checkAuthState = useCallback(async () => {
 		const supabase = createBrowserClient();
 		
@@ -87,6 +106,7 @@ export function AuthStatus() {
 				console.error('[AUTH] Session check error:', error);
 				setAuthState('error');
 				setEmail(null);
+				setDisplayName(null);
 				setSessionExpiresAt(null);
 				return;
 			}
@@ -104,6 +124,7 @@ export function AuthStatus() {
 						console.error('[AUTH] Session refresh failed:', refreshError);
 						setAuthState('unauthenticated');
 						setEmail(null);
+						setDisplayName(null);
 						setSessionExpiresAt(null);
 						showToastOnce('session-expired', () => {
 							toast.warning('Session expired', 'Please log in again');
@@ -112,17 +133,20 @@ export function AuthStatus() {
 					}
 					
 					// Update with refreshed session
-					setEmail(refreshData.session.user.email ?? null);
+					const userInfo = extractUserInfo(refreshData.session.user);
+					setEmail(userInfo.email);
+					setDisplayName(userInfo.displayName);
 					setAuthState('authenticated');
 					const newExpiresAt = new Date(refreshData.session.expires_at! * 1000);
 					setSessionExpiresAt(newExpiresAt);
 					scheduleSessionRefresh(newExpiresAt);
 				} else {
 					// Session is valid
-					setEmail(data.session.user.email ?? null);
+					const userInfo = extractUserInfo(data.session.user);
+					setEmail(userInfo.email);
+					setDisplayName(userInfo.displayName);
 					setAuthState('authenticated');
 					setSessionExpiresAt(expiresAt);
-					// Only schedule refresh if none is currently scheduled
 					if (!refreshTimeoutRef.current) {
 						scheduleSessionRefresh(expiresAt);
 					}
@@ -131,23 +155,40 @@ export function AuthStatus() {
 				// No session
 				setAuthState('unauthenticated');
 				setEmail(null);
+				setDisplayName(null);
 				setSessionExpiresAt(null);
 			}
 		} catch (error) {
 			console.error('[AUTH] Auth check failed:', error);
 			setAuthState('error');
 			setEmail(null);
+			setDisplayName(null);
 			setSessionExpiresAt(null);
 		}
-	}, [scheduleSessionRefresh, showToastOnce, toast]);
+	}, [scheduleSessionRefresh, showToastOnce, toast, extractUserInfo]);
 
-	// Initial auth check and periodic monitoring
+	// Initial auth check and auth state change listener
 	useEffect(() => {
 		const supabase = createBrowserClient();
 		let isMounted = true;
 
 		// Initial check
 		void checkAuthState();
+
+		// Handle justSignedIn cookie from OAuth callback
+		if (typeof window !== 'undefined') {
+			const justSignedIn = document.cookie.includes('justSignedIn=1');
+			if (justSignedIn) {
+				// Remove the cookie
+				document.cookie = 'justSignedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+				// Show welcome toast after a short delay
+				setTimeout(() => {
+					showToastOnce('signed-in', () => {
+						toast.success('Signed in successfully', 'Welcome to Batchion!');
+					});
+				}, 100);
+			}
+		}
 
 		// Set up auth state change listener
 		const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -158,26 +199,21 @@ export function AuthStatus() {
 			switch (event) {
 				case 'SIGNED_IN':
 					if (session?.user) {
-						setEmail(session.user.email ?? null);
+						const userInfo = extractUserInfo(session.user);
+						setEmail(userInfo.email);
+						setDisplayName(userInfo.displayName);
 						setAuthState('authenticated');
 						const expiresAt = new Date(session.expires_at! * 1000);
 						setSessionExpiresAt(expiresAt);
 						scheduleSessionRefresh(expiresAt);
-						// Only show welcome toast when we know the user explicitly just logged in
-						if (typeof window !== 'undefined' && sessionStorage.getItem('justSignedIn') === '1') {
-							sessionStorage.removeItem('justSignedIn');
-							showToastOnce('signed-in', () => {
-								toast.success('Signed in successfully', `Welcome back, ${session.user.email}`);
-							});
-						}
 					}
 					break;
 					
 				case 'SIGNED_OUT':
 					setEmail(null);
+					setDisplayName(null);
 					setAuthState('unauthenticated');
 					setSessionExpiresAt(null);
-					// Clean up all intervals and timeouts on sign out
 					if (refreshTimeoutRef.current) {
 						clearTimeout(refreshTimeoutRef.current);
 						refreshTimeoutRef.current = null;
@@ -191,7 +227,9 @@ export function AuthStatus() {
 				case 'TOKEN_REFRESHED':
 					if (session?.user) {
 						console.log('[AUTH] Token refreshed');
-						setEmail(session.user.email ?? null);
+						const userInfo = extractUserInfo(session.user);
+						setEmail(userInfo.email);
+						setDisplayName(userInfo.displayName);
 						setAuthState('authenticated');
 						const expiresAt = new Date(session.expires_at! * 1000);
 						setSessionExpiresAt(expiresAt);
@@ -201,18 +239,20 @@ export function AuthStatus() {
 					
 				case 'USER_UPDATED':
 					if (session?.user) {
-						setEmail(session.user.email ?? null);
+						const userInfo = extractUserInfo(session.user);
+						setEmail(userInfo.email);
+						setDisplayName(userInfo.displayName);
 					}
 					break;
 			}
 		});
 
-		// Periodic session health check (every 5 minutes instead of 30 seconds)
+		// Periodic session health check (every 5 minutes)
 		sessionCheckIntervalRef.current = setInterval(() => {
 			if (isMounted) {
 				void checkAuthState();
 			}
-		}, 5 * 60 * 1000); // Changed from 30 * 1000 to 5 * 60 * 1000
+		}, 5 * 60 * 1000);
 
 		return () => {
 			isMounted = false;
@@ -221,7 +261,7 @@ export function AuthStatus() {
 				clearInterval(sessionCheckIntervalRef.current);
 			}
 		};
-	}, [checkAuthState, scheduleSessionRefresh, showToastOnce, toast]);
+	}, [checkAuthState, scheduleSessionRefresh, showToastOnce, toast, extractUserInfo]);
 
 	const handleLogout = useCallback(async () => {
 		const supabase = createBrowserClient();
@@ -230,6 +270,7 @@ export function AuthStatus() {
 			setAuthState('loading');
 			await supabase.auth.signOut();
 			setEmail(null);
+			setDisplayName(null);
 			setAuthState('unauthenticated');
 			setSessionExpiresAt(null);
 			
@@ -264,7 +305,7 @@ export function AuthStatus() {
 		if (timeRemaining < 5 * 60 * 1000) return 'Expiring soon';
 		if (timeRemaining < 30 * 60 * 1000) return `${Math.round(timeRemaining / (60 * 1000))}m remaining`;
 		
-		return null; // Don't show time if more than 30 minutes
+		return null;
 	}, [sessionExpiresAt]);
 
 	const timeRemaining = getSessionTimeRemaining();
@@ -295,10 +336,11 @@ export function AuthStatus() {
 
 	// Show authenticated state
 	if (authState === 'authenticated' && email) {
+		const displayText = displayName || email;
 		return (
 			<div className="text-sm flex items-center gap-[var(--space-3)]">
 				<div className="flex flex-col">
-					<span>Signed in as {email}</span>
+					<span>Signed in as {displayText}</span>
 					{timeRemaining && (
 						<span className={`text-xs ${timeRemaining === 'Expiring soon' ? 'text-[var(--warning-600)]' : 'text-[var(--text-tertiary)]'}`}>
 							Session {timeRemaining}

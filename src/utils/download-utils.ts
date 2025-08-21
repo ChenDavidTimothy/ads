@@ -288,9 +288,9 @@ export async function downloadFile(
 
         return new Promise<Blob>((resolveBlob, rejectBlob) => {
           function read() {
-            reader.read().then(({ done, value }) => {
+            reader!.read().then(({ done, value }) => {
               if (done) {
-                const blob = new Blob(chunks, { type: file.mimeType || 'application/octet-stream' });
+                const blob = new Blob(chunks as BlobPart[], { type: file.mimeType || 'application/octet-stream' });
                 resolveBlob(blob);
                 return;
               }
@@ -348,7 +348,11 @@ export async function downloadFilesAsZip(
 
   // For single file, download directly without ZIP
   if (files.length === 1) {
-    return downloadFile(files[0], { onProgress, onComplete, onError, timeout });
+    const file = files[0];
+    if (!file) {
+      throw new Error('File not found');
+    }
+    return downloadFile(file, { onProgress, onComplete, onError, timeout });
   }
 
   const zip = new JSZip();
@@ -375,7 +379,7 @@ export async function downloadFilesAsZip(
       onProgress?.(Math.round((completedFiles / totalFiles) * 100), file.filename);
 
     } catch (error) {
-      const errorMessage = `Failed to download ${file.filename}: ${error.message}`;
+      const errorMessage = `Failed to download ${file.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       onError?.(errorMessage, file.filename);
       throw error;
     }
@@ -399,7 +403,7 @@ export async function downloadFilesAsZip(
     onComplete?.();
 
   } catch (error) {
-    const errorMessage = `ZIP creation failed: ${error.message}`;
+    const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     onError?.(errorMessage);
     throw new Error(errorMessage);
   }
@@ -674,7 +678,7 @@ async function handleStreamingDownload(
     }
   }
 
-  const blob = new Blob(chunks, { type: file.mimeType || 'application/octet-stream' });
+  const blob = new Blob(chunks as BlobPart[], { type: file.mimeType || 'application/octet-stream' });
 
   // Use the force download function
   forceDownload(blob, file.filename);

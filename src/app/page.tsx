@@ -69,15 +69,9 @@ export default async function LandingPage() {
             <div className="flex items-center gap-3">
               <Link 
                 href="/login"
-                className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                className="px-6 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
               >
                 Sign In
-              </Link>
-              <Link 
-                href="/register"
-                className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
-              >
-                Get Started
               </Link>
             </div>
           </div>
@@ -98,7 +92,7 @@ export default async function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Link 
-                href="/register"
+                href="/login"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg hover:opacity-90 transition-all font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Start Creating Free <ArrowRight className="w-5 h-5" />
@@ -192,7 +186,7 @@ export default async function LandingPage() {
                 </li>
               </ul>
               <Link 
-                href="/register"
+                href="/login"
                 className="w-full block text-center px-6 py-3 border border-[var(--border-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors"
               >
                 Get Started
@@ -230,7 +224,7 @@ export default async function LandingPage() {
                 </li>
               </ul>
               <Link 
-                href="/register"
+                href="/login"
                 className="w-full block text-center px-6 py-3 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
               >
                 Start Pro Trial
@@ -278,17 +272,10 @@ export default async function LandingPage() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
-                href="/register"
+                href="/login"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg hover:opacity-90 transition-all font-semibold text-lg"
               >
                 Start Your Free Account <ArrowRight className="w-5 h-5" />
-              </Link>
-              
-              <Link 
-                href="/login"
-                className="inline-flex items-center justify-center px-8 py-4 border border-[var(--border-primary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-2)] transition-colors font-semibold"
-              >
-                Already have an account?
               </Link>
             </div>
 
