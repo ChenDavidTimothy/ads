@@ -780,8 +780,8 @@ export const NODE_DEFINITIONS = {
     rendering: {
       icon: '🖼️',
       colors: {
-        primary: 'bg-[var(--node-input)]',
-        handle: '!bg-[var(--node-input)]',
+        primary: 'bg-[var(--node-image)]',
+        handle: '!bg-[var(--node-image)]',
       }
     },
     defaults: {}

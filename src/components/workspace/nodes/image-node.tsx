@@ -22,15 +22,9 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-2 text-xs text-[var(--text-secondary)]">
-        <div className="w-full h-16 bg-[var(--surface-2)] rounded flex items-center justify-center">
-          <Image size={16} className="text-[var(--text-tertiary)]" />
-        </div>
-        
-        <div className="space-y-1">
-          <div className="text-[var(--text-tertiary)]">
-            Image node - connect to Media node for editing
-          </div>
+      <CardContent className="p-0 space-y-1 text-xs text-[var(--text-secondary)]">
+        <div className="text-[var(--text-tertiary)]">
+          Connect to Media node for editing
         </div>
       </CardContent>
 
