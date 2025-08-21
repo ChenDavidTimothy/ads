@@ -313,7 +313,6 @@ function SchemaBasedProperties({
               onChange({ [schema.key]: casted } as Partial<NodeData>);
             }}
             options={schema.options}
-            bindAdornment={supportsBinding && nodeId ? (<BindButton nodeId={nodeId} bindingKey={schema.key} />) : undefined}
           />
         );
 

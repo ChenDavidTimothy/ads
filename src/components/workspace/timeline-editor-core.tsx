@@ -954,9 +954,6 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
               { value: "fill", label: "Fill" },
               { value: "stroke", label: "Stroke" },
             ]}
-            bindAdornment={bindButton(`color.property`)}
-            disabled={isBound('color.property')}
-            inputClassName={leftBorderClass('color.property')}
           />
           
           {/* Color Fields - Two Column */}
