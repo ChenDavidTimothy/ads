@@ -837,96 +837,14 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     };
   }, [validationErrors]);
 
-  // Multi-video download functions
-  const handleDownloadAll = useCallback(async () => {
-    const completedVideos = videos.filter(v => v.status === 'completed' && v.videoUrl);
-    if (completedVideos.length === 0) {
-      toast.warning('No videos to download', 'Wait for videos to complete first');
-      return;
-    }
 
-    try {
-      for (const video of completedVideos) {
-        const link = document.createElement('a');
-        link.href = video.videoUrl!;
-        link.download = `${video.sceneName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Small delay between downloads to avoid browser blocking
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      toast.success(`Downloading ${completedVideos.length} videos`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try downloading videos individually');
-    }
-  }, [videos, toast]);
 
-  const handleDownloadVideo = useCallback((jobId: string) => {
-    const video = videos.find(v => v.jobId === jobId);
-    if (!video?.videoUrl) {
-      toast.warning('Video not ready', 'Please wait for the video to complete');
-      return;
-    }
 
-    try {
-      const link = document.createElement('a');
-      link.href = video.videoUrl;
-      link.download = `${video.sceneName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`Downloading ${video.sceneName}`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try right-clicking the video and selecting "Save video as..."');
-    }
-  }, [videos, toast]);
 
-  // Image download helpers
-  const handleDownloadAllImages = useCallback(async () => {
-    const completedImages = images.filter(i => i.status === 'completed' && i.imageUrl);
-    if (completedImages.length === 0) {
-      toast.warning('No images to download', 'Wait for images to complete first');
-      return;
-    }
-    try {
-      for (const img of completedImages) {
-        const link = document.createElement('a');
-        link.href = img.imageUrl!;
-        const ext = img.imageUrl!.toLowerCase().includes('jpeg') || img.imageUrl!.toLowerCase().includes('jpg') ? 'jpg' : 'png';
-        link.download = `${img.frameName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      toast.success(`Downloading ${completedImages.length} images`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try downloading images individually');
-    }
-  }, [images, toast]);
 
-  const handleDownloadImage = useCallback((jobId: string) => {
-    const img = images.find(i => i.jobId === jobId);
-    if (!img?.imageUrl) {
-      toast.warning('Image not ready', 'Please wait for the image to complete');
-      return;
-    }
-    try {
-      const link = document.createElement('a');
-      link.href = img.imageUrl;
-      const ext = img.imageUrl.toLowerCase().includes('jpeg') || img.imageUrl.toLowerCase().includes('jpg') ? 'jpg' : 'png';
-      link.download = `${img.frameName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`Downloading ${img.frameName}`, 'Check your downloads folder');
-    } catch {
-      toast.error('Download failed', 'Please try right-clicking the image and selecting "Save image as..."');
-    }
-  }, [images, toast]);
+
+
+
 
   return { 
     // Legacy single video support
@@ -940,14 +858,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     videos,
     hasVideos: videos.length > 0,
     completedVideos: videos.filter(v => v.status === 'completed'),
-    handleDownloadAll,
-    handleDownloadVideo,
-    
+
     // Multi-image support
     images,
     completedImages: images.filter(i => i.status === 'completed'),
-    handleDownloadAllImages,
-    handleDownloadImage,
     
     // Generation state
     canGenerate, 

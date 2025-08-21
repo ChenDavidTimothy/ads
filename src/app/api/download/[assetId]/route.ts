@@ -13,10 +13,10 @@ interface Asset {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { assetId: string } }
+  { params }: { params: Promise<{ assetId: string }> }
 ) {
   try {
-    const assetId = params.assetId;
+    const { assetId } = await params;
 
     if (!assetId) {
       return NextResponse.json(

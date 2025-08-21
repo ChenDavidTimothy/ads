@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { 
-  Image, 
-  Video, 
-  Trash2, 
-  MoreVertical, 
+import {
+  Image,
+  Video,
+  Trash2,
+  MoreVertical,
   Download,
   Info,
   Calendar,
@@ -16,6 +16,8 @@ import NextImage from 'next/image';
 import { cn } from '@/lib/utils';
 import type { AssetResponse } from '@/shared/types/assets';
 import { formatFileSize, isImage, isVideo } from '@/shared/types/assets';
+import { downloadFile } from '@/utils/download-utils';
+import { useNotifications } from '@/hooks/use-notifications';
 
 interface AssetGridProps {
   assets: AssetResponse[];
@@ -96,6 +98,9 @@ function AssetCard({
   isDeleting,
   selectionMode,
 }: AssetCardProps) {
+  const { toast } = useNotifications();
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handleCardClick = () => {
     if (selectionMode) {
       onSelect();
@@ -104,15 +109,59 @@ function AssetCard({
     }
   };
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    if (asset.public_url) {
-      const link = document.createElement('a');
-      link.href = asset.public_url;
-      link.download = asset.original_name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+
+
+    if (!asset.public_url) {
+      toast.error('Download Failed', 'Asset URL not available');
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      // Use the enhanced download utility for better reliability
+      await downloadFile(
+        {
+          url: `/api/download/${asset.id}`,
+          filename: asset.original_name,
+          mimeType: asset.mime_type,
+          size: asset.file_size,
+          assetId: asset.id,
+        },
+        {
+          onProgress: (progress) => {
+            // Progress tracking can be added here if needed
+          },
+          onComplete: () => {
+            toast.success('Download Complete', `${asset.original_name} has been downloaded`);
+          },
+          onError: (error, filename) => {
+            toast.error('Download Failed', `Failed to download ${filename}: ${error}`);
+          },
+          timeout: 120000, // 2 minutes for assets
+        }
+      );
+    } catch (error) {
+      // Fallback to simple download method
+      try {
+        const link = document.createElement('a');
+        link.href = `/api/download/${asset.id}`;
+        link.download = asset.original_name;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Download Started', `${asset.original_name} is being downloaded`);
+      } catch (fallbackError) {
+        toast.error('Download Failed', 'Unable to download file');
+      }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -221,10 +270,11 @@ function AssetCard({
                 variant="ghost"
                 size="xs"
                 onClick={handleDownload}
+                disabled={isDownloading}
                 className="flex-1"
               >
                 <Download size={12} className="mr-1" />
-                Download
+                {isDownloading ? 'Downloading...' : 'Download'}
               </Button>
               
               <Button

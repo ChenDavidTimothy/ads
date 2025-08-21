@@ -4,9 +4,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Save, Download, Play, Image as ImageIcon } from 'lucide-react';
+import { Save, Download, Play, Image as ImageIcon, Archive } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { useNotifications } from '@/hooks/use-notifications';
+import { usePreviewDownloads } from '@/hooks/use-preview-downloads';
 
 interface VideoJob {
   jobId: string;
@@ -93,10 +94,10 @@ interface PreviewPanelProps {
   onDownloadAllImages?: () => void;
 }
 
-export function PreviewPanel({ 
-  videoUrl, 
-  videos, 
-  onDownloadVideo, 
+export function PreviewPanel({
+  videoUrl,
+  videos,
+  onDownloadVideo,
   onDownloadAll,
   imageUrl,
   images = [],
@@ -105,6 +106,18 @@ export function PreviewPanel({
 }: PreviewPanelProps) {
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Use the download hook for robust download functionality
+  const {
+    downloadVideo,
+    downloadImage,
+    downloadAllVideos,
+    downloadAllImages,
+    downloadAllContent,
+    isDownloading,
+    downloadProgress,
+    currentFile,
+  } = usePreviewDownloads({ videos, images });
 
   const hasMultipleVideos = videos.length > 0;
   const completedVideos = videos.filter(v => v.status === 'completed' && v.videoUrl);
@@ -153,6 +166,31 @@ export function PreviewPanel({
 
   return (
     <div className="space-y-[var(--space-4)]">
+      {/* Download Progress Indicator */}
+      {isDownloading && (
+        <div className="bg-[var(--surface-1)] rounded-[var(--radius-md)] border border-[var(--border-primary)] p-[var(--space-4)]">
+          <div className="flex items-center justify-between mb-[var(--space-2)]">
+            <div className="text-sm text-refined-medium text-[var(--text-secondary)]">
+              Downloading...
+            </div>
+            <div className="text-xs text-refined text-[var(--text-tertiary)]">
+              {downloadProgress}%
+            </div>
+          </div>
+          <div className="w-full bg-[var(--surface-2)] rounded-full h-2">
+            <div
+              className="bg-[var(--accent-primary)] h-2 rounded-full transition-all duration-300"
+              style={{ width: `${downloadProgress}%` }}
+            />
+          </div>
+          {currentFile && (
+            <div className="text-xs text-refined text-[var(--text-tertiary)] mt-[var(--space-1)] truncate">
+              {currentFile}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Single Image Preview */}
       {hasSingleImage && !hasMultipleImages && (
         <div className="space-y-[var(--space-3)]">
@@ -189,10 +227,16 @@ export function PreviewPanel({
                 Images ({completedImages.length}/{images.length} ready)
               </div>
             </div>
-            {onDownloadAllImages && completedImages.length > 1 && (
-              <Button onClick={onDownloadAllImages} variant="glass" size="sm" className="text-refined text-[var(--text-primary)] hover:text-[var(--accent-primary)]">
-                <Download size={12} className="mr-[var(--space-1)]" />
-                Download All
+            {completedImages.length > 1 && (
+              <Button
+                onClick={downloadAllImages}
+                disabled={isDownloading}
+                variant="glass"
+                size="sm"
+                className="text-refined text-[var(--text-primary)] hover:text-[var(--accent-primary)]"
+              >
+                <Archive size={12} className="mr-[var(--space-1)]" />
+                {isDownloading ? 'Downloading...' : 'Download All'}
               </Button>
             )}
           </div>
@@ -251,14 +295,16 @@ export function PreviewPanel({
                     )}
 
                     {/* Download button */}
-                    {onDownloadImage && img.status === 'completed' && (
+                    {img.status === 'completed' && img.imageUrl && (
                       <Button
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          onDownloadImage(img.jobId);
+                          downloadImage(img.jobId);
                         }}
                         variant="glass"
                         size="xs"
+                        disabled={isDownloading}
                         className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]"
                       >
                         <Download size={14} />
@@ -304,10 +350,16 @@ export function PreviewPanel({
                 Videos ({completedVideos.length}/{videos.length} ready)
               </div>
             </div>
-            {onDownloadAll && completedVideos.length > 1 && (
-              <Button onClick={onDownloadAll} variant="glass" size="sm" className="text-refined text-[var(--text-primary)] hover:text-[var(--accent-primary)]">
-                <Download size={12} className="mr-[var(--space-1)]" />
-                Download All
+            {completedVideos.length > 1 && (
+              <Button
+                onClick={downloadAllVideos}
+                disabled={isDownloading}
+                variant="glass"
+                size="sm"
+                className="text-refined text-[var(--text-primary)] hover:text-[var(--accent-primary)]"
+              >
+                <Archive size={12} className="mr-[var(--space-1)]" />
+                {isDownloading ? 'Downloading...' : 'Download All'}
               </Button>
             )}
           </div>
@@ -374,14 +426,16 @@ export function PreviewPanel({
                     )}
 
                     {/* Download button */}
-                    {onDownloadVideo && video.status === 'completed' && (
+                    {video.status === 'completed' && video.videoUrl && (
                       <Button
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          onDownloadVideo(video.jobId);
+                          downloadVideo(video.jobId);
                         }}
                         variant="glass"
                         size="xs"
+                        disabled={isDownloading}
                         className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]"
                       >
                         <Download size={14} />
