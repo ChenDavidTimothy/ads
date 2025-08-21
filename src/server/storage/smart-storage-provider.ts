@@ -508,12 +508,15 @@ export class SmartStorageProvider implements StorageProvider {
         .not('output_url', 'is', null)
         .lt('created_at', cutoffTime.toISOString());
 
+      // Type assertion for Supabase response
+      const typedOrphanedJobs = orphanedJobs as Array<{ id: string; output_url: string; created_at: string }> | null;
+
       if (error) {
         this.logger.error('Failed to fetch orphaned jobs for file cleanup:', error);
         return;
       }
 
-      if (!orphanedJobs || orphanedJobs.length === 0) {
+      if (!typedOrphanedJobs || typedOrphanedJobs.length === 0) {
         return;
       }
 
@@ -523,18 +526,23 @@ export class SmartStorageProvider implements StorageProvider {
         .select('metadata')
         .not('metadata->render_job_id', 'is', null);
 
+      // Type assertion for Supabase response
+      const typedSavedAssets = savedAssets as Array<{ metadata: { render_job_id?: string } }> | null;
+
       if (assetsError) {
         this.logger.error('Failed to fetch saved assets for cleanup:', assetsError);
         return;
       }
 
       const savedJobIds = new Set(
-        (savedAssets || [])
-          .map(asset => asset.metadata?.render_job_id as string)
-          .filter(Boolean)
+        (typedSavedAssets ?? [])
+          .map(asset => asset.metadata?.render_job_id)
+          .filter((jobId): jobId is string => typeof jobId === 'string')
       );
 
-      const filesToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
+      const filesToDelete = typedOrphanedJobs.filter((job): job is typeof job & { id: string; output_url: string } =>
+        typeof job.id === 'string' && typeof job.output_url === 'string' && !savedJobIds.has(job.id)
+      );
 
       if (filesToDelete.length === 0) {
         return;
@@ -585,12 +593,15 @@ export class SmartStorageProvider implements StorageProvider {
         .eq('status', 'completed')
         .lt('created_at', cutoffTime.toISOString());
 
+      // Type assertion for Supabase response
+      const typedOrphanedJobs = orphanedJobs as Array<{ id: string }> | null;
+
       if (error) {
         this.logger.error('Failed to fetch orphaned jobs for record cleanup:', error);
         return;
       }
 
-      if (!orphanedJobs || orphanedJobs.length === 0) {
+      if (!typedOrphanedJobs || typedOrphanedJobs.length === 0) {
         return;
       }
 
@@ -600,18 +611,21 @@ export class SmartStorageProvider implements StorageProvider {
         .select('metadata')
         .not('metadata->render_job_id', 'is', null);
 
+      // Type assertion for Supabase response
+      const typedSavedAssets = savedAssets as Array<{ metadata: { render_job_id?: string } }> | null;
+
       if (assetsError) {
         this.logger.error('Failed to fetch saved assets for record cleanup:', assetsError);
         return;
       }
 
       const savedJobIds = new Set(
-        (savedAssets || [])
-          .map(asset => asset.metadata?.render_job_id as string)
-          .filter(Boolean)
+        (typedSavedAssets ?? [])
+          .map(asset => asset.metadata?.render_job_id)
+          .filter((jobId): jobId is string => typeof jobId === 'string')
       );
 
-      const jobsToDelete = orphanedJobs.filter(job => !savedJobIds.has(job.id));
+      const jobsToDelete = typedOrphanedJobs.filter(job => !savedJobIds.has(job.id));
 
       if (jobsToDelete.length === 0) {
         return;
@@ -620,7 +634,7 @@ export class SmartStorageProvider implements StorageProvider {
       this.logger.info(`Cleaning up ${jobsToDelete.length} orphaned render job records`);
 
       // Delete orphaned render job records
-      const jobIds = jobsToDelete.map(job => job.id);
+      const jobIds = jobsToDelete.map(job => job.id).filter((id): id is string => typeof id === 'string');
       const { error: deleteError } = await this.supabase
         .from('render_jobs')
         .delete()

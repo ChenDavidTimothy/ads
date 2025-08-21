@@ -175,7 +175,6 @@ export function AssetsPanel() {
             onDrop={assetManagement.handleDrop}
             isDragOver={assetManagement.isDragOver}
             uploadProgress={assetManagement.uploadProgress}
-            onResetDragState={assetManagement.resetDragState}
           />
         </div>
       )}

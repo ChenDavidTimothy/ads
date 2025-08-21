@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
 
 interface Asset {
@@ -29,16 +30,27 @@ export async function GET(
     const supabaseClient = createServiceClient();
 
     // Fetch asset metadata from database
-    const { data: asset, error: assetError } = await supabaseClient
+    const result = await supabaseClient
       .from('user_assets')
       .select('*')
       .eq('id', assetId)
       .single();
 
-    if (assetError || !asset) {
+    if (result.error || !result.data) {
       return NextResponse.json(
         { error: 'Asset not found' },
         { status: 404 }
+      );
+    }
+
+    // Type assertion to ensure asset has expected structure
+    const asset = result.data as Asset;
+
+    // Type guard to ensure asset has required properties
+    if (!asset.bucket_name || !asset.storage_path) {
+      return NextResponse.json(
+        { error: 'Invalid asset data' },
+        { status: 400 }
       );
     }
 
@@ -66,7 +78,7 @@ export async function GET(
 
     // Set proper download headers
     const headers = new Headers();
-    headers.set('Content-Type', asset.mime_type || 'application/octet-stream');
+    headers.set('Content-Type', asset.mime_type ?? 'application/octet-stream');
     headers.set('Content-Disposition', `attachment; filename="${asset.original_name}"`);
     headers.set('Content-Length', buffer.byteLength.toString());
     headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');

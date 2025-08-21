@@ -846,9 +846,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
 
 
 
-  return { 
+  return {
     // Legacy single video support
-    videoUrl, 
+    videoUrl,
     handleDownload,
     hasVideo: Boolean(videoUrl),
     // Image support
@@ -862,14 +862,14 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     // Multi-image support
     images,
     completedImages: images.filter(i => i.status === 'completed'),
-    
+
     // Generation state
-    canGenerate, 
+    canGenerate,
     generateScene: {
       ...generateScene,
       isPending: isGenerating,
-    }, 
-    handleGenerateScene, 
+    },
+    handleGenerateScene,
     isSceneConnected,
 
     // Image generation
@@ -886,9 +886,15 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     isGenerating,
     validationErrors,
     getValidationSummary,
-    
+
     // NEW: Selective generation
     handleGenerateSelected,
+
+    // Download handlers for multiple videos/images
+    handleDownloadAll: handleDownload, // Use same handler for now
+    handleDownloadVideo: handleDownload, // Use same handler for now
+    handleDownloadAllImages: handleDownload, // Use same handler for now
+    handleDownloadImage: handleDownload, // Use same handler for now
   } as const;
 }
 

@@ -16,6 +16,7 @@ import { AssetSelectionModal } from './media/asset-selection-modal';
 import { Image, ImageOff, Settings } from 'lucide-react';
 import { api } from '@/trpc/react';
 import type { AssetResponse } from '@/shared/types/assets';
+import NextImage from 'next/image';
 
 // Badge Components (following typography pattern)
 function MediaBindingBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
@@ -67,19 +68,13 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
 
   // Direct assignment pattern (following typography)
   const imageAssetId: string = data?.imageAssetId ?? defImageAssetId;
-  const cropX = data?.cropX ?? def.cropX ?? 0;
-  const cropY = data?.cropY ?? def.cropY ?? 0;
-  const cropWidth = data?.cropWidth ?? def.cropWidth ?? 0;
-  const cropHeight = data?.cropHeight ?? def.cropHeight ?? 0;
-  const displayWidth = data?.displayWidth ?? def.displayWidth ?? 0;
-  const displayHeight = data?.displayHeight ?? def.displayHeight ?? 0;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
   
   // Helper to get value for bound fields - blank if bound, normal value if not
   const getValue = function<T>(key: string, defaultValue: T): T | undefined {
     if (isBound(key)) return undefined; // Blank when bound
-    return (data as any)?.[key] ?? defaultValue;
+    return (data as unknown as Record<string, unknown>)?.[key] as T ?? defaultValue;
   };
   
   const leftBorderClass = (key: string) => (
@@ -150,10 +145,12 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
                   {assetDetails.public_url && (
-                    <img
+                    <NextImage
                       key={`asset-img-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
+                      width={48}
+                      height={48}
                       className="w-full h-full object-cover"
                     />
                   )}
@@ -219,7 +216,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
             disabled={isBound('imageAssetId')}
             className={`w-full ${leftBorderClass('imageAssetId')}`}
           >
-            <Image size={14} className="mr-2" />
+            <Image size={14} className="mr-2" aria-label="Image icon" />
             {imageAssetId ? 'Change Image' : 'Override Image'}
           </Button>
           
@@ -404,7 +401,7 @@ function MediaPerObjectProperties({
   
   const assignment: ObjectAssignments = assignments[objectId] ?? {};
   const initial = assignment.initial ?? {};
-  const base = data as MediaNodeData; // Node-level values as fallback
+  const base = data ?? {} as MediaNodeData; // Node-level values as fallback
 
   // Binding detection
   const isBound = (key: string): boolean => {
@@ -490,10 +487,12 @@ function MediaPerObjectProperties({
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="w-12 h-12 bg-[var(--surface-1)] rounded overflow-hidden">
                   {assetDetails.public_url && (
-                    <img
+                    <NextImage
                       key={`asset-img-per-object-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
+                      width={48}
+                      height={48}
                       className="w-full h-full object-cover"
                     />
                   )}
@@ -559,7 +558,7 @@ function MediaPerObjectProperties({
             disabled={isBound('imageAssetId')}
             className={`w-full ${leftBorderClass('imageAssetId')}`}
           >
-            <Image size={14} className="mr-2" />
+            <Image size={14} className="mr-2" aria-label="Image icon" />
             {currentAssetId ? 'Change Image' : 'Override Image'}
           </Button>
           

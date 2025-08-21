@@ -32,7 +32,7 @@ async function downloadSupabaseFile(
   file: DownloadableFile,
   options: DownloadOptions = {}
 ): Promise<void> {
-  const { onProgress, onComplete, onError, timeout = 60000 } = options;
+  const { onComplete, onError, timeout = 60000 } = options;
 
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -46,7 +46,7 @@ async function downloadSupabaseFile(
     fetch(file.url, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType || '*/*',
+        'Accept': file.mimeType ?? '*/*',
         // Critical for Supabase downloads
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
@@ -70,9 +70,9 @@ async function downloadSupabaseFile(
       })
       .catch(error => {
         clearTimeout(timeoutId);
-        const errorMessage = error.name === 'AbortError'
+        const errorMessage = error instanceof Error && error.name === 'AbortError'
           ? 'Download was cancelled'
-          : `Supabase download failed: ${error.message}`;
+          : `Supabase download failed: ${error instanceof Error ? error.message : String(error)}`;
         console.error('❌ Supabase download error:', error);
         onError?.(errorMessage, file.filename);
         reject(new Error(errorMessage));
@@ -260,7 +260,7 @@ export async function downloadFile(
     fetch(downloadUrl, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType || '*/*',
+        'Accept': file.mimeType ?? '*/*',
         // Force the response to be treated as a download
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
@@ -280,7 +280,7 @@ export async function downloadFile(
         let loaded = 0;
 
         const reader = response.body?.getReader();
-        const chunks: Uint8Array[] = [];
+        const chunks: BlobPart[] = [];
 
         if (!reader) {
           throw new Error('Response body is not readable');
@@ -290,7 +290,7 @@ export async function downloadFile(
           function read() {
             reader!.read().then(({ done, value }) => {
               if (done) {
-                const blob = new Blob(chunks as BlobPart[], { type: file.mimeType || 'application/octet-stream' });
+                const blob = new Blob(chunks, { type: file.mimeType ?? 'application/octet-stream' });
                 resolveBlob(blob);
                 return;
               }
@@ -317,9 +317,9 @@ export async function downloadFile(
       })
       .catch(error => {
         clearTimeout(timeoutId);
-        const errorMessage = error.name === 'AbortError'
+        const errorMessage = error instanceof Error && error.name === 'AbortError'
           ? 'Download was cancelled'
-          : `Download failed: ${error.message}`;
+          : `Download failed: ${error instanceof Error ? error.message : String(error)}`;
         onError?.(errorMessage, file.filename);
         reject(new Error(errorMessage));
       });
@@ -362,7 +362,7 @@ export async function downloadFilesAsZip(
   const downloadPromises = files.map(async (file) => {
     try {
       const response = await fetch(file.url, {
-        headers: { 'Accept': file.mimeType || '*/*' },
+        headers: { 'Accept': file.mimeType ?? '*/*' },
       });
 
       if (!response.ok) {
@@ -379,7 +379,7 @@ export async function downloadFilesAsZip(
       onProgress?.(Math.round((completedFiles / totalFiles) * 100), file.filename);
 
     } catch (error) {
-      const errorMessage = `Failed to download ${file.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMessage = `Failed to download ${file.filename}: ${error instanceof Error ? error.message : String(error)}`;
       onError?.(errorMessage, file.filename);
       throw error;
     }
@@ -403,7 +403,7 @@ export async function downloadFilesAsZip(
     onComplete?.();
 
   } catch (error) {
-    const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : String(error)}`;
     onError?.(errorMessage);
     throw new Error(errorMessage);
   }
@@ -452,13 +452,13 @@ export function getExtensionFromMimeType(mimeType: string): string {
     'application/typescript': '.ts'
   };
 
-  return mimeToExt[mimeType] || '';
+  return mimeToExt[mimeType] ?? '';
 }
 
 /**
  * Generate a safe filename with timestamp
  */
-export function generateSafeFilename(baseName: string, extension: string = ''): string {
+export function generateSafeFilename(baseName: string, extension = '') {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const safeName = baseName.replace(/[<>:"/\\|?*]/g, '_');
   return `${safeName}_${timestamp}${extension}`;
@@ -538,25 +538,27 @@ export function shouldUseStreaming(fileSizeBytes: number): boolean {
 /**
  * Handle download errors with user-friendly messages
  */
-export function getErrorMessage(error: any): string {
-  if (error.name === 'AbortError') {
-    return 'Download was cancelled';
-  }
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.name === 'AbortError') {
+      return 'Download was cancelled';
+    }
 
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
-    return 'Network error - please check your internet connection';
-  }
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return 'Network error - please check your internet connection';
+    }
 
-  if (error.message.includes('HTTP')) {
-    return 'File not available or access denied';
-  }
+    if (error.message.includes('HTTP')) {
+      return 'File not available or access denied';
+    }
 
-  if (error.message.includes('quota')) {
-    return 'Storage quota exceeded';
-  }
+    if (error.message.includes('quota')) {
+      return 'Storage quota exceeded';
+    }
 
-  if (error.message.includes('timeout')) {
-    return 'Download timeout - file may be too large';
+    if (error.message.includes('timeout')) {
+      return 'Download timeout - file may be too large';
+    }
   }
 
   return 'Download failed - please try again';
@@ -600,7 +602,7 @@ export async function downloadFileEnhanced(
     const response = await fetch(file.url, {
       signal: controller.signal,
       headers: {
-        'Accept': file.mimeType || '*/*',
+        'Accept': file.mimeType ?? '*/*',
         'Cache-Control': 'no-cache',
       },
       mode: 'cors',
@@ -613,13 +615,13 @@ export async function downloadFileEnhanced(
     }
 
     const contentLength = response.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : file.size || 0;
+    const total = contentLength ? parseInt(contentLength, 10) : file.size ?? 0;
 
     // Use streaming for large files
     if (shouldUseStreaming(total)) {
       await handleStreamingDownload(response, file, total, onProgress);
     } else {
-      await handleStandardDownload(response, file, total, onProgress);
+      await handleStandardDownload(response, file);
     }
 
     onComplete?.();
@@ -637,9 +639,7 @@ export async function downloadFileEnhanced(
  */
 async function handleStandardDownload(
   response: Response,
-  file: DownloadableFile,
-  total: number,
-  onProgress?: (progress: number, file?: string) => void
+  file: DownloadableFile
 ): Promise<void> {
   const blob = await response.blob();
 
@@ -661,9 +661,8 @@ async function handleStreamingDownload(
     throw new Error('Response body is not readable');
   }
 
-  const chunks: Uint8Array[] = [];
+  const chunks: BlobPart[] = [];
   let receivedLength = 0;
-  const chunkSize = getOptimalChunkSize(total);
 
   while (true) {
     const { done, value } = await reader.read();
@@ -678,7 +677,7 @@ async function handleStreamingDownload(
     }
   }
 
-  const blob = new Blob(chunks as BlobPart[], { type: file.mimeType || 'application/octet-stream' });
+  const blob = new Blob(chunks, { type: file.mimeType ?? 'application/octet-stream' });
 
   // Use the force download function
   forceDownload(blob, file.filename);
@@ -687,7 +686,7 @@ async function handleStreamingDownload(
 /**
  * Estimate download time based on file size and connection speed
  */
-export function estimateDownloadTime(fileSizeBytes: number, connectionSpeedKbps: number = 1024): number {
+export function estimateDownloadTime(fileSizeBytes: number, connectionSpeedKbps = 1024): number {
   // Convert to bits and estimate time in seconds
   const fileSizeBits = fileSizeBytes * 8;
   const connectionSpeedBps = connectionSpeedKbps * 1024;

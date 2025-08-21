@@ -97,12 +97,12 @@ interface PreviewPanelProps {
 export function PreviewPanel({
   videoUrl,
   videos,
-  onDownloadVideo,
-  onDownloadAll,
+  onDownloadVideo: _onDownloadVideo,
+  onDownloadAll: _onDownloadAll,
   imageUrl,
   images = [],
-  onDownloadImage,
-  onDownloadAllImages
+  onDownloadImage: _onDownloadImage,
+  onDownloadAllImages: _onDownloadAllImages
 }: PreviewPanelProps) {
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -113,7 +113,6 @@ export function PreviewPanel({
     downloadImage,
     downloadAllVideos,
     downloadAllImages,
-    downloadAllContent,
     isDownloading,
     downloadProgress,
     currentFile,
@@ -300,7 +299,7 @@ export function PreviewPanel({
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          downloadImage(img.jobId);
+                          void downloadImage(img.jobId);
                         }}
                         variant="glass"
                         size="xs"
@@ -431,7 +430,7 @@ export function PreviewPanel({
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          downloadVideo(video.jobId);
+                          void downloadVideo(video.jobId);
                         }}
                         variant="glass"
                         size="xs"

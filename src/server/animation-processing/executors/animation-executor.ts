@@ -259,7 +259,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Apply per-object assignments (manual overrides)
     // Handle object ID prefix mismatch - try both prefixed and non-prefixed versions
-    const assignment = assignments?.[objectId] || assignments?.[objectId.replace(/^image_/, '')];
+    const assignment = assignments?.[objectId] ?? assignments?.[objectId.replace(/^image_/, '')];
     const initial = assignment?.initial ?? {};
 
     // Merge in the assignment overrides

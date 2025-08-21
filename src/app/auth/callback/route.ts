@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // Determine redirect destination
     let destination = "/dashboard";
     
-    if (redirectTo && redirectTo.startsWith("/")) {
+    if (redirectTo?.startsWith("/")) {
       // Validate redirect URL to prevent open redirects
       try {
         const redirectUrl = new URL(redirectTo, origin);

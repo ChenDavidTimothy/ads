@@ -33,7 +33,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
 
   const downloadVideo = useCallback(async (jobId: string) => {
     const video = videos.find(v => v.jobId === jobId);
-    if (!video || !video.videoUrl) {
+    if (!video?.videoUrl) {
       toast.error('Download Failed', 'Video not available');
       return;
     }
@@ -62,7 +62,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
           timeout: 120000, // 2 minutes for videos
         }
       );
-    } catch (error) {
+    } catch {
       // Error handling is done in callbacks
     } finally {
       setIsDownloading(false);
@@ -72,7 +72,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
   const downloadImage = useCallback(async (jobId: string) => {
     const image = images.find(i => i.jobId === jobId);
 
-    if (!image || !image.imageUrl) {
+    if (!image?.imageUrl) {
       toast.error('Download Failed', 'Image not available');
       return;
     }
@@ -101,7 +101,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
           timeout: 30000, // 30 seconds for images
         }
       );
-    } catch (error) {
+    } catch {
       // Error handling is done in callbacks
     } finally {
       setIsDownloading(false);
@@ -145,7 +145,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
           timeout: 300000, // 5 minutes for batch video downloads
         }
       );
-    } catch (error) {
+    } catch {
       // Error handling is done in callbacks
     } finally {
       setIsDownloading(false);
@@ -189,7 +189,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
           timeout: 120000, // 2 minutes for batch image downloads
         }
       );
-    } catch (error) {
+    } catch {
       // Error handling is done in callbacks
     } finally {
       setIsDownloading(false);
@@ -242,7 +242,7 @@ export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDown
           timeout: 300000, // 5 minutes for all content
         }
       );
-    } catch (error) {
+    } catch {
       // Error handling is done in callbacks
     } finally {
       setIsDownloading(false);

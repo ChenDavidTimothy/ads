@@ -32,7 +32,7 @@ export function MediaNode({ data, selected, onOpenMedia }: NodeProps<MediaNodeDa
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div className="w-6 h-6 bg-[var(--node-animation)] flex items-center justify-center rounded text-[var(--text-primary)]">
-            <Image size={12} />
+            <Image size={12} aria-label="Media node icon" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-[var(--text-primary)] truncate">

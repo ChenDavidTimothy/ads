@@ -11,13 +11,13 @@ function shouldInitializeServices(): boolean {
     console.log(`🔧 ${processConfig.processType} process detected - skipping service initialization`);
     return false;
   }
-  
+
   // Skip if explicitly disabled
   if (process.env.DISABLE_BACKGROUND_SERVICES === 'true') {
     console.log('🔧 Background services disabled via environment variable');
     return false;
   }
-  
+
   return true;
 }
 
@@ -34,4 +34,4 @@ export async function initializeBackgroundServices(): Promise<void> {
 }
 
 // Auto-initialize when this module is imported
-initializeBackgroundServices();
+void initializeBackgroundServices();

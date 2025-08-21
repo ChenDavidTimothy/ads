@@ -217,6 +217,8 @@ export function FlowEditorTab() {
 		videos,
 		canGenerate,
 		handleGenerateScene,
+		handleDownloadAll,
+		handleDownloadVideo,
 		lastError,
 		resetGeneration,
 		isGenerating,
@@ -227,6 +229,8 @@ export function FlowEditorTab() {
 		handleGenerateImage,
 		isGeneratingImage,
 		images,
+		handleDownloadAllImages,
+		handleDownloadImage,
 		// NEW: Selective generation
 		handleGenerateSelected,
 	} = useSceneGeneration(nodes, edges);
@@ -313,8 +317,12 @@ export function FlowEditorTab() {
 					// Preview panel props (moved from floating preview)
 					videoUrl={videoUrl}
 					videos={videos}
+					onDownloadVideo={handleDownloadVideo}
+					onDownloadAll={handleDownloadAll}
 					imageUrl={imageUrl}
 					images={images}
+					onDownloadImage={handleDownloadImage}
+					onDownloadAllImages={handleDownloadAllImages}
 				/>
 			)}
 		</div>

@@ -96,11 +96,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
   
-  // Helper to get value for bound fields - blank if bound, normal value if not
-  const getValue = function<T>(key: string, defaultValue: T): T | undefined {
-    if (isBound(key)) return undefined; // Blank when bound
-    return (data[key] as T) ?? defaultValue;
-  };
+
   
   const leftBorderClass = (key: string) => (
     isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : ''
@@ -118,7 +114,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <TextareaField
             label="Text Content"
-            value={getValue('content', 'Sample Text') ?? 'Sample Text'} 
+            value={content} 
             onChange={(content) => updateFlow({ 
               nodes: state.flow.nodes.map(n => 
                 n.data?.identifier?.id !== nodeId ? n : 
@@ -148,7 +144,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <SelectField
             label="Font Family"
-            value={data.fontFamily ?? 'Arial'}
+            value={fontFamily}
             onChange={(fontFamily) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontFamily } })) })}
             options={[
               { value: 'Arial', label: 'Arial' },
@@ -165,7 +161,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <NumberField
             label="Font Size (px)"
-            value={getValue('fontSize', 24)}
+            value={fontSize}
             onChange={(fontSize) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontSize } })) })}
             min={8} max={200} step={1}
             bindAdornment={<BindButton nodeId={nodeId} bindingKey="fontSize" />}
@@ -186,7 +182,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <SelectField
             label="Font Weight"
-            value={data.fontWeight ?? 'normal'}
+            value={fontWeight}
             onChange={(fontWeight) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontWeight } })) })}
             options={[
               { value: 'normal', label: 'Normal (400)' },
@@ -205,7 +201,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <SelectField
             label="Font Style"
-            value={data.fontStyle ?? 'normal'}
+            value={fontStyle}
             onChange={(fontStyle) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fontStyle } })) })}
             options={[
               { value: 'normal', label: 'Normal' },
@@ -225,7 +221,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <ColorField 
               label="Fill Color" 
-              value={getValue('fillColor', '#000000') ?? '#000000'} 
+              value={fillColor} 
               onChange={(fillColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, fillColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="fillColor" />}
               disabled={isBound('fillColor')}
@@ -242,7 +238,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           <div>
             <ColorField 
               label="Stroke Color" 
-              value={getValue('strokeColor', '#ffffff') ?? '#ffffff'} 
+              value={strokeColor} 
               onChange={(strokeColor) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeColor } })) })}
               bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeColor" />}
               disabled={isBound('strokeColor')}
@@ -262,7 +258,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
         <div>
           <NumberField 
             label="Stroke Width" 
-            value={getValue('strokeWidth', 0)} 
+            value={strokeWidth} 
             onChange={(strokeWidth) => updateFlow({ nodes: state.flow.nodes.map(n => n.data?.identifier?.id !== nodeId ? n : ({ ...n, data: { ...n.data, strokeWidth } })) })}
             min={0} max={10} step={0.1}
             bindAdornment={<BindButton nodeId={nodeId} bindingKey="strokeWidth" />}

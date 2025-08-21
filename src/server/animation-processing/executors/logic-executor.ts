@@ -1198,7 +1198,7 @@ export class LogicNodeExecutor extends BaseExecutor {
           ...anim,
           objectId: targetId,
           id: anim.id.replace(sourceId, targetId),
-          properties: JSON.parse(JSON.stringify(anim.properties)) // ✅ FIX: Deep clone properties
+          properties: JSON.parse(JSON.stringify(anim.properties)) as typeof anim.properties // ✅ FIX: Deep clone properties
         })) as SceneAnimationTrack[];
       } catch (error) {
         logger.warn(`Failed to clone animations for ${sourceId}→${targetId}:`, { error: String(error) });

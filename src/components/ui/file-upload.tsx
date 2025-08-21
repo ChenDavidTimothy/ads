@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Upload, File, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/shared/types/assets';
@@ -26,7 +25,7 @@ interface FileUploadProps {
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
-  onResetDragState?: () => void;
+
 }
 
 export function FileUpload({
@@ -42,7 +41,6 @@ export function FileUpload({
   multiple = true,
   disabled = false,
   className,
-  onResetDragState,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 

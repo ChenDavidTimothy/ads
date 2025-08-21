@@ -214,7 +214,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   }, [deleteAssetMutation]);
 
   // Drag state management with proper debouncing
-  const [dragCounter, setDragCounter] = useState(0);
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dragResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -222,7 +221,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   const resetStuckDragState = useCallback(() => {
     if (isDragOver) {
       setIsDragOver(false);
-      setDragCounter(0);
       if (dragTimeoutRef.current) {
         clearTimeout(dragTimeoutRef.current);
         dragTimeoutRef.current = null;
@@ -277,7 +275,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     e.stopPropagation();
 
     if (e.dataTransfer.types.includes('Files')) {
-      setDragCounter(prev => prev + 1);
       // Only update state if it's not already true
       if (!isDragOver) {
         setDragState(true);
@@ -300,13 +297,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     if (x < rect.left - tolerance || x > rect.right + tolerance ||
         y < rect.top - tolerance || y > rect.bottom + tolerance) {
 
-      setDragCounter(prev => {
-        const newCount = Math.max(0, prev - 1);
-        if (newCount === 0) {
-          setDragState(false);
-        }
-        return newCount;
-      });
+      setDragState(false);
     }
   }, [setDragState]);
 
@@ -328,7 +319,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     e.stopPropagation();
 
     // Reset drag state
-    setDragCounter(0);
     setDragState(false);
 
     // Clear any pending timeouts
@@ -373,7 +363,6 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   // Reset drag state function
   const resetDragState = useCallback(() => {
     setIsDragOver(false);
-    setDragCounter(0);
     if (dragTimeoutRef.current) {
       clearTimeout(dragTimeoutRef.current);
       dragTimeoutRef.current = null;

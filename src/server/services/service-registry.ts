@@ -11,7 +11,7 @@ export interface ServiceRegistry {
 
 class ServiceRegistryImpl implements ServiceRegistry {
   private isInitialized = false;
-  private services = new Map<string, { start: () => void; stop: () => void; getStatus: () => any }>();
+  private services = new Map<string, { start: () => void; stop: () => void; getStatus: () => unknown }>();
 
   constructor() {
     // Register services
@@ -31,8 +31,8 @@ class ServiceRegistryImpl implements ServiceRegistry {
       try {
         service.start();
         console.log(`✅ Started service: ${name}`);
-      } catch (error) {
-        console.error(`❌ Failed to start service ${name}:`, error);
+      } catch {
+        console.error(`❌ Failed to start service ${name}`);
       }
     }
 
@@ -52,8 +52,8 @@ class ServiceRegistryImpl implements ServiceRegistry {
       try {
         service.stop();
         console.log(`✅ Stopped service: ${name}`);
-      } catch (error) {
-        console.error(`❌ Failed to stop service ${name}:`, error);
+      } catch {
+        console.error(`❌ Failed to stop service ${name}`);
       }
     }
 
@@ -67,11 +67,14 @@ class ServiceRegistryImpl implements ServiceRegistry {
     for (const [name, service] of this.services) {
       try {
         const serviceStatus = service.getStatus();
+        const isRunning = serviceStatus && typeof serviceStatus === 'object' && 'isRunning' in serviceStatus && typeof serviceStatus.isRunning === 'boolean'
+          ? serviceStatus.isRunning
+          : false;
         status[name] = {
-          isRunning: serviceStatus.isRunning,
-          status: serviceStatus.isRunning ? 'Running' : 'Stopped'
+          isRunning,
+          status: isRunning ? 'Running' : 'Stopped'
         };
-      } catch (error) {
+      } catch {
         status[name] = { isRunning: false, status: 'Error' };
       }
     }
@@ -84,14 +87,14 @@ class ServiceRegistryImpl implements ServiceRegistry {
 export const serviceRegistry = new ServiceRegistryImpl();
 
 // Graceful shutdown handling
-process.on('SIGINT', async () => {
+process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT - shutting down gracefully...');
-  await serviceRegistry.shutdown();
+  void serviceRegistry.shutdown();
   process.exit(0);
 });
 
-process.on('SIGTERM', async () => {
+process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM - shutting down gracefully...');
-  await serviceRegistry.shutdown();
+  void serviceRegistry.shutdown();
   process.exit(0);
 });

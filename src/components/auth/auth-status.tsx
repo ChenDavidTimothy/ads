@@ -77,10 +77,10 @@ export function AuthStatus() {
 		}, refreshTime);
 	}, [showToastOnce, toast]);
 
-	const extractUserInfo = useCallback((user: any) => {
+	const extractUserInfo = useCallback((user: { email?: string; user_metadata?: { full_name?: string; name?: string; first_name?: string; last_name?: string } }): { email: string | null; displayName: string | null } => {
 		// Handle OAuth user data structure
-		const email = user.email || null;
-		let displayName = null;
+		const email = user.email ?? null;
+		let displayName: string | null = null;
 
 		// Try to get display name from various OAuth provider metadata
 		if (user.user_metadata?.full_name) {
@@ -137,7 +137,7 @@ export function AuthStatus() {
 					setEmail(userInfo.email);
 					setDisplayName(userInfo.displayName);
 					setAuthState('authenticated');
-					const newExpiresAt = new Date(refreshData.session.expires_at! * 1000);
+					const newExpiresAt = new Date((refreshData.session.expires_at ?? Date.now() / 1000 + 3600) * 1000);
 					setSessionExpiresAt(newExpiresAt);
 					scheduleSessionRefresh(newExpiresAt);
 				} else {
@@ -203,7 +203,7 @@ export function AuthStatus() {
 						setEmail(userInfo.email);
 						setDisplayName(userInfo.displayName);
 						setAuthState('authenticated');
-						const expiresAt = new Date(session.expires_at! * 1000);
+						const expiresAt = new Date((session.expires_at ?? Date.now() / 1000 + 3600) * 1000);
 						setSessionExpiresAt(expiresAt);
 						scheduleSessionRefresh(expiresAt);
 					}
@@ -231,7 +231,7 @@ export function AuthStatus() {
 						setEmail(userInfo.email);
 						setDisplayName(userInfo.displayName);
 						setAuthState('authenticated');
-						const expiresAt = new Date(session.expires_at! * 1000);
+						const expiresAt = new Date((session.expires_at ?? Date.now() / 1000 + 3600) * 1000);
 						setSessionExpiresAt(expiresAt);
 						scheduleSessionRefresh(expiresAt);
 					}
@@ -336,7 +336,7 @@ export function AuthStatus() {
 
 	// Show authenticated state
 	if (authState === 'authenticated' && email) {
-		const displayText = displayName || email;
+		const displayText = displayName ?? email;
 		return (
 			<div className="text-sm flex items-center gap-[var(--space-3)]">
 				<div className="flex flex-col">

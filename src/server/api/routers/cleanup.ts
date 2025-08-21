@@ -1,5 +1,5 @@
 // src/server/api/routers/cleanup.ts
-import { z } from "zod";
+
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { serviceRegistry } from "@/server/services/service-registry";
 
@@ -9,7 +9,7 @@ export const cleanupRouter = createTRPCRouter({
       const status = serviceRegistry.getStatus();
       const cleanupStatus = status.cleanup;
       return {
-        isRunning: cleanupStatus?.isRunning || false,
+        isRunning: cleanupStatus?.isRunning ?? false,
         message: cleanupStatus?.isRunning 
           ? "Cleanup service is running and cleaning orphaned files every 3 minutes"
           : "Cleanup service is not running"

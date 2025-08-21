@@ -19,7 +19,7 @@ const EDITOR_TABS: EditorTabConfig[] = [
   { key: 'timeline', label: 'Timeline', icon: <Timer size={16} />, requiredNodeType: 'animation' },
   { key: 'canvas', label: 'Canvas', icon: <ImageIcon size={16} />, requiredNodeType: 'canvas' },
   { key: 'typography', label: 'Typography', icon: <Type size={16} />, requiredNodeType: 'typography' },
-  { key: 'media', label: 'Media', icon: <Image size={16} />, requiredNodeType: 'media' },
+  { key: 'media', label: 'Media', icon: <Image size={16} aria-label="Media tab icon" />, requiredNodeType: 'media' },
   // future: image, audio
 ];
 

@@ -133,19 +133,19 @@ function AssetCard({
           assetId: asset.id,
         },
         {
-          onProgress: (progress) => {
+          onProgress: (_progress) => {
             // Progress tracking can be added here if needed
           },
           onComplete: () => {
             toast.success('Download Complete', `${asset.original_name} has been downloaded`);
           },
-          onError: (error, filename) => {
-            toast.error('Download Failed', `Failed to download ${filename}: ${error}`);
+          onError: (_, filename) => {
+            toast.error('Download Failed', `Failed to download ${filename}`);
           },
           timeout: 120000, // 2 minutes for assets
         }
       );
-    } catch (error) {
+    } catch {
       // Fallback to simple download method
       try {
         const link = document.createElement('a');
@@ -158,6 +158,7 @@ function AssetCard({
         document.body.removeChild(link);
         toast.success('Download Started', `${asset.original_name} is being downloaded`);
       } catch (fallbackError) {
+        console.error('Fallback download failed:', fallbackError);
         toast.error('Download Failed', 'Unable to download file');
       }
     } finally {
