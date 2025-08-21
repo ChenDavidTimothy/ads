@@ -727,29 +727,41 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
           <div className="space-y-[var(--space-2)]">
             <div className="text-xs text-[var(--text-secondary)] font-medium">From Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
-              <NumberField
-                label={labelWithOverride("X")}
-                value={getTrackFieldValue("move.from.x", getOverrideProperty<number>("from.x"), track.properties.from.x)}
-                onChange={(x) => updateProperties({ from: { x } } as Partial<MoveTrackProperties>)}
-                defaultValue={0}
-                bindAdornment={bindButton(`move.from.x`)}
-                disabled={isBound('move.from.x')}
-                inputClassName={leftBorderClass('move.from.x')}
-                className=""
-              />
-              <NumberField
-                label={labelWithOverride("Y")}
-                value={getTrackFieldValue("move.from.y", getOverrideProperty<number>("from.y"), track.properties.from.y)}
-                onChange={(y) => updateProperties({ from: { y } } as Partial<MoveTrackProperties>)}
-                defaultValue={0}
-                bindAdornment={bindButton(`move.from.y`)}
-                disabled={isBound('move.from.y')}
-                inputClassName={leftBorderClass('move.from.y')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <FieldBadges keyName="move.from.x" />
-              <FieldBadges keyName="move.from.y" />
+              <div>
+                <NumberField
+                  label={labelWithOverride("X")}
+                  value={getTrackFieldValue("move.from.x", getOverrideProperty<number>("from.x"), track.properties.from.x)}
+                  onChange={(x) => updateProperties({ from: { x } } as Partial<MoveTrackProperties>)}
+                  defaultValue={0}
+                  bindAdornment={bindButton(`move.from.x`)}
+                  disabled={isBound('move.from.x')}
+                  inputClassName={leftBorderClass('move.from.x')}
+                  className=""
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('move.from.x') || isFieldBound('move.from.x')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="move.from.x" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <NumberField
+                  label={labelWithOverride("Y")}
+                  value={getTrackFieldValue("move.from.y", getOverrideProperty<number>("from.y"), track.properties.from.y)}
+                  onChange={(y) => updateProperties({ from: { y } } as Partial<MoveTrackProperties>)}
+                  defaultValue={0}
+                  bindAdornment={bindButton(`move.from.y`)}
+                  disabled={isBound('move.from.y')}
+                  inputClassName={leftBorderClass('move.from.y')}
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('move.from.y') || isFieldBound('move.from.y')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="move.from.y" />
+                  </div>
+                )}
+              </div>
             </div>
             
           </div>
@@ -758,28 +770,40 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
           <div className="space-y-[var(--space-2)]">
             <div className="text-xs text-[var(--text-secondary)] font-medium">To Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
-              <NumberField
-                label={labelWithOverride("X")}
-                value={getTrackFieldValue("move.to.x", getOverrideProperty<number>("to.x"), track.properties.to.x)}
-                onChange={(x) => updateProperties({ to: { x } } as Partial<MoveTrackProperties>)}
-                defaultValue={100}
-                bindAdornment={bindButton(`move.to.x`)}
-                disabled={isBound('move.to.x')}
-                inputClassName={leftBorderClass('move.to.x')}
-              />
-              <NumberField
-                label={labelWithOverride("Y")}
-                value={getTrackFieldValue("move.to.y", getOverrideProperty<number>("to.y"), track.properties.to.y)}
-                onChange={(y) => updateProperties({ to: { y } } as Partial<MoveTrackProperties>)}
-                defaultValue={100}
-                bindAdornment={bindButton(`move.to.y`)}
-                disabled={isBound('move.to.y')}
-                inputClassName={leftBorderClass('move.to.y')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <FieldBadges keyName="move.to.x" />
-              <FieldBadges keyName="move.to.y" />
+              <div>
+                <NumberField
+                  label={labelWithOverride("X")}
+                  value={getTrackFieldValue("move.to.x", getOverrideProperty<number>("to.x"), track.properties.to.x)}
+                  onChange={(x) => updateProperties({ to: { x } } as Partial<MoveTrackProperties>)}
+                  defaultValue={100}
+                  bindAdornment={bindButton(`move.to.x`)}
+                  disabled={isBound('move.to.x')}
+                  inputClassName={leftBorderClass('move.to.x')}
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('move.to.x') || isFieldBound('move.to.x')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="move.to.x" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <NumberField
+                  label={labelWithOverride("Y")}
+                  value={getTrackFieldValue("move.to.y", getOverrideProperty<number>("to.y"), track.properties.to.y)}
+                  onChange={(y) => updateProperties({ to: { y } } as Partial<MoveTrackProperties>)}
+                  defaultValue={100}
+                  bindAdornment={bindButton(`move.to.y`)}
+                  disabled={isBound('move.to.y')}
+                  inputClassName={leftBorderClass('move.to.y')}
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('move.to.y') || isFieldBound('move.to.y')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="move.to.y" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -789,30 +813,42 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
         <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Rotate Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <NumberField
-              label={labelWithOverride("From")}
-              value={getTrackFieldValue("rotate.from", getOverrideProperty<number>("from"), track.properties.from)}
-              onChange={(from) => updateProperties({ from })}
-              step={0.1}
-              defaultValue={0}
-              bindAdornment={bindButton(`rotate.from`)}
-              disabled={isBound('rotate.from')}
-              inputClassName={leftBorderClass('rotate.from')}
-            />
-            <NumberField
-              label={labelWithOverride("To")}
-              value={getTrackFieldValue("rotate.to", getOverrideProperty<number>("to"), track.properties.to)}
-              onChange={(to) => updateProperties({ to })}
-              step={0.1}
-              defaultValue={1}
-              bindAdornment={bindButton(`rotate.to`)}
-              disabled={isBound('rotate.to')}
-              inputClassName={leftBorderClass('rotate.to')}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <FieldBadges keyName="rotate.from" />
-            <FieldBadges keyName="rotate.to" />
+            <div>
+              <NumberField
+                label={labelWithOverride("From")}
+                value={getTrackFieldValue("rotate.from", getOverrideProperty<number>("from"), track.properties.from)}
+                onChange={(from) => updateProperties({ from })}
+                step={0.1}
+                defaultValue={0}
+                bindAdornment={bindButton(`rotate.from`)}
+                disabled={isBound('rotate.from')}
+                inputClassName={leftBorderClass('rotate.from')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('rotate.from') || isFieldBound('rotate.from')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="rotate.from" />
+                </div>
+              )}
+            </div>
+            <div>
+              <NumberField
+                label={labelWithOverride("To")}
+                value={getTrackFieldValue("rotate.to", getOverrideProperty<number>("to"), track.properties.to)}
+                onChange={(to) => updateProperties({ to })}
+                step={0.1}
+                defaultValue={1}
+                bindAdornment={bindButton(`rotate.to`)}
+                disabled={isBound('rotate.to')}
+                inputClassName={leftBorderClass('rotate.to')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('rotate.to') || isFieldBound('rotate.to')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="rotate.to" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -821,30 +857,42 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
         <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Scale Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <NumberField
-              label={labelWithOverride("From")}
-              value={getTrackFieldValue("scale.from", getOverrideProperty<number>("from"), track.properties.from)}
-              onChange={(from) => updateProperties({ from })}
-              step={0.1}
-              defaultValue={1}
-              bindAdornment={bindButton(`scale.from`)}
-              disabled={isBound('scale.from')}
-              inputClassName={leftBorderClass('scale.from')}
-            />
-            <NumberField
-              label={labelWithOverride("To")}
-              value={getTrackFieldValue("scale.to", getOverrideProperty<number>("to"), track.properties.to)}
-              onChange={(to) => updateProperties({ to })}
-              step={0.1}
-              defaultValue={2}
-              bindAdornment={bindButton(`scale.to`)}
-              disabled={isBound('scale.to')}
-              inputClassName={leftBorderClass('scale.to')}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <FieldBadges keyName="scale.from" />
-            <FieldBadges keyName="scale.to" />
+            <div>
+              <NumberField
+                label={labelWithOverride("From")}
+                value={getTrackFieldValue("scale.from", getOverrideProperty<number>("from"), track.properties.from)}
+                onChange={(from) => updateProperties({ from })}
+                step={0.1}
+                defaultValue={1}
+                bindAdornment={bindButton(`scale.from`)}
+                disabled={isBound('scale.from')}
+                inputClassName={leftBorderClass('scale.from')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('scale.from') || isFieldBound('scale.from')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="scale.from" />
+                </div>
+              )}
+            </div>
+            <div>
+              <NumberField
+                label={labelWithOverride("To")}
+                value={getTrackFieldValue("scale.to", getOverrideProperty<number>("to"), track.properties.to)}
+                onChange={(to) => updateProperties({ to })}
+                step={0.1}
+                defaultValue={2}
+                bindAdornment={bindButton(`scale.to`)}
+                disabled={isBound('scale.to')}
+                inputClassName={leftBorderClass('scale.to')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('scale.to') || isFieldBound('scale.to')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="scale.to" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -853,30 +901,42 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
         <div className="space-y-[var(--space-3)]">
           <div className="text-sm font-medium text-[var(--text-primary)] border-b border-[var(--border-primary)] pb-[var(--space-2)]">Fade Properties</div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <NumberField
-              label={labelWithOverride("From")}
-              value={getTrackFieldValue("fade.from", getOverrideProperty<number>("from"), track.properties.from)}
-              onChange={(from) => updateProperties({ from })}
-              step={0.05}
-              defaultValue={1}
-              bindAdornment={bindButton(`fade.from`)}
-              disabled={isBound('fade.from')}
-              inputClassName={leftBorderClass('fade.from')}
-            />
-            <NumberField
-              label={labelWithOverride("To")}
-              value={getTrackFieldValue("fade.to", getOverrideProperty<number>("to"), track.properties.to)}
-              onChange={(to) => updateProperties({ to })}
-              step={0.05}
-              defaultValue={0}
-              bindAdornment={bindButton(`fade.to`)}
-              disabled={isBound('fade.to')}
-              inputClassName={leftBorderClass('fade.to')}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-            <FieldBadges keyName="fade.from" />
-            <FieldBadges keyName="fade.to" />
+            <div>
+              <NumberField
+                label={labelWithOverride("From")}
+                value={getTrackFieldValue("fade.from", getOverrideProperty<number>("from"), track.properties.from)}
+                onChange={(from) => updateProperties({ from })}
+                step={0.05}
+                defaultValue={1}
+                bindAdornment={bindButton(`fade.from`)}
+                disabled={isBound('fade.from')}
+                inputClassName={leftBorderClass('fade.from')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('fade.from') || isFieldBound('fade.from')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="fade.from" />
+                </div>
+              )}
+            </div>
+            <div>
+              <NumberField
+                label={labelWithOverride("To")}
+                value={getTrackFieldValue("fade.to", getOverrideProperty<number>("to"), track.properties.to)}
+                onChange={(to) => updateProperties({ to })}
+                step={0.05}
+                defaultValue={0}
+                bindAdornment={bindButton(`fade.to`)}
+                disabled={isBound('fade.to')}
+                inputClassName={leftBorderClass('fade.to')}
+              />
+              {/* Badge - Only show when needed */}
+              {(isFieldOverridden('fade.to') || isFieldBound('fade.to')) && (
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                  <FieldBadges keyName="fade.to" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -903,26 +963,38 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
           <div className="space-y-[var(--space-2)]">
             <div className="text-xs text-[var(--text-secondary)] font-medium">Color Values</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
-              <ColorField 
-                label={labelWithOverride("From")}
-                value={getTrackFieldValue("color.from", getOverrideProperty<string>("from"), track.properties.from) ?? track.properties.from} 
-                onChange={(from) => updateProperties({ from })} 
-                bindAdornment={bindButton(`color.from`)} 
-                disabled={isBound('color.from')}
-                inputClassName={leftBorderClass('color.from')}
-              />
-              <ColorField 
-                label={labelWithOverride("To")}
-                value={getTrackFieldValue("color.to", getOverrideProperty<string>("to"), track.properties.to) ?? track.properties.to} 
-                onChange={(to) => updateProperties({ to })} 
-                bindAdornment={bindButton(`color.to`)} 
-                disabled={isBound('color.to')}
-                inputClassName={leftBorderClass('color.to')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-[var(--space-2)] text-[10px] text-[var(--text-tertiary)]">
-              <FieldBadges keyName="color.from" />
-              <FieldBadges keyName="color.to" />
+              <div>
+                <ColorField 
+                  label={labelWithOverride("From")}
+                  value={getTrackFieldValue("color.from", getOverrideProperty<string>("from"), track.properties.from) ?? track.properties.from} 
+                  onChange={(from) => updateProperties({ from })} 
+                  bindAdornment={bindButton(`color.from`)} 
+                  disabled={isBound('color.from')}
+                  inputClassName={leftBorderClass('color.from')}
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('color.from') || isFieldBound('color.from')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="color.from" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <ColorField 
+                  label={labelWithOverride("To")}
+                  value={getTrackFieldValue("color.to", getOverrideProperty<string>("to"), track.properties.to) ?? track.properties.to} 
+                  onChange={(to) => updateProperties({ to })} 
+                  bindAdornment={bindButton(`color.to`)} 
+                  disabled={isBound('color.to')}
+                  inputClassName={leftBorderClass('color.to')}
+                />
+                {/* Badge - Only show when needed */}
+                {(isFieldOverridden('color.to') || isFieldBound('color.to')) && (
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-[var(--space-1)]">
+                    <FieldBadges keyName="color.to" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
