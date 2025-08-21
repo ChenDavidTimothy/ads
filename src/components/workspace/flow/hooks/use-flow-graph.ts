@@ -292,6 +292,16 @@ export function useFlowGraph() {
 
   const onNodesDelete = useCallback(
     (deletedNodes: Node<NodeData>[]) => {
+      // Prevent deletion if it would leave the workspace empty
+      const remainingNodes = nodes.length - deletedNodes.length;
+      if (remainingNodes === 0) {
+        toast.error(
+          "Cannot delete the last node",
+          "At least one node must remain in the workspace to maintain scene structure."
+        );
+        return;
+      }
+
       // Remove from flow tracker
       deletedNodes.forEach((node: Node<NodeData>) => {
         flowTracker.removeNode(node.data.identifier.id);
@@ -305,7 +315,7 @@ export function useFlowGraph() {
         ),
       );
     },
-    [flowTracker, setNodes],
+    [flowTracker, setNodes, nodes.length, toast],
   );
 
   const onEdgesDelete = useCallback(
