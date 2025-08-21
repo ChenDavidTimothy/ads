@@ -195,7 +195,7 @@ function LoginForm() {
     <div className="min-h-screen bg-[var(--surface-0)] flex flex-col">
       {/* Header */}
       <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-[var(--space-6)] py-[var(--space-4)] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
@@ -213,11 +213,11 @@ function LoginForm() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-[var(--space-6)] py-[var(--space-8)]">
         <div className="w-full max-w-md">
           {/* Form Container */}
-          <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-8 backdrop-blur-sm shadow-[var(--glass-shadow-lg)]">
-            <div className="text-center mb-8">
+          <div className="glass-panel rounded-[var(--radius-lg)] p-[var(--space-6)]">
+            <div className="text-center mb-[var(--space-6)]">
               <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
                 Welcome back
               </h1>
@@ -226,9 +226,9 @@ function LoginForm() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-[var(--space-6)]">
               {/* Email Field */}
-              <div className="space-y-2">
+              <div className="space-y-[var(--space-2)]">
                 <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)]">
                   Email address
                 </label>
@@ -243,7 +243,7 @@ function LoginForm() {
                     required
                     value={email}
                     onChange={handleEmailChange}
-                    className="w-full pl-10 pr-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full pl-10 pr-[var(--space-4)] py-[var(--space-4)] glass-input rounded-[var(--radius-md)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Enter your email"
                     disabled={loading || isRateLimited}
                     autoFocus
@@ -252,7 +252,7 @@ function LoginForm() {
               </div>
 
               {/* Password Field */}
-              <div className="space-y-2">
+              <div className="space-y-[var(--space-2)]">
                 <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)]">
                   Password
                 </label>
@@ -267,7 +267,7 @@ function LoginForm() {
                     required
                     value={password}
                     onChange={handlePasswordChange}
-                    className="w-full pl-10 pr-12 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent outline-none transition-all text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full pl-10 pr-12 py-[var(--space-4)] glass-input rounded-[var(--radius-md)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Enter your password"
                     disabled={loading || isRateLimited}
                   />
@@ -294,7 +294,7 @@ function LoginForm() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-[var(--border-primary)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)] focus:ring-2 focus:ring-offset-0 bg-[var(--glass-bg)]"
+                    className="w-4 h-4 rounded-[var(--radius-sharp)] border-[var(--border-primary)] text-[var(--accent-primary)] focus:ring-[var(--ring-color)] focus:ring-1 focus:ring-offset-1 focus:ring-offset-[var(--surface-0)] bg-[var(--glass-bg)]"
                     disabled={loading || isRateLimited}
                   />
                   <label htmlFor="remember-me" className="ml-2 text-sm text-[var(--text-secondary)] cursor-pointer">
@@ -312,7 +312,7 @@ function LoginForm() {
 
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-lg flex items-start gap-2">
+                <div className="p-[var(--space-3)] bg-[var(--danger-500)]/10 border border-[var(--danger-500)]/20 rounded-[var(--radius-md)] flex items-start gap-[var(--space-2)]">
                   <AlertCircle className="h-4 w-4 text-[var(--danger-500)] mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-[var(--danger-500)] font-medium">{error}</p>
                 </div>
@@ -320,7 +320,7 @@ function LoginForm() {
 
               {/* Success Message */}
               {success && (
-                <div className="p-3 bg-[var(--success-500)]/10 border border-[var(--success-500)]/20 rounded-lg flex items-start gap-2">
+                <div className="p-[var(--space-3)] bg-[var(--success-500)]/10 border border-[var(--success-500)]/20 rounded-[var(--radius-md)] flex items-start gap-[var(--space-2)]">
                   <CheckCircle className="h-4 w-4 text-[var(--success-500)] mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-[var(--success-500)] font-medium">{success}</p>
                 </div>
@@ -339,7 +339,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading || isRateLimited}
-                className="w-full py-3 bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] text-white rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-[var(--space-4)] bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-[var(--text-primary)] rounded-[var(--radius-md)] font-semibold hover:opacity-90 transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-[var(--space-2)] shadow-[var(--glass-shadow)] hover:shadow-[var(--glass-shadow-lg)] transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 {loading ? (
                   <>
@@ -353,7 +353,7 @@ function LoginForm() {
             </form>
 
             {/* Divider */}
-            <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
+            <div className="mt-[var(--space-6)] pt-[var(--space-5)] border-t border-[var(--border-primary)]">
               <p className="text-center text-sm text-[var(--text-secondary)]">
                 New to Batchion?{" "}
                 <Link href="/register" className="text-[var(--accent-primary)] hover:underline font-medium transition-colors">
@@ -364,7 +364,7 @@ function LoginForm() {
           </div>
 
           {/* Additional Help */}
-          <div className="mt-6 text-center">
+          <div className="mt-[var(--space-5)] text-center">
             <p className="text-xs text-[var(--text-tertiary)]">
               By signing in, you agree to our{" "}
               <Link href="/terms" className="hover:text-[var(--text-secondary)] underline transition-colors">
@@ -378,7 +378,7 @@ function LoginForm() {
           </div>
 
           {/* Security Notice */}
-          <div className="mt-4 text-center">
+          <div className="mt-[var(--space-4)] text-center">
             <p className="text-xs text-[var(--text-tertiary)]">
               🔒 Your data is encrypted and secure
             </p>

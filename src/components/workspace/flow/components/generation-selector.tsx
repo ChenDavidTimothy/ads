@@ -105,7 +105,7 @@ export function GenerationSelector({
       )}
 
       {!hasScenes && !hasFrames && (
-        <div className="text-sm text-[var(--text-tertiary)] text-center py-4">
+        <div className="text-sm text-[var(--text-tertiary)] text-center py-[var(--space-4)]">
           Add Scene or Frame nodes to enable selective generation
         </div>
       )}

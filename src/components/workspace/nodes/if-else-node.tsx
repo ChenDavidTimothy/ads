@@ -55,7 +55,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded-[var(--radius-sm)]">Data Router</span>
+          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)]">Data Router</span>
         </div>
 
         <div className="mt-3 pt-2 border-t border-[var(--border-primary)]">

@@ -42,8 +42,8 @@ export function AssetGrid({
 
   if (assets.length === 0) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
-        <div className="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mb-4">
+      <div className={cn("flex flex-col items-center justify-center py-[var(--space-8)] text-center", className)}>
+        <div className="w-16 h-16 bg-[var(--surface-2)] rounded-[var(--radius-full)] flex items-center justify-center mb-[var(--space-4)]">
           <Image size={24} className="text-[var(--text-tertiary)]" aria-label="No assets" />
         </div>
         <h3 className="text-sm font-medium text-[var(--text-primary)] mb-1">
@@ -177,7 +177,7 @@ function AssetCard({
   return (
     <div
       className={cn(
-        "bg-[var(--surface-1)] border rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[var(--border-primary)]",
+        "bg-[var(--surface-1)] border rounded-[var(--radius-md)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)] hover:border-[var(--border-primary)]",
         isSelected 
           ? "border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/20" 
           : "border-[var(--border-secondary)]",
@@ -208,14 +208,14 @@ function AssetCard({
         )}
 
         {/* File type indicator */}
-        <div className="absolute top-2 left-2">
-          <div className="w-6 h-6 bg-black/60 rounded flex items-center justify-center">
+        <div className="absolute top-[var(--space-2)] left-[var(--space-2)]">
+          <div className="w-6 h-6 bg-[var(--surface-0)]/60 rounded-[var(--radius-md)] flex items-center justify-center">
             {isImage(asset) ? (
-              <Image size={12} className="text-white" aria-label="Image file" />
+              <Image size={12} className="text-[var(--text-primary)]" aria-label="Image file" />
             ) : isVideo(asset) ? (
-              <Video size={12} className="text-white" aria-label="Video file" />
+              <Video size={12} className="text-[var(--text-primary)]" aria-label="Video file" />
             ) : (
-              <HardDrive size={12} className="text-white" aria-label="File" />
+              <HardDrive size={12} className="text-[var(--text-primary)]" aria-label="File" />
             )}
           </div>
         </div>

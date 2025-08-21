@@ -74,7 +74,7 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--success-100)] text-[var(--success-700)] px-2 py-1 rounded-[var(--radius-sm)]">
+          <span className="bg-[var(--success-100)] text-[var(--success-700)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)]">
             Boolean Output
           </span>
         </div>

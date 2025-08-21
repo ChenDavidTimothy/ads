@@ -165,7 +165,7 @@ export function AssetsPanel() {
 
       {/* Upload Section */}
       {showUpload && (
-        <div className="border border-[var(--border-primary)] rounded-lg p-4">
+        <div className="border border-[var(--border-primary)] rounded-[var(--radius-md)] p-[var(--space-4)]">
           <FileUpload
             onFilesSelected={assetManagement.uploadFiles}
             onDragOver={assetManagement.handleDragOver}
@@ -217,7 +217,7 @@ export function AssetsPanel() {
       {/* Content */}
       <div className="flex-1 min-h-0">
         {assetsError ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-[var(--space-6)] text-center">
             <AlertCircle size={24} className="text-[var(--danger-500)] mb-2" />
             <p className="text-sm text-[var(--text-primary)] mb-1">
               Failed to load assets

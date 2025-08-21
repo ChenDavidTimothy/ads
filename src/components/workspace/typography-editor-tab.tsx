@@ -706,7 +706,7 @@ export function TypographyEditorTab({ nodeId }: { nodeId: string }) {
 			{/* Main Content Area */}
 			<div className="flex-1 flex flex-col">
 				{/* Header */}
-				<div className="h-12 px-4 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
+				<div className="h-[var(--header-height)] px-[var(--space-4)] border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--surface-1)]/60">
 					<div className="flex items-center gap-3">
 						<Type size={16} />
 						<div className="text-[var(--text-primary)] font-medium">Typography</div>

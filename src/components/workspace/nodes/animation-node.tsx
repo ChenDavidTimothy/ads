@@ -72,7 +72,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
             {uniqueTypes.map((type) => (
               <span
                 key={type}
-                className={`text-xs px-2 py-1 rounded ${getTrackColors()[type]} text-[var(--text-primary)]`}
+                className={`text-xs px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sharp)] ${getTrackColors()[type]} text-[var(--text-primary)]`}
               >
                 {TRACK_ICONS[type]} {type}
               </span>

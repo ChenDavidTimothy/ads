@@ -61,7 +61,7 @@ export function AssetSelectionModal({
         {/* Asset Grid */}
         <div className="flex-1 overflow-auto scrollbar-elegant">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-[var(--space-6)]">
               <div className="text-sm text-[var(--text-tertiary)]">Loading assets...</div>
             </div>
           ) : (

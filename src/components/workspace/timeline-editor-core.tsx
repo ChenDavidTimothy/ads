@@ -437,7 +437,7 @@ export function TimelineEditorCore({ animationNodeId, duration: controlledDurati
           </div>
 
           {tracks.length === 0 && (
-            <div className="text-center py-12 text-[var(--text-tertiary)]">
+            <div className="text-center py-[var(--space-8)] text-[var(--text-tertiary)]">
               <div className="text-lg mb-2">No animation tracks</div>
               <div className="text-sm mb-[var(--space-4)]">Click the colored buttons above to add animation tracks</div>
             </div>
@@ -667,7 +667,7 @@ export function TrackProperties({ track, onChange, onDisplayNameChange, validate
                   autoFocus
                 />
                 {currentError && (
-                  <div className="text-xs text-red-400">{currentError}</div>
+                  <div className="text-xs text-[var(--danger-500)]">{currentError}</div>
                 )}
                 <div className="flex gap-[var(--space-2)]">
                   <Button

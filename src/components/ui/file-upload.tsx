@@ -72,7 +72,7 @@ export function FileUpload({
         onDrop={onDrop}
         onClick={handleClick}
         className={cn(
-          "relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200",
+          "relative border-2 border-dashed rounded-[var(--radius-md)] p-[var(--space-5)] text-center cursor-pointer transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
           isDragOver
             ? "border-[var(--accent-primary)] bg-[var(--purple-shadow-subtle)] shadow-[0_0_5px_var(--purple-shadow-subtle)]"
             : "border-[var(--border-secondary)] hover:border-[var(--accent-primary)] hover:bg-[var(--purple-shadow-subtle)] hover:shadow-[0_0_5px_var(--purple-shadow-subtle)]",
@@ -90,11 +90,11 @@ export function FileUpload({
           className="hidden"
         />
 
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-[var(--space-3)]">
           <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200",
+            "w-12 h-12 rounded-[var(--radius-full)] flex items-center justify-center transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
             isDragOver
-              ? "bg-[var(--accent-primary)] text-white"
+              ? "bg-[var(--accent-primary)] text-[var(--text-primary)]"
               : "bg-[var(--surface-2)] text-[var(--text-secondary)] group-hover:bg-[var(--purple-shadow-subtle)] group-hover:text-[var(--accent-primary)]"
           )}>
             <Upload size={20} />
@@ -162,8 +162,8 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
   };
 
   return (
-    <div className="bg-[var(--surface-1)] rounded-lg p-3 border border-[var(--border-primary)]">
-      <div className="flex items-center gap-3">
+    <div className="bg-[var(--surface-1)] rounded-[var(--radius-md)] p-[var(--space-3)] border border-[var(--border-primary)]">
+      <div className="flex items-center gap-[var(--space-3)]">
         {getStatusIcon()}
         
         <div className="flex-1 min-w-0">
@@ -183,7 +183,7 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
               {/* Progress bar */}
               <div className="w-full bg-[var(--surface-3)] rounded-full h-1.5 mb-1">
                 <div
-                  className={cn("h-1.5 rounded-full transition-all duration-300", getStatusColor())}
+                  className={cn("h-1.5 rounded-[var(--radius-full)] transition-all duration-[var(--duration-medium)] ease-[var(--easing-standard)]", getStatusColor())}
                   style={{ width: `${progress.progress}%` }}
                 />
               </div>

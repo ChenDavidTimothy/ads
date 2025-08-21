@@ -73,7 +73,7 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
         </div>
 
         <div className="text-xs text-center">
-          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-2 py-1 rounded-[var(--radius-sm)]">
+          <span className="bg-[var(--accent-100)] text-[var(--accent-900)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)]">
             Boolean Logic
           </span>
         </div>
