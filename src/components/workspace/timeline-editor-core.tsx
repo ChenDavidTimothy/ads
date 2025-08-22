@@ -725,6 +725,8 @@ export function TrackProperties({
   // Variable discovery uses animationNodeId to mirror object discovery behavior
   const { state } = useWorkspace();
 
+  const { resetToDefault } = useVariableBinding(animationNodeId, selectedObjectId);
+
   const bindButton = (fieldKey: string) => {
     // Prefer track-specific key when a track is selected
     const specific = `track.${track.identifier.id}.${fieldKey}`;
@@ -998,9 +1000,8 @@ export function TrackProperties({
                     active={!isFieldOverridden("move.from.x") && !isFieldBound("move.from.x")}
                     onToggle={(next) => {
                       if (next) {
-                        // Clear from.x override/binding
                         onChange({ properties: { from: { x: undefined } } as Partial<MoveTrackProperties> });
-                        // Clearing binding is handled by reset in Bind menu; Auto implies no manual or binding
+                        resetToDefault(`track.${track.identifier.id}.move.from.x`);
                       }
                     }}
                   />
@@ -1039,6 +1040,7 @@ export function TrackProperties({
                     onToggle={(next) => {
                       if (next) {
                         onChange({ properties: { from: { y: undefined } } as Partial<MoveTrackProperties> });
+                        resetToDefault(`track.${track.identifier.id}.move.from.y`);
                       }
                     }}
                   />
@@ -1148,6 +1150,7 @@ export function TrackProperties({
                   onToggle={(next) => {
                     if (next) {
                       onChange({ properties: { from: undefined } as Partial<RotateTrackProperties> });
+                      resetToDefault(`track.${track.identifier.id}.rotate.from`);
                     }
                   }}
                 />
@@ -1281,6 +1284,7 @@ export function TrackProperties({
                   onToggle={(next) => {
                     if (next) {
                       onChange({ properties: { from: undefined } as Partial<FadeTrackProperties> });
+                      resetToDefault(`track.${track.identifier.id}.fade.from`);
                     }
                   }}
                 />
@@ -1372,6 +1376,7 @@ export function TrackProperties({
                     onToggle={(next) => {
                       if (next) {
                         onChange({ properties: { from: undefined } as Partial<ColorTrackProperties> });
+                        resetToDefault(`track.${track.identifier.id}.color.from`);
                       }
                     }}
                   />
