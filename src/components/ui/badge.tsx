@@ -16,16 +16,40 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
         ref={ref}
         className={cn(
           "inline-flex items-center gap-1 px-[var(--space-2)] py-[var(--space-half)]",
-          "rounded-[var(--radius-sm)] border border-[var(--border-primary)] text-[10px]",
-          {
-            default: "bg-transparent text-[var(--text-tertiary)]",
-            manual: "bg-transparent text-[var(--warning-600)]",
-            bound: "bg-transparent text-[var(--node-data)]",
-            result:
-              "border-transparent bg-[var(--node-output)] text-[var(--text-primary)]",
-          }[variant],
+          "rounded-[var(--radius-sm)] border text-[10px] font-medium",
           className,
         )}
+        style={{
+          ...(variant === "default" && {
+            background: "transparent",
+            borderColor: "var(--border-primary)",
+            color: "var(--text-tertiary)",
+          }),
+          ...(variant === "manual" && {
+            background: `
+              linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, transparent 60%),
+              rgba(245, 158, 11, 0.1)
+            `,
+            borderColor: "rgba(245, 158, 11, 0.5)",
+            color: "#f59e0b",
+          }),
+          ...(variant === "bound" && {
+            background: `
+              linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, transparent 60%),
+              rgba(59, 130, 246, 0.1)
+            `,
+            borderColor: "rgba(59, 130, 246, 0.5)",
+            color: "var(--text-primary)",
+          }),
+          ...(variant === "result" && {
+            background: `
+              linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, transparent 60%),
+              rgba(139, 92, 246, 0.15)
+            `,
+            borderColor: "rgba(139, 92, 246, 0.4)",
+            color: "var(--text-primary)",
+          }),
+        }}
         {...props}
       >
         {children}

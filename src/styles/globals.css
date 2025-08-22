@@ -7,93 +7,100 @@
 
 :root {
   color-scheme: dark;
-  
-  /* Logo-inspired surface hierarchy */
+
+  /* PREMIUM DARK SURFACES - keeping existing names */
   --surface-0: #000000;
-  --surface-1: #0a0a0a;
-  --surface-2: #1a1a1a;
-  --surface-interactive: #242424;
+  --surface-1: #050508;
+  --surface-2: #0a0a0f;
+  --surface-interactive: #12121a;
 
-  /* Logo-inspired borders */
-  --border-primary: #404040;
-  --border-secondary: #4a4a4a;
-  --border-accent: rgba(124, 58, 237, 0.4); /* Logo purple accent */
+  /* PREMIUM GLASS LAYERS - enhanced but keeping names */
+  --glass-bg: rgba(12, 12, 20, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 24px rgba(139, 92, 246, 0.04);
+  --glass-shadow-lg:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 32px rgba(139, 92, 246, 0.06);
 
-  /* Text hierarchy - Logo-inspired */
-  --text-primary: #f8fafc;
+  /* PREMIUM BORDERS - keeping existing names */
+  --border-primary: #1e293b;
+  --border-secondary: #334155;
+  --border-accent: rgba(139, 92, 246, 0.4);
+
+  /* ENHANCED TEXT HIERARCHY - keeping existing names */
+  --text-primary: #ffffff;
   --text-secondary: #e2e8f0;
   --text-tertiary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-disabled: #64748b;
 
-  /* Logo color scheme - Blue gradient */
-  --accent-500: #2563eb;
-  --accent-600: #1d4ed8;
-  --accent-700: #1e3a8a;
+  /* PREMIUM ACCENT COLORS - keeping existing names */
+  --accent-500: #3b82f6;
+  --accent-600: #2563eb;
+  --accent-700: #1d4ed8;
   --accent-900: #1e40af;
-  --accent-100: rgba(37, 99, 235, 0.08);
+  --accent-100: rgba(59, 130, 246, 0.08);
 
-  /* Logo-inspired accent variants */
-  --accent-primary: #7c3aed;     /* Logo purple */
-  --accent-secondary: #2563eb;   /* Logo blue */
-  --accent-success: #22c55e;
+  /* PREMIUM ACCENT VARIANTS - keeping existing names */
+  --accent-primary: #8b5cf6;
+  --accent-secondary: #3b82f6;
+  --accent-success: #10b981;
   --accent-ghost: transparent;
 
-  /* Transform color standardization - Logo theme */
-  --transform-move: var(--accent-primary);     /* Purple */
-  --transform-rotate: var(--accent-secondary); /* Blue */
-  --transform-scale: #f472b6;                  /* Pink */
-  --transform-fade: #f59e0b;                   /* Orange */
-  --transform-color: #22d3ee;                  /* Cyan */
+  /* PREMIUM TRANSFORM COLORS - solid but visible */
+  --transform-move: rgba(139, 92, 246, 0.9);
+  --transform-rotate: rgba(139, 92, 246, 0.9);
+  --transform-scale: rgba(139, 92, 246, 0.9);
+  --transform-fade: rgba(139, 92, 246, 0.9);
+  --transform-color: rgba(139, 92, 246, 0.9);
 
-  /* Button interaction states */
-  --button-ghost-hover: var(--surface-2);
+  /* PREMIUM BUTTON INTERACTION STATES - keeping existing names */
+  --button-ghost-hover: rgba(18, 18, 26, 0.9);
   --button-ghost-active: var(--surface-interactive);
 
-  /* Semantic colors */
-  --success-500: #22c55e;
-  --success-600: #16a34a;
+  /* PREMIUM SEMANTIC COLORS - keeping existing names */
+  --success-500: #10b981;
+  --success-600: #059669;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
   --danger-500: #ef4444;
   --danger-600: #dc2626;
+  --danger-700: #b91c1c;
 
-  /* Node category colors - Logo theme */
-  --node-animation: #7c3aed;    /* Logo purple */
-  --node-logic: #2563eb;        /* Logo blue */
-  --node-data: #22d3ee;         /* Cyan */
-  --node-geometry: #f472b6;     /* Pink */
-  --node-text: #10b981;         /* Emerald - NEW */
-  --node-image: #eab308;        /* Yellow - NEW */
-  --node-output: #a78bfa;       /* Light purple */
+  /* PREMIUM NODE CATEGORY COLORS - keeping existing names */
+  --node-animation: #8b5cf6;
+  --node-logic: #3b82f6;
+  --node-data: #22d3ee;
+  --node-geometry: #f472b6;
+  --node-text: #10b981;
+  --node-image: #eab308;
+  --node-output: #a78bfa;
 
-  /* Logo purple-derived shadow colors */
-  --purple-shadow-subtle: color-mix(in srgb, var(--accent-primary) 30%, transparent);
-  --purple-shadow-medium: color-mix(in srgb, var(--accent-primary) 85%, transparent);
-  --purple-shadow-strong: color-mix(in srgb, var(--accent-primary) 95%, transparent);
-  
-  /* Edge-specific colors */
-  --edge-stroke: var(--purple-shadow-medium);
-  --edge-stroke-hover: var(--purple-shadow-strong);
+  /* PREMIUM PURPLE SHADOW COLORS - keeping existing names but enhanced */
+  --purple-shadow-subtle: rgba(139, 92, 246, 0.15);
+  --purple-shadow-medium: rgba(139, 92, 246, 0.8);
+  --purple-shadow-strong: rgba(139, 92, 246, 1.0);
+
+  /* PREMIUM EDGE COLORS - enhanced for visibility */
+  --edge-stroke: rgba(139, 92, 246, 0.7);
+  --edge-stroke-hover: rgba(139, 92, 246, 1.0);
   --edge-stroke-selected: var(--accent-primary);
 
-  /* Glass-like effects */
-  --glass-bg: rgba(255, 255, 255, 0.02);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
+  /* PREMIUM MODAL BACKDROP COLORS - keeping existing names */
+  --modal-backdrop: rgba(0, 0, 0, 0.6);
+  --modal-backdrop-blur: rgba(0, 0, 0, 0.5);
 
-  /* Modal backdrop colors */
-  --modal-backdrop: rgba(0, 0, 0, 0.4);
-  --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
-
-  /* Ultra-sharp radii for crisp edges */
+  /* RADII - reduced for sharper, more professional look */
   --radius-sharp: 1px;
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
 
-  /* Refined spacing system */
+  /* SPACING - keeping existing names */
   --space-0: 0px;
   --space-half: 2px;
   --space-1: 3px;
@@ -104,20 +111,20 @@
   --space-6: 18px;
   --space-8: 24px;
 
-  /* Component sizing */
+  /* COMPONENT SIZING - keeping existing names */
   --node-min-width: 14rem;
   --tab-max-width: 16rem;
   --sidebar-width: 18rem;
   --header-height: 48px;
 
-  /* Refined component paddings */
+  /* COMPONENT PADDINGS - keeping existing names */
   --card-padding: var(--space-3);
   --card-padding-sm: var(--space-2);
   --button-padding-sm: var(--space-1) var(--space-3);
   --button-padding-lg: var(--space-3) var(--space-5);
   --input-padding: var(--space-2) var(--space-3);
 
-  /* Animation and easing */
+  /* ANIMATION AND EASING - keeping existing names */
   --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --easing-enter: cubic-bezier(0, 0, 0.2, 1);
   --easing-exit: cubic-bezier(0.4, 0, 1, 1);
@@ -125,169 +132,104 @@
   --duration-medium: 180ms;
   --duration-slow: 250ms;
 
-  /* Focus states */
+  /* FOCUS STATES - keeping existing names */
   --ring-color: var(--purple-shadow-medium);
   --ring-width: 1px;
   --ring-offset: var(--surface-0);
 }
 
-:root[data-theme="dark"] {
-  /* Logo-inspired surface hierarchy */
-  --surface-0: #000000;
-  --surface-1: #0a0a0a;
-  --surface-2: #1a1a1a;
-  --surface-interactive: #242424;
-
-  /* Logo-inspired borders */
-  --border-primary: #404040;
-  --border-secondary: #4a4a4a;
-  --border-accent: rgba(124, 58, 237, 0.4); /* Logo purple accent */
-
-  /* Text hierarchy - Logo-inspired */
-  --text-primary: #f8fafc;
-  --text-secondary: #e2e8f0;
-  --text-tertiary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-disabled: #64748b;
-
-  /* Logo color scheme - Blue gradient */
-  --accent-500: #2563eb;
-  --accent-600: #1d4ed8;
-  --accent-700: #1e3a8a;
-  --accent-900: #1e40af;
-  --accent-100: rgba(37, 99, 235, 0.08);
-
-  /* Logo-inspired accent variants */
-  --accent-primary: #7c3aed;     /* Logo purple */
-  --accent-secondary: #2563eb;   /* Logo blue */
-  --accent-success: #22c55e;
-  --accent-ghost: transparent;
-
-  /* Transform color standardization - Logo theme */
-  --transform-move: var(--accent-primary);     /* Purple */
-  --transform-rotate: var(--accent-secondary); /* Blue */
-  --transform-scale: #f472b6;                  /* Pink */
-  --transform-fade: #f59e0b;                   /* Orange */
-  --transform-color: #22d3ee;                  /* Cyan */
-
-  /* Button interaction states */
-  --button-ghost-hover: var(--surface-2);
-  --button-ghost-active: var(--surface-interactive);
-
-  /* Semantic colors */
-  --success-500: #22c55e;
-  --success-600: #16a34a;
-  --warning-500: #f59e0b;
-  --warning-600: #d97706;
-  --danger-500: #ef4444;
-  --danger-600: #dc2626;
-
-  /* Node category colors - Logo theme */
-  --node-animation: #7c3aed;    /* Logo purple */
-  --node-logic: #2563eb;        /* Logo blue */
-  --node-data: #22d3ee;         /* Cyan */
-  --node-geometry: #f472b6;     /* Pink */
-  --node-image: #eab308;        /* Yellow - NEW */
-  --node-output: #a78bfa;       /* Light purple */
-
-  /* Logo purple-derived shadow colors */
-  --purple-shadow-subtle: color-mix(in srgb, var(--accent-primary) 30%, transparent);
-  --purple-shadow-medium: color-mix(in srgb, var(--accent-primary) 85%, transparent);
-  --purple-shadow-strong: color-mix(in srgb, var(--accent-primary) 95%, transparent);
-  
-  /* Edge-specific colors */
-  --edge-stroke: var(--purple-shadow-medium);
-  --edge-stroke-hover: var(--purple-shadow-strong);
-  --edge-stroke-selected: var(--accent-primary);
-
-  /* Glass-like effects */
-  --glass-bg: rgba(255, 255, 255, 0.02);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --glass-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.3);
-
-  /* Modal backdrop colors */
-  --modal-backdrop: rgba(0, 0, 0, 0.4);
-  --modal-backdrop-blur: rgba(0, 0, 0, 0.35);
-
-  /* Ultra-sharp radii for crisp edges */
-  --radius-sharp: 1px;
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-
-  /* Refined spacing system */
-  --space-0: 0px;
-  --space-half: 2px;
-  --space-1: 3px;
-  --space-2: 6px;
-  --space-3: 9px;
-  --space-4: 12px;
-  --space-5: 15px;
-  --space-6: 18px;
-  --space-8: 24px;
-
-  /* Component sizing */
-  --node-min-width: 14rem;
-  --tab-max-width: 16rem;
-  --sidebar-width: 18rem;
-  --header-height: 48px;
-
-  /* Refined component paddings */
-  --card-padding: var(--space-3);
-  --card-padding-sm: var(--space-2);
-  --button-padding-sm: var(--space-1) var(--space-3);
-  --button-padding-lg: var(--space-3) var(--space-5);
-  --input-padding: var(--space-2) var(--space-3);
-
-  /* Animation and easing */
-  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --easing-enter: cubic-bezier(0, 0, 0.2, 1);
-  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
-  --duration-fast: 120ms;
-  --duration-medium: 180ms;
-  --duration-slow: 250ms;
-
-  /* Focus states */
-  --ring-color: var(--purple-shadow-medium);
-  --ring-width: 1px;
-  --ring-offset: var(--surface-0);
-}
-
-/* Glass-like component base classes */
+/* PREMIUM GLASS COMPONENT BASE CLASSES - keeping existing names */
 .glass-panel {
-  background: var(--glass-bg);
+  background:
+    /* Premium subtle distant light gradient */
+    linear-gradient(135deg,
+      rgba(139, 92, 246, 0.03) 0%,
+      transparent 25%,
+      transparent 75%,
+      rgba(59, 130, 246, 0.02) 100%),
+    /* Enhanced glass frosting layer */
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium deep solid base */
+    var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(8px);
-  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--glass-shadow-lg);
 }
 
 .glass-button {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
+  background:
+    /* Premium subtle directional light */
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      transparent 35%,
+      rgba(59, 130, 246, 0.015) 100%),
+    /* Deep glass frosting */
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium dark base */
+    rgba(12, 12, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
   transition: all var(--duration-fast) var(--easing-standard);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .glass-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background:
+    /* Enhanced premium subtle light */
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      transparent 30%,
+      rgba(59, 130, 246, 0.025) 100%),
+    /* Enhanced deep frosting */
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
+    /* Premium interactive base */
+    rgba(18, 18, 28, 0.92);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(139, 92, 246, 0.04);
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.02);
+  background:
+    /* Premium subtle directional light */
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.02) 0%,
+      transparent 40%,
+      rgba(59, 130, 246, 0.01) 100%),
+    /* Deep glass layer */
+    linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
+    /* Premium dark base */
+    rgba(8, 8, 15, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 var(--ring-width) var(--ring-color);
+  background:
+    /* Enhanced premium directional light */
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      transparent 35%,
+      rgba(139, 92, 246, 0.02) 100%),
+    /* Enhanced glass layer */
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium focused base */
+    rgba(12, 12, 22, 0.9);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 0 0 var(--ring-width) var(--ring-color),
+    0 0 24px rgba(139, 92, 246, 0.08);
 }
 
-/* Refined typography */
+/* PREMIUM TYPOGRAPHY - keeping existing names */
 .text-refined {
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -299,7 +241,7 @@
   letter-spacing: -0.015em;
 }
 
-/* Ultra-thin borders */
+/* PREMIUM BORDERS - keeping existing names */
 .border-glass {
   border: 1px solid var(--glass-border);
 }
@@ -308,7 +250,7 @@
   border: 1px solid var(--border-primary);
 }
 
-/* Subtle shadows for depth */
+/* PREMIUM SHADOWS - keeping existing names */
 .shadow-glass {
   box-shadow: var(--glass-shadow);
 }
@@ -330,7 +272,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Elegant Scrollbar Styling */
+/* PREMIUM SCROLLBAR STYLING - keeping existing names */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -389,7 +331,7 @@ body {
   background: var(--border-primary);
 }
 
-/* Node delete button styles */
+/* PREMIUM NODE DELETE BUTTON STYLES - keeping existing names */
 .node-delete-button {
   position: absolute;
   top: var(--space-1);
@@ -401,20 +343,25 @@ body {
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
+    var(--surface-2);
   color: var(--text-tertiary);
   opacity: 0.4;
   transition: all var(--duration-fast) var(--easing-standard);
   border: none;
   cursor: pointer;
-  font-size: 0; /* Hide any text */
+  font-size: 0;
 }
 
 .node-delete-button:hover {
   opacity: 1;
   transform: scale(1.1);
-  background: var(--danger-600);
+  background:
+    linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%),
+    var(--danger-600);
   color: white;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
 }
 
 .node-delete-button:active {
@@ -432,7 +379,110 @@ body {
   .node-delete-button:hover {
     opacity: 1;
     transform: none;
-    background: var(--danger-600);
+    background:
+      linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%),
+      var(--danger-600);
     color: white;
+  }
+}
+
+/* PREMIUM REACTFLOW NODE STYLING - preserving all existing features */
+.react-flow__node {
+  /* Enhanced premium glass styling for nodes */
+  border-radius: var(--radius-sm);
+}
+
+.react-flow__node.selected {
+  /* IMPORTANT: Preserve node selection glow effects with premium styling */
+  box-shadow:
+    0 0 0 2px var(--accent-primary),
+    0 0 20px rgba(139, 92, 246, 0.3),
+    0 0 40px rgba(139, 92, 246, 0.1);
+}
+
+/* PREMIUM REACTFLOW EDGE STYLING - enhanced for visibility */
+.react-flow__edge-path {
+  stroke: var(--edge-stroke);
+  stroke-width: 4px;
+  fill: none;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--edge-stroke-selected);
+  stroke-width: 5px;
+  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.6));
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--edge-stroke-hover);
+  stroke-width: 6px;
+  cursor: pointer;
+  filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.8));
+}
+
+/* PREMIUM REACTFLOW HANDLE STYLING - enhanced but preserving functionality */
+.react-flow__handle {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 60%),
+    var(--surface-2);
+  transition: all 120ms ease;
+  cursor: crosshair;
+  transform-origin: center;
+  border-radius: 50%;
+  backdrop-filter: blur(8px);
+}
+
+.react-flow__handle:hover {
+  border-color: var(--accent-primary);
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, transparent 60%),
+    rgba(139, 92, 246, 0.15);
+  box-shadow:
+    0 0 12px rgba(139, 92, 246, 0.3),
+    0 0 24px rgba(139, 92, 246, 0.1);
+  transform: scale(1.1);
+}
+
+.react-flow__handle.react-flow__handle-left { left: -8px; }
+.react-flow__handle.react-flow__handle-right { right: -8px; }
+
+/* Large invisible hit area around ports for easy clicking - PRESERVED */
+.react-flow__handle::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  left: -8px;
+  top: -8px;
+  background: transparent;
+  cursor: crosshair;
+}
+
+/* Enhanced visual feedback when hovering near ports */
+.react-flow__handle:hover::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  left: -14px;
+  top: -14px;
+  border: 2px dashed var(--accent-primary);
+  border-radius: 50%;
+  animation: premium-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes premium-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
   }
 }

@@ -12,6 +12,7 @@ import {
   Star,
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import { Button } from "@/components/ui/button";
 
 export default async function LandingPage() {
   // Check if user is already authenticated
@@ -89,11 +90,10 @@ export default async function LandingPage() {
             </nav>
 
             <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="rounded-lg bg-[var(--accent-primary)] px-6 py-2 font-medium text-white transition-opacity hover:opacity-90"
-              >
-                Sign In
+              <Link href="/login">
+                <Button variant="primary" size="sm">
+                  Sign In
+                </Button>
               </Link>
             </div>
           </div>
@@ -118,18 +118,20 @@ export default async function LandingPage() {
             </p>
 
             <div className="mb-16 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/login"
-                className="inline-flex transform items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-105 hover:opacity-90 hover:shadow-xl"
-              >
-                Start Creating Free <ArrowRight className="h-5 w-5" />
+              <Link href="/login">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="transform hover:scale-105"
+                >
+                  Start Creating Free <ArrowRight className="h-5 w-5" />
+                </Button>
               </Link>
 
-              <Link
-                href="#demo"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] px-8 py-4 font-semibold text-[var(--text-primary)] backdrop-blur-sm transition-all hover:bg-[var(--surface-2)]"
-              >
-                <Play className="h-5 w-5" /> Watch Demo
+              <Link href="#demo">
+                <Button variant="glass" size="lg">
+                  <Play className="h-5 w-5" /> Watch Demo
+                </Button>
               </Link>
             </div>
 
@@ -278,11 +280,10 @@ export default async function LandingPage() {
                   Priority rendering
                 </li>
               </ul>
-              <Link
-                href="/login"
-                className="block w-full rounded-lg bg-[var(--accent-primary)] px-6 py-3 text-center font-medium text-white transition-opacity hover:opacity-90"
-              >
-                Start Pro Trial
+              <Link href="/login" className="block w-full">
+                <Button variant="primary" className="w-full">
+                  Start Pro Trial
+                </Button>
               </Link>
             </div>
 

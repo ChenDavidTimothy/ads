@@ -12,7 +12,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     | "danger"
     | "success"
     | "ghost";
-  interaction?: "always" | "hover" | "conditional"; // New interaction control
+  interaction?: "always" | "hover" | "conditional";
   size?: "xs" | "sm" | "md" | "lg";
 }
 
@@ -43,19 +43,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             md: "h-8 px-[var(--space-4)] py-[var(--space-2)] text-[12px]",
             lg: "h-9 px-[var(--space-5)] py-[var(--space-3)] text-[13px]",
           }[size],
-          // Refined variants
+          // Premium glass variants
           {
-            primary:
-              "border border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-primary)] hover:brightness-110",
-            secondary:
-              "border border-[var(--border-primary)] bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]",
+            primary: "btn-primary-glass",
+            secondary: "btn-secondary-glass",
             glass: "glass-button text-[var(--text-primary)]",
             minimal:
-              "border border-transparent bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
-            danger:
-              "border border-[var(--danger-600)] bg-[var(--danger-600)] text-[var(--text-primary)] hover:bg-[var(--danger-700)]",
-            success:
-              "border border-[var(--success-600)] bg-[var(--success-600)] text-[var(--text-primary)] hover:bg-[var(--success-700)]",
+              "border border-transparent bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--button-ghost-hover)] hover:text-[var(--text-primary)]",
+            danger: "btn-danger-glass",
+            success: "btn-success-glass",
             ghost:
               "border border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--button-ghost-hover)] hover:text-[var(--text-primary)]",
           }[variant],
@@ -68,6 +64,100 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           }[interaction || "always"],
           className,
         )}
+        style={{
+          ...(variant === "primary" && {
+            background: `
+              linear-gradient(135deg, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0.15) 50%, rgba(59, 130, 246, 0.1) 100%),
+              linear-gradient(145deg, rgba(139, 92, 246, 0.1), transparent),
+              rgba(139, 92, 246, 0.15)
+            `,
+            border: "1px solid rgba(139, 92, 246, 0.4)",
+            backdropFilter: "blur(16px)",
+            color: "var(--text-primary)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(139, 92, 246, 0.12)",
+          }),
+          ...(variant === "secondary" && {
+            background: `
+              linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 35%, rgba(59, 130, 246, 0.015) 100%),
+              linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+              rgba(12, 12, 20, 0.88)
+            `,
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            backdropFilter: "blur(16px)",
+            color: "var(--text-secondary)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.6)",
+          }),
+          ...(variant === "success" && {
+            background: `
+              linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(16, 185, 129, 0.15) 50%, rgba(34, 211, 238, 0.08) 100%),
+              linear-gradient(145deg, rgba(16, 185, 129, 0.1), transparent),
+              rgba(16, 185, 129, 0.15)
+            `,
+            border: "1px solid rgba(16, 185, 129, 0.4)",
+            backdropFilter: "blur(16px)",
+            color: "var(--text-primary)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(16, 185, 129, 0.12)",
+          }),
+          ...(variant === "danger" && {
+            background: `
+              linear-gradient(135deg, rgba(239, 68, 68, 0.28) 0%, rgba(239, 68, 68, 0.15) 50%, rgba(245, 158, 11, 0.08) 100%),
+              linear-gradient(145deg, rgba(239, 68, 68, 0.1), transparent),
+              rgba(239, 68, 68, 0.15)
+            `,
+            border: "1px solid rgba(239, 68, 68, 0.4)",
+            backdropFilter: "blur(16px)",
+            color: "var(--text-primary)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(239, 68, 68, 0.12)",
+          }),
+        }}
+        onMouseEnter={(e) => {
+          if (variant === "primary") {
+            e.currentTarget.style.background = `
+              linear-gradient(135deg, rgba(139, 92, 246, 0.4) 0%, rgba(139, 92, 246, 0.22) 50%, rgba(59, 130, 246, 0.15) 100%),
+              linear-gradient(145deg, rgba(139, 92, 246, 0.15), transparent),
+              rgba(139, 92, 246, 0.22)
+            `;
+            e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.5)";
+            e.currentTarget.style.boxShadow =
+              "inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 36px rgba(139, 92, 246, 0.18)";
+            e.currentTarget.style.transform = "translateY(-1px)";
+          } else if (variant === "secondary") {
+            e.currentTarget.style.background = `
+              linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, transparent 30%, rgba(59, 130, 246, 0.025) 100%),
+              linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
+              rgba(18, 18, 28, 0.92)
+            `;
+            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.22)";
+            e.currentTarget.style.color = "var(--text-primary)";
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (variant === "primary") {
+            e.currentTarget.style.background = `
+              linear-gradient(135deg, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0.15) 50%, rgba(59, 130, 246, 0.1) 100%),
+              linear-gradient(145deg, rgba(139, 92, 246, 0.1), transparent),
+              rgba(139, 92, 246, 0.15)
+            `;
+            e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.4)";
+            e.currentTarget.style.boxShadow =
+              "inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(139, 92, 246, 0.12)";
+            e.currentTarget.style.transform = "translateY(0)";
+          } else if (variant === "secondary") {
+            e.currentTarget.style.background = `
+              linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 35%, rgba(59, 130, 246, 0.015) 100%),
+              linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+              rgba(12, 12, 20, 0.88)
+            `;
+            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+            e.currentTarget.style.color = "var(--text-secondary)";
+            e.currentTarget.style.transform = "translateY(0)";
+          }
+        }}
         {...props}
       >
         {children}

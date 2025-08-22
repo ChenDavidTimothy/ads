@@ -7,6 +7,7 @@ import { createBrowserClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthStatus } from "@/components/auth/auth-status";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   User,
@@ -288,18 +289,21 @@ export default function SettingsPage() {
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
-                  <button
+                  <Button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors ${
+                    variant={activeTab === tab.id ? "primary" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start rounded-none border-b-2",
                       activeTab === tab.id
-                        ? "bg-[var(--accent-primary)] text-white"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
-                    }`}
+                        ? "border-[var(--accent-primary)]"
+                        : "border-transparent",
+                    )}
+                    onClick={() => setActiveTab(tab.id)}
                   >
                     <Icon className="h-4 w-4" />
                     {tab.label}
-                  </button>
+                  </Button>
                 );
               })}
             </nav>
@@ -401,11 +405,7 @@ export default function SettingsPage() {
                       />
                     </div>
 
-                    <Button
-                      type="submit"
-                      disabled={saving}
-                      className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]"
-                    >
+                    <Button type="submit" disabled={saving} variant="primary">
                       {saving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -524,11 +524,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <Button
-                      type="submit"
-                      disabled={saving}
-                      className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]"
-                    >
+                    <Button type="submit" disabled={saving} variant="primary">
                       {saving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -595,7 +591,7 @@ export default function SettingsPage() {
                       </label>
                     </div>
 
-                    <Button className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]">
+                    <Button variant="primary">
                       <Save className="mr-2 h-4 w-4" />
                       Save Preferences
                     </Button>

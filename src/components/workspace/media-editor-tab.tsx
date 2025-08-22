@@ -19,7 +19,7 @@ import {
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
 import { AssetSelectionModal } from "./media/asset-selection-modal";
-import { Image, ImageOff, Settings } from "lucide-react";
+import { Image, ImageOff } from "lucide-react";
 import { api } from "@/trpc/react";
 import type { AssetResponse } from "@/shared/types/assets";
 import NextImage from "next/image";
@@ -992,7 +992,7 @@ function MediaPerObjectProperties({
 
 // Main Editor Component
 export function MediaEditorTab({ nodeId }: { nodeId: string }) {
-  const { state, updateFlow } = useWorkspace();
+  const { state, updateUI, updateFlow } = useWorkspace();
 
   // Find the media node and its assignments
   const mediaNode = useMemo(
@@ -1075,45 +1075,78 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
   );
 
   return (
-    <div className="flex h-full bg-[var(--surface-0)]">
+    <div className="flex h-full">
       {/* Left Sidebar - Object Selection */}
-      <div className="w-[var(--sidebar-width)] overflow-y-auto border-r border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]">
-        <h3 className="mb-[var(--space-4)] text-lg font-semibold text-[var(--text-primary)]">
-          Objects
-        </h3>
+      <div className="w-[var(--sidebar-width)] border-r border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-3)]">
+        <div className="space-y-[var(--space-3)]">
+          <SelectionList
+            mode="single"
+            items={upstreamObjects.map((obj) => ({
+              id: obj.data.identifier.id,
+              label: obj.data.identifier.displayName,
+            }))}
+            selectedId={selectedObjectId}
+            onSelect={setSelectedObjectId}
+            showDefault={true}
+            defaultLabel="Default"
+            emptyLabel="No image objects found"
+          />
 
-        <SelectionList
-          items={upstreamObjects.map((obj) => ({
-            id: obj.data.identifier.id,
-            label: obj.data.identifier.displayName,
-          }))}
-          selectedId={selectedObjectId}
-          onSelect={setSelectedObjectId}
-          mode="single"
-          showDefault={true}
-          defaultLabel="Default"
-          emptyLabel="No image objects found"
-        />
-
-        {upstreamObjects.length === 0 && (
-          <div className="mt-[var(--space-4)] rounded border border-[var(--border-secondary)] bg-[var(--surface-2)] p-[var(--space-3)]">
-            <div className="text-xs text-[var(--text-tertiary)]">
-              Connect image nodes to this media node to see them here.
-            </div>
+          {/* Show object count for debugging */}
+          <div className="border-t border-[var(--border-primary)] pt-[var(--space-2)] text-xs text-[var(--text-tertiary)]">
+            Detected: {upstreamObjects.length} image object
+            {upstreamObjects.length !== 1 ? "s" : ""}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Center Content */}
-      <div className="min-w-0 flex-1 overflow-y-auto p-[var(--space-4)]">
-        <div className="max-w-2xl">
-          <div className="py-[var(--space-8)] text-center">
-            <div className="mx-auto mb-[var(--space-4)] flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)]">
-              <Settings size={24} className="text-[var(--text-tertiary)]" />
-            </div>
-            <div className="text-sm text-[var(--text-tertiary)]">
-              Select Default or an image object on the left to edit its
-              properties.
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col">
+        {/* Header */}
+        <div className="flex h-12 items-center justify-between border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60 px-4">
+          <div className="flex items-center gap-3">
+            <div className="font-medium text-[var(--text-primary)]">Media</div>
+          </div>
+          <button
+            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            onClick={() =>
+              updateUI({
+                activeTab: "flow",
+                selectedNodeId: undefined,
+                selectedNodeType: undefined,
+              })
+            }
+          >
+            Back to Workspace
+          </button>
+        </div>
+
+        {/* Media Content */}
+        <div className="flex-1 p-[var(--space-4)]">
+          <div className="flex h-full w-full items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto mb-[var(--space-4)] flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-2)]">
+                <svg
+                  className="h-8 w-8 text-[var(--text-tertiary)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              </div>
+              <div className="mb-[var(--space-2)] text-lg font-medium text-[var(--text-primary)]">
+                Batch Mode coming soon
+              </div>
+              <div className="max-w-sm text-sm text-[var(--text-tertiary)]">
+                Select Default or an image object on the left to edit its
+                properties.
+              </div>
             </div>
           </div>
         </div>

@@ -16,9 +16,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         className={cn(
           "transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
           {
-            // Default glass-like variant
-            default:
-              "rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)]",
+            // Premium glass variant with enhanced styling
+            default: "rounded-[var(--radius-sm)] border backdrop-blur-[20px]",
             // Ultra-glass variant
             glass: "glass-panel rounded-[var(--radius-sm)]",
             // Minimal variant
@@ -30,6 +29,21 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             : "",
           className,
         )}
+        style={{
+          ...(variant === "default" && {
+            background: `
+              linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, transparent 25%, transparent 75%, rgba(59, 130, 246, 0.02) 100%),
+              linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+              rgba(12, 12, 20, 0.88)
+            `,
+            borderColor: selected
+              ? "var(--accent-primary)"
+              : "rgba(255, 255, 255, 0.15)",
+            boxShadow: selected
+              ? "inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(139, 92, 246, 0.12), 0 0 0 1px var(--purple-shadow-subtle)"
+              : "inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(139, 92, 246, 0.04)",
+          }),
+        }}
         {...props}
       >
         {children}

@@ -517,9 +517,7 @@ export function TimelineEditorCore({
                       {track.type}
                     </span>
                     {selectedTrackId === track.identifier.id && (
-                      <span className="rounded-[var(--radius-sm)] bg-[var(--accent-primary)] px-[var(--space-2)] py-[var(--space-1)] text-xs font-medium text-[var(--text-primary)]">
-                        SELECTED
-                      </span>
+                      <Badge variant="result">SELECTED</Badge>
                     )}
                   </div>
                   <Button

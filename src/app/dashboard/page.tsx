@@ -7,6 +7,7 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthStatus } from "@/components/auth/auth-status";
+import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";
 import {
   Plus,
@@ -496,10 +497,7 @@ export default function DashboardPage() {
               Refresh
             </Button>
 
-            <Button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)] hover:opacity-90"
-            >
+            <Button variant="primary" onClick={() => setShowCreateForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New Workspace
             </Button>
@@ -538,8 +536,8 @@ export default function DashboardPage() {
                     type="button"
                     className={`rounded-lg border p-4 text-left transition-all ${
                       selectedTemplate?.id === template.id
-                        ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-                        : "border-[var(--border-primary)] hover:border-[var(--accent-primary)] hover:bg-[var(--surface-2)]"
+                        ? "border-[var(--accent-primary)]"
+                        : "border-transparent hover:border-[var(--accent-primary)]"
                     }`}
                     onClick={() => selectTemplate(template)}
                   >
@@ -598,18 +596,21 @@ export default function DashboardPage() {
         {/* Category Filters */}
         <div className="mb-6 flex flex-wrap gap-2">
           {categories.map((category) => (
-            <button
+            <Button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all ${
+              variant={selectedCategory === category.id ? "primary" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-none border-b-2",
                 selectedCategory === category.id
-                  ? "bg-[var(--accent-primary)] text-white"
-                  : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]"
-              }`}
+                  ? "border-[var(--accent-primary)]"
+                  : "border-transparent",
+              )}
+              onClick={() => setSelectedCategory(category.id)}
             >
               {category.icon}
               {category.name} ({category.count})
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -717,8 +718,8 @@ export default function DashboardPage() {
                   Create your first workspace to start building animations.
                 </p>
                 <Button
+                  variant="primary"
                   onClick={() => setShowCreateForm(true)}
-                  className="bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Workspace
@@ -746,9 +747,13 @@ export default function DashboardPage() {
                         }
                       >
                         <div className="mb-4 flex items-start justify-between">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]">
-                            <Play className="h-5 w-5 text-white" />
-                          </div>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="h-10 w-10 rounded-lg p-0"
+                          >
+                            <Play className="h-5 w-5" />
+                          </Button>
                           <button
                             className="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
                             onClick={(e) => openWorkspaceMenu(e, workspace.id)}
@@ -795,9 +800,13 @@ export default function DashboardPage() {
                       }
                     >
                       <div className="mb-4 flex items-start justify-between">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]">
-                          <Play className="h-5 w-5 text-white" />
-                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="h-10 w-10 rounded-lg p-0"
+                        >
+                          <Play className="h-5 w-5" />
+                        </Button>
                         <button
                           className="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
                           onClick={(e) => openWorkspaceMenu(e, workspace.id)}
@@ -835,9 +844,13 @@ export default function DashboardPage() {
                       }
                     >
                       <div className="flex flex-1 items-center gap-4">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[var(--node-animation)] to-[var(--accent-secondary)]">
-                          <Play className="h-5 w-5 text-white" />
-                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="h-10 w-10 flex-shrink-0 rounded-lg p-0"
+                        >
+                          <Play className="h-5 w-5" />
+                        </Button>
 
                         <div className="min-w-0 flex-1">
                           <h3 className="truncate font-medium text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-primary)]">
