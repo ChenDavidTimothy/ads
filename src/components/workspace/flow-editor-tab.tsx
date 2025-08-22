@@ -314,38 +314,13 @@ export function FlowEditorTab() {
     handleGenerateSelected,
   } = useSceneGeneration(nodes, edges);
 
-  // CRITICAL: Stable delete handlers to prevent context re-renders
-  // These MUST be stable references - no dependencies that change frequently
+  // Simple delete handler - no complex optimization needed
   const handleDeleteNodeById = useCallback((nodeId: string) => {
-    // Find node in current state at execution time
-    const currentNodes = nodesRef.current || [];
-    const nodeToDelete = currentNodes.find(node => node.data.identifier.id === nodeId);
+    const nodeToDelete = nodes.find(node => node.data.identifier.id === nodeId);
     if (nodeToDelete) {
       onNodesDelete([nodeToDelete]);
     }
-  }, [onNodesDelete]); // Only depends on onNodesDelete, not nodes array
-
-  const handleDeleteEdgeById = useCallback((edgeId: string) => {
-    // Find edge in current state at execution time
-    const currentEdges = edgesRef.current || [];
-    const edgeToDelete = currentEdges.find(edge => edge.id === edgeId);
-    if (edgeToDelete) {
-      onEdgesDelete([edgeToDelete]);
-    }
-  }, [onEdgesDelete]); // Only depends on onEdgesDelete, not edges array
-
-  // Refs to access current state without triggering re-renders
-  const nodesRef = useRef(nodes);
-  const edgesRef = useRef(edges);
-
-  // Update refs when state changes, but don't trigger re-renders
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-
-  useEffect(() => {
-    edgesRef.current = edges;
-  }, [edges]);
+  }, [nodes, onNodesDelete]);
 
   const validationSummary = getValidationSummary();
 
@@ -389,7 +364,6 @@ export function FlowEditorTab() {
           >
             <DeleteProvider
               onDeleteNode={handleDeleteNodeById}
-              onDeleteEdge={handleDeleteEdgeById}
             >
               <FlowCanvas
                 nodes={nodes}
