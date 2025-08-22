@@ -33,8 +33,6 @@ export interface TrackOverride {
 export interface ObjectAssignments {
 	initial?: ObjectInitialOverrides;
 	tracks?: TrackOverride[];
-	// Per-object inherit toggles; structure mirrors node-level inherit maps per editor
-	inherit?: Record<string, unknown>;
 }
 
 // Map objectId -> assignments
@@ -92,7 +90,6 @@ export function isObjectAssignments(
 		if (!Array.isArray(v.tracks)) return false;
 		if (!v.tracks.every(isTrackOverride)) return false;
 	}
-	if (v.inherit !== undefined && !isPlainObject(v.inherit)) return false;
 	return true;
 }
 
@@ -108,8 +105,7 @@ export function isPerObjectAssignments(
 
 // Merge two ObjectAssignments: `overrides` takes precedence over `base`
 export function mergeObjectAssignments(
-	base: ObjectAssignments | undefined,
-	overrides: ObjectAssignments | undefined,
+	base: ObjectAssignments | undefined,	overrides: ObjectAssignments | undefined,
 ): ObjectAssignments | undefined {
 	if (!base && !overrides) return undefined;
 	// Deep-merge initial so sub-fields (e.g., position.x) are preserved
@@ -119,22 +115,12 @@ export function mergeObjectAssignments(
 		return deepMerge(b, o);
 	})();
 
-	// Merge inherit maps shallowly (overrides overwrite base)
-	const inherit: Record<string, unknown> | undefined = (() => {
-		const b = base?.inherit ?? {};
-		const o = overrides?.inherit ?? {};
-		const merged = deepMerge(b, o);
-		return Object.keys(merged).length > 0 ? merged : undefined;
-	})();
-
-	// Track overrides: prefer entries from `overrides` when they explicitly match the same trackId or type
 	const baseTracks = base?.tracks ?? [];
 	const overrideTracks = overrides?.tracks ?? [];
 
 	if (baseTracks.length === 0 && overrideTracks.length === 0) {
 		const out: ObjectAssignments = {};
 		if (Object.keys(initial).length > 0) out.initial = initial;
-		if (inherit) out.inherit = inherit;
 		return Object.keys(out).length > 0 ? out : {};
 	}
 
@@ -190,13 +176,11 @@ export function mergeObjectAssignments(
 		}
 	}
 
-	// Push indexed (merged) tracks and any non-keyed base tracks not overridden
 	const indexedMerged = Array.from(index.values());
 	mergedTracks.unshift(...indexedMerged);
 
 	const result: ObjectAssignments = {};
 	if (Object.keys(initial).length > 0) result.initial = initial;
-	if (inherit) result.inherit = inherit;
 	if (mergedTracks.length > 0) result.tracks = mergedTracks;
 	return result;
 }
