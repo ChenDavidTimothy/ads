@@ -91,6 +91,12 @@ export function WorkspaceProvider({
             const newNode = newNodes[i];
             const currentNode = currentNodes[i];
 
+            // Null safety checks
+            if (!newNode || !currentNode) {
+              onlyPositionChanges = false;
+              break;
+            }
+
             // Quick identity check
             if (newNode.id !== currentNode.id) {
               onlyPositionChanges = false;
@@ -98,16 +104,17 @@ export function WorkspaceProvider({
             }
 
             // Position change detection
-            const posChanged = (
+            const posChanged =
               newNode.position.x !== currentNode.position.x ||
-              newNode.position.y !== currentNode.position.y
-            );
+              newNode.position.y !== currentNode.position.y;
 
             if (posChanged) hasPositionChanges = true;
 
             // Quick non-position change detection (avoid deep comparison)
-            if (newNode.type !== currentNode.type ||
-                newNode.data !== currentNode.data) {
+            if (
+              newNode.type !== currentNode.type ||
+              newNode.data !== currentNode.data
+            ) {
               onlyPositionChanges = false;
             }
           }

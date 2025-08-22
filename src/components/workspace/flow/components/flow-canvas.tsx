@@ -156,6 +156,30 @@ export function FlowCanvas(props: Props) {
 
   const [showMinimap, setShowMinimap] = useState(true);
 
+  // SURGICAL FIX: Pre-compute node colors to avoid string operations during render
+  const nodeColorMemo = useMemo(() => {
+    const nodeColorMap = new Map<string, string>();
+
+    // Pre-populate color map for current nodes
+    nodes.forEach((node) => {
+      if (!nodeColorMap.has(node.type!)) {
+        const type = node.type!;
+        let color = "var(--node-output)"; // default
+
+        if (type.includes("animation")) color = "var(--node-animation)";
+        else if (type.includes("logic")) color = "var(--node-logic)";
+        else if (type.includes("geometry")) color = "var(--node-geometry)";
+        else if (type.includes("text")) color = "var(--node-text)";
+        else if (type.includes("data")) color = "var(--node-data)";
+
+        nodeColorMap.set(type, color);
+      }
+    });
+
+    // Return optimized lookup function
+    return (node: Node) => nodeColorMap.get(node.type!) ?? "var(--node-output)";
+  }, [nodes]);
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: EDGE_STYLES }} />
@@ -213,29 +237,7 @@ export function FlowCanvas(props: Props) {
         {showMinimap && (
           <MiniMap
             className="shadow-glass rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)]"
-            nodeColor={useMemo(() => {
-              // SURGICAL FIX: Pre-compute node colors to avoid string operations during render
-              const nodeColorMap = new Map<string, string>();
-
-              // Pre-populate color map for current nodes
-              nodes.forEach(node => {
-                if (!nodeColorMap.has(node.type!)) {
-                  const type = node.type!;
-                  let color = "var(--node-output)"; // default
-
-                  if (type.includes("animation")) color = "var(--node-animation)";
-                  else if (type.includes("logic")) color = "var(--node-logic)";
-                  else if (type.includes("geometry")) color = "var(--node-geometry)";
-                  else if (type.includes("text")) color = "var(--node-text)";
-                  else if (type.includes("data")) color = "var(--node-data)";
-
-                  nodeColorMap.set(type, color);
-                }
-              });
-
-              // Return optimized lookup function
-              return (node: Node) => nodeColorMap.get(node.type!) ?? "var(--node-output)";
-            }, [nodes.map(n => n.type).join(',')])} // Only recompute when node types change
+            nodeColor={nodeColorMemo}
             maskColor="var(--surface-0)"
             style={{
               backgroundColor: "var(--surface-1)",

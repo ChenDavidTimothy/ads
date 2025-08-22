@@ -52,7 +52,10 @@ export default async function WorkspaceEditorPage({
 
     if (workspaceError || !workspace) {
       // Workspace doesn't exist or doesn't belong to user
-      console.warn("Workspace not found or doesn't belong to user:", workspaceId);
+      console.warn(
+        "Workspace not found or doesn't belong to user:",
+        workspaceId,
+      );
 
       // Check if user has any workspaces
       const { data: userWorkspaces } = await supabase
@@ -62,7 +65,7 @@ export default async function WorkspaceEditorPage({
         .order("updated_at", { ascending: false })
         .limit(1);
 
-      if (userWorkspaces && userWorkspaces.length > 0) {
+      if (userWorkspaces && userWorkspaces.length > 0 && userWorkspaces[0]) {
         // Redirect to user's first workspace
         console.log("Redirecting to user's workspace:", userWorkspaces[0].id);
         redirect(`/workspace?workspace=${userWorkspaces[0].id}`);
@@ -85,8 +88,11 @@ export default async function WorkspaceEditorPage({
         .order("updated_at", { ascending: false })
         .limit(1);
 
-      if (userWorkspaces && userWorkspaces.length > 0) {
-        console.log("Fallback: Redirecting to user's workspace after error:", userWorkspaces[0].id);
+      if (userWorkspaces && userWorkspaces.length > 0 && userWorkspaces[0]) {
+        console.log(
+          "Fallback: Redirecting to user's workspace after error:",
+          userWorkspaces[0].id,
+        );
         redirect(`/workspace?workspace=${userWorkspaces[0].id}`);
       } else {
         redirect("/dashboard");

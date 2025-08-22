@@ -40,7 +40,7 @@ export function useCrashBackup(
     const key = BACKUP_PREFIX + workspaceId;
     const tick = () => {
       // Skip backup if nodes are being dragged
-      const isDragging = document.querySelector('.react-flow__node-dragging');
+      const isDragging = document.querySelector(".react-flow__node-dragging");
       if (isDragging) return;
 
       const state = getState();

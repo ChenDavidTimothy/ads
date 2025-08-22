@@ -30,11 +30,11 @@ export function useFlowGraph() {
   const dragAwareOnNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const hasDragStart = changes.some(
-        (change) => change.type === "position" && change.dragging === true
+        (change) => change.type === "position" && change.dragging === true,
       );
 
       const hasDragEnd = changes.some(
-        (change) => change.type === "position" && change.dragging === false
+        (change) => change.type === "position" && change.dragging === false,
       );
 
       // SURGICAL FIX: Enter drag mode immediately
@@ -66,7 +66,7 @@ export function useFlowGraph() {
       // Non-drag changes: Full processing
       onNodesChange(changes);
     },
-    [onNodesChange, isDragging]
+    [onNodesChange, isDragging],
   );
 
   // Unified edge validation function for nodes with dynamic ports
@@ -318,7 +318,7 @@ export function useFlowGraph() {
       if (remainingNodes === 0) {
         toast.error(
           "Cannot delete the last node",
-          "At least one node must remain in the workspace to maintain scene structure."
+          "At least one node must remain in the workspace to maintain scene structure.",
         );
         return;
       }
