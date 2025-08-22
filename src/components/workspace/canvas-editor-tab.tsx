@@ -429,7 +429,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             bindAdornment={
               <BindButton nodeId={nodeId} bindingKey="position.x" />
             }
-            disabled={isBound("position.x")}
+            disabled={isBound("position.x") || Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
             inputClassName={leftBorderClass("position.x")}
           />
           {/* Badge - Only show when bound */}
@@ -1118,7 +1118,7 @@ function CanvasPerObjectProperties({
                 objectId={objectId}
               />
             }
-            disabled={isBound("position.x")}
+            disabled={isBound("position.x") || Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
             inputClassName={leftBorderClass("position.x")}
           />
           {/* Badge - Only show when needed */}
