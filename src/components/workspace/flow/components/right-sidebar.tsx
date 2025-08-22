@@ -1,4 +1,5 @@
 // src/components/workspace/flow/components/right-sidebar.tsx
+import React, { memo } from "react";
 import type { Edge, Node } from "reactflow";
 import { Play, Settings, Folder } from "lucide-react";
 import { PropertyPanel } from "@/components/workspace/property-panel";
@@ -7,6 +8,17 @@ import { PreviewPanel } from "./preview-panel";
 import { AssetsPanel } from "./assets-panel";
 import type { NodeData } from "@/shared/types";
 import type { FlowTracker } from "@/lib/flow/flow-tracking";
+
+// SURGICAL FIX: Memoize PropertyPanel to prevent re-renders during drag
+const MemoizedPropertyPanel = memo(PropertyPanel, (prevProps, nextProps) => {
+  // Only re-render if selected node actually changed (not just position)
+  return (
+    prevProps.node?.id === nextProps.node?.id &&
+    prevProps.node?.data === nextProps.node?.data &&
+    prevProps.allNodes.length === nextProps.allNodes.length &&
+    prevProps.allEdges.length === nextProps.allEdges.length
+  );
+});
 
 interface VideoJob {
   jobId: string;
@@ -82,7 +94,7 @@ export function RightSidebar({
       >
         {node ? (
           // Node is selected - show properties
-          <PropertyPanel
+          <MemoizedPropertyPanel
             node={node}
             onChange={(newData: Partial<NodeData>) => onChange(newData)}
             onDisplayNameChange={onDisplayNameChange}

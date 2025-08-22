@@ -77,13 +77,52 @@ export function WorkspaceProvider({
     setState((prev) => {
       if (!prev) return prev;
 
-      // For node updates, always apply the change since the overhead is minimal
-      // and ensures correctness for complex nested object mutations
-      if ("nodes" in updates) {
+      // SURGICAL FIX: Fast path for node position updates (avoid expensive JSON.stringify)
+      if ("nodes" in updates && updates.nodes) {
+        const newNodes = updates.nodes;
+        const currentNodes = prev.flow.nodes;
+
+        // Ultra-fast position-only change detection
+        if (newNodes.length === currentNodes.length) {
+          let onlyPositionChanges = true;
+          let hasPositionChanges = false;
+
+          for (let i = 0; i < newNodes.length && onlyPositionChanges; i++) {
+            const newNode = newNodes[i];
+            const currentNode = currentNodes[i];
+
+            // Quick identity check
+            if (newNode.id !== currentNode.id) {
+              onlyPositionChanges = false;
+              break;
+            }
+
+            // Position change detection
+            const posChanged = (
+              newNode.position.x !== currentNode.position.x ||
+              newNode.position.y !== currentNode.position.y
+            );
+
+            if (posChanged) hasPositionChanges = true;
+
+            // Quick non-position change detection (avoid deep comparison)
+            if (newNode.type !== currentNode.type ||
+                newNode.data !== currentNode.data) {
+              onlyPositionChanges = false;
+            }
+          }
+
+          // CRITICAL: Fast path for position-only updates
+          if (onlyPositionChanges && hasPositionChanges) {
+            return { ...prev, flow: { ...prev.flow, nodes: newNodes } };
+          }
+        }
+
+        // Fast path: Always update if nodes array changed (structural changes)
         return { ...prev, flow: { ...prev.flow, ...updates } };
       }
 
-      // Keep existing logic for other flow updates (edges, etc.)
+      // Existing logic for non-node updates (edges, etc.)
       const hasChanges = Object.keys(updates).some((key) => {
         const updateValue = updates[key as keyof typeof updates];
         const currentValue = prev.flow[key as keyof typeof prev.flow];

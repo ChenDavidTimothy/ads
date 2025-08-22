@@ -35,10 +35,14 @@ export function useCrashBackup(
     }
   }, [workspaceId, maxAgeMs]);
 
-  // Periodic backup
+  // SURGICAL FIX: Pause backup during drag to prevent interference
   useEffect(() => {
     const key = BACKUP_PREFIX + workspaceId;
     const tick = () => {
+      // Skip backup if nodes are being dragged
+      const isDragging = document.querySelector('.react-flow__node-dragging');
+      if (isDragging) return;
+
       const state = getState();
       if (!state) return;
       try {

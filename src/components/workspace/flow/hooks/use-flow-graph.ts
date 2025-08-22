@@ -1,5 +1,5 @@
 // src/components/workspace/flow/hooks/useFlowGraph.ts - Fixed React render errors
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import {
   useEdgesState,
   useNodesState,
@@ -23,29 +23,50 @@ export function useFlowGraph() {
   const [flowTracker] = useState(() => new FlowTracker());
   const { toast } = useNotifications();
 
-  // Optimized node change handler to reduce re-renders during drag
-  const optimizedOnNodesChange = useCallback(
+  // CRITICAL: Track drag state to bypass expensive operations during drag
+  const [isDragging, setIsDragging] = useState(false);
+  const dragEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const dragAwareOnNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Batch position-only changes to improve drag performance
-      const positionChanges = changes.filter(
-        (change) => change.type === "position" && change.dragging === true,
+      const hasDragStart = changes.some(
+        (change) => change.type === "position" && change.dragging === true
       );
 
-      const otherChanges = changes.filter(
-        (change) => change.type !== "position" || change.dragging !== true,
+      const hasDragEnd = changes.some(
+        (change) => change.type === "position" && change.dragging === false
       );
 
-      // Handle position changes immediately for smooth dragging
-      if (positionChanges.length > 0) {
-        onNodesChange(positionChanges);
+      // SURGICAL FIX: Enter drag mode immediately
+      if (hasDragStart && !isDragging) {
+        setIsDragging(true);
+        // Clear any pending drag end
+        if (dragEndTimeoutRef.current) {
+          clearTimeout(dragEndTimeoutRef.current);
+          dragEndTimeoutRef.current = null;
+        }
       }
 
-      // Handle other changes with a small delay to batch them
-      if (otherChanges.length > 0) {
-        setTimeout(() => onNodesChange(otherChanges), 8); // 120fps for responsiveness
+      // CRITICAL: During drag, ONLY update ReactFlow state (bypasses all expensive operations)
+      if (isDragging || hasDragStart) {
+        onNodesChange(changes); // Fast path: local state only
+
+        // Exit drag mode with safety delay
+        if (hasDragEnd) {
+          if (dragEndTimeoutRef.current) {
+            clearTimeout(dragEndTimeoutRef.current);
+          }
+          dragEndTimeoutRef.current = setTimeout(() => {
+            setIsDragging(false);
+          }, 100); // Ensure all position updates complete
+        }
+        return;
       }
+
+      // Non-drag changes: Full processing
+      onNodesChange(changes);
     },
-    [onNodesChange],
+    [onNodesChange, isDragging]
   );
 
   // Unified edge validation function for nodes with dynamic ports
@@ -379,7 +400,7 @@ export function useFlowGraph() {
     edges,
     setNodes,
     setEdges,
-    onNodesChange: optimizedOnNodesChange,
+    onNodesChange: dragAwareOnNodesChange, // ← CHANGE: Use new handler
     onEdgesChange,
     selectedNodeId,
     selectedNode,
@@ -393,5 +414,6 @@ export function useFlowGraph() {
     handleAddNode,
     flowTracker,
     cleanupInvalidDynamicEdges,
+    isDragging, // ← ADD: Export drag state
   } as const;
 }
