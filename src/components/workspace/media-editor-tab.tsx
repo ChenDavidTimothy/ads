@@ -176,6 +176,28 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               Image Asset
             </label>
             <div className="flex items-center gap-2">
+              <AutoToggle
+                active={Boolean((node?.data as MediaNodeData)?.inherit?.imageAssetId)}
+                onToggle={(next) => {
+                  updateFlow({
+                    nodes: state.flow.nodes.map((n) =>
+                      n.data?.identifier?.id !== nodeId
+                        ? n
+                        : {
+                            ...n,
+                            data: {
+                              ...(n.data as MediaNodeData),
+                              inherit: {
+                                ...((n.data as MediaNodeData).inherit ?? {}),
+                                imageAssetId: next,
+                              },
+                            },
+                          },
+                    ),
+                  });
+                  if (next) resetToDefault("imageAssetId");
+                }}
+              />
 					<AutoToggle
 						active={Boolean((node?.data as MediaNodeData)?.inherit?.imageAssetId)}
 						onToggle={(next) =>
