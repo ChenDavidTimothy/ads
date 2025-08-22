@@ -12,19 +12,22 @@ interface NodeDeleteButtonProps {
 // ✅ SIMPLE & EFFECTIVE: Just a delete button, no over-engineering
 export const NodeDeleteButton = memo(function NodeDeleteButton({
   nodeId,
-  nodeName
+  nodeName,
 }: NodeDeleteButtonProps) {
   const { onDeleteNode, isDragging } = useDeleteActions();
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
 
-    // Prevent delete during drag to avoid accidental clicks
-    if (!isDragging) {
-      onDeleteNode(nodeId);
-    }
-  }, [nodeId, onDeleteNode, isDragging]);
+      // Prevent delete during drag to avoid accidental clicks
+      if (!isDragging) {
+        onDeleteNode(nodeId);
+      }
+    },
+    [nodeId, onDeleteNode, isDragging],
+  );
 
   return (
     <button

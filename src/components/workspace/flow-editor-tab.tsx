@@ -271,10 +271,10 @@ export function FlowEditorTab() {
 
   const nodeTypes: NodeTypes = useMemo(() => {
     return createNodeTypes(
-      (id) => openTimelineRef.current(id),
-      (id) => openLogViewerRef.current(id),
+      (id) => openTimelineRef.current?.(id),
+      (id) => openLogViewerRef.current?.(id),
     );
-  }, []);
+  }, []); // Empty deps array - create once
 
   const { onConnect } = useConnections(
     nodes,
@@ -315,12 +315,17 @@ export function FlowEditorTab() {
   } = useSceneGeneration(nodes, edges);
 
   // Simple delete handler - no complex optimization needed
-  const handleDeleteNodeById = useCallback((nodeId: string) => {
-    const nodeToDelete = nodes.find(node => node.data.identifier.id === nodeId);
-    if (nodeToDelete) {
-      onNodesDelete([nodeToDelete]);
-    }
-  }, [nodes, onNodesDelete]);
+  const handleDeleteNodeById = useCallback(
+    (nodeId: string) => {
+      const nodeToDelete = nodes.find(
+        (node) => node.data.identifier.id === nodeId,
+      );
+      if (nodeToDelete) {
+        onNodesDelete([nodeToDelete]);
+      }
+    },
+    [nodes, onNodesDelete],
+  );
 
   const validationSummary = getValidationSummary();
 
@@ -362,9 +367,7 @@ export function FlowEditorTab() {
               isDebugging,
             }}
           >
-            <DeleteProvider
-              onDeleteNode={handleDeleteNodeById}
-            >
+            <DeleteProvider onDeleteNode={handleDeleteNodeById}>
               <FlowCanvas
                 nodes={nodes}
                 edges={edges}

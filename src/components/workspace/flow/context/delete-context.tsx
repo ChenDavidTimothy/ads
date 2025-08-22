@@ -11,7 +11,7 @@ const DeleteContext = createContext<DeleteContextType | null>(null);
 
 export function DeleteProvider({
   children,
-  onDeleteNode
+  onDeleteNode,
 }: {
   children: React.ReactNode;
   onDeleteNode: (nodeId: string) => void;
@@ -23,12 +23,12 @@ export function DeleteProvider({
     const handleDragStart = () => setIsDragging(true);
     const handleDragEnd = () => setIsDragging(false);
 
-    document.addEventListener('dragstart', handleDragStart);
-    document.addEventListener('dragend', handleDragEnd);
+    document.addEventListener("dragstart", handleDragStart);
+    document.addEventListener("dragend", handleDragEnd);
 
     return () => {
-      document.removeEventListener('dragstart', handleDragStart);
-      document.removeEventListener('dragend', handleDragEnd);
+      document.removeEventListener("dragstart", handleDragStart);
+      document.removeEventListener("dragend", handleDragEnd);
     };
   }, []);
 

@@ -36,32 +36,9 @@ const EDGE_STYLES = `
   stroke: var(--edge-stroke-hover) !important;
   stroke-width: 4px !important;
   cursor: pointer !important;
-  filter: drop-shadow(0 0 4px var(--purple-shadow-medium)) !important;
 }
 
-/* Tooltip for edge deletion */
-.react-flow__edge {
-  position: relative;
-}
 
-.react-flow__edge:hover::after {
-  content: 'Double-click to delete';
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--danger-600);
-  color: white;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0.95;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 2px 8px var(--purple-shadow-medium);
-}
 
 .react-flow__handle {
   width: 16px;
@@ -220,7 +197,9 @@ export function FlowCanvas(props: Props) {
         onPaneClick={onPaneClick}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
-        onEdgeDoubleClick={(event, edge) => onEdgesDelete([edge])}
+        onEdgeDoubleClick={(event, edge) => {
+          onEdgesDelete([edge]);
+        }}
         onNodeDragStop={onNodeDragStop}
         onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
@@ -251,11 +230,6 @@ export function FlowCanvas(props: Props) {
         proOptions={{ hideAttribution: true }}
       >
         <Background color="var(--border-secondary)" size={2} gap={20} />
-
-        {/* Delete instructions for better UX */}
-        <div className="absolute left-4 bottom-4 z-50 rounded-[var(--radius-sm)] bg-[var(--surface-1)]/80 px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-tertiary)] backdrop-blur-sm border border-[var(--border-primary)]">
-          💡 Double-click edges or press Delete to remove them
-        </div>
 
         {/* Custom minimap toggle button - positioned inside ReactFlow */}
         <button

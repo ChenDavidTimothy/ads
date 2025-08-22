@@ -15,9 +15,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export function extractDomainError(
-  error: unknown,
-): {
+export function extractDomainError(error: unknown): {
   code: DomainErrorCode;
   details?: DomainErrorDetails;
   message?: string;
