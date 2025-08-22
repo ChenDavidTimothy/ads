@@ -41,6 +41,7 @@ import {
   useVariableBinding,
 } from "@/components/workspace/binding/bindings";
 import { Badge } from "@/components/ui/badge";
+import { AutoToggle } from "@/components/ui/source-selector";
 
 function BindingBadge({
   nodeId,
@@ -991,16 +992,29 @@ export function TrackProperties({
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
+                <div className="flex items-center justify-between">
+                  <span className="block text-xs text-[var(--text-tertiary)]">From X</span>
+                  <AutoToggle
+                    active={!isFieldOverridden("move.from.x") && !isFieldBound("move.from.x")}
+                    onToggle={(next) => {
+                      if (next) {
+                        // Clear from.x override/binding
+                        onChange({ properties: { from: { x: undefined } } as Partial<MoveTrackProperties> });
+                        // Clearing binding is handled by reset in Bind menu; Auto implies no manual or binding
+                      }
+                    }}
+                  />
+                </div>
                 <NumberField
-                  label={labelWithOverride("X")}
+                  label={labelWithOverride("")}
                   value={getTrackFieldValue(
                     "move.from.x",
                     getOverrideProperty<number>("from.x"),
                     track.properties.from.x,
                   )}
-                  onChange={(x) =>
+                  onChange={(fromX) =>
                     updateProperties({
-                      from: { x },
+                      from: { ...track.properties.from, x: fromX },
                     } as Partial<MoveTrackProperties>)
                   }
                   defaultValue={0}
