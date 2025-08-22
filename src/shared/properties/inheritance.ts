@@ -89,8 +89,8 @@ export function buildSparsePoint2DOverride(
 	key: string,
 	defaultScope: DefaultScopeInputs<Record<string, Point2D | number | string>>,
 	perObjectScope?: PerObjectScopeInputs<Record<string, Point2D | number | string>>,
-): Partial<Record<string, Point2D>> {
-	const out: Partial<Record<string, Point2D>> = {};
+): Partial<Record<string, Partial<Point2D>>> {
+	const out: Partial<Record<string, Partial<Point2D>>> = {};
 	const inheritObj = defaultScope.inherit as Record<string, unknown> | undefined;
 
 	// Resolve bound and assignment per-axis first
@@ -113,16 +113,21 @@ export function buildSparsePoint2DOverride(
 		y = (poAssign[key] as Record<string, unknown>).y as number;
 	}
 
-	// If per-object provided either axis, include those
-	if (x !== undefined || y !== undefined) {
+	// If per-object provided either axis, include only those axes
+	const partial: Partial<Point2D> = {};
+	if (x !== undefined) partial.x = x;
+	if (y !== undefined) partial.y = y;
+	if (partial.x !== undefined || partial.y !== undefined) {
+		// Fill the missing axis with node default if available for stability
+		const nodeDef = defaultScope.nodeDefaults[key] as Point2D | undefined;
 		out[key] = {
-			x: x ?? (defaultScope.nodeDefaults[key] as Point2D | undefined)?.x ?? 0,
-			y: y ?? (defaultScope.nodeDefaults[key] as Point2D | undefined)?.y ?? 0,
+			x: partial.x ?? nodeDef?.x,
+			y: partial.y ?? nodeDef?.y,
 		};
 		return out;
 	}
 
-	// Default inherit check per-axis
+	// Default inherit check per-axis determines omission of specific axes
 	const inhX = getInheritFlag(inheritObj, key, "x");
 	const inhY = getInheritFlag(inheritObj, key, "y");
 
@@ -131,18 +136,15 @@ export function buildSparsePoint2DOverride(
 
 	const nodeDef = defaultScope.nodeDefaults[key] as Point2D | undefined;
 
-	const finalX = inhX
-		? undefined
-		: (nodeBoundX as number | undefined) ?? nodeDef?.x;
-	const finalY = inhY
-		? undefined
-		: (nodeBoundY as number | undefined) ?? nodeDef?.y;
+	const resolvedX = inhX ? undefined : ((nodeBoundX as number | undefined) ?? nodeDef?.x);
+	const resolvedY = inhY ? undefined : ((nodeBoundY as number | undefined) ?? nodeDef?.y);
 
-	if (finalX !== undefined || finalY !== undefined) {
-		out[key] = {
-			x: finalX ?? nodeDef?.x ?? 0,
-			y: finalY ?? nodeDef?.y ?? 0,
-		};
+	const partialDefault: Partial<Point2D> = {};
+	if (resolvedX !== undefined) partialDefault.x = resolvedX;
+	if (resolvedY !== undefined) partialDefault.y = resolvedY;
+
+	if (partialDefault.x !== undefined || partialDefault.y !== undefined) {
+		out[key] = partialDefault;
 	}
 
 	return out;
