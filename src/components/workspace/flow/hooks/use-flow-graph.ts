@@ -145,9 +145,7 @@ export function useFlowGraph() {
               invalidEdges.forEach((edge) => {
                 flowTracker.removeConnection(edge.id);
               });
-              console.log(
-                `[CLEANUP] Removed ${invalidEdges.length} invalid connection(s) during port reconfiguration`,
-              );
+              // Cleanup: Removed ${invalidEdges.length} invalid connection(s) during port reconfiguration
             }
 
             return eds.filter(
@@ -194,9 +192,7 @@ export function useFlowGraph() {
                 removedEdges.forEach((edge) => {
                   flowTracker.removeConnection(edge.id);
                 });
-                console.log(
-                  `[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to NOT operation change - user can reconnect`,
-                );
+                // Cleanup: Cut ${removedEdges.length} connection(s) due to NOT operation change
               }
 
               return eds.filter((edge) => edge.target !== updatedNode.id);
@@ -241,9 +237,7 @@ export function useFlowGraph() {
                 removedEdges.forEach((edge) => {
                   flowTracker.removeConnection(edge.id);
                 });
-                console.log(
-                  `[SIMPLE-CLEANUP] Cut ${removedEdges.length} connection(s) due to math operation port change - user can reconnect`,
-                );
+                // Cleanup: Cut ${removedEdges.length} connection(s) due to math operation port change
               }
 
               return eds.filter((edge) => edge.target !== updatedNode.id);

@@ -388,3 +388,51 @@ body {
 .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
   background: var(--border-primary);
 }
+
+/* Node delete button styles */
+.node-delete-button {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  opacity: 0.4;
+  transition: all var(--duration-fast) var(--easing-standard);
+  border: none;
+  cursor: pointer;
+  font-size: 0; /* Hide any text */
+}
+
+.node-delete-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  background: var(--danger-600);
+  color: white;
+}
+
+.node-delete-button:active {
+  transform: scale(0.95);
+}
+
+/* Mobile-first approach for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .node-delete-button {
+    opacity: 0.8;
+    width: 24px;
+    height: 24px;
+  }
+
+  .node-delete-button:hover {
+    opacity: 1;
+    transform: none;
+    background: var(--danger-600);
+    color: white;
+  }
+}
