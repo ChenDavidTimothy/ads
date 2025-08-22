@@ -17,7 +17,7 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
-import { AutoToggle } from "@/components/ui/auto-toggle";
+import { AutoToggle } from "@/components/ui/source-selector";
 
 function CanvasBindingBadge({
   nodeId,
