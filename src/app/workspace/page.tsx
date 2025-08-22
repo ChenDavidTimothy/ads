@@ -52,11 +52,49 @@ export default async function WorkspaceEditorPage({
 
     if (workspaceError || !workspace) {
       // Workspace doesn't exist or doesn't belong to user
-      redirect("/dashboard");
+      console.warn("Workspace not found or doesn't belong to user:", workspaceId);
+
+      // Check if user has any workspaces
+      const { data: userWorkspaces } = await supabase
+        .from("workspaces")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (userWorkspaces && userWorkspaces.length > 0) {
+        // Redirect to user's first workspace
+        console.log("Redirecting to user's workspace:", userWorkspaces[0].id);
+        redirect(`/workspace?workspace=${userWorkspaces[0].id}`);
+      } else {
+        // User has no workspaces, redirect to dashboard to create one
+        console.log("No workspaces found for user, redirecting to dashboard");
+        redirect("/dashboard");
+      }
+      return; // This line won't be reached but TypeScript needs it
     }
   } catch (error) {
     console.error("Error validating workspace:", error);
-    redirect("/dashboard");
+
+    // On error, try to find any user workspace as fallback
+    try {
+      const { data: userWorkspaces } = await supabase
+        .from("workspaces")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (userWorkspaces && userWorkspaces.length > 0) {
+        console.log("Fallback: Redirecting to user's workspace after error:", userWorkspaces[0].id);
+        redirect(`/workspace?workspace=${userWorkspaces[0].id}`);
+      } else {
+        redirect("/dashboard");
+      }
+    } catch (fallbackError) {
+      console.error("Fallback workspace lookup also failed:", fallbackError);
+      redirect("/dashboard");
+    }
   }
 
   return <WorkspaceLayout workspaceId={workspaceId} />;
