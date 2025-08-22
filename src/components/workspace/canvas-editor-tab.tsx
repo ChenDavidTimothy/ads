@@ -323,6 +323,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
     string,
     { target?: string; boundResultNodeId?: string }
   >;
+  const { resetToDefault } = useVariableBinding(nodeId);
+  const inheritFlags = (node?.data as CanvasNodeData)?.inherit ?? {};
 
   const def =
     (getNodeDefinition("canvas")?.defaults as Record<string, unknown> & {
@@ -377,7 +379,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -396,7 +398,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("position.x");
               }
               className="ml-2"
             />
@@ -445,7 +448,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.position?.y)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -464,7 +467,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("position.y");
               }
               className="ml-2"
             />
@@ -515,7 +519,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.scale?.x)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -534,7 +538,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("scale.x");
               }
               className="ml-2"
             />
@@ -580,7 +585,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.scale?.y)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -599,7 +604,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("scale.y");
               }
               className="ml-2"
             />
@@ -678,7 +684,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.opacity)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -694,7 +700,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("opacity");
               }
               className="ml-2"
             />
@@ -1268,7 +1275,7 @@ function CanvasPerObjectProperties({
             </label>
             <AutoToggle
               active={Boolean((node?.data as CanvasNodeData)?.inherit?.rotation)}
-              onToggle={(next) =>
+              onToggle={(next) => {
                 updateFlow({
                   nodes: state.flow.nodes.map((n) =>
                     n.data?.identifier?.id !== nodeId
@@ -1284,7 +1291,8 @@ function CanvasPerObjectProperties({
                           },
                         },
                   ),
-                })
+                });
+                if (next) resetToDefault("rotation");
               }
               className="ml-2"
             />
