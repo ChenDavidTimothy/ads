@@ -27,6 +27,7 @@ import { logger } from "@/lib/logger";
 import type { SceneObject, TextProperties } from "@/shared/types/scene";
 import { createServiceClient } from "@/utils/supabase/service";
 import { loadImage } from "canvas";
+import { buildSparseOverrides } from "@/shared/properties/inheritance";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -104,8 +105,37 @@ export class AnimationNodeExecutor extends BaseExecutor {
         return readVarGlobal(key);
       };
 
-    // Build Media overrides with ALL properties
-    const baseOverrides: {
+    // Build sparse Media overrides honoring Default-scope inherit
+    const nodeBoundValues: Record<string, unknown> = {};
+    for (const key of Object.keys(bindings)) {
+      const v = readVarGlobal(key);
+      if (v !== undefined) nodeBoundValues[key] = v;
+    }
+    const defaultScope = {
+      nodeDefaults: {
+        imageAssetId: data.imageAssetId as string,
+        cropX: data.cropX as number,
+        cropY: data.cropY as number,
+        cropWidth: data.cropWidth as number,
+        cropHeight: data.cropHeight as number,
+        displayWidth: data.displayWidth as number,
+        displayHeight: data.displayHeight as number,
+      } as Record<string, unknown>,
+      nodeBoundValues,
+      inherit: (data.inherit as Record<string, unknown>) ?? {},
+    };
+    const nodeOverrides = buildSparseOverrides<Record<string, number | string>>(
+      [
+        "imageAssetId",
+        "cropX",
+        "cropY",
+        "cropWidth",
+        "cropHeight",
+        "displayWidth",
+        "displayHeight",
+      ],
+      defaultScope,
+    ) as {
       imageAssetId?: string;
       cropX?: number;
       cropY?: number;
@@ -113,51 +143,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       cropHeight?: number;
       displayWidth?: number;
       displayHeight?: number;
-    } = {
-      imageAssetId: data.imageAssetId as string,
-      cropX: data.cropX as number,
-      cropY: data.cropY as number,
-      cropWidth: data.cropWidth as number,
-      cropHeight: data.cropHeight as number,
-      displayWidth: data.displayWidth as number,
-      displayHeight: data.displayHeight as number,
     };
-
-    // Apply all global binding keys generically into baseOverrides
-    const globalKeys = Object.keys(bindings);
-    const nodeOverrides = JSON.parse(
-      JSON.stringify(baseOverrides),
-    ) as typeof baseOverrides;
-
-    for (const key of globalKeys) {
-      const val = readVarGlobal(key);
-      if (val === undefined) continue;
-
-      // Type-safe property setting for ALL Media overrides
-      switch (key) {
-        case "imageAssetId":
-          if (typeof val === "string") nodeOverrides.imageAssetId = val;
-          break;
-        case "cropX":
-          if (typeof val === "number") nodeOverrides.cropX = val;
-          break;
-        case "cropY":
-          if (typeof val === "number") nodeOverrides.cropY = val;
-          break;
-        case "cropWidth":
-          if (typeof val === "number") nodeOverrides.cropWidth = val;
-          break;
-        case "cropHeight":
-          if (typeof val === "number") nodeOverrides.cropHeight = val;
-          break;
-        case "displayWidth":
-          if (typeof val === "number") nodeOverrides.displayWidth = val;
-          break;
-        case "displayHeight":
-          if (typeof val === "number") nodeOverrides.displayHeight = val;
-          break;
-      }
-    }
 
     const processedObjects: unknown[] = [];
 
@@ -941,125 +927,84 @@ export class AnimationNodeExecutor extends BaseExecutor {
         return readVarGlobal(key);
       };
 
-    // Build Typography overrides with ALL properties
-    const baseOverrides: {
+    // Build Typography overrides honoring Default-scope inherit
+    const nodeBoundValues: Record<string, unknown> = {};
+    for (const key of Object.keys(bindings)) {
+      const v = readVarGlobal(key);
+      if (v !== undefined) nodeBoundValues[key] = v;
+    }
+    const defaultScope = {
+      nodeDefaults: {
+        content?: string;
+        // Typography properties (KEEP)
+        fontFamily?: string;
+        fontSize?: number;
+        fontWeight?: string;
+        textAlign?: string;
+        lineHeight?: number;
+        letterSpacing?: number;
+        // NEW PROPERTIES - Add these
+        fontStyle?: string;
+        textBaseline?: string;
+        direction?: string;
+        // RESTORE: Add these back
+        fillColor?: string;
+        strokeColor?: string;
+        strokeWidth?: number;
+        // Text Effects (KEEP)
+        shadowColor?: string;
+        shadowOffsetX?: number;
+        shadowOffsetY?: number;
+        shadowBlur?: number;
+        textOpacity?: number;
+      },
+      nodeBoundValues,
+      inherit: (data.inherit as Record<string, unknown>) ?? {},
+    };
+    const nodeOverrides = buildSparseOverrides<
+      Record<string, string | number>
+    >(
+      [
+        "content",
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "textAlign",
+        "lineHeight",
+        "letterSpacing",
+        "fontStyle",
+        "textBaseline",
+        "direction",
+        "fillColor",
+        "strokeColor",
+        "strokeWidth",
+        "shadowColor",
+        "shadowOffsetX",
+        "shadowOffsetY",
+        "shadowBlur",
+        "textOpacity",
+      ],
+      defaultScope,
+    ) as {
       content?: string;
-      // Typography properties (KEEP)
       fontFamily?: string;
       fontSize?: number;
       fontWeight?: string;
       textAlign?: string;
       lineHeight?: number;
       letterSpacing?: number;
-      // NEW PROPERTIES - Add these
       fontStyle?: string;
       textBaseline?: string;
       direction?: string;
-      // RESTORE: Add these back
       fillColor?: string;
       strokeColor?: string;
       strokeWidth?: number;
-      // Text Effects (KEEP)
       shadowColor?: string;
       shadowOffsetX?: number;
       shadowOffsetY?: number;
       shadowBlur?: number;
       textOpacity?: number;
-    } = {
-      content: data.content as string,
-      // Typography properties (KEEP)
-      fontFamily: data.fontFamily as string,
-      fontSize: data.fontSize as number,
-      fontWeight: data.fontWeight as string,
-      textAlign: data.textAlign as string,
-      lineHeight: data.lineHeight as number,
-      letterSpacing: data.letterSpacing as number,
-      // NEW PROPERTIES - Add these
-      fontStyle: data.fontStyle as string,
-      textBaseline: data.textBaseline as string,
-      direction: data.direction as string,
-      // RESTORE: Add color assignments
-      fillColor: data.fillColor as string,
-      strokeColor: data.strokeColor as string,
-      strokeWidth: data.strokeWidth as number,
-      // Text Effects (KEEP)
-      shadowColor: data.shadowColor as string,
-      shadowOffsetX: data.shadowOffsetX as number,
-      shadowOffsetY: data.shadowOffsetY as number,
-      shadowBlur: data.shadowBlur as number,
-      textOpacity: data.textOpacity as number,
     };
-
-    // Apply all global binding keys generically into baseOverrides
-    const globalKeys = Object.keys(bindings);
-    const nodeOverrides = JSON.parse(
-      JSON.stringify(baseOverrides),
-    ) as typeof baseOverrides;
-    for (const key of globalKeys) {
-      const val = readVarGlobal(key);
-      if (val === undefined) continue;
-
-      // Type-safe property setting for ALL Typography overrides
-      switch (key) {
-        case "content": // ADD this case
-          if (typeof val === "string") nodeOverrides.content = val;
-          break;
-        // EXISTING CASES (keep unchanged)
-        case "fontFamily":
-          if (typeof val === "string") nodeOverrides.fontFamily = val;
-          break;
-        case "fontSize":
-          if (typeof val === "number") nodeOverrides.fontSize = val;
-          break;
-        case "fontWeight":
-          if (typeof val === "string") nodeOverrides.fontWeight = val;
-          break;
-        case "textAlign":
-          if (typeof val === "string") nodeOverrides.textAlign = val;
-          break;
-        case "lineHeight":
-          if (typeof val === "number") nodeOverrides.lineHeight = val;
-          break;
-        case "letterSpacing":
-          if (typeof val === "number") nodeOverrides.letterSpacing = val;
-          break;
-        // NEW CASES - Add these
-        case "fontStyle":
-          if (typeof val === "string") nodeOverrides.fontStyle = val;
-          break;
-        case "textBaseline":
-          if (typeof val === "string") nodeOverrides.textBaseline = val;
-          break;
-        case "direction":
-          if (typeof val === "string") nodeOverrides.direction = val;
-          break;
-        // RESTORE: Add color binding cases
-        case "fillColor":
-          if (typeof val === "string") nodeOverrides.fillColor = val;
-          break;
-        case "strokeColor":
-          if (typeof val === "string") nodeOverrides.strokeColor = val;
-          break;
-        case "strokeWidth":
-          if (typeof val === "number") nodeOverrides.strokeWidth = val;
-          break;
-        case "shadowColor":
-          if (typeof val === "string") nodeOverrides.shadowColor = val;
-          break;
-        case "shadowOffsetX":
-          if (typeof val === "number") nodeOverrides.shadowOffsetX = val;
-          break;
-        case "shadowOffsetY":
-          if (typeof val === "number") nodeOverrides.shadowOffsetY = val;
-          break;
-        case "shadowBlur":
-          if (typeof val === "number") nodeOverrides.shadowBlur = val;
-          break;
-        case "textOpacity":
-          if (typeof val === "number") nodeOverrides.textOpacity = val;
-          break;
-      }
-    }
 
     const processedObjects: unknown[] = [];
 

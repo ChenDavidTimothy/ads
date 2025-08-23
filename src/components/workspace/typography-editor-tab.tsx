@@ -22,6 +22,8 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
+import { AutoToggle } from "@/components/ui/source-selector";
+import { useVariableBinding } from "@/components/workspace/binding/bindings";
 import { Type } from "lucide-react";
 
 // Badge Components
@@ -141,6 +143,7 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
   const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 0;
 
   const isBound = (key: string) => !!bindings[key]?.boundResultNodeId;
+  const { resetToDefault } = useVariableBinding(nodeId);
 
   const leftBorderClass = (key: string) =>
     isBound(key) ? "border-l-2 border-[var(--accent-secondary)]" : "";
@@ -157,8 +160,33 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
           Content
         </div>
         <div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-tertiary)]">Text Content</span>
+            <AutoToggle
+              active={Boolean((node?.data as TypographyNodeData)?.inherit?.content)}
+              onToggle={(next) => {
+                updateFlow({
+                  nodes: state.flow.nodes.map((n) =>
+                    n.data?.identifier?.id !== nodeId
+                      ? n
+                      : {
+                          ...n,
+                          data: {
+                            ...(n.data as TypographyNodeData),
+                            inherit: {
+                              ...((n.data as TypographyNodeData).inherit ?? {}),
+                              content: next,
+                            },
+                          },
+                        },
+                  ),
+                });
+                if (next) resetToDefault("content");
+              }}
+            />
+          </div>
           <TextareaField
-            label="Text Content"
+            label=""
             value={content}
             onChange={(content) =>
               updateFlow({
@@ -217,8 +245,33 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
 
         {/* Typography Row 2 - Font Size */}
         <div>
+          <div className="flex items-center justify-between">
+            <span className="block text-xs text-[var(--text-tertiary)]">Font Size (px)</span>
+                         <AutoToggle
+               active={Boolean((node?.data as TypographyNodeData)?.inherit?.fontSize)}
+               onToggle={(next) => {
+                 updateFlow({
+                   nodes: state.flow.nodes.map((n) =>
+                     n.data?.identifier?.id !== nodeId
+                       ? n
+                       : {
+                           ...n,
+                           data: {
+                             ...(n.data as TypographyNodeData),
+                             inherit: {
+                               ...((n.data as TypographyNodeData).inherit ?? {}),
+                               fontSize: next,
+                             },
+                           },
+                         },
+                   ),
+                 });
+                 if (next) resetToDefault("fontSize");
+               }}
+             />
+          </div>
           <NumberField
-            label="Font Size (px)"
+            label=""
             value={fontSize}
             onChange={(fontSize) =>
               updateFlow({
