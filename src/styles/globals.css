@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif,
+  --font-sans:
+    var(--font-montserrat), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
@@ -18,12 +19,10 @@
   --glass-bg: rgba(12, 12, 20, 0.88);
   --glass-border: rgba(255, 255, 255, 0.15);
   --glass-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.6),
     0 0 24px rgba(139, 92, 246, 0.04);
   --glass-shadow-lg:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.4),
     0 0 32px rgba(139, 92, 246, 0.06);
 
   /* PREMIUM BORDERS - keeping existing names */
@@ -83,11 +82,11 @@
   /* PREMIUM PURPLE SHADOW COLORS - keeping existing names but enhanced */
   --purple-shadow-subtle: rgba(139, 92, 246, 0.15);
   --purple-shadow-medium: rgba(139, 92, 246, 0.8);
-  --purple-shadow-strong: rgba(139, 92, 246, 1.0);
+  --purple-shadow-strong: rgba(139, 92, 246, 1);
 
   /* PREMIUM EDGE COLORS - enhanced for visibility */
   --edge-stroke: rgba(139, 92, 246, 0.7);
-  --edge-stroke-hover: rgba(139, 92, 246, 1.0);
+  --edge-stroke-hover: rgba(139, 92, 246, 1);
   --edge-stroke-selected: var(--accent-primary);
 
   /* PREMIUM MODAL BACKDROP COLORS - keeping existing names */
@@ -142,15 +141,16 @@
 .glass-panel {
   background:
     /* Premium subtle distant light gradient */
-    linear-gradient(135deg,
+    linear-gradient(
+      135deg,
       rgba(139, 92, 246, 0.03) 0%,
       transparent 25%,
       transparent 75%,
-      rgba(59, 130, 246, 0.02) 100%),
+      rgba(59, 130, 246, 0.02) 100%
+    ),
     /* Enhanced glass frosting layer */
-    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
-    /* Premium deep solid base */
-    var(--glass-bg);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium deep solid base */ var(--glass-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow-lg);
@@ -159,14 +159,15 @@
 .glass-button {
   background:
     /* Premium subtle directional light */
-    linear-gradient(135deg,
+    linear-gradient(
+      135deg,
       rgba(255, 255, 255, 0.04) 0%,
       transparent 35%,
-      rgba(59, 130, 246, 0.015) 100%),
+      rgba(59, 130, 246, 0.015) 100%
+    ),
     /* Deep glass frosting */
-    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
-    /* Premium dark base */
-    rgba(12, 12, 20, 0.88);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium dark base */ rgba(12, 12, 20, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(16px);
   transition: all var(--duration-fast) var(--easing-standard);
@@ -178,14 +179,15 @@
 .glass-button:hover {
   background:
     /* Enhanced premium subtle light */
-    linear-gradient(135deg,
+    linear-gradient(
+      135deg,
       rgba(255, 255, 255, 0.06) 0%,
       transparent 30%,
-      rgba(59, 130, 246, 0.025) 100%),
+      rgba(59, 130, 246, 0.025) 100%
+    ),
     /* Enhanced deep frosting */
-    linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
-    /* Premium interactive base */
-    rgba(18, 18, 28, 0.92);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
+    /* Premium interactive base */ rgba(18, 18, 28, 0.92);
   border-color: rgba(255, 255, 255, 0.22);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
@@ -196,14 +198,15 @@
 .glass-input {
   background:
     /* Premium subtle directional light */
-    linear-gradient(135deg,
+    linear-gradient(
+      135deg,
       rgba(255, 255, 255, 0.02) 0%,
       transparent 40%,
-      rgba(59, 130, 246, 0.01) 100%),
+      rgba(59, 130, 246, 0.01) 100%
+    ),
     /* Deep glass layer */
-    linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
-    /* Premium dark base */
-    rgba(8, 8, 15, 0.85);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
+    /* Premium dark base */ rgba(8, 8, 15, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
   box-shadow:
@@ -214,14 +217,15 @@
 .glass-input:focus {
   background:
     /* Enhanced premium directional light */
-    linear-gradient(135deg,
+    linear-gradient(
+      135deg,
       rgba(255, 255, 255, 0.04) 0%,
       transparent 35%,
-      rgba(139, 92, 246, 0.02) 100%),
+      rgba(139, 92, 246, 0.02) 100%
+    ),
     /* Enhanced glass layer */
-    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
-    /* Premium focused base */
-    rgba(12, 12, 22, 0.9);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Premium focused base */ rgba(12, 12, 22, 0.9);
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.5),
@@ -446,12 +450,16 @@ body {
   transform: scale(1.1);
 }
 
-.react-flow__handle.react-flow__handle-left { left: -8px; }
-.react-flow__handle.react-flow__handle-right { right: -8px; }
+.react-flow__handle.react-flow__handle-left {
+  left: -8px;
+}
+.react-flow__handle.react-flow__handle-right {
+  right: -8px;
+}
 
 /* Large invisible hit area around ports for easy clicking - PRESERVED */
 .react-flow__handle::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 32px;
   height: 32px;
@@ -463,7 +471,7 @@ body {
 
 /* Enhanced visual feedback when hovering near ports */
 .react-flow__handle:hover::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 40px;
   height: 40px;
@@ -476,7 +484,8 @@ body {
 }
 
 @keyframes premium-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(1);
   }

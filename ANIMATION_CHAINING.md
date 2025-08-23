@@ -26,81 +26,84 @@ The system uses a priority-based approach for determining the "from" values:
 ### 3. Example Scenarios
 
 #### Scenario 1: Move then Rotate
+
 ```typescript
 // Animation 1: Move from (0,0) to (900,900)
 const moveTrack = {
-  type: 'move',
+  type: "move",
   startTime: 0,
   duration: 1000,
   properties: {
     from: { x: 0, y: 0 },
-    to: { x: 900, y: 900 }
-  }
+    to: { x: 900, y: 900 },
+  },
 };
 
 // Animation 2: Rotate from 0° to 90°
 const rotateTrack = {
-  type: 'rotate',
+  type: "rotate",
   startTime: 1000, // Start when move ends
   duration: 500,
   properties: {
-    from: 0,  // Will inherit from previous rotation
-    to: 90
-  }
+    from: 0, // Will inherit from previous rotation
+    to: 90,
+  },
 };
 ```
 
 **Result**: Object moves to (900,900), then rotates in place from 0° to 90°
 
 #### Scenario 2: Sequential Moves
+
 ```typescript
 // First move: (0,0) to (100,100)
 const move1 = {
-  type: 'move',
+  type: "move",
   startTime: 0,
   duration: 500,
   properties: {
     from: { x: 0, y: 0 },
-    to: { x: 100, y: 100 }
-  }
+    to: { x: 100, y: 100 },
+  },
 };
 
 // Second move: (100,100) to (200,200)
 const move2 = {
-  type: 'move',
+  type: "move",
   startTime: 500, // Start when first move ends
   duration: 500,
   properties: {
     from: { x: 100, y: 100 }, // Explicitly set to continue
-    to: { x: 200, y: 200 }
-  }
+    to: { x: 200, y: 200 },
+  },
 };
 ```
 
 **Result**: Smooth continuous motion from (0,0) → (100,100) → (200,200)
 
 #### Scenario 3: Mixed Transform Types
+
 ```typescript
 // Move animation
 const moveTrack = {
-  type: 'move',
+  type: "move",
   startTime: 0,
   duration: 1000,
   properties: {
     from: { x: 0, y: 0 },
-    to: { x: 500, y: 500 }
-  }
+    to: { x: 500, y: 500 },
+  },
 };
 
 // Scale animation
 const scaleTrack = {
-  type: 'scale',
+  type: "scale",
   startTime: 1000, // Start when move ends
   duration: 500,
   properties: {
-    from: 1,  // Start from normal size
-    to: 2     // Scale to 2x size
-  }
+    from: 1, // Start from normal size
+    to: 2, // Scale to 2x size
+  },
 };
 ```
 
@@ -143,7 +146,9 @@ const scaleTrack = {
 ## Best Practices
 
 ### 1. Explicit "from" Values
+
 When you want precise control over the starting point:
+
 ```typescript
 properties: {
   from: { x: 100, y: 100 }, // Explicit starting position
@@ -152,7 +157,9 @@ properties: {
 ```
 
 ### 2. Implicit Chaining
+
 Let the system automatically determine the starting point:
+
 ```typescript
 properties: {
   // from: omitted - will inherit from previous animation
@@ -161,7 +168,9 @@ properties: {
 ```
 
 ### 3. Timing Coordination
+
 Ensure proper sequencing:
+
 ```typescript
 // Animation 1
 startTime: 0,
@@ -173,7 +182,9 @@ duration: 500
 ```
 
 ### 4. Transform Type Separation
+
 Use different transform types for different properties:
+
 ```typescript
 // Move and rotate can happen simultaneously or sequentially
 // Scale and fade can be applied independently

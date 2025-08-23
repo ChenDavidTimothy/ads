@@ -70,6 +70,7 @@ These environment variables tune the rendering pipeline timeouts and watchdog li
 This project uses **separate Supabase storage buckets** for different content types with automatic routing:
 
 ### Bucket Configuration
+
 ```bash
 # Separate buckets for different content types
 SUPABASE_IMAGES_BUCKET=images
@@ -77,6 +78,7 @@ SUPABASE_VIDEOS_BUCKET=videos
 ```
 
 ### Automatic Content Routing
+
 The storage system automatically routes files to the appropriate bucket based on file extension:
 
 - **Images**: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg` → `images` bucket
@@ -86,6 +88,7 @@ The storage system automatically routes files to the appropriate bucket based on
 ### File Organization
 
 Your files will now be organized like this:
+
 ```
 images bucket:
   └── {userId}/scene_{timestamp}_{uuid}.png
@@ -98,9 +101,11 @@ videos bucket:
 **Note**: The intermediate "animations" folder has been removed for cleaner organization.
 
 ### Bucket Policies
+
 Each bucket should have appropriate RLS policies. Run the SQL script in `scripts/setup-storage-buckets.sql` in your Supabase SQL editor.
 
 ### Benefits of Bucket Separation
+
 - **Security**: Different access controls for different content types
 - **Performance**: Optimized CDN and caching strategies per content type
 - **Cost Management**: Better storage tiering and lifecycle management
@@ -115,6 +120,7 @@ Run Graphile Worker migrations in your database (safe to run on Supabase):
 - Option B (recommended for production): run Graphile Worker's SQL migrations once via a migration tool or psql.
 
 Additionally, for client notifications, ensure the custom channel exists (no schema changes required):
+
 - We publish job completion events to `render_job_events` using `pg_notify`.
 
 ## Commands

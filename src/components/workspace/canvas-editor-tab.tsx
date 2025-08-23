@@ -17,7 +17,7 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
-import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
+import { OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
 
 function CanvasBindingBadge({
   nodeId,
@@ -35,17 +35,11 @@ function CanvasBindingBadge({
     (n) => n.data?.identifier?.id === nodeId,
   ) as Node<CanvasNodeData> | undefined;
   if (!node) return null;
-  let bound: string | undefined;
-  if (objectId) {
-    bound =
-      node.data?.variableBindingsByObject?.[objectId]?.[keyName]
-        ?.boundResultNodeId;
-    if (!bound) {
-      bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-    }
-  } else {
-    bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-  }
+  const bound = objectId
+    ? (node.data?.variableBindingsByObject?.[objectId]?.[keyName]
+        ?.boundResultNodeId ??
+      node.data?.variableBindings?.[keyName]?.boundResultNodeId)
+    : node.data?.variableBindings?.[keyName]?.boundResultNodeId;
   if (!bound) return null;
   const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)
     ?.data?.identifier?.displayName;
@@ -58,8 +52,22 @@ function CanvasBindingBadge({
 }
 
 // Replace bespoke badges with unified badges
-function OverrideBadge({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) {
-  return <UnifiedOverrideBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />;
+function OverrideBadge({
+  nodeId,
+  keyName,
+  objectId,
+}: {
+  nodeId: string;
+  keyName: string;
+  objectId?: string;
+}) {
+  return (
+    <UnifiedOverrideBadge
+      nodeId={nodeId}
+      bindingKey={keyName}
+      objectId={objectId}
+    />
+  );
 }
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
@@ -767,12 +775,7 @@ function CanvasPerObjectProperties({
     const vbAll = node?.data?.variableBindingsByObject ?? {};
     return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
   };
-  const isInheritedBound = (key: string) => {
-    if (isBound(key)) return false;
-    if (isOverridden(key)) return false;
-    const vb = node?.data?.variableBindings ?? {};
-    return !!(vb as Record<string, { boundResultNodeId?: string }>)[key]?.boundResultNodeId;
-  };
+  // Removed unused isInheritedBound function
   const isOverridden = (key: string) => {
     switch (key) {
       case "position.x":

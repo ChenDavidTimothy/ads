@@ -865,7 +865,10 @@ export function TrackProperties({
     );
     if (direct) return true;
     // Inherited: only if not directly bound and not overridden at the field
-    return !!(vbGlobal?.[scopedKey]?.boundResultNodeId ?? vbGlobal?.[key]?.boundResultNodeId);
+    return !!(
+      vbGlobal?.[scopedKey]?.boundResultNodeId ??
+      vbGlobal?.[key]?.boundResultNodeId
+    );
   };
   const labelWithOverride = (base: string) => {
     return base;

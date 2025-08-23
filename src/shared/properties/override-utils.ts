@@ -38,7 +38,9 @@ export function getObjectBindingKeys(
 /**
  * Pick the per-object assignments for an object id, supporting normalized id fallback.
  */
-export function pickAssignmentsForObject<T extends PerObjectAssignments | undefined>(
+export function pickAssignmentsForObject<
+  T extends PerObjectAssignments | undefined,
+>(
   assignments: T,
   objectId: string,
 ): T extends undefined ? undefined : NonNullable<T>[string] | undefined {
@@ -70,5 +72,3 @@ export function mergePerObjectAssignments(
   }
   return result;
 }
-
-

@@ -12,13 +12,12 @@ import type {
 import { NumberField } from "@/components/ui/form-fields";
 import { Button } from "@/components/ui/button";
 import { SelectionList } from "@/components/ui/selection";
-import {
-  BindButton,
-  useVariableBinding,
-} from "@/components/workspace/binding/bindings";
+import { BindButton } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import { Badge } from "@/components/ui/badge";
-import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
+import {
+  BindingBadge,
+  OverrideBadge as UnifiedOverrideBadge,
+} from "@/components/workspace/binding/badges";
 import { AssetSelectionModal } from "./media/asset-selection-modal";
 import { Image, ImageOff } from "lucide-react";
 import { api } from "@/trpc/react";
@@ -27,12 +26,30 @@ import NextImage from "next/image";
 
 // Badge Components (following typography pattern)
 // Replace bespoke badges with unified badges
-const MediaBindingBadge = ({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) => (
-  <BindingBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />
-);
+const MediaBindingBadge = ({
+  nodeId,
+  keyName,
+  objectId,
+}: {
+  nodeId: string;
+  keyName: string;
+  objectId?: string;
+}) => <BindingBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />;
 
-const MediaOverrideBadge = ({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) => (
-  <UnifiedOverrideBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />
+const MediaOverrideBadge = ({
+  nodeId,
+  keyName,
+  objectId,
+}: {
+  nodeId: string;
+  keyName: string;
+  objectId?: string;
+}) => (
+  <UnifiedOverrideBadge
+    nodeId={nodeId}
+    bindingKey={keyName}
+    objectId={objectId}
+  />
 );
 
 // Default Properties Component (Center Panel)
@@ -470,12 +487,6 @@ function MediaPerObjectProperties({
     return !!data?.variableBindingsByObject?.[objectId]?.[key]
       ?.boundResultNodeId;
   };
-  const isInheritedBound = (key: string): boolean => {
-    if (isBound(key)) return false;
-    if (isOverridden(key)) return false;
-    return !!data?.variableBindings?.[key]?.boundResultNodeId;
-  };
-
   const isOverridden = (key: string): boolean => {
     return key in initial;
   };

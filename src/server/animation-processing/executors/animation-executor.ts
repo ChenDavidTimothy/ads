@@ -32,7 +32,6 @@ import {
   resolveBindingLookupId,
   getObjectBindingKeys,
   pickAssignmentsForObject,
-  normalizeObjectId,
   mergePerObjectAssignments,
 } from "@/shared/properties/override-utils";
 
@@ -244,6 +243,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       cropHeight?: number;
       displayWidth?: number;
       displayHeight?: number;
+      position?: { x: number; y: number };
+      rotation?: number;
+      scale?: { x: number; y: number };
+      opacity?: number;
     },
     assignments: PerObjectAssignments | undefined,
     bindingsByObject: Record<
@@ -256,7 +259,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext,
   ): Promise<SceneObject> {
     const objectId = obj.id;
-    const objectIdNoPrefix = normalizeObjectId(String(objectId));
+    // Removed unused objectIdNoPrefix variable
 
     // Debug logging to check object structure
     logger.debug(`Processing image object ${objectId}:`, {
@@ -328,7 +331,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       opacity: objectOverrides.opacity,
       // Media doesn't use canvas color properties
       fillColor: "#4444ff",
-      strokeColor: "#ffffff", 
+      strokeColor: "#ffffff",
       strokeWidth: 2,
     };
 
@@ -655,7 +658,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const objectId = (timedObject as { id?: unknown }).id as
           | string
           | undefined;
-        const objectIdNoPrefix = objectId ? normalizeObjectId(String(objectId)) : "";
+        // Removed unused objectIdNoPrefix variable
         const appearanceTime = (timedObject as { appearanceTime?: unknown })
           .appearanceTime as number | undefined;
         let baseline: number;

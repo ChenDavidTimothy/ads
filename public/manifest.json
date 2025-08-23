@@ -53,7 +53,7 @@
     },
     {
       "name": "Workspace",
-      "short_name": "Workspace", 
+      "short_name": "Workspace",
       "description": "Open animation workspace",
       "url": "/workspace",
       "icons": [

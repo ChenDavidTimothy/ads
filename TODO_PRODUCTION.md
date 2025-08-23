@@ -41,5 +41,6 @@ This checklist tracks foundational improvements to make the video rendering pipe
   - [x] Document environment variables and defaults for new rendering config
 
 Notes:
+
 - Consider adding per-job unique logger context and structured logs for lifecycle events.
 - Partial temp-file unlink on early failure is mostly covered by existing cleanup; additional early best-effort cleanup can be added in job handlers if desired.

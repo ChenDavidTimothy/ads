@@ -22,7 +22,6 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
-import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
 import { Type } from "lucide-react";
 
 // Badge Components
@@ -42,17 +41,11 @@ function TypographyBindingBadge({
     (n) => n.data?.identifier?.id === nodeId,
   ) as Node<TypographyNodeData> | undefined;
   if (!node) return null;
-  let bound: string | undefined;
-  if (objectId) {
-    bound =
-      node.data?.variableBindingsByObject?.[objectId]?.[keyName]
-        ?.boundResultNodeId;
-    if (!bound) {
-      bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-    }
-  } else {
-    bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-  }
+  const bound = objectId
+    ? (node.data?.variableBindingsByObject?.[objectId]?.[keyName]
+        ?.boundResultNodeId ??
+      node.data?.variableBindings?.[keyName]?.boundResultNodeId)
+    : node.data?.variableBindings?.[keyName]?.boundResultNodeId;
   if (!bound) return null;
   const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)
     ?.data?.identifier?.displayName;
@@ -478,13 +471,6 @@ function TypographyPerObjectProperties({
     const vbAll = node?.data?.variableBindingsByObject ?? {};
     return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
   };
-  const isInheritedBound = (key: string) => {
-    if (isBound(key)) return false;
-    if (isOverridden(key)) return false;
-    const vb = node?.data?.variableBindings ?? {};
-    return !!(vb as Record<string, { boundResultNodeId?: string }>)[key]?.boundResultNodeId;
-  };
-
   const isOverridden = (key: string) => {
     switch (key) {
       case "content":

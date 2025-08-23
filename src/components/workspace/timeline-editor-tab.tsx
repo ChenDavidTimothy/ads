@@ -149,7 +149,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         }),
       });
     },
-    [currentAssignments, state.flow.nodes, nodeId, updateFlow, data?.tracks],
+    [currentAssignments, state.flow.nodes, nodeId, updateFlow],
   );
 
   const scheduleUpdate = useCallback(() => {

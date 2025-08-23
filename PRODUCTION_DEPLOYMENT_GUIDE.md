@@ -1,7 +1,9 @@
 # PRODUCTION DEPLOYMENT GUIDE
+
 ## Storage Cleanup System - Production Deployment Procedures
 
 ### OVERVIEW
+
 This guide provides step-by-step procedures for deploying the comprehensive storage cleanup system to production after successful testing validation.
 
 ---
@@ -9,6 +11,7 @@ This guide provides step-by-step procedures for deploying the comprehensive stor
 ## STEP 1: PRE-DEPLOYMENT CHECKLIST
 
 ### 1A. Testing Validation Complete
+
 - [ ] **Testing completed successfully** in development environment
 - [ ] **All validation queries pass** without errors
 - [ ] **No errors in cleanup logs** during testing period
@@ -18,6 +21,7 @@ This guide provides step-by-step procedures for deploying the comprehensive stor
 - [ ] **Cleanup cycles run every 3 minutes** without interruption
 
 ### 1B. Environment Preparation
+
 - [ ] **Backup database** (critical - in case rollback needed)
 - [ ] **Staging environment tested** (if available)
 - [ ] **Current saved assets properly tracked** in database
@@ -25,6 +29,7 @@ This guide provides step-by-step procedures for deploying the comprehensive stor
 - [ ] **Low-traffic deployment window** identified and scheduled
 
 ### 1C. Team Preparation
+
 - [ ] **Operations team notified** of deployment
 - [ ] **Monitoring procedures** communicated to team
 - [ ] **Rollback procedures** documented and understood
@@ -36,6 +41,7 @@ This guide provides step-by-step procedures for deploying the comprehensive stor
 ## STEP 2: PRODUCTION DEPLOYMENT PROCESS
 
 ### 2A. Pre-Deployment Verification (30 minutes before)
+
 ```bash
 # 1. Verify current system state
 # Run these queries in Supabase SQL Editor:
@@ -44,25 +50,26 @@ This guide provides step-by-step procedures for deploying the comprehensive stor
 SELECT COUNT(*) as current_orphaned_count
 FROM render_jobs rj
 LEFT JOIN user_assets ua ON ua.metadata->>'render_job_id' = rj.id::text
-WHERE rj.status = 'completed' 
-  AND rj.output_url IS NOT NULL 
+WHERE rj.status = 'completed'
+  AND rj.output_url IS NOT NULL
   AND ua.id IS NULL;
 
 -- Verify saved assets count
 SELECT COUNT(*) as saved_assets_count
-FROM user_assets 
+FROM user_assets
 WHERE asset_type = 'generated_saved'
   AND metadata->>'render_job_id' IS NOT NULL;
 
 -- Check recent render job activity
 SELECT COUNT(*) as recent_jobs
-FROM render_jobs 
+FROM render_jobs
 WHERE created_at > NOW() - INTERVAL '1 hour';
 ```
 
 ### 2B. Deployment Steps (During Low-Traffic Window)
 
 1. **Deploy Application Changes**
+
    ```bash
    # Deploy the updated code with new cleanup methods
    # Ensure SmartStorageProvider is updated
@@ -84,13 +91,14 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 ### 2C. Post-Deployment Validation (First 30 minutes)
 
 1. **Immediate Validation (5 minutes after deployment)**
+
    ```sql
    -- Check if cleanup is working
    SELECT COUNT(*) as orphaned_files_after_cleanup
    FROM render_jobs rj
    LEFT JOIN user_assets ua ON ua.metadata->>'render_job_id' = rj.id::text
-   WHERE rj.status = 'completed' 
-     AND rj.output_url IS NOT NULL 
+   WHERE rj.status = 'completed'
+     AND rj.output_url IS NOT NULL
      AND ua.id IS NULL
      AND rj.created_at < NOW() - INTERVAL '5 minutes';
    ```
@@ -112,6 +120,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 ## STEP 3: PRODUCTION MONITORING
 
 ### 3A. First 30 Minutes (Critical Monitoring Period)
+
 - [ ] **Monitor every cleanup cycle** (every 3 minutes)
 - [ ] **Check application logs** for errors or warnings
 - [ ] **Verify cleanup operations** complete successfully
@@ -119,6 +128,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 - [ ] **Check Supabase storage** for expected file deletions
 
 ### 3B. First 24 Hours (Extended Monitoring)
+
 - [ ] **Run validation queries** every 2 hours
 - [ ] **Monitor storage usage trends** in Supabase dashboard
 - [ ] **Check application performance** during cleanup cycles
@@ -126,6 +136,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 - [ ] **Monitor error logs** for any issues
 
 ### 3C. First Week (Stability Monitoring)
+
 - [ ] **Daily validation queries** to ensure cleanup effectiveness
 - [ ] **Weekly storage usage analysis** to track cost savings
 - [ ] **Performance monitoring** to ensure no degradation
@@ -136,6 +147,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 ## STEP 4: SUCCESS VALIDATION
 
 ### 4A. Immediate Success Indicators (First Day)
+
 - [ ] **Cleanup cycles run every 3 minutes** without errors
 - [ ] **Orphaned files reduced** from pre-deployment levels
 - [ ] **No saved assets accidentally deleted** or affected
@@ -143,6 +155,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 - [ ] **Database performance maintained** during cleanup cycles
 
 ### 4B. Short-term Success Indicators (First Week)
+
 - [ ] **Consistent cleanup cycles** without interruption
 - [ ] **Orphaned file count remains low** (near zero)
 - [ ] **Storage costs stabilized** or reduced
@@ -150,6 +163,7 @@ WHERE created_at > NOW() - INTERVAL '1 hour';
 - [ ] **User workflow completely unaffected**
 
 ### 4C. Long-term Success Indicators (First Month)
+
 - [ ] **Storage costs significantly reduced** from pre-deployment
 - [ ] **Database performance improved** due to reduced orphaned records
 - [ ] **Zero system issues** related to cleanup operations
@@ -187,30 +201,32 @@ MAX_TEMP_FILE_AGE_MS: 60 * 60 * 1000, // 1 hour
 ## STEP 6: ONGOING PRODUCTION MONITORING
 
 ### 6A. Weekly Health Checks
+
 ```sql
 -- Monitor cleanup effectiveness
-SELECT 
+SELECT
   COUNT(*) as orphaned_jobs,
   DATE_TRUNC('day', created_at) as day
 FROM render_jobs rj
 LEFT JOIN user_assets ua ON ua.metadata->>'render_job_id' = rj.id::text
-WHERE rj.status = 'completed' 
-  AND rj.output_url IS NOT NULL 
+WHERE rj.status = 'completed'
+  AND rj.output_url IS NOT NULL
   AND ua.id IS NULL
   AND rj.created_at > NOW() - INTERVAL '7 days'
 GROUP BY DATE_TRUNC('day', created_at)
 ORDER BY day DESC;
 
 -- Storage usage trends
-SELECT 
+SELECT
   COUNT(*) as total_assets,
   SUM(file_size) as total_bytes,
   asset_type
-FROM user_assets 
+FROM user_assets
 GROUP BY asset_type;
 ```
 
 ### 6B. Monthly Performance Review
+
 - [ ] **Storage cost analysis** and trend review
 - [ ] **Database performance metrics** review
 - [ ] **Cleanup system health** assessment
@@ -222,6 +238,7 @@ GROUP BY asset_type;
 ## STEP 7: EMERGENCY PROCEDURES
 
 ### 7A. If Cleanup Stops Working
+
 1. **Check server logs** for error messages
 2. **Verify database connectivity** and permissions
 3. **Test Supabase storage access** and bucket permissions
@@ -229,15 +246,16 @@ GROUP BY asset_type;
 5. **Contact system administrator** if issues persist
 
 ### 7B. If Storage Usage Spikes
+
 ```sql
 -- Emergency manual cleanup (run with caution)
-DELETE FROM render_jobs 
+DELETE FROM render_jobs
 WHERE id IN (
   SELECT rj.id
   FROM render_jobs rj
   LEFT JOIN user_assets ua ON ua.metadata->>'render_job_id' = rj.id::text
-  WHERE rj.status = 'completed' 
-    AND rj.output_url IS NOT NULL 
+  WHERE rj.status = 'completed'
+    AND rj.output_url IS NOT NULL
     AND ua.id IS NULL
     AND rj.created_at < NOW() - INTERVAL '1 hour'
   LIMIT 100
@@ -245,6 +263,7 @@ WHERE id IN (
 ```
 
 ### 7C. If Saved Assets Are Affected
+
 1. **Immediate rollback** to previous version
 2. **Restore from database backup** if needed
 3. **Investigate root cause** of the issue
@@ -256,6 +275,7 @@ WHERE id IN (
 ## STEP 8: ROLLBACK PLAN
 
 ### 8A. Complete Rollback Procedure
+
 1. **Revert config.ts** to original 1-hour intervals
 2. **Remove new cleanup methods** from SmartStorageProvider
 3. **Restore original startCleanupInterval** method
@@ -263,6 +283,7 @@ WHERE id IN (
 5. **Verify system returns** to pre-deployment state
 
 ### 8B. Partial Rollback (If Only Some Issues)
+
 1. **Identify specific problems** and their causes
 2. **Fix individual issues** without full rollback
 3. **Test fixes** in development environment
@@ -274,12 +295,14 @@ WHERE id IN (
 ## SUCCESS METRICS SUMMARY
 
 ### Immediate (First Week)
+
 - [ ] Cleanup cycles run every 3 minutes without errors
 - [ ] Orphaned files reduced from current accumulation to near-zero
 - [ ] No saved assets accidentally deleted
 - [ ] Storage usage growth rate decreases
 
-### Long-term (First Month)  
+### Long-term (First Month)
+
 - [ ] Storage costs stabilized/reduced
 - [ ] Database performance maintained
 - [ ] Zero manual cleanup interventions needed
@@ -290,6 +313,7 @@ WHERE id IN (
 ## TECHNICAL SPECIFICATION SUMMARY
 
 **Files Modified:** 2
+
 - `src/server/storage/config.ts` (timing values)
 - `src/server/storage/smart-storage-provider.ts` (cleanup methods)
 
@@ -301,6 +325,7 @@ WHERE id IN (
 **Safety:** Only deletes confirmed orphaned files >3 minutes old
 
 **Production Readiness:** ✅ Complete
+
 - Comprehensive error handling
 - Full logging and monitoring
 - Rollback procedures documented
