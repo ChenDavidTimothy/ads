@@ -1210,11 +1210,18 @@ export class AnimationNodeExecutor extends BaseExecutor {
     ) => (key: string) => unknown,
   ): SceneObject {
     const objectId = obj.id;
-    const reader = readVarForObject(objectId);
+    const bindingLookupId = resolveBindingLookupId(
+      bindingsByObject as Record<string, unknown>,
+      String(objectId),
+    );
+    const reader = readVarForObject(bindingLookupId);
 
     // Build object-specific overrides
     const objectOverrides = { ...nodeOverrides };
-    const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+    const objectKeys = getObjectBindingKeys(
+      bindingsByObject as Record<string, Record<string, unknown>>,
+      String(objectId),
+    );
 
     for (const key of objectKeys) {
       const value = reader(key);
@@ -1285,7 +1292,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     // Apply per-object assignments (masking bound properties)
-    const assignmentsForObject = assignments?.[objectId];
+    const assignmentsForObject = pickAssignmentsForObject(
+      assignments,
+      String(objectId),
+    );
     const maskedAssignmentsForObject = (() => {
       if (!assignmentsForObject) return undefined;
       const keys = objectKeys; // Only use per-object bindings
