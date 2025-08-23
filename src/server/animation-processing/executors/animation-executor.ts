@@ -46,6 +46,26 @@ function deepClone<T>(value: T): T {
   }
 }
 
+// Safe conversion of unknown values to a human-readable string without relying on
+// implicit Object.prototype.toString coercion.
+function toDisplayString(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  )
+    return String(value);
+  if (value instanceof Date) return value.toISOString();
+  try {
+    return JSON.stringify(value);
+  } catch {
+    // As a last resort, use explicit tag, not implicit coercion
+    return Object.prototype.toString.call(value);
+  }
+}
+
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
   protected registerHandlers(): void {
@@ -1047,6 +1067,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
       switch (key) {
         case "content": // ADD this case
           if (typeof val === "string") nodeOverrides.content = val;
+          else {
+            const rid = bindings[key]?.boundResultNodeId;
+            const entry = rid
+              ? (context.nodeOutputs.get(`${rid}.output`) ??
+                context.nodeOutputs.get(`${rid}.result`))
+              : undefined;
+            const display = (entry?.metadata as { displayValue?: unknown } | undefined)?.displayValue;
+            if (typeof display === "string") nodeOverrides.content = display;
+            else nodeOverrides.content = toDisplayString(val);
+          }
           break;
         // EXISTING CASES (keep unchanged)
         case "fontFamily":
@@ -1142,6 +1172,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
             mergedAssignments,
             bindingsByObject,
             readVarForObject,
+            context,
           );
           processedObjects.push(processed);
         } else {
@@ -1213,6 +1244,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     readVarForObject: (
       objectId: string | undefined,
     ) => (key: string) => unknown,
+    context: ExecutionContext,
   ): SceneObject {
     const objectId = obj.id;
     const bindingLookupId = resolveBindingLookupId(
@@ -1232,9 +1264,21 @@ export class AnimationNodeExecutor extends BaseExecutor {
       const value = reader(key);
       if (value !== undefined) {
         switch (key) {
-          case "content":
-            if (typeof value === "string") objectOverrides.content = value;
+          case "content": {
+            if (typeof value === "string") {
+              objectOverrides.content = value;
+            } else {
+              const rid = bindingsByObject[String(objectId)]?.[key]?.boundResultNodeId;
+              const entry = rid
+                ? (context.nodeOutputs.get(`${rid}.output`) ??
+                  context.nodeOutputs.get(`${rid}.result`))
+                : undefined;
+              const display = (entry?.metadata as { displayValue?: unknown } | undefined)?.displayValue;
+              if (typeof display === "string") objectOverrides.content = display;
+              else objectOverrides.content = toDisplayString(value);
+            }
             break;
+          }
           // EXISTING CASES (keep unchanged)
           case "fontFamily":
             if (typeof value === "string") objectOverrides.fontFamily = value;

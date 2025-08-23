@@ -52,6 +52,7 @@ export interface TextNodeData extends BaseNodeData {
 }
 
 export interface TypographyNodeData extends BaseNodeData {
+  content?: string;
   fontFamily: string;
   fontWeight: string;
   textAlign: string;
