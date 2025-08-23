@@ -61,7 +61,24 @@ function BindingBadge({
   const vb = objectId
     ? (animationData.variableBindingsByObject?.[objectId] ?? {})
     : (animationData.variableBindings ?? {});
-  const bound = vb?.[keyName]?.boundResultNodeId;
+  let bound = vb?.[keyName]?.boundResultNodeId;
+  if (!bound && objectId === undefined) {
+    // already reading global
+  }
+  if (!bound && objectId !== undefined) {
+    // Fallback to global default binding for inherited badge
+    const node = state.flow.nodes.find(
+      (n) => n.data?.identifier?.id === nodeId,
+    );
+    if (node) {
+      const animationData = node.data as AnimationNodeData;
+      const globalVb = (animationData.variableBindings ?? {}) as Record<
+        string,
+        { boundResultNodeId?: string }
+      >;
+      bound = globalVb?.[keyName]?.boundResultNodeId;
+    }
+  }
   if (!bound) return null;
   const boundNode = state.flow.nodes.find(
     (n) => n.data?.identifier?.id === bound,
@@ -833,12 +850,22 @@ export function TrackProperties({
 
     const animationData = node.data as AnimationNodeData;
     const scopedKey = `track.${track.identifier.id}.${key}`;
-    const vb = selectedObjectId
+    const vbObj = selectedObjectId
       ? (animationData.variableBindingsByObject?.[selectedObjectId] ?? {})
-      : (animationData.variableBindings ?? {});
-    return !!(
-      vb?.[scopedKey]?.boundResultNodeId ?? vb?.[key]?.boundResultNodeId
+      : undefined;
+    const vbGlobal = (animationData.variableBindings ?? {}) as Record<
+      string,
+      { boundResultNodeId?: string }
+    >;
+    const direct = !!(
+      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[scopedKey]
+        ?.boundResultNodeId ??
+      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[key]
+        ?.boundResultNodeId
     );
+    if (direct) return true;
+    // Inherited: only if not directly bound and not overridden at the field
+    return !!(vbGlobal?.[scopedKey]?.boundResultNodeId ?? vbGlobal?.[key]?.boundResultNodeId);
   };
   const labelWithOverride = (base: string) => {
     return base;
@@ -854,11 +881,13 @@ export function TrackProperties({
           selectedObjectId={selectedObjectId}
         />
       )}
-      <BindingBadge
-        nodeId={animationNodeId}
-        keyName={`track.${track.identifier.id}.${keyName}`}
-        objectId={selectedObjectId}
-      />
+      {!isFieldOverridden(keyName) && (
+        <BindingBadge
+          nodeId={animationNodeId}
+          keyName={`track.${track.identifier.id}.${keyName}`}
+          objectId={selectedObjectId}
+        />
+      )}
     </div>
   );
 

@@ -194,11 +194,25 @@ export class CanvasNodeExecutor extends BaseExecutor {
         if (isSceneObject(obj)) {
           const original = obj;
           const objectId = original.id;
+          const objectIdNoPrefix =
+            typeof objectId === "string"
+              ? (objectId as string).replace(/^image_/, "")
+              : (objectId as string);
 
           // NEW: Add type-aware color property filtering
           const isTextObject = original.type === "text";
 
-          const reader = readVarForObject(objectId);
+          // Normalize binding lookup ID so image objects (id starts with "image_")
+          // can use per-object bindings/overrides keyed by the underlying node id
+          const bindingLookupId =
+            bindingsByObject[objectId]?.__proto__ !== undefined &&
+            bindingsByObject[objectId]
+              ? objectId
+              : (bindingsByObject as Record<string, unknown>)[objectIdNoPrefix]
+                ? objectIdNoPrefix
+                : objectId;
+
+          const reader = readVarForObject(bindingLookupId);
           const objectOverrides: CanvasOverrides = JSON.parse(
             JSON.stringify(nodeOverrides),
           ) as CanvasOverrides;
@@ -210,7 +224,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
             delete objectOverrides.strokeWidth;
           }
 
-          const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+          const objectKeys = Object.keys(
+            bindingsByObject[bindingLookupId] ?? {},
+          );
           for (const key of objectKeys) {
             const val = reader(key);
             if (val === undefined) continue;
@@ -259,7 +275,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
             }
           }
 
-          const assignmentsForObject = mergedAssignments?.[objectId];
+          const assignmentsForObject =
+            mergedAssignments?.[objectId] ??
+            mergedAssignments?.[objectIdNoPrefix];
           const maskedAssignmentsForObject = (() => {
             if (!assignmentsForObject) return undefined;
             const keys = objectKeys; // ✅ Only use per-object bindings, not global keys

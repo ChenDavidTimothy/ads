@@ -39,6 +39,9 @@ function CanvasBindingBadge({
     bound =
       node.data?.variableBindingsByObject?.[objectId]?.[keyName]
         ?.boundResultNodeId;
+    if (!bound) {
+      bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
+    }
   } else {
     bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
   }
@@ -776,6 +779,12 @@ function CanvasPerObjectProperties({
     const vbAll = node?.data?.variableBindingsByObject ?? {};
     return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
   };
+  const isInheritedBound = (key: string) => {
+    if (isBound(key)) return false;
+    if (isOverridden(key)) return false;
+    const vb = node?.data?.variableBindings ?? {};
+    return !!(vb as Record<string, { boundResultNodeId?: string }>)[key]?.boundResultNodeId;
+  };
   const isOverridden = (key: string) => {
     switch (key) {
       case "position.x":
@@ -807,10 +816,12 @@ function CanvasPerObjectProperties({
         ? "border-l-2 border-[var(--warning-600)]"
         : "";
 
-  // Helper to get value for bound fields - blank if bound
+  // Helper to get value for bound fields - proper precedence like geometry nodes
   const getValue = (key: string, fallbackValue: number | string) => {
-    if (isBound(key)) return undefined; // Blank when bound
+    // Check per-object binding first (highest priority)
+    if (isBound(key)) return undefined; // Blank when bound (like geometry nodes)
 
+    // Check manual override second (if not bound) - this is the key fix
     switch (key) {
       case "position.x":
         return (
@@ -863,10 +874,12 @@ function CanvasPerObjectProperties({
     }
   };
 
-  // Helper to get string value for color fields - empty string if bound
+  // Helper to get string value for color fields - proper precedence like geometry nodes
   const getStringValue = (key: string, fallbackValue: string) => {
-    if (isBound(key)) return ""; // Empty string when bound
+    // Check per-object binding first (highest priority)
+    if (isBound(key)) return ""; // Empty string when bound (like geometry nodes)
 
+    // Check manual override second (if not bound) - this is the key fix
     switch (key) {
       case "fillColor":
         return (
@@ -907,7 +920,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("position.x")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("position.x") || isBound("position.x")) && (
+          {(isOverridden("position.x") || isBound("position.x") || isInheritedBound("position.x")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("position.x") && !isBound("position.x") && (
@@ -917,11 +930,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="position.x"
-                  objectId={objectId}
-                />
+                {(isBound("position.x") || (!isOverridden("position.x") && isInheritedBound("position.x"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="position.x"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -946,7 +961,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("position.y")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("position.y") || isBound("position.y")) && (
+          {(isOverridden("position.y") || isBound("position.y") || isInheritedBound("position.y")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("position.y") && !isBound("position.y") && (
@@ -956,11 +971,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="position.y"
-                  objectId={objectId}
-                />
+                {(isBound("position.y") || (!isOverridden("position.y") && isInheritedBound("position.y"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="position.y"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -990,7 +1007,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("scale.x")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("scale.x") || isBound("scale.x")) && (
+          {(isOverridden("scale.x") || isBound("scale.x") || isInheritedBound("scale.x")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("scale.x") && !isBound("scale.x") && (
@@ -1000,11 +1017,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="scale.x"
-                  objectId={objectId}
-                />
+                {(isBound("scale.x") || (!isOverridden("scale.x") && isInheritedBound("scale.x"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="scale.x"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1031,7 +1050,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("scale.y")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("scale.y") || isBound("scale.y")) && (
+          {(isOverridden("scale.y") || isBound("scale.y") || isInheritedBound("scale.y")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("scale.y") && !isBound("scale.y") && (
@@ -1041,11 +1060,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="scale.y"
-                  objectId={objectId}
-                />
+                {(isBound("scale.y") || (!isOverridden("scale.y") && isInheritedBound("scale.y"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="scale.y"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1074,7 +1095,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("rotation")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("rotation") || isBound("rotation")) && (
+          {(isOverridden("rotation") || isBound("rotation") || isInheritedBound("rotation")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("rotation") && !isBound("rotation") && (
@@ -1084,11 +1105,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="rotation"
-                  objectId={objectId}
-                />
+                {(isBound("rotation") || (!isOverridden("rotation") && isInheritedBound("rotation"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="rotation"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1116,7 +1139,7 @@ function CanvasPerObjectProperties({
             inputClassName={leftBorderClass("opacity")}
           />
           {/* Badge - Only show when needed */}
-          {(isOverridden("opacity") || isBound("opacity")) && (
+          {(isOverridden("opacity") || isBound("opacity") || isInheritedBound("opacity")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("opacity") && !isBound("opacity") && (
@@ -1126,11 +1149,13 @@ function CanvasPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                <CanvasBindingBadge
-                  nodeId={nodeId}
-                  keyName="opacity"
-                  objectId={objectId}
-                />
+                {(isBound("opacity") || (!isOverridden("opacity") && isInheritedBound("opacity"))) && (
+                  <CanvasBindingBadge
+                    nodeId={nodeId}
+                    keyName="opacity"
+                    objectId={objectId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1157,7 +1182,7 @@ function CanvasPerObjectProperties({
                 inputClassName={leftBorderClass("fillColor")}
               />
               {/* Badge - Only show when needed */}
-              {(isOverridden("fillColor") || isBound("fillColor")) && (
+              {(isOverridden("fillColor") || isBound("fillColor") || isInheritedBound("fillColor")) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden("fillColor") && !isBound("fillColor") && (
@@ -1167,11 +1192,13 @@ function CanvasPerObjectProperties({
                         objectId={objectId}
                       />
                     )}
-                    <CanvasBindingBadge
-                      nodeId={nodeId}
-                      keyName="fillColor"
-                      objectId={objectId}
-                    />
+                    {(isBound("fillColor") || (!isOverridden("fillColor") && isInheritedBound("fillColor"))) && (
+                      <CanvasBindingBadge
+                        nodeId={nodeId}
+                        keyName="fillColor"
+                        objectId={objectId}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -1192,7 +1219,7 @@ function CanvasPerObjectProperties({
                 inputClassName={leftBorderClass("strokeColor")}
               />
               {/* Badge - Only show when needed */}
-              {(isOverridden("strokeColor") || isBound("strokeColor")) && (
+              {(isOverridden("strokeColor") || isBound("strokeColor") || isInheritedBound("strokeColor")) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden("strokeColor") && !isBound("strokeColor") && (
@@ -1202,11 +1229,13 @@ function CanvasPerObjectProperties({
                         objectId={objectId}
                       />
                     )}
-                    <CanvasBindingBadge
-                      nodeId={nodeId}
-                      keyName="strokeColor"
-                      objectId={objectId}
-                    />
+                    {(isBound("strokeColor") || (!isOverridden("strokeColor") && isInheritedBound("strokeColor"))) && (
+                      <CanvasBindingBadge
+                        nodeId={nodeId}
+                        keyName="strokeColor"
+                        objectId={objectId}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -1230,7 +1259,7 @@ function CanvasPerObjectProperties({
                 inputClassName={leftBorderClass("strokeWidth")}
               />
               {/* Badge - Only show when needed */}
-              {(isOverridden("strokeWidth") || isBound("strokeWidth")) && (
+              {(isOverridden("strokeWidth") || isBound("strokeWidth") || isInheritedBound("strokeWidth")) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden("strokeWidth") && !isBound("strokeWidth") && (
@@ -1240,11 +1269,13 @@ function CanvasPerObjectProperties({
                         objectId={objectId}
                       />
                     )}
-                    <CanvasBindingBadge
-                      nodeId={nodeId}
-                      keyName="strokeWidth"
-                      objectId={objectId}
-                    />
+                    {(isBound("strokeWidth") || (!isOverridden("strokeWidth") && isInheritedBound("strokeWidth"))) && (
+                      <CanvasBindingBadge
+                        nodeId={nodeId}
+                        keyName="strokeWidth"
+                        objectId={objectId}
+                      />
+                    )}
                   </div>
                 </div>
               )}

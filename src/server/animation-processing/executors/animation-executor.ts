@@ -27,6 +27,7 @@ import { logger } from "@/lib/logger";
 import type { SceneObject, TextProperties } from "@/shared/types/scene";
 import { createServiceClient } from "@/utils/supabase/service";
 import { loadImage } from "canvas";
+import { resolveInitialObject } from "@/shared/properties/resolver";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -261,6 +262,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext,
   ): Promise<SceneObject> {
     const objectId = obj.id;
+    const objectIdNoPrefix =
+      typeof objectId === "string"
+        ? (objectId as string).replace(/^image_/, "")
+        : (objectId as string);
 
     // Debug logging to check object structure
     logger.debug(`Processing image object ${objectId}:`, {
@@ -272,11 +277,22 @@ export class AnimationNodeExecutor extends BaseExecutor {
       type: obj.type,
     });
 
-    const reader = readVarForObject(objectId);
+    // Normalize binding lookup ID to support assignments keyed by base node id
+    const bindingLookupId =
+      bindingsByObject[objectId]?.__proto__ !== undefined &&
+      bindingsByObject[objectId]
+        ? objectId
+        : (bindingsByObject as Record<string, unknown>)[objectIdNoPrefix]
+          ? objectIdNoPrefix
+          : objectId;
+
+    const reader = readVarForObject(bindingLookupId);
 
     // Build object-specific overrides
     const objectOverrides = { ...nodeOverrides };
-    const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+    const objectKeys = Object.keys(
+      bindingsByObject[bindingLookupId] ?? {},
+    );
 
     for (const key of objectKeys) {
       const val = reader(key);
@@ -311,10 +327,32 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Apply per-object assignments (manual overrides)
     // Handle object ID prefix mismatch - try both prefixed and non-prefixed versions
     const assignment =
-      assignments?.[objectId] ?? assignments?.[objectId.replace(/^image_/, "")];
+      assignments?.[objectId] ?? assignments?.[objectIdNoPrefix];
     const initial = assignment?.initial ?? {};
 
-    // Merge in the assignment overrides
+    // Use the standard resolveInitialObject function like canvas executor
+    // Create canvas-style overrides for media-specific properties
+    const mediaCanvasOverrides = {
+      // Transform properties are handled by resolveInitialObject
+      position: objectOverrides.position,
+      rotation: objectOverrides.rotation,
+      scale: objectOverrides.scale,
+      opacity: objectOverrides.opacity,
+      // Media doesn't use canvas color properties
+      fillColor: "#4444ff",
+      strokeColor: "#ffffff", 
+      strokeWidth: 2,
+    };
+
+    const {
+      initialPosition,
+      initialRotation,
+      initialScale,
+      initialOpacity,
+      properties: resolvedProperties,
+    } = resolveInitialObject(obj, mediaCanvasOverrides, assignment);
+
+    // Merge media-specific overrides for properties not handled by resolveInitialObject
     const finalOverrides = { ...objectOverrides, ...initial };
 
     // Load asset if specified
@@ -372,17 +410,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Apply media processing to the image object
+    // Apply media processing to the image object using resolved properties
     const processed = {
       ...obj,
-      // Ensure timeline properties are preserved
-      initialPosition: obj.initialPosition ?? { x: 0, y: 0 },
-      initialRotation: obj.initialRotation ?? 0,
-      initialScale: obj.initialScale ?? { x: 1, y: 1 },
-      initialOpacity: obj.initialOpacity ?? 1,
+      // Use properly resolved transform properties with correct precedence
+      initialPosition,
+      initialRotation,
+      initialScale,
+      initialOpacity,
       properties: {
-        ...obj.properties,
-        // Asset properties
+        ...resolvedProperties,
+        // Override with media-specific properties
         imageUrl: imageData?.url,
         originalWidth: imageData?.width ?? 100,
         originalHeight: imageData?.height ?? 100,
@@ -629,6 +667,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const objectId = (timedObject as { id?: unknown }).id as
           | string
           | undefined;
+        const objectIdNoPrefix =
+          typeof objectId === "string"
+            ? (objectId as string).replace(/^(image_|text_)/, "")
+            : (objectId as string);
         const appearanceTime = (timedObject as { appearanceTime?: unknown })
           .appearanceTime as number | undefined;
         let baseline: number;
@@ -646,10 +688,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
           : [];
 
         // Apply per-object bindings if present
-        const objectBindingKeys = objectId
-          ? Object.keys(bindingsByObject[objectId] ?? {})
+        const bindingLookupId = objectId
+          ? bindingsByObject[objectId]
+            ? objectId
+            : bindingsByObject[objectIdNoPrefix]
+              ? objectIdNoPrefix
+              : objectId
+          : undefined;
+        const objectBindingKeys = bindingLookupId
+          ? Object.keys(bindingsByObject[bindingLookupId] ?? {})
           : [];
-        const objectReader = readVarForObject(objectId);
+        const objectReader = readVarForObject(bindingLookupId);
         const resolvedForObject = objectId
           ? resolvedTracks.map((t) =>
               applyBindingsToTrack(t, objectBindingKeys, objectReader),
@@ -659,7 +708,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Build a masked per-object assignment so bound keys take precedence over manual overrides
         const maskedAssignmentsForObject = (() => {
           if (!objectId) return undefined;
-          const base = mergedAssignments?.[objectId];
+          const base =
+            mergedAssignments?.[objectId] ??
+            mergedAssignments?.[objectIdNoPrefix];
           if (!base) return undefined;
           const keys = [...globalBindingKeys, ...objectBindingKeys];
 
