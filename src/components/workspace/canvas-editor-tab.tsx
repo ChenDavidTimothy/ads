@@ -17,7 +17,6 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
-import { AutoToggle } from "@/components/ui/source-selector";
 
 function CanvasBindingBadge({
   nodeId,
@@ -323,8 +322,6 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
     string,
     { target?: string; boundResultNodeId?: string }
   >;
-  const { resetToDefault } = useVariableBinding(nodeId);
-  const inheritFlags = (node?.data as CanvasNodeData)?.inherit ?? {};
 
   const def =
     (getNodeDefinition("canvas")?.defaults as Record<string, unknown> & {
@@ -373,37 +370,9 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
     <div className="space-y-[var(--space-3)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Position X
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              position: {
-                                ...((n.data as CanvasNodeData).inherit?.position ?? {}),
-                                x: next,
-                              },
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("position.x");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Position X
+          </label>
           <NumberField
             label=""
             value={posX}
@@ -429,7 +398,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             bindAdornment={
               <BindButton nodeId={nodeId} bindingKey="position.x" />
             }
-            disabled={isBound("position.x") || Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
+            disabled={isBound("position.x")}
             inputClassName={leftBorderClass("position.x")}
           />
           {/* Badge - Only show when bound */}
@@ -442,37 +411,9 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Position Y
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.position?.y)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              position: {
-                                ...((n.data as CanvasNodeData).inherit?.position ?? {}),
-                                y: next,
-                              },
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("position.y");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Position Y
+          </label>
           <NumberField
             label=""
             value={posY}
@@ -513,37 +454,9 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
       </div>
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Scale X
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.scale?.x)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              scale: {
-                                ...((n.data as CanvasNodeData).inherit?.scale ?? {}),
-                                x: next,
-                              },
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("scale.x");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Scale X
+          </label>
           <NumberField
             label=""
             value={scaleX}
@@ -579,37 +492,9 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Scale Y
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.scale?.y)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              scale: {
-                                ...((n.data as CanvasNodeData).inherit?.scale ?? {}),
-                                y: next,
-                              },
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("scale.y");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Scale Y
+          </label>
           <NumberField
             label=""
             value={scaleY}
@@ -678,34 +563,9 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Opacity
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.opacity)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              opacity: next,
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("opacity");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Opacity
+          </label>
           <NumberField
             label=""
             value={opacity}
@@ -741,33 +601,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
         <>
           <div className="grid grid-cols-3 items-end gap-[var(--space-2)]">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">Fill</span>
-                <AutoToggle
-                  active={Boolean((node?.data as CanvasNodeData)?.inherit?.fillColor)}
-                  onToggle={(next) =>
-                    updateFlow({
-                      nodes: state.flow.nodes.map((n) =>
-                        n.data?.identifier?.id !== nodeId
-                          ? n
-                          : {
-                              ...n,
-                              data: {
-                                ...(n.data as CanvasNodeData),
-                                inherit: {
-                                  ...((n.data as CanvasNodeData).inherit ?? {}),
-                                  fillColor: next,
-                                },
-                              },
-                            },
-                      ),
-                    })
-                  }
-                  className="ml-2"
-                />
-              </div>
               <ColorField
-                label=""
+                label="Fill"
                 value={fillColor}
                 onChange={(fillColor) =>
                   updateFlow({
@@ -794,33 +629,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
               )}
             </div>
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">Stroke</span>
-                <AutoToggle
-                  active={Boolean((node?.data as CanvasNodeData)?.inherit?.strokeColor)}
-                  onToggle={(next) =>
-                    updateFlow({
-                      nodes: state.flow.nodes.map((n) =>
-                        n.data?.identifier?.id !== nodeId
-                          ? n
-                          : {
-                              ...n,
-                              data: {
-                                ...(n.data as CanvasNodeData),
-                                inherit: {
-                                  ...((n.data as CanvasNodeData).inherit ?? {}),
-                                  strokeColor: next,
-                                },
-                              },
-                            },
-                      ),
-                    })
-                  }
-                  className="ml-2"
-                />
-              </div>
               <ColorField
-                label=""
+                label="Stroke"
                 value={strokeColor}
                 onChange={(strokeColor) =>
                   updateFlow({
@@ -847,33 +657,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
               )}
             </div>
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">Stroke W</span>
-                <AutoToggle
-                  active={Boolean((node?.data as CanvasNodeData)?.inherit?.strokeWidth)}
-                  onToggle={(next) =>
-                    updateFlow({
-                      nodes: state.flow.nodes.map((n) =>
-                        n.data?.identifier?.id !== nodeId
-                          ? n
-                          : {
-                              ...n,
-                              data: {
-                                ...(n.data as CanvasNodeData),
-                                inherit: {
-                                  ...((n.data as CanvasNodeData).inherit ?? {}),
-                                  strokeWidth: next,
-                                },
-                              },
-                            },
-                      ),
-                    })
-                  }
-                  className="ml-2"
-                />
-              </div>
               <NumberField
-                label=""
+                label="Stroke W"
                 value={strokeWidth}
                 onChange={(strokeWidth) =>
                   updateFlow({
@@ -1118,7 +903,7 @@ function CanvasPerObjectProperties({
                 objectId={objectId}
               />
             }
-            disabled={isBound("position.x") || Boolean((node?.data as CanvasNodeData)?.inherit?.position?.x)}
+            disabled={isBound("position.x")}
             inputClassName={leftBorderClass("position.x")}
           />
           {/* Badge - Only show when needed */}
@@ -1269,34 +1054,9 @@ function CanvasPerObjectProperties({
 
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs text-[var(--text-tertiary)]">
-              Rotation
-            </label>
-            <AutoToggle
-              active={Boolean((node?.data as CanvasNodeData)?.inherit?.rotation)}
-              onToggle={(next) => {
-                updateFlow({
-                  nodes: state.flow.nodes.map((n) =>
-                    n.data?.identifier?.id !== nodeId
-                      ? n
-                      : {
-                          ...n,
-                          data: {
-                            ...(n.data as CanvasNodeData),
-                            inherit: {
-                              ...((n.data as CanvasNodeData).inherit ?? {}),
-                              rotation: next,
-                            },
-                          },
-                        },
-                  ),
-                });
-                if (next) resetToDefault("rotation");
-              }
-              className="ml-2"
-            />
-          </div>
+          <label className="block text-xs text-[var(--text-tertiary)]">
+            Rotation
+          </label>
           <NumberField
             label=""
             value={getValue("rotation", 0)}

@@ -87,27 +87,6 @@ export interface TypographyNodeData extends BaseNodeData {
   shadowOffsetY: number;
   shadowBlur: number;
   textOpacity: number;
-  // Inheritance toggles (Default scope): when true, omit this property to inherit upstream
-  inherit?: {
-    content?: boolean;
-    fontFamily?: boolean;
-    fontSize?: boolean;
-    fontWeight?: boolean;
-    textAlign?: boolean;
-    lineHeight?: boolean;
-    letterSpacing?: boolean;
-    fontStyle?: boolean;
-    textBaseline?: boolean;
-    direction?: boolean;
-    fillColor?: boolean;
-    strokeColor?: boolean;
-    strokeWidth?: boolean;
-    shadowColor?: boolean;
-    shadowOffsetX?: boolean;
-    shadowOffsetY?: boolean;
-    shadowBlur?: boolean;
-    textOpacity?: boolean;
-  };
 }
 
 // Insert node data
@@ -293,16 +272,6 @@ export interface CanvasNodeData extends BaseNodeData {
       }
     >
   >;
-  // Inheritance toggles (Default scope): when true, omit this property to inherit upstream
-  inherit?: {
-    position?: { x?: boolean; y?: boolean };
-    rotation?: boolean;
-    scale?: { x?: boolean; y?: boolean };
-    opacity?: boolean;
-    fillColor?: boolean;
-    strokeColor?: boolean;
-    strokeWidth?: boolean;
-  };
 }
 
 // Frame node data (static image output configuration)
@@ -382,16 +351,6 @@ export interface MediaNodeData extends BaseNodeData {
     Record<string, { target?: string; boundResultNodeId?: string }>
   >;
   perObjectAssignments?: PerObjectAssignments;
-  // Inheritance toggles (Default scope): when true, omit this property to inherit upstream
-  inherit?: {
-    imageAssetId?: boolean;
-    cropX?: boolean;
-    cropY?: boolean;
-    cropWidth?: boolean;
-    cropHeight?: boolean;
-    displayWidth?: boolean;
-    displayHeight?: boolean;
-  };
 }
 
 // Union type for all node data

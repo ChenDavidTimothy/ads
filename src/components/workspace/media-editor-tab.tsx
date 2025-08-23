@@ -18,7 +18,6 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
-import { AutoToggle } from "@/components/ui/source-selector";
 import { AssetSelectionModal } from "./media/asset-selection-modal";
 import { Image, ImageOff } from "lucide-react";
 import { api } from "@/trpc/react";
@@ -175,52 +174,7 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
             <label className="text-xs text-[var(--text-tertiary)]">
               Image Asset
             </label>
-            <div className="flex items-center gap-2">
-              <AutoToggle
-                active={Boolean((node?.data as MediaNodeData)?.inherit?.imageAssetId)}
-                onToggle={(next) => {
-                  updateFlow({
-                    nodes: state.flow.nodes.map((n) =>
-                      n.data?.identifier?.id !== nodeId
-                        ? n
-                        : {
-                            ...n,
-                            data: {
-                              ...(n.data as MediaNodeData),
-                              inherit: {
-                                ...((n.data as MediaNodeData).inherit ?? {}),
-                                imageAssetId: next,
-                              },
-                            },
-                          },
-                    ),
-                  });
-                  if (next) resetToDefault("imageAssetId");
-                }}
-              />
-					<AutoToggle
-						active={Boolean((node?.data as MediaNodeData)?.inherit?.imageAssetId)}
-						onToggle={(next) =>
-							updateFlow({
-								nodes: state.flow.nodes.map((n) =>
-									n.data?.identifier?.id !== nodeId
-										? n
-										: {
-												...n,
-												data: {
-													...(n.data as MediaNodeData),
-													inherit: {
-														...((n.data as MediaNodeData).inherit ?? {}),
-														imageAssetId: next,
-													},
-												},
-											},
-									),
-							})
-						}
-					/>
-					<BindButton nodeId={nodeId} bindingKey="imageAssetId" />
-				</div>
+            <BindButton nodeId={nodeId} bindingKey="imageAssetId" />
           </div>
 
           {/* Current Asset Display */}

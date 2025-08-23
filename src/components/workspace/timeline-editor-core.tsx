@@ -41,7 +41,6 @@ import {
   useVariableBinding,
 } from "@/components/workspace/binding/bindings";
 import { Badge } from "@/components/ui/badge";
-import { AutoToggle } from "@/components/ui/source-selector";
 
 function BindingBadge({
   nodeId,
@@ -725,8 +724,6 @@ export function TrackProperties({
   // Variable discovery uses animationNodeId to mirror object discovery behavior
   const { state } = useWorkspace();
 
-  const { resetToDefault } = useVariableBinding(animationNodeId, selectedObjectId);
-
   const bindButton = (fieldKey: string) => {
     // Prefer track-specific key when a track is selected
     const specific = `track.${track.identifier.id}.${fieldKey}`;
@@ -994,28 +991,16 @@ export function TrackProperties({
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="block text-xs text-[var(--text-tertiary)]">From X</span>
-                  <AutoToggle
-                    active={!isFieldOverridden("move.from.x") && !isFieldBound("move.from.x")}
-                    onToggle={(next) => {
-                      if (next) {
-                        onChange({ properties: { from: { x: undefined } } as Partial<MoveTrackProperties> });
-                        resetToDefault(`track.${track.identifier.id}.move.from.x`);
-                      }
-                    }}
-                  />
-                </div>
                 <NumberField
-                  label={labelWithOverride("")}
+                  label={labelWithOverride("X")}
                   value={getTrackFieldValue(
                     "move.from.x",
                     getOverrideProperty<number>("from.x"),
                     track.properties.from.x,
                   )}
-                  onChange={(fromX) =>
+                  onChange={(x) =>
                     updateProperties({
-                      from: { ...track.properties.from, x: fromX },
+                      from: { x },
                     } as Partial<MoveTrackProperties>)
                   }
                   defaultValue={0}
@@ -1033,18 +1018,6 @@ export function TrackProperties({
                 )}
               </div>
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="block text-xs text-[var(--text-tertiary)]">From Y</span>
-                  <AutoToggle
-                    active={!isFieldOverridden("move.from.y") && !isFieldBound("move.from.y")}
-                    onToggle={(next) => {
-                      if (next) {
-                        onChange({ properties: { from: { y: undefined } } as Partial<MoveTrackProperties> });
-                        resetToDefault(`track.${track.identifier.id}.move.from.y`);
-                      }
-                    }}
-                  />
-                </div>
                 <NumberField
                   label={labelWithOverride("Y")}
                   value={getTrackFieldValue(
@@ -1143,18 +1116,6 @@ export function TrackProperties({
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">From</span>
-                <AutoToggle
-                  active={!isFieldOverridden("rotate.from") && !isFieldBound("rotate.from")}
-                  onToggle={(next) => {
-                    if (next) {
-                      onChange({ properties: { from: undefined } as Partial<RotateTrackProperties> });
-                      resetToDefault(`track.${track.identifier.id}.rotate.from`);
-                    }
-                  }}
-                />
-              </div>
               <NumberField
                 label={labelWithOverride("From")}
                 value={getTrackFieldValue(
@@ -1211,17 +1172,6 @@ export function TrackProperties({
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">From</span>
-                <AutoToggle
-                  active={!isFieldOverridden("scale.from") && !isFieldBound("scale.from")}
-                  onToggle={(next) => {
-                    if (next) {
-                      onChange({ properties: { from: undefined } as Partial<ScaleTrackProperties> });
-                    }
-                  }}
-                />
-              </div>
               <NumberField
                 label={labelWithOverride("From")}
                 value={getTrackFieldValue(
@@ -1277,18 +1227,6 @@ export function TrackProperties({
           </div>
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="block text-xs text-[var(--text-tertiary)]">From</span>
-                <AutoToggle
-                  active={!isFieldOverridden("fade.from") && !isFieldBound("fade.from")}
-                  onToggle={(next) => {
-                    if (next) {
-                      onChange({ properties: { from: undefined } as Partial<FadeTrackProperties> });
-                      resetToDefault(`track.${track.identifier.id}.fade.from`);
-                    }
-                  }}
-                />
-              </div>
               <NumberField
                 label={labelWithOverride("From")}
                 value={getTrackFieldValue(
@@ -1369,18 +1307,6 @@ export function TrackProperties({
             </div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="block text-xs text-[var(--text-tertiary)]">From</span>
-                  <AutoToggle
-                    active={!isFieldOverridden("color.from") && !isFieldBound("color.from")}
-                    onToggle={(next) => {
-                      if (next) {
-                        onChange({ properties: { from: undefined } as Partial<ColorTrackProperties> });
-                        resetToDefault(`track.${track.identifier.id}.color.from`);
-                      }
-                    }}
-                  />
-                </div>
                 <ColorField
                   label={labelWithOverride("From")}
                   value={

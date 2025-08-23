@@ -19,7 +19,6 @@ import {
   type ObjectAssignments,
 } from "@/shared/properties/assignments";
 import { deleteByPath } from "@/shared/utils/object-path";
-import { buildSparseOverrides, buildSparsePoint2DOverride } from "@/shared/properties/inheritance";
 
 // Helper types for better type safety
 interface VariableBinding {
@@ -38,15 +37,6 @@ interface NodeDataWithBindings {
   variableBindings?: Record<string, VariableBinding>;
   variableBindingsByObject?: Record<string, Record<string, VariableBinding>>;
   perObjectAssignments?: PerObjectAssignments;
-  inherit?: {
-    position?: { x?: boolean; y?: boolean };
-    rotation?: boolean;
-    scale?: { x?: boolean; y?: boolean };
-    opacity?: boolean;
-    fillColor?: boolean;
-    strokeColor?: boolean;
-    strokeWidth?: boolean;
-  };
 }
 
 interface InputWithMetadata {
@@ -118,43 +108,59 @@ export class CanvasNodeExecutor extends BaseExecutor {
       };
     // Apply bound values to node defaults
 
-    // Build sparse node-level overrides honoring inherit flags
-    const nodeBoundValues: Record<string, unknown> = {};
-    for (const key of Object.keys(bindings)) {
-      const v = readVarGlobal(key);
-      if (v !== undefined) nodeBoundValues[key] = v;
-    }
-
-    const defaultScope = {
-      nodeDefaults: {
-        position: data.position,
-        rotation: data.rotation,
-        scale: data.scale,
-        opacity: data.opacity,
-        fillColor: data.fillColor,
-        strokeColor: data.strokeColor,
-        strokeWidth: data.strokeWidth,
-      } as Record<string, unknown>,
-      nodeBoundValues,
-      inherit: data.inherit as Record<string, unknown> | undefined,
+    // Start with node defaults as overrides
+    const baseOverrides: CanvasOverrides = {
+      position: data.position,
+      rotation: data.rotation,
+      scale: data.scale,
+      opacity: data.opacity,
+      fillColor: data.fillColor,
+      strokeColor: data.strokeColor,
+      strokeWidth: data.strokeWidth,
     };
 
-    const pointOverrides = {
-      ...buildSparsePoint2DOverride("position", defaultScope),
-      ...buildSparsePoint2DOverride("scale", defaultScope),
-    } as Partial<CanvasOverrides>;
+    // Apply all global binding keys generically into baseOverrides
+    const globalKeys = Object.keys(bindings);
+    const nodeOverrides: CanvasOverrides = JSON.parse(
+      JSON.stringify(baseOverrides),
+    ) as CanvasOverrides;
+    for (const key of globalKeys) {
+      const val = readVarGlobal(key);
+      if (val === undefined) continue;
 
-    const scalarOverrides = buildSparseOverrides<
-      Record<string, number | string>
-    >(
-      ["rotation", "opacity", "fillColor", "strokeColor", "strokeWidth"],
-      defaultScope,
-    ) as Partial<CanvasOverrides>;
-
-    const nodeOverrides: CanvasOverrides = {
-      ...pointOverrides,
-      ...scalarOverrides,
-    } as CanvasOverrides;
+      // Type-safe property setting for CanvasOverrides
+      if (key === "position.x" && typeof val === "number") {
+        nodeOverrides.position = {
+          x: val,
+          y: nodeOverrides.position?.y ?? 540,
+        };
+      } else if (key === "position.y" && typeof val === "number") {
+        nodeOverrides.position = {
+          x: nodeOverrides.position?.x ?? 960,
+          y: val,
+        };
+      } else if (key === "scale.x" && typeof val === "number") {
+        nodeOverrides.scale = {
+          x: val,
+          y: nodeOverrides.scale?.y ?? 1,
+        };
+      } else if (key === "scale.y" && typeof val === "number") {
+        nodeOverrides.scale = {
+          x: nodeOverrides.scale?.x ?? 1,
+          y: val,
+        };
+      } else if (key === "rotation" && typeof val === "number") {
+        nodeOverrides.rotation = val;
+      } else if (key === "opacity" && typeof val === "number") {
+        nodeOverrides.opacity = val;
+      } else if (key === "fillColor" && typeof val === "string") {
+        nodeOverrides.fillColor = val;
+      } else if (key === "strokeColor" && typeof val === "string") {
+        nodeOverrides.strokeColor = val;
+      } else if (key === "strokeWidth" && typeof val === "number") {
+        nodeOverrides.strokeWidth = val;
+      }
+    }
 
     const passThrough: unknown[] = [];
 
