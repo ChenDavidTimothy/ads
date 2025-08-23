@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { memo, useCallback } from "react";
-import { useDeleteActions } from "../../flow/context/delete-context";
+import { useReactFlow } from "reactflow";
 
 interface NodeDeleteButtonProps {
   nodeId: string;
@@ -14,19 +14,16 @@ export const NodeDeleteButton = memo(function NodeDeleteButton({
   nodeId,
   nodeName,
 }: NodeDeleteButtonProps) {
-  const { onDeleteNode, isDragging } = useDeleteActions();
+  const { deleteElements } = useReactFlow();
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
 
-      // Prevent delete during drag to avoid accidental clicks
-      if (!isDragging) {
-        onDeleteNode(nodeId);
-      }
+      deleteElements({ nodes: [{ id: nodeId }] });
     },
-    [nodeId, onDeleteNode, isDragging],
+    [nodeId, deleteElements],
   );
 
   return (

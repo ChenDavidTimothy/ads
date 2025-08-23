@@ -933,22 +933,24 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
 
-      // Scene validation is now handled by the backend
-
+      // Sanitize edges to prevent dangling references before sending to backend
+      const nodeIdSet = new Set(nodes.map((n) => n.id));
       const backendNodes = nodes.map((node) => ({
         id: node.id,
         type: node.type,
         position: node.position,
         data: node.data,
       }));
-      const backendEdges = edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? undefined,
-        targetHandle: edge.targetHandle ?? undefined,
-        kind: "data" as const,
-      }));
+      const backendEdges = edges
+        .filter((e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
+        .map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle ?? undefined,
+          targetHandle: edge.targetHandle ?? undefined,
+          kind: "data" as const,
+        }));
 
       generateScene.mutate({ nodes: backendNodes, edges: backendEdges });
     } catch (error) {
@@ -1024,20 +1026,23 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         router.push("/login");
         return;
       }
+      const nodeIdSet = new Set(nodes.map((n) => n.id));
       const backendNodes = nodes.map((node) => ({
         id: node.id,
         type: node.type,
         position: node.position,
         data: node.data,
       }));
-      const backendEdges = edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? undefined,
-        targetHandle: edge.targetHandle ?? undefined,
-        kind: "data" as const,
-      }));
+      const backendEdges = edges
+        .filter((e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
+        .map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle ?? undefined,
+          targetHandle: edge.targetHandle ?? undefined,
+          kind: "data" as const,
+        }));
       generateImage.mutate({ nodes: backendNodes, edges: backendEdges });
     } catch (error) {
       setLastError(

@@ -20,7 +20,6 @@ import type { Node, Edge } from "reactflow";
 import { useWorkspace } from "./workspace-context";
 import { generateTransformIdentifier } from "@/lib/defaults/transforms";
 import { debounce } from "@/lib/utils";
-import { DeleteProvider } from "./flow/context/delete-context";
 
 export function FlowEditorTab() {
   const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
@@ -46,13 +45,16 @@ export function FlowEditorTab() {
     isDragging, // ← ADD: Get drag state
   } = useFlowGraph();
 
-  // Initialize local state from context on mount (load saved nodes)
+  // Initialize local state from context on mount (load saved nodes) with edge sanitization
   useEffect(() => {
     if (ctxNodes.length > 0 && nodes.length === 0) {
-      setNodes(ctxNodes as unknown as Node<NodeData>[]);
-    }
-    if (ctxEdges.length > 0 && edges.length === 0) {
-      setEdges(ctxEdges);
+      const initialNodes = ctxNodes as unknown as Node<NodeData>[];
+      const nodeIdSet = new Set(initialNodes.map((n) => n.id));
+      const initialEdges = (ctxEdges ?? []).filter(
+        (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target),
+      );
+      setNodes(initialNodes);
+      if (initialEdges.length > 0) setEdges(initialEdges);
     }
   }, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
 
@@ -314,18 +316,7 @@ export function FlowEditorTab() {
     handleGenerateSelected,
   } = useSceneGeneration(nodes, edges);
 
-  // Simple delete handler - no complex optimization needed
-  const handleDeleteNodeById = useCallback(
-    (nodeId: string) => {
-      const nodeToDelete = nodes.find(
-        (node) => node.data.identifier.id === nodeId,
-      );
-      if (nodeToDelete) {
-        onNodesDelete([nodeToDelete]);
-      }
-    },
-    [nodes, onNodesDelete],
-  );
+  // Legacy manual deletion removed: deletion must use React Flow API via useReactFlow in the button
 
   const validationSummary = getValidationSummary();
 
@@ -367,25 +358,23 @@ export function FlowEditorTab() {
               isDebugging,
             }}
           >
-            <DeleteProvider onDeleteNode={handleDeleteNodeById}>
-              <FlowCanvas
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={onNodeClick}
-                onPaneClick={onPaneClick}
-                onNodesDelete={onNodesDelete}
-                onEdgesDelete={onEdgesDelete}
-                onNodeDragStop={() => {
-                  // Context sync happens automatically via useEffect when nodes change
-                }}
-                onSelectionChange={handleSelectionChange}
-                disableDeletion={resultLogModalState.isOpen}
-              />
-            </DeleteProvider>
+            <FlowCanvas
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onNodesDelete={onNodesDelete}
+              onEdgesDelete={onEdgesDelete}
+              onNodeDragStop={() => {
+                // Context sync happens automatically via useEffect when nodes change
+              }}
+              onSelectionChange={handleSelectionChange}
+              disableDeletion={resultLogModalState.isOpen}
+            />
             <ResultLogModal
               isOpen={resultLogModalState.isOpen}
               onClose={handleCloseResultLogViewer}
