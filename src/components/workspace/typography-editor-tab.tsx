@@ -22,6 +22,7 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
+import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
 import { Type } from "lucide-react";
 
 // Badge Components
@@ -620,7 +621,7 @@ function TypographyPerObjectProperties({
             disabled={isBound("content")}
             inputClassName={leftBorderClass("content")}
           />
-          {(isOverridden("content") || isBound("content") || isInheritedBound("content")) && (
+          {(isOverridden("content") || isBound("content")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("content") && !isBound("content") && (
@@ -630,7 +631,7 @@ function TypographyPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                {(isBound("content") || (!isOverridden("content") && isInheritedBound("content"))) && (
+                {isBound("content") && (
                   <TypographyBindingBadge
                     nodeId={nodeId}
                     keyName="content"
@@ -697,8 +698,8 @@ function TypographyPerObjectProperties({
             disabled={isBound("fontSize")}
             inputClassName={leftBorderClass("fontSize")}
           />
-          {/* Badge - Only show when needed */}
-          {(isOverridden("fontSize") || isBound("fontSize") || isInheritedBound("fontSize")) && (
+          {/* Badge - Only show when overridden or bound */}
+          {(isOverridden("fontSize") || isBound("fontSize")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("fontSize") && !isBound("fontSize") && (
@@ -708,7 +709,7 @@ function TypographyPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                {(isBound("fontSize") || (!isOverridden("fontSize") && isInheritedBound("fontSize"))) && (
+                {isBound("fontSize") && (
                   <TypographyBindingBadge
                     nodeId={nodeId}
                     keyName="fontSize"
@@ -805,7 +806,7 @@ function TypographyPerObjectProperties({
               disabled={isBound("fillColor")}
             />
             {/* Badge - Show when overridden or bound */}
-            {(isOverridden("fillColor") || isBound("fillColor") || isInheritedBound("fillColor")) && (
+            {(isOverridden("fillColor") || isBound("fillColor")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("fillColor") && !isBound("fillColor") && (
@@ -815,7 +816,7 @@ function TypographyPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("fillColor") || (!isOverridden("fillColor") && isInheritedBound("fillColor"))) && (
+                  {isBound("fillColor") && (
                     <TypographyBindingBadge
                       nodeId={nodeId}
                       keyName="fillColor"
@@ -845,7 +846,7 @@ function TypographyPerObjectProperties({
               disabled={isBound("strokeColor")}
             />
             {/* Badge - Show when overridden or bound */}
-            {(isOverridden("strokeColor") || isBound("strokeColor") || isInheritedBound("strokeColor")) && (
+            {(isOverridden("strokeColor") || isBound("strokeColor")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("strokeColor") && !isBound("strokeColor") && (
@@ -855,7 +856,7 @@ function TypographyPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("strokeColor") || (!isOverridden("strokeColor") && isInheritedBound("strokeColor"))) && (
+                  {isBound("strokeColor") && (
                     <TypographyBindingBadge
                       nodeId={nodeId}
                       keyName="strokeColor"
@@ -887,8 +888,8 @@ function TypographyPerObjectProperties({
             disabled={isBound("strokeWidth")}
             inputClassName={leftBorderClass("strokeWidth")}
           />
-          {/* Badge - Only show when needed */}
-          {(isOverridden("strokeWidth") || isBound("strokeWidth") || isInheritedBound("strokeWidth")) && (
+          {/* Badge - Only show when overridden or bound */}
+          {(isOverridden("strokeWidth") || isBound("strokeWidth")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("strokeWidth") && !isBound("strokeWidth") && (
@@ -898,7 +899,7 @@ function TypographyPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                {(isBound("strokeWidth") || (!isOverridden("strokeWidth") && isInheritedBound("strokeWidth"))) && (
+                {isBound("strokeWidth") && (
                   <TypographyBindingBadge
                     nodeId={nodeId}
                     keyName="strokeWidth"

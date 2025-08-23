@@ -121,48 +121,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
           : {}),
       } as Record<string, unknown>;
 
-      // Prune fields equal to base track defaults so only explicit changes remain
-      const baseTrack = data?.tracks.find((t) => t.identifier.id === trackId);
-      const prunedProps = (() => {
-        if (!baseTrack) return mergedProps;
-        const baseTrackProps = baseTrack.properties as unknown as Record<
-          string,
-          unknown
-        >;
-        const copy: Record<string, unknown> = { ...mergedProps };
-
-        // Helper to prune nested point2d-like objects (from/to)
-        const pruneNested = (key: string) => {
-          const mergedVal = copy[key] as Record<string, unknown> | undefined;
-          const baseVal = baseTrackProps[key] as
-            | Record<string, unknown>
-            | undefined;
-          if (
-            mergedVal &&
-            typeof mergedVal === "object" &&
-            baseVal &&
-            typeof baseVal === "object"
-          ) {
-            const out: Record<string, unknown> = {};
-            for (const k of Object.keys(mergedVal)) {
-              const mv = mergedVal[k];
-              const bv = baseVal[k];
-              if (mv !== bv) out[k] = mv;
-            }
-            if (Object.keys(out).length > 0) copy[key] = out;
-            else delete copy[key];
-          } else if (mergedVal === baseVal) {
-            delete copy[key];
-          }
-        };
-
-        for (const key of Object.keys(copy)) {
-          if (key === "from" || key === "to") pruneNested(key);
-          else if (copy[key] === baseTrackProps[key]) delete copy[key];
-        }
-        return copy;
-      })();
-
+      // SIMPLIFIED: any per-object edit is a manual override; do not prune equality
       const merged: TrackOverride = {
         ...base,
         ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
@@ -172,30 +131,10 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         ...(updates.duration !== undefined
           ? { duration: updates.duration }
           : {}),
-        properties: prunedProps,
+        properties: mergedProps,
       };
-
-      // Also prune timing/easing if equal to base track
-      if (baseTrack) {
-        if (merged.easing === baseTrack.easing) delete merged.easing;
-        if (merged.startTime === baseTrack.startTime) delete merged.startTime;
-        if (merged.duration === baseTrack.duration) delete merged.duration;
-      }
-
-      // If no properties and no timing/easing overrides remain, drop this override entry entirely
-      const hasProps =
-        merged.properties && Object.keys(merged.properties).length > 0;
-      const hasMeta =
-        merged.easing !== undefined ||
-        merged.startTime !== undefined ||
-        merged.duration !== undefined;
-
-      if (!hasProps && !hasMeta) {
-        if (idx >= 0) list.splice(idx, 1);
-      } else {
-        if (idx >= 0) list[idx] = merged;
-        else list.push(merged);
-      }
+      if (idx >= 0) list[idx] = merged;
+      else list.push(merged);
 
       obj.tracks = list;
       next[objectId] = obj;

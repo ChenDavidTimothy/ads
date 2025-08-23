@@ -700,7 +700,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
             String(objectId),
           );
           if (!base) return undefined;
-          const keys = [...globalBindingKeys, ...objectBindingKeys];
+          // Only mask per-object bound keys; allow per-object manual overrides
+          // to override any global bindings (matching Canvas behavior)
+          const keys = objectBindingKeys;
 
           // FIX: Use proper typing with ObjectAssignments interface instead of any
           interface ObjectAssignments {

@@ -18,6 +18,7 @@ import {
 } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
+import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
 import { AssetSelectionModal } from "./media/asset-selection-modal";
 import { Image, ImageOff } from "lucide-react";
 import { api } from "@/trpc/react";
@@ -25,63 +26,14 @@ import type { AssetResponse } from "@/shared/types/assets";
 import NextImage from "next/image";
 
 // Badge Components (following typography pattern)
-function MediaBindingBadge({
-  nodeId,
-  keyName,
-  objectId,
-}: {
-  nodeId: string;
-  keyName: string;
-  objectId?: string;
-}) {
-  const { state } = useWorkspace();
-  const { resetToDefault } = useVariableBinding(nodeId, objectId);
+// Replace bespoke badges with unified badges
+const MediaBindingBadge = ({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) => (
+  <BindingBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />
+);
 
-  const node = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === nodeId,
-  ) as Node<MediaNodeData> | undefined;
-  if (!node) return null;
-
-  let bound: string | undefined;
-  if (objectId) {
-    bound =
-      node.data?.variableBindingsByObject?.[objectId]?.[keyName]
-        ?.boundResultNodeId;
-    if (!bound) {
-      bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-    }
-  } else {
-    bound = node.data?.variableBindings?.[keyName]?.boundResultNodeId;
-  }
-  if (!bound) return null;
-
-  const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)
-    ?.data?.identifier?.displayName;
-
-  return (
-    <Badge variant="bound" onRemove={() => resetToDefault(keyName)}>
-      {name ? `Bound: ${name}` : "Bound"}
-    </Badge>
-  );
-}
-
-function MediaOverrideBadge({
-  nodeId,
-  keyName,
-  objectId,
-}: {
-  nodeId: string;
-  keyName: string;
-  objectId?: string;
-}) {
-  const { resetToDefault } = useVariableBinding(nodeId, objectId);
-
-  return (
-    <Badge variant="manual" onRemove={() => resetToDefault(keyName)}>
-      Manual
-    </Badge>
-  );
-}
+const MediaOverrideBadge = ({ nodeId, keyName, objectId }: { nodeId: string; keyName: string; objectId?: string }) => (
+  <UnifiedOverrideBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />
+);
 
 // Default Properties Component (Center Panel)
 function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
@@ -525,7 +477,7 @@ function MediaPerObjectProperties({
   };
 
   const isOverridden = (key: string): boolean => {
-    return key in initial && !isBound(key);
+    return key in initial;
   };
 
   const leftBorderClass = (key: string) => {
@@ -722,8 +674,8 @@ function MediaPerObjectProperties({
             {currentAssetId ? "Change Image" : "Override Image"}
           </Button>
 
-          {/* Asset Binding Badge - Typography Pattern */}
-          {(isOverridden("imageAssetId") || isBound("imageAssetId") || isInheritedBound("imageAssetId")) && (
+          {/* Asset Binding/Override Badge */}
+          {(isOverridden("imageAssetId") || isBound("imageAssetId")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 {isOverridden("imageAssetId") && !isBound("imageAssetId") && (
@@ -733,7 +685,7 @@ function MediaPerObjectProperties({
                     objectId={objectId}
                   />
                 )}
-                {(isBound("imageAssetId") || (!isOverridden("imageAssetId") && isInheritedBound("imageAssetId"))) && (
+                {isBound("imageAssetId") && (
                   <MediaBindingBadge
                     nodeId={nodeId}
                     keyName="imageAssetId"
@@ -769,8 +721,8 @@ function MediaPerObjectProperties({
               disabled={isBound("cropX")}
               inputClassName={leftBorderClass("cropX")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("cropX") || isBound("cropX") || isInheritedBound("cropX")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("cropX") || isBound("cropX")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("cropX") && !isBound("cropX") && (
@@ -780,7 +732,7 @@ function MediaPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("cropX") || (!isOverridden("cropX") && isInheritedBound("cropX"))) && (
+                  {isBound("cropX") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="cropX"
@@ -808,8 +760,8 @@ function MediaPerObjectProperties({
               disabled={isBound("cropY")}
               inputClassName={leftBorderClass("cropY")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("cropY") || isBound("cropY") || isInheritedBound("cropY")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("cropY") || isBound("cropY")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("cropY") && !isBound("cropY") && (
@@ -819,7 +771,7 @@ function MediaPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("cropY") || (!isOverridden("cropY") && isInheritedBound("cropY"))) && (
+                  {isBound("cropY") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="cropY"
@@ -849,8 +801,8 @@ function MediaPerObjectProperties({
               disabled={isBound("cropWidth")}
               inputClassName={leftBorderClass("cropWidth")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("cropWidth") || isBound("cropWidth") || isInheritedBound("cropWidth")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("cropWidth") || isBound("cropWidth")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("cropWidth") && !isBound("cropWidth") && (
@@ -860,7 +812,7 @@ function MediaPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("cropWidth") || (!isOverridden("cropWidth") && isInheritedBound("cropWidth"))) && (
+                  {isBound("cropWidth") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="cropWidth"
@@ -888,8 +840,8 @@ function MediaPerObjectProperties({
               disabled={isBound("cropHeight")}
               inputClassName={leftBorderClass("cropHeight")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("cropHeight") || isBound("cropHeight") || isInheritedBound("cropHeight")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("cropHeight") || isBound("cropHeight")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("cropHeight") && !isBound("cropHeight") && (
@@ -899,7 +851,7 @@ function MediaPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("cropHeight") || (!isOverridden("cropHeight") && isInheritedBound("cropHeight"))) && (
+                  {isBound("cropHeight") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="cropHeight"
@@ -936,8 +888,8 @@ function MediaPerObjectProperties({
               disabled={isBound("displayWidth")}
               inputClassName={leftBorderClass("displayWidth")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("displayWidth") || isBound("displayWidth") || isInheritedBound("displayWidth")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("displayWidth") || isBound("displayWidth")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("displayWidth") && !isBound("displayWidth") && (
@@ -947,7 +899,7 @@ function MediaPerObjectProperties({
                       objectId={objectId}
                     />
                   )}
-                  {(isBound("displayWidth") || (!isOverridden("displayWidth") && isInheritedBound("displayWidth"))) && (
+                  {isBound("displayWidth") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="displayWidth"
@@ -975,8 +927,8 @@ function MediaPerObjectProperties({
               disabled={isBound("displayHeight")}
               inputClassName={leftBorderClass("displayHeight")}
             />
-            {/* Badge - Only show when needed */}
-            {(isOverridden("displayHeight") || isBound("displayHeight") || isInheritedBound("displayHeight")) && (
+            {/* Badge - Only show when overridden or bound */}
+            {(isOverridden("displayHeight") || isBound("displayHeight")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
                   {isOverridden("displayHeight") &&
@@ -987,7 +939,7 @@ function MediaPerObjectProperties({
                         objectId={objectId}
                       />
                     )}
-                  {(isBound("displayHeight") || (!isOverridden("displayHeight") && isInheritedBound("displayHeight"))) && (
+                  {isBound("displayHeight") && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="displayHeight"
