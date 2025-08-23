@@ -17,7 +17,7 @@ export class ImageExecutor extends BaseExecutor {
     // Create proper SceneObject with timeline-compatible properties
     const imageObject = {
       type: "image" as const,
-      id: `image_${node.data.identifier.id}`,
+      id: node.data.identifier.id,
       // Timeline-required properties
       initialPosition: { x: 0, y: 0 }, // Default origin - Canvas will provide positioning
       initialRotation: 0,
