@@ -28,6 +28,13 @@ import type { SceneObject, TextProperties } from "@/shared/types/scene";
 import { createServiceClient } from "@/utils/supabase/service";
 import { loadImage } from "canvas";
 import { resolveInitialObject } from "@/shared/properties/resolver";
+import {
+  resolveBindingLookupId,
+  getObjectBindingKeys,
+  pickAssignmentsForObject,
+  normalizeObjectId,
+  mergePerObjectAssignments,
+} from "@/shared/properties/override-utils";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -165,26 +172,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Read optional per-object assignments metadata (from upstream)
     const upstreamAssignments: PerObjectAssignments | undefined =
       this.extractPerObjectAssignmentsFromInputs(inputs);
-    // Read node-level assignments stored on the Media node itself
     const nodeAssignments: PerObjectAssignments | undefined =
       data.perObjectAssignments as PerObjectAssignments | undefined;
-
-    // Merge upstream + node-level; node-level takes precedence per object
-    const mergedAssignments: PerObjectAssignments | undefined = (() => {
-      if (!upstreamAssignments && !nodeAssignments) return undefined;
-      const result: PerObjectAssignments = {};
-      const objectIds = new Set<string>([
-        ...Object.keys(upstreamAssignments ?? {}),
-        ...Object.keys(nodeAssignments ?? {}),
-      ]);
-      for (const objectId of objectIds) {
-        const base = upstreamAssignments?.[objectId];
-        const overrides = nodeAssignments?.[objectId];
-        const merged = mergeObjectAssignments(base, overrides);
-        if (merged) result[objectId] = merged;
-      }
-      return result;
-    })();
+    const mergedAssignments = mergePerObjectAssignments(
+      upstreamAssignments,
+      nodeAssignments,
+      mergeObjectAssignments,
+    );
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -262,10 +256,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext,
   ): Promise<SceneObject> {
     const objectId = obj.id;
-    const objectIdNoPrefix =
-      typeof objectId === "string"
-        ? (objectId as string).replace(/^image_/, "")
-        : (objectId as string);
+    const objectIdNoPrefix = normalizeObjectId(String(objectId));
 
     // Debug logging to check object structure
     logger.debug(`Processing image object ${objectId}:`, {
@@ -278,20 +269,18 @@ export class AnimationNodeExecutor extends BaseExecutor {
     });
 
     // Normalize binding lookup ID to support assignments keyed by base node id
-    const bindingLookupId =
-      bindingsByObject[objectId]?.__proto__ !== undefined &&
-      bindingsByObject[objectId]
-        ? objectId
-        : (bindingsByObject as Record<string, unknown>)[objectIdNoPrefix]
-          ? objectIdNoPrefix
-          : objectId;
+    const bindingLookupId = resolveBindingLookupId(
+      bindingsByObject as Record<string, unknown>,
+      String(objectId),
+    );
 
     const reader = readVarForObject(bindingLookupId);
 
     // Build object-specific overrides
     const objectOverrides = { ...nodeOverrides };
-    const objectKeys = Object.keys(
-      bindingsByObject[bindingLookupId] ?? {},
+    const objectKeys = getObjectBindingKeys(
+      bindingsByObject as Record<string, Record<string, unknown>>,
+      String(objectId),
     );
 
     for (const key of objectKeys) {
@@ -326,8 +315,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Apply per-object assignments (manual overrides)
     // Handle object ID prefix mismatch - try both prefixed and non-prefixed versions
-    const assignment =
-      assignments?.[objectId] ?? assignments?.[objectIdNoPrefix];
+    const assignment = pickAssignmentsForObject(assignments, String(objectId));
     const initial = assignment?.initial ?? {};
 
     // Use the standard resolveInitialObject function like canvas executor
@@ -667,10 +655,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         const objectId = (timedObject as { id?: unknown }).id as
           | string
           | undefined;
-        const objectIdNoPrefix =
-          typeof objectId === "string"
-            ? (objectId as string).replace(/^(image_|text_)/, "")
-            : (objectId as string);
+        const objectIdNoPrefix = objectId ? normalizeObjectId(String(objectId)) : "";
         const appearanceTime = (timedObject as { appearanceTime?: unknown })
           .appearanceTime as number | undefined;
         let baseline: number;
@@ -689,14 +674,16 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
         // Apply per-object bindings if present
         const bindingLookupId = objectId
-          ? bindingsByObject[objectId]
-            ? objectId
-            : bindingsByObject[objectIdNoPrefix]
-              ? objectIdNoPrefix
-              : objectId
+          ? resolveBindingLookupId(
+              bindingsByObject as Record<string, unknown>,
+              String(objectId),
+            )
           : undefined;
         const objectBindingKeys = bindingLookupId
-          ? Object.keys(bindingsByObject[bindingLookupId] ?? {})
+          ? getObjectBindingKeys(
+              bindingsByObject as Record<string, Record<string, unknown>>,
+              String(objectId),
+            )
           : [];
         const objectReader = readVarForObject(bindingLookupId);
         const resolvedForObject = objectId
@@ -708,9 +695,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Build a masked per-object assignment so bound keys take precedence over manual overrides
         const maskedAssignmentsForObject = (() => {
           if (!objectId) return undefined;
-          const base =
-            mergedAssignments?.[objectId] ??
-            mergedAssignments?.[objectIdNoPrefix];
+          const base = pickAssignmentsForObject(
+            mergedAssignments,
+            String(objectId),
+          );
           if (!base) return undefined;
           const keys = [...globalBindingKeys, ...objectBindingKeys];
 

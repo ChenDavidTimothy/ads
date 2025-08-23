@@ -13,6 +13,11 @@ import {
   type CanvasOverrides,
 } from "@/shared/properties/resolver";
 import {
+  resolveBindingLookupId,
+  getObjectBindingKeys,
+  pickAssignmentsForObject,
+} from "@/shared/properties/override-utils";
+import {
   mergeObjectAssignments,
   isObjectAssignments,
   type PerObjectAssignments,
@@ -194,23 +199,15 @@ export class CanvasNodeExecutor extends BaseExecutor {
         if (isSceneObject(obj)) {
           const original = obj;
           const objectId = original.id;
-          const objectIdNoPrefix =
-            typeof objectId === "string"
-              ? (objectId as string).replace(/^image_/, "")
-              : (objectId as string);
 
           // NEW: Add type-aware color property filtering
           const isTextObject = original.type === "text";
 
-          // Normalize binding lookup ID so image objects (id starts with "image_")
-          // can use per-object bindings/overrides keyed by the underlying node id
-          const bindingLookupId =
-            bindingsByObject[objectId]?.__proto__ !== undefined &&
-            bindingsByObject[objectId]
-              ? objectId
-              : (bindingsByObject as Record<string, unknown>)[objectIdNoPrefix]
-                ? objectIdNoPrefix
-                : objectId;
+          // Unified binding lookup id across object types
+          const bindingLookupId = resolveBindingLookupId(
+            bindingsByObject as Record<string, unknown>,
+            objectId,
+          );
 
           const reader = readVarForObject(bindingLookupId);
           const objectOverrides: CanvasOverrides = JSON.parse(
@@ -224,8 +221,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
             delete objectOverrides.strokeWidth;
           }
 
-          const objectKeys = Object.keys(
-            bindingsByObject[bindingLookupId] ?? {},
+          const objectKeys = getObjectBindingKeys(
+            bindingsByObject as Record<string, Record<string, unknown>>,
+            objectId,
           );
           for (const key of objectKeys) {
             const val = reader(key);
@@ -275,9 +273,10 @@ export class CanvasNodeExecutor extends BaseExecutor {
             }
           }
 
-          const assignmentsForObject =
-            mergedAssignments?.[objectId] ??
-            mergedAssignments?.[objectIdNoPrefix];
+          const assignmentsForObject = pickAssignmentsForObject(
+            mergedAssignments,
+            objectId,
+          );
           const maskedAssignmentsForObject = (() => {
             if (!assignmentsForObject) return undefined;
             const keys = objectKeys; // ✅ Only use per-object bindings, not global keys
