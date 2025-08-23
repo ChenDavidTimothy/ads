@@ -149,6 +149,9 @@ export class FlowTracker {
       }>,
     );
 
+    // Canonical start identifier (the node we're querying for)
+    const startCanonicalId = toCanonicalId(nodeId, idMap);
+
     // Get all node types from registry
     const geometryNodeTypes = getNodesByCategory("geometry").map(
       (def) => def.type,
@@ -250,7 +253,31 @@ export class FlowTracker {
         return multipliedObjects;
       }
 
-      // For other nodes (filter, canvas, animation), pass through from single input
+      // Filter node: only allow explicitly selected object IDs to pass through
+      if (currentNode.type === "filter") {
+        // If we're computing upstream objects FOR the filter node itself,
+        // do NOT apply filtering here — the UI needs to show all upstream objects
+        if (currentNodeId === startCanonicalId) {
+          const inputObjects = objectsByPort.get("input") ?? [];
+          return inputObjects;
+        }
+
+        const selected = (
+          (currentNode.data as unknown as { selectedObjectIds?: string[] })
+            .selectedObjectIds ?? []
+        ).filter((id) => typeof id === "string");
+
+        // If nothing is selected, nothing passes through this path
+        if (selected.length === 0) {
+          return [];
+        }
+
+        const allow = new Set(selected);
+        const inputObjects = objectsByPort.get("input") ?? [];
+        return inputObjects.filter((obj) => allow.has(obj.id));
+      }
+
+      // For other nodes (canvas, animation, etc.), pass through from single input
       const inputObjects = objectsByPort.get("input") ?? [];
       return inputObjects;
     };
@@ -306,8 +333,7 @@ export class FlowTracker {
     };
 
     // Start traversal from target node
-    const startId = toCanonicalId(nodeId, idMap);
-    const result = traverseUpstream(startId);
+    const result = traverseUpstream(startCanonicalId);
 
     // Remove duplicates and sort
     const uniqueObjects = new Map<string, ObjectDescriptor>();
