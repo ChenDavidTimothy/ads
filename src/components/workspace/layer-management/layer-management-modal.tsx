@@ -113,7 +113,8 @@ export function LayerManagementModal({ isOpen, onClose }: Props) {
     if (localIdsChanged || !arraysEqual(localOrder, reconciled)) {
       setLocalOrder(reconciled);
     }
-  }, [selectedNode, objectList, localOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNode, objectList]);
 
   const handleReorder = (newOrder: string[]) => {
     if (!selectedNode) return;
