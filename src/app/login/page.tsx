@@ -113,7 +113,7 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--surface-0)]">
       {/* Header */}
-      <PageHeader showBack={true} isDashboard={true} />
+      <PageHeader showBack={true} />
 
       {/* Main Content */}
       <div className="flex flex-1 items-center justify-center px-[var(--space-6)] py-12">

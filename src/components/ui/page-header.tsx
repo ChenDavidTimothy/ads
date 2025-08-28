@@ -12,8 +12,6 @@ interface PageHeaderProps {
   showBack?: boolean;
   /** Page title to display */
   title?: string;
-  /** Whether this is a dashboard page (affects logo size/layout) */
-  isDashboard?: boolean;
   /** Custom logo className */
   logoClassName?: string;
   /** Custom right side navigation */
@@ -37,7 +35,6 @@ declare global {
 export function PageHeader({
   showBack = false,
   title,
-  isDashboard = false,
   logoClassName = "h-8 w-32",
   rightNavigation,
 }: PageHeaderProps) {
@@ -108,7 +105,7 @@ export function PageHeader({
 
           {/* Right Side Navigation */}
           <div className="flex items-center gap-4">
-            {rightNavigation || <UserProfile />}
+            {rightNavigation ?? <UserProfile />}
           </div>
         </div>
       </div>

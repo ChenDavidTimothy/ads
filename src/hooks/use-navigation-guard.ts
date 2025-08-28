@@ -28,11 +28,7 @@ export function useNavigationGuard(
   getState: () => WorkspaceState | null,
   options?: NavigationGuardOptions,
 ) {
-  const {
-    onNavigationAttempt,
-    onSave: _onSave,
-    onDiscard: _onDiscard,
-  } = options ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { onNavigationAttempt } = options ?? {};
 
   const handleEmergencyBackup = useCallback(() => {
     if (hasUnsavedChanges) {

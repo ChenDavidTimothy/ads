@@ -350,7 +350,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[var(--surface-0)]">
       {/* Header */}
-      <PageHeader isDashboard={true} />
+      <PageHeader />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">

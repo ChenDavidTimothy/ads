@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = {
@@ -12,7 +13,6 @@ export default function PrivacyPage() {
       {/* Header */}
       <PageHeader
         showBack={true}
-        isDashboard={true}
         rightNavigation={
           <div className="flex items-center gap-4">
             <Link
