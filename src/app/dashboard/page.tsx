@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/form-fields";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";
@@ -646,17 +647,20 @@ export default function DashboardPage() {
               <span className="text-sm text-[var(--text-secondary)]">
                 Sort by:
               </span>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(e.target.value as "name" | "updated" | "created")
-                }
-                className="rounded-md border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-sm text-[var(--text-primary)]"
-              >
-                <option value="updated">Last Updated</option>
-                <option value="created">Date Created</option>
-                <option value="name">Name</option>
-              </select>
+              <div className="w-48">
+                <SelectField
+                  label={<span className="sr-only">Sort by</span>}
+                  value={sortBy}
+                  onChange={(v) => setSortBy(v as "name" | "updated" | "created")}
+                  options={[
+                    { value: "updated", label: "Last Updated" },
+                    { value: "created", label: "Date Created" },
+                    { value: "name", label: "Name" },
+                  ]}
+                  required={false}
+                  className="!space-y-0"
+                />
+              </div>
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
