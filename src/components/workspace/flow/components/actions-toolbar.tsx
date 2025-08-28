@@ -76,6 +76,15 @@ export function ActionsToolbar({
       return type === "video" ? "Generating..." : "Generating...";
     if (lastError || validationSummary?.hasErrors)
       return "Fix Issues & Try Again";
+    
+    // Show different text when no content is available
+    if (type === "video" && sceneNodes.length === 0) {
+      return "No Scenes to Generate";
+    }
+    if (type === "image" && frameNodes.length === 0) {
+      return "No Frames to Generate";
+    }
+    
     return type === "video" ? "Generate All Videos" : "Generate All Images";
   };
 
@@ -118,57 +127,50 @@ export function ActionsToolbar({
   return (
     <>
       <div className="flex items-center gap-[var(--space-2)]">
-        {/* Batch Generation */}
-        {sceneNodes.length > 0 && (
-          <Button
-            onClick={onGenerate}
-            disabled={!canGenerate || anyGenerating}
-            variant={getButtonVariant()}
-            size="sm"
-            className="font-medium"
-          >
-            {getButtonText(isGenerating, "video")}
-          </Button>
-        )}
+        {/* Batch Generation - Always visible but disabled when no content */}
+        <Button
+          onClick={onGenerate}
+          disabled={!canGenerate || anyGenerating || sceneNodes.length === 0}
+          variant={getButtonVariant()}
+          size="sm"
+          className="font-medium"
+        >
+          {getButtonText(isGenerating, "video")}
+        </Button>
 
-        {frameNodes.length > 0 && (
-          <Button
-            onClick={onGenerateImage}
-            disabled={!canGenerateImage || anyGenerating}
-            variant={getButtonVariant()}
-            size="sm"
-            className="font-medium"
-          >
-            {getButtonText(isGeneratingImage, "image")}
-          </Button>
-        )}
+        <Button
+          onClick={onGenerateImage}
+          disabled={!canGenerateImage || anyGenerating || frameNodes.length === 0}
+          variant={getButtonVariant()}
+          size="sm"
+          className="font-medium"
+        >
+          {getButtonText(isGeneratingImage, "image")}
+        </Button>
 
-        {/* Selective Generation */}
-        {hasSelectableContent && (
-          <Button
-            onClick={() => setShowSelectionModal(true)}
-            disabled={anyGenerating}
-            variant="secondary"
-            size="sm"
-            className="font-medium"
-          >
-            Select & Generate
-            <ChevronDown className="ml-1 h-4 w-4" />
-          </Button>
-        )}
+        {/* Selective Generation - Always visible but disabled when no content */}
+        <Button
+          onClick={() => setShowSelectionModal(true)}
+          disabled={anyGenerating || !hasSelectableContent}
+          variant="secondary"
+          size="sm"
+          className="font-medium"
+        >
+          {hasSelectableContent ? "Select & Generate" : "No Content to Select"}
+          <ChevronDown className="ml-1 h-4 w-4" />
+        </Button>
 
-        {/* Layer Management */}
-        {hasLayerableContent && (
-          <Button
-            onClick={() => setShowLayersModal(true)}
-            disabled={anyGenerating}
-            variant="secondary"
-            size="sm"
-            className="font-medium"
-          >
-            <Layers className="mr-1 h-4 w-4" /> Layers
-          </Button>
-        )}
+        {/* Layer Management - Always visible but disabled when no content */}
+        <Button
+          onClick={() => setShowLayersModal(true)}
+          disabled={anyGenerating || !hasLayerableContent}
+          variant="secondary"
+          size="sm"
+          className="font-medium"
+        >
+          <Layers className="mr-1 h-4 w-4" />
+          {hasLayerableContent ? "Layers" : "No Layers Available"}
+        </Button>
 
         {/* Reset Button */}
         {(lastError ?? validationSummary?.hasErrors) && onResetGeneration && (
