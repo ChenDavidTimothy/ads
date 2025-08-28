@@ -50,7 +50,7 @@ export function CollapsibleSection({
     <div className={`border-b border-[var(--border-primary)] ${className}`}>
       <button
         onClick={handleToggle}
-        className="flex w-full items-center justify-between p-[var(--space-3)] text-left transition-colors hover:bg-[var(--surface-interactive)]"
+        className="flex w-full items-center justify-between p-[var(--space-3)] text-left transition-colors cursor-pointer hover:bg-[var(--surface-interactive)]"
         type="button"
       >
         <div className="flex items-center gap-[var(--space-2)]">

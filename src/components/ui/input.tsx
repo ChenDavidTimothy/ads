@@ -14,7 +14,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          "text-refined w-full text-[12px] text-[var(--text-primary)] transition-all",
+          "text-refined w-full text-[12px] text-[var(--text-primary)] transition-all cursor-text",
           "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
           "placeholder:text-[var(--text-muted)]",
           {

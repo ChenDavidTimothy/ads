@@ -366,7 +366,7 @@ export function RangeField({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full"
+          className="w-full cursor-pointer"
         />
         {showLabels && (
           <div className="flex justify-between text-xs text-[var(--text-muted)]">
@@ -400,7 +400,7 @@ export function BooleanField({
           type="checkbox"
           checked={value}
           onChange={(e) => onChange(e.target.checked)}
-          className="rounded"
+          className="rounded cursor-pointer"
         />
         <label className="text-sm text-[var(--text-secondary)]">{label}</label>
       </div>
@@ -451,7 +451,7 @@ export function TextareaField({
           disabled={disabled}
           className={cn(
             // Base textarea styling - follows Input component pattern
-            "text-refined w-full text-[12px] text-[var(--text-primary)] transition-all",
+            "text-refined w-full text-[12px] text-[var(--text-primary)] transition-all cursor-text",
             "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
             "placeholder:text-[var(--text-muted)]",
             "border border-[var(--border-primary)] bg-[var(--surface-2)]",

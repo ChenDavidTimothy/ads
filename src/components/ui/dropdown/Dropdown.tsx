@@ -114,7 +114,7 @@ Dropdown.Trigger = function Trigger({
       aria-expanded={ctx.isOpen}
       aria-controls={ctx.listboxId}
       disabled={disabled}
-      className={className}
+      className={cn("cursor-pointer", className)}
       onClick={handleToggle}
       onKeyDown={handleKeyDown}
       {...props}

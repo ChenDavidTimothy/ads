@@ -505,7 +505,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
                           onClick={() =>
                             setShowCurrentPassword(!showCurrentPassword)
                           }
@@ -537,7 +537,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
                           {showNewPassword ? (
@@ -567,7 +567,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
                           onClick={() =>
                             setShowConfirmPassword(!showConfirmPassword)
                           }

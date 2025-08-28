@@ -29,7 +29,7 @@ export const NodeDeleteButton = memo(function NodeDeleteButton({
   return (
     <button
       onClick={handleClick}
-      className="node-delete-button"
+      className="node-delete-button cursor-pointer"
       title={`Delete ${nodeName}`}
       aria-label={`Delete ${nodeName}`}
       onMouseDown={(e) => e.stopPropagation()}
