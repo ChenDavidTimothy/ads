@@ -263,6 +263,23 @@
   box-shadow: var(--glass-shadow-lg);
 }
 
+/* TIMELINE TRACKS - scoped glass tuning without removing interactive layers */
+.timeline-tracks-container {
+  /* Soften track bar colors to allow glass panel to show through */
+  --transform-move: rgba(139, 92, 246, 0.35);
+  --transform-rotate: rgba(139, 92, 246, 0.35);
+  --transform-scale: rgba(139, 92, 246, 0.35);
+  --transform-fade: rgba(139, 92, 246, 0.35);
+  --transform-color: rgba(139, 92, 246, 0.35);
+  /* Slightly reduce purple glow intensity within timeline */
+  --purple-shadow-medium: rgba(139, 92, 246, 0.6);
+  --purple-shadow-subtle: rgba(139, 92, 246, 0.12);
+  /* Subtle reduction to glass panel purple bloom */
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 24px rgba(139, 92, 246, 0.03);
+}
+
 html {
   height: 100%;
 }
