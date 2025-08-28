@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/form-fields";
 import { UserProfile } from "@/components/auth/user-profile";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";
 import {
@@ -34,7 +35,6 @@ import {
   Eye,
   AlertCircle,
 } from "lucide-react";
-import Logo from "@/components/ui/logo";
 
 type Workspace = RouterOutputs["workspace"]["list"][number];
 
@@ -357,24 +357,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[var(--surface-0)]">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link
-              href="/"
-              className="flex items-center gap-3 transition-opacity hover:opacity-80"
-            >
-              <Logo className="h-8 w-32" />
-            </Link>
-
-            {/* User Menu */}
-            <div className="flex items-center gap-4">
-              <UserProfile />
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader isDashboard={true} />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">

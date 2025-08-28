@@ -45,7 +45,7 @@ export function WorkspaceHeader() {
           href="/dashboard"
           className="flex flex-shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <Logo className="h-6 w-24" />
+          <Logo className="h-8 w-32" />
         </Link>
 
         {/* Workspace Tabs */}

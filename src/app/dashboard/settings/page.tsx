@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
   User,
   Lock,
   Bell,
@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import Logo from "@/components/ui/logo";
 
 interface UserProfile {
   id: string;
@@ -279,30 +278,11 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[var(--surface-0)]">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo & Back */}
-            <div className="flex items-center gap-6">
-              <Link href="/dashboard" className="flex items-center gap-3">
-                <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
-                <div className="flex items-center gap-3">
-                  <Logo className="h-8 w-32" />
-                </div>
-              </Link>
-
-              <div className="text-[var(--text-tertiary)]">/</div>
-
-              <h1 className="text-lg font-semibold text-[var(--text-primary)]">
-                Settings
-              </h1>
-            </div>
-
-            {/* User Menu */}
-            <AuthStatus />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        showBack={true}
+        backUrl="/dashboard"
+        title="Settings"
+      />
 
       {/* Main Content */}
       <div className="mx-auto max-w-4xl px-6 py-8">
