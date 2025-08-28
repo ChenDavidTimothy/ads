@@ -19,7 +19,7 @@ interface DropdownContextValue<T extends string = string> {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   listboxId: string;
-  triggerRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const DropdownContext = createContext<DropdownContextValue | null>(null);
@@ -164,7 +164,7 @@ Dropdown.Content = function Content({
     };
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [ctx.isOpen]);
+  }, [ctx.isOpen, ctx]);
 
   // Compute and update portal position relative to viewport
   const updatePosition = () => {
@@ -211,10 +211,10 @@ Dropdown.Content = function Content({
     const onScrollOrResize = () => updatePosition();
     window.addEventListener("resize", onScrollOrResize, { passive: true });
     ancestors.forEach((a) =>
-      (a as Element | Window).addEventListener?.(
+      a.addEventListener?.(
         "scroll",
         onScrollOrResize as EventListener,
-        { passive: true } as any,
+        { passive: true } as AddEventListenerOptions,
       ),
     );
 
@@ -225,10 +225,7 @@ Dropdown.Content = function Content({
     return () => {
       window.removeEventListener("resize", onScrollOrResize as EventListener);
       ancestors.forEach((a) =>
-        (a as Element | Window).removeEventListener?.(
-          "scroll",
-          onScrollOrResize as EventListener,
-        ),
+        a.removeEventListener?.("scroll", onScrollOrResize as EventListener),
       );
       ro.disconnect();
     };
