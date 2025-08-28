@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface DropdownContextValue<T extends string = string> {
@@ -126,6 +127,8 @@ interface ContentProps extends React.HTMLAttributes<HTMLDivElement> {
 Dropdown.Content = function Content({ children, align = "start", sideOffset = 4, className, matchTriggerWidth = true, maxHeight = 240, ...props }: ContentProps) {
   const ctx = useDropdownCtx();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [portalStyle, setPortalStyle] = useState<React.CSSProperties | null>(null);
+  const scrollAncestorsRef = useRef<(Element | Window)[]>([]);
 
   useEffect(() => {
     if (!ctx.isOpen) return;
@@ -140,24 +143,68 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [ctx.isOpen]);
 
-  if (!ctx.isOpen) return null;
-
-  // Basic positioning relative to trigger
-  let style: React.CSSProperties = {};
-  const triggerRect = ctx.triggerRef.current?.getBoundingClientRect();
-  if (triggerRect) {
-    const width = matchTriggerWidth ? triggerRect.width : undefined;
-    const left = align === "end" ? triggerRect.right - (width ?? 0) : triggerRect.left;
-    style = {
+  // Compute and update portal position relative to viewport
+  const updatePosition = () => {
+    const triggerEl = ctx.triggerRef.current;
+    if (!triggerEl) return;
+    const rect = triggerEl.getBoundingClientRect();
+    const width = matchTriggerWidth ? rect.width : undefined;
+    const left = align === "end" ? rect.right - (width ?? 0) : rect.left;
+    const nextStyle: React.CSSProperties = {
       position: "fixed",
-      top: Math.min(window.innerHeight - 8, triggerRect.bottom + sideOffset),
+      top: Math.min(window.innerHeight - 8, Math.max(8, rect.bottom + sideOffset)),
       left: Math.max(8, left),
       width,
-      zIndex: 50,
+      // Ensure above modal overlay which uses z-[9999]
+      zIndex: 10001,
+      maxHeight,
     };
-  }
+    setPortalStyle(nextStyle);
+  };
 
-  return (
+  // Observe scroll/resize on window and nearest scrollable ancestors
+  useEffect(() => {
+    if (!ctx.isOpen) return;
+    updatePosition();
+
+    const triggerEl = ctx.triggerRef.current;
+    const ancestors: (Element | Window)[] = [window];
+    let node: Element | null = triggerEl ? triggerEl.parentElement : null;
+    while (node) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const overflow = style.overflow;
+      if (/auto|scroll|overlay/.test(overflowY) || /auto|scroll|overlay/.test(overflow)) {
+        ancestors.push(node);
+      }
+      node = node.parentElement;
+    }
+    scrollAncestorsRef.current = ancestors;
+
+    const onScrollOrResize = () => updatePosition();
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+    ancestors.forEach((a) => (a as Element | Window).addEventListener?.("scroll", onScrollOrResize as EventListener, { passive: true } as any));
+
+    // Reposition on font/icon load/layout shifts
+    const ro = new ResizeObserver(() => updatePosition());
+    if (triggerEl) ro.observe(triggerEl);
+
+    return () => {
+      window.removeEventListener("resize", onScrollOrResize as EventListener);
+      ancestors.forEach((a) => (a as Element | Window).removeEventListener?.("scroll", onScrollOrResize as EventListener));
+      ro.disconnect();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx.isOpen, align, sideOffset, matchTriggerWidth, maxHeight]);
+
+  useLayoutEffect(() => {
+    if (ctx.isOpen) updatePosition();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx.isOpen]);
+
+  if (!ctx.isOpen || !portalStyle) return null;
+
+  const content = (
     <div
       ref={contentRef}
       role="listbox"
@@ -167,12 +214,14 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
         "overflow-auto",
         className,
       )}
-      style={{ ...style, maxHeight }}
+      style={portalStyle}
       {...props}
     >
       {children}
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 interface ItemProps extends React.HTMLAttributes<HTMLDivElement> {
