@@ -280,7 +280,6 @@ export default function SettingsPage() {
       {/* Header */}
       <PageHeader
         showBack={true}
-        backUrl="/dashboard"
         title="Settings"
       />
 
