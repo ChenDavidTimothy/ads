@@ -216,25 +216,7 @@ export default function DashboardPage() {
     ];
   }, [workspaces]);
 
-  // Enhanced statistics
-  const workspaceStats = useMemo(() => {
-    if (!workspaces) return null;
 
-    // Remove video_count and size since they don't exist in current schema
-    const totalVideos = 0; // No video_count property available
-    const thisMonth = workspaces.filter((ws) => {
-      const date = new Date(ws.updated_at);
-      const now = new Date();
-      return (
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
-    }).length;
-    const totalSize = 0; // No size property available
-    const activeProjects = workspaces.length; // All workspaces are considered active
-
-    return { totalVideos, thisMonth, totalSize, activeProjects };
-  }, [workspaces]);
 
   // Filter and sort workspaces
   const filteredWorkspaces = useMemo(() => {
