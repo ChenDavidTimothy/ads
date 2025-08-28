@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { PageHeader } from "@/components/ui/page-header";
+import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -252,14 +253,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0)]">
-        <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading settings...</span>
-        </div>
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   const tabs = [

@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/form-fields";
 import { PageHeader } from "@/components/ui/page-header";
@@ -337,14 +338,7 @@ export default function DashboardPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0)]">
-        <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading dashboard...</span>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (

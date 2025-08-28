@@ -22,6 +22,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { useCrashBackup } from "@/hooks/use-crash-backup";
 import { useNavigationGuard } from "@/hooks/use-navigation-guard";
 import { UnsavedChangesModal } from "./unsaved-changes-modal";
+import { WorkspaceSkeleton } from "@/components/skeletons/WorkspaceSkeleton";
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
@@ -329,11 +330,7 @@ export function WorkspaceProvider({
   ]);
 
   if (isLoading || !contextValue) {
-    return (
-      <div className="h-screen w-full bg-[var(--surface-0)] p-6 text-[var(--text-secondary)]">
-        Loading workspace…
-      </div>
-    );
+    return <WorkspaceSkeleton />;
   }
 
   return (
