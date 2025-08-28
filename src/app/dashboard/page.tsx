@@ -372,20 +372,6 @@ export default function DashboardPage() {
             {/* Navigation */}
             <nav className="hidden items-center gap-6 md:flex">
               <Link
-                href="/dashboard"
-                className="flex items-center gap-2 font-medium text-[var(--text-primary)]"
-              >
-                <FolderOpen className="h-4 w-4" />
-                Workspaces
-              </Link>
-              <Link
-                href="/dashboard/analytics"
-                className="flex items-center gap-2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-              >
-                <Activity className="h-4 w-4" />
-                Analytics
-              </Link>
-              <Link
                 href="/dashboard/settings"
                 className="flex items-center gap-2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
