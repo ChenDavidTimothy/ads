@@ -538,13 +538,6 @@ export function validateNoMultipleInsertNodesInSeries(
   }
 }
 
-export function validateNoDuplicateObjectIds(
-  _nodes: ReactFlowNode<NodeData>[],
-  _edges: ReactFlowEdge[],
-): void {
-  // Deprecated: static duplicate object ID validation removed in favor of runtime validation.
-}
-
 function canReachNodeType(
   startNodeId: string,
   targetNodeType: string,

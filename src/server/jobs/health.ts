@@ -1,6 +1,5 @@
 import { checkEventSystemHealth } from "./pg-events";
 import { renderQueue } from "./render-queue";
-import { logger } from "@/lib/logger";
 
 export interface JobSystemHealth {
   overall: "healthy" | "degraded" | "unhealthy";
@@ -157,85 +156,4 @@ export async function checkJobSystemStatus(): Promise<{
       message: `Health check failed: ${errorMessage}`,
     };
   }
-}
-
-// Auto-maintenance placeholder (to be implemented with Graphile Worker if needed)
-export async function performHealthBasedMaintenance(): Promise<{
-  maintenancePerformed: boolean;
-  actions: string[];
-  errors: string[];
-}> {
-  const actions: string[] = [];
-  const errors: string[] = [];
-  let maintenancePerformed = false;
-
-  try {
-    const health = await checkJobSystemHealth();
-
-    const queueStats = health.components.queue.stats;
-    if (
-      queueStats &&
-      (queueStats.completed > 1000 || queueStats.failed > 100)
-    ) {
-      // Placeholder: implement cleanup suitable for Graphile Worker if required
-      actions.push(
-        "Queue appears large; consider manual cleanup or retention tuning",
-      );
-      maintenancePerformed = false;
-    }
-
-    if (health.overall !== "healthy") {
-      logger.warn("Job system health check", {
-        status: health.overall,
-        recommendations: health.recommendations,
-        components: health.components,
-      });
-      actions.push(`Logged health warning (${health.overall})`);
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    errors.push(`Health check failed: ${errorMessage}`);
-  }
-
-  return {
-    maintenancePerformed,
-    actions,
-    errors,
-  };
-}
-
-export function startHealthMonitor(intervalMs = 300000): () => void {
-  let isRunning = true;
-
-  const monitor = async () => {
-    if (!isRunning) return;
-
-    try {
-      const result = await performHealthBasedMaintenance();
-
-      if (result.errors.length > 0) {
-        logger.error("Health monitor errors", { errors: result.errors });
-      }
-
-      if (result.actions.length > 0 && process.env.JOB_HEALTH_DEBUG === "1") {
-        logger.info("Health monitor actions", { actions: result.actions });
-      }
-    } catch (error) {
-      logger.errorWithStack("Health monitor failed", error);
-    }
-
-    if (isRunning) {
-      setTimeout(() => {
-        void monitor();
-      }, intervalMs);
-    }
-  };
-
-  setTimeout(() => {
-    void monitor();
-  }, intervalMs);
-
-  return () => {
-    isRunning = false;
-  };
 }
