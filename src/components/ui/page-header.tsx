@@ -15,6 +15,8 @@ interface PageHeaderProps {
   isDashboard?: boolean;
   /** Custom logo className */
   logoClassName?: string;
+  /** Custom right side navigation */
+  rightNavigation?: React.ReactNode;
 }
 
 // Type for the guarded router available on window when there are unsaved changes
@@ -36,6 +38,7 @@ export function PageHeader({
   title,
   isDashboard = false,
   logoClassName = "h-8 w-32",
+  rightNavigation,
 }: PageHeaderProps) {
   const router = useRouter();
 
@@ -98,9 +101,9 @@ export function PageHeader({
             )}
           </div>
 
-          {/* User Menu */}
+          {/* Right Side Navigation */}
           <div className="flex items-center gap-4">
-            <UserProfile />
+            {rightNavigation || <UserProfile />}
           </div>
         </div>
       </div>

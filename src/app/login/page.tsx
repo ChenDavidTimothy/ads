@@ -4,8 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import Logo from "@/components/ui/logo";
+import { Loader2, AlertCircle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Google icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -113,19 +113,10 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--surface-0)]">
       {/* Header */}
-      <header className="border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-[var(--space-6)] py-[var(--space-4)]">
-          <Link
-            href="/"
-            className="flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-80"
-          >
-            <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
-            <div className="flex items-center gap-3">
-              <Logo className="h-8 w-32" />
-            </div>
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        showBack={true}
+        isDashboard={true}
+      />
 
       {/* Main Content */}
       <div className="flex flex-1 items-center justify-center px-[var(--space-6)] py-12">
