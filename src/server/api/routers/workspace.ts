@@ -110,7 +110,8 @@ export const workspaceRouter = createTRPCRouter({
         .eq("user_id", user.id)
         .single();
 
-      const currentWorkspace = currentWorkspaceRaw as DatabaseWorkspaceRow | null;
+      const currentWorkspace =
+        currentWorkspaceRaw as DatabaseWorkspaceRow | null;
 
       if (fetchError) {
         console.error(

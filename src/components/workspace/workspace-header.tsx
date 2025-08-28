@@ -51,7 +51,7 @@ export function WorkspaceHeader() {
               router.push("/dashboard");
             }
           }}
-          className="flex cursor-pointer flex-shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
+          className="flex flex-shrink-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
           aria-label="Go to dashboard"
         >
           <Logo className="h-8 w-32" />

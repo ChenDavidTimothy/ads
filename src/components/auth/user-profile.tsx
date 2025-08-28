@@ -210,7 +210,7 @@ export function UserProfile({
           className="h-full w-full object-cover"
           onError={() => {
             // This will cause the Image to unmount and show fallback
-            setUserData(prev => prev ? { ...prev, avatarUrl: null } : null);
+            setUserData((prev) => (prev ? { ...prev, avatarUrl: null } : null));
           }}
         />
       ) : (

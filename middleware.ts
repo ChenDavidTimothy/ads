@@ -153,7 +153,7 @@ export async function middleware(request: NextRequest) {
 
     // In case of critical error, allow access to public pages but block API if needed
     if (isApiProtectedRoute) {
-        return new NextResponse("Service Unavailable", { status: 503 });
+      return new NextResponse("Service Unavailable", { status: 503 });
     }
 
     return addSecurityHeaders(response, request);

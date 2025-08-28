@@ -216,8 +216,6 @@ export default function DashboardPage() {
     ];
   }, [workspaces]);
 
-
-
   // Filter and sort workspaces
   const filteredWorkspaces = useMemo(() => {
     if (!workspaces) return [];
@@ -365,7 +363,6 @@ export default function DashboardPage() {
             Manage your animation workspaces and create stunning video content.
           </p>
         </div>
-
 
         {/* Actions Bar */}
         <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -862,5 +859,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-

@@ -16,7 +16,7 @@ export default async function WorkspaceEditorPage({
 }: WorkspacePageProps) {
   // Get search params
   const params = await searchParams;
-  const { workspace: workspaceId, tab, node } = params;
+  const { workspace: workspaceId, tab: _tab, node: _node } = params;
 
   const supabase = await createClient();
 
@@ -86,5 +86,3 @@ export default async function WorkspaceEditorPage({
 
   return <WorkspaceLayout workspaceId={workspaceId} />;
 }
-
-
