@@ -369,64 +369,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Quick Stats */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
-          <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Total Workspaces
-                </p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {workspaces?.length ?? 0}
-                </p>
-              </div>
-              <FolderOpen className="h-8 w-8 text-[var(--accent-primary)]" />
-            </div>
-          </div>
 
-          <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Videos Created
-                </p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {workspaceStats?.totalVideos ?? 0}
-                </p>
-              </div>
-              <Video className="h-8 w-8 text-[var(--node-geometry)]" />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  This Month
-                </p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {workspaceStats?.thisMonth ?? 0}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-[var(--success-500)]" />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Active Projects
-                </p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {workspaceStats?.activeProjects ?? 0}
-                </p>
-              </div>
-              <Activity className="h-8 w-8 text-[var(--warning-500)]" />
-            </div>
-          </div>
-        </div>
 
         {/* Actions Bar */}
         <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
