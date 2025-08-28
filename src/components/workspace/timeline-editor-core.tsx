@@ -144,7 +144,8 @@ interface DragState {
   startDuration: number;
 }
 
-const TIMELINE_WIDTH = 800;
+const DEFAULT_TIMELINE_WIDTH = 800;
+const HANDLE_HITBOX_PX = 12; // Wide invisible hitbox (w-3)
 
 function isPoint2D(value: unknown): value is { x: number; y: number } {
   return (
@@ -216,6 +217,9 @@ export function TimelineEditorCore({
   const timelineRef = useRef<HTMLDivElement>(null);
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
   const prevNodeIdRef = useRef<string>(animationNodeId);
+  const [timelineWidth, setTimelineWidth] = useState<number>(
+    DEFAULT_TIMELINE_WIDTH,
+  );
 
   // Initialize only when the animation node changes; preserve interaction state otherwise
   useEffect(() => {
@@ -232,6 +236,32 @@ export function TimelineEditorCore({
       prevNodeIdRef.current = animationNodeId;
     }
   }, [animationNodeId, controlledDuration, controlledTracks]);
+
+  // Measure timeline width responsively
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0) setTimelineWidth(rect.width);
+    };
+    measure();
+    const ro =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver((entries) => {
+            for (const entry of entries) {
+              const cr = entry.contentRect;
+              if (cr.width > 0) setTimelineWidth(cr.width);
+            }
+          })
+        : undefined;
+    if (ro) ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      if (ro) ro.disconnect();
+    };
+  }, []);
 
   // Use local tracks during drag for smooth performance
   const displayTracks = dragState ? localDragTracks : tracks;
@@ -335,11 +365,14 @@ export function TimelineEditorCore({
     [onChange, tracks],
   );
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, trackId: string, type: DragState["type"]) => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent, trackId: string, type: DragState["type"]) => {
       e.preventDefault();
       const track = tracks.find((t) => t.identifier.id === trackId);
       if (!track) return;
+      try {
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      } catch {}
       setDragState({
         trackId,
         type,
@@ -353,8 +386,8 @@ export function TimelineEditorCore({
     [tracks],
   );
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
       if (!dragState || !localDragTracks.length) return;
       const track = localDragTracks.find(
         (t) => t.identifier.id === dragState.trackId,
@@ -362,7 +395,8 @@ export function TimelineEditorCore({
       if (!track) return;
 
       const deltaX = e.clientX - dragState.startX;
-      const deltaTime = (deltaX / TIMELINE_WIDTH) * duration;
+      const width = timelineWidth || DEFAULT_TIMELINE_WIDTH;
+      const deltaTime = (deltaX / width) * duration;
 
       // Update local state immediately for smooth visual feedback
       setLocalDragTracks((prev) =>
@@ -412,10 +446,10 @@ export function TimelineEditorCore({
         }),
       );
     },
-    [dragState, localDragTracks, duration],
+    [dragState, localDragTracks, duration, timelineWidth],
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     if (dragState && localDragTracks.length > 0) {
       // Update parent with final drag state
       onChange({ tracks: localDragTracks });
@@ -427,14 +461,16 @@ export function TimelineEditorCore({
 
   useEffect(() => {
     if (dragState) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerUp);
+      document.addEventListener("pointercancel", handlePointerUp);
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("pointermove", handlePointerMove);
+        document.removeEventListener("pointerup", handlePointerUp);
+        document.removeEventListener("pointercancel", handlePointerUp);
       };
     }
-  }, [dragState, handleMouseMove, handleMouseUp]);
+  }, [dragState, handlePointerMove, handlePointerUp]);
 
   const selectedTrack = tracks.find((t) => t.identifier.id === selectedTrackId);
 
@@ -503,8 +539,7 @@ export function TimelineEditorCore({
 
         <div
           ref={timelineRef}
-          className="shadow-glass relative rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]"
-          style={{ width: `${TIMELINE_WIDTH}px` }}
+          className="shadow-glass relative w-full rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-1)] p-[var(--space-4)]"
         >
           <div className="relative mb-[var(--space-4)] h-6">
             {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
@@ -522,101 +557,117 @@ export function TimelineEditorCore({
           </div>
 
           <div
-            className="timeline-tracks-container overflow-y-auto scrollbar-elegant pr-[var(--space-2)]"
+            className="timeline-tracks-container scrollbar-elegant overflow-y-auto pr-[var(--space-2)]"
             style={{ maxHeight: "40vh" }}
           >
             <div className="space-y-[var(--space-3)]">
-            {displayTracks.map((track) => (
-              <div key={track.identifier.id} className="relative">
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="flex items-center gap-[var(--space-2)]">
-                    <span className="w-16 text-sm font-medium text-[var(--text-primary)]">
-                      {(() => {
-                        const trackIcons = transformFactory.getTrackIcons();
-                        return trackIcons[track.type] ?? "●";
-                      })()}{" "}
-                      {track.type}
-                    </span>
-                    {selectedTrackId === track.identifier.id && (
-                      <Badge variant="result">SELECTED</Badge>
-                    )}
+              {displayTracks.map((track) => (
+                <div key={track.identifier.id} className="relative">
+                  <div className="mb-1 flex items-center justify-between">
+                    <div className="flex items-center gap-[var(--space-2)]">
+                      <span className="w-16 text-sm font-medium text-[var(--text-primary)]">
+                        {(() => {
+                          const trackIcons = transformFactory.getTrackIcons();
+                          return trackIcons[track.type] ?? "●";
+                        })()}{" "}
+                        {track.type}
+                      </span>
+                      {selectedTrackId === track.identifier.id && (
+                        <Badge variant="result">SELECTED</Badge>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => deleteTrack(track.identifier.id)}
+                      variant="danger"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      Delete
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => deleteTrack(track.identifier.id)}
-                    variant="danger"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    Delete
-                  </Button>
-                </div>
 
-                <div className="relative h-8 glass-panel rounded-[var(--radius-sm)] border border-[var(--border-secondary)] bg-[var(--surface-2)]">
-                  <div
-                    className={cn(
-                      "absolute h-6 cursor-move rounded-[var(--radius-sm)] border border-transparent text-[var(--text-primary)]",
-                      (() => {
-                        const trackColors = transformFactory.getTrackColors();
-                        return (
-                          trackColors[track.type] ??
-                          "bg-[var(--surface-interactive)]"
-                        );
-                      })(),
-                      selectedTrackId === track.identifier.id
-                        ? "border-[var(--accent-primary)] shadow-[0_0_20px_var(--purple-shadow-medium),0_4px_12px_var(--purple-shadow-subtle)]"
-                        : "hover:border-[var(--border-accent)] hover:brightness-110",
-                      dragState?.trackId === track.identifier.id
-                        ? "opacity-80"
-                        : "",
-                    )}
-                    style={{
-                      left: `${(track.startTime / duration) * 100}%`,
-                      width: `${(track.duration / duration) * 100}%`,
-                      top: "1px",
-                    }}
-                    onMouseDown={(e) =>
-                      handleMouseDown(e, track.identifier.id, "move")
-                    }
-                    onClick={() => setSelectedTrackId(track.identifier.id)}
-                  >
-                    <div className="flex h-full items-center justify-between px-[var(--space-2)]">
-                      <span className="truncate text-xs font-medium">
-                        {track.identifier.displayName}
-                      </span>
-                      <span className="text-xs text-[var(--text-secondary)]">
-                        {track.duration.toFixed(1)}s
-                      </span>
+                  <div className="glass-panel relative h-8 rounded-[var(--radius-sm)] border border-[var(--border-secondary)] bg-[var(--surface-2)]">
+                    <div
+                      className={cn(
+                        "absolute h-6 cursor-move touch-none rounded-[var(--radius-sm)] border border-transparent text-[var(--text-primary)] select-none",
+                        (() => {
+                          const trackColors = transformFactory.getTrackColors();
+                          return (
+                            trackColors[track.type] ??
+                            "bg-[var(--surface-interactive)]"
+                          );
+                        })(),
+                        selectedTrackId === track.identifier.id
+                          ? "border-[var(--accent-primary)] shadow-[0_0_20px_var(--purple-shadow-medium),0_4px_12px_var(--purple-shadow-subtle)]"
+                          : "hover:border-[var(--border-accent)] hover:brightness-110",
+                        dragState?.trackId === track.identifier.id
+                          ? "opacity-80"
+                          : "",
+                      )}
+                      style={{
+                        left: `${(track.startTime / duration) * 100}%`,
+                        width: `${(track.duration / duration) * 100}%`,
+                        top: "1px",
+                      }}
+                      onPointerDown={(e) =>
+                        handlePointerDown(e, track.identifier.id, "move")
+                      }
+                      onClick={() => setSelectedTrackId(track.identifier.id)}
+                    >
+                      <div className="flex h-full items-center justify-between px-[var(--space-2)]">
+                        <span className="truncate text-xs font-medium">
+                          {track.identifier.displayName}
+                        </span>
+                        <span className="text-xs text-[var(--text-secondary)]">
+                          {track.duration.toFixed(1)}s
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      className="absolute z-10 h-6 w-3 cursor-w-resize touch-none select-none"
+                      style={{
+                        left: `${(track.startTime / duration) * 100}%`,
+                        top: "1px",
+                      }}
+                      onPointerDown={(e) =>
+                        handlePointerDown(
+                          e,
+                          track.identifier.id,
+                          "resize-start",
+                        )
+                      }
+                    >
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 left-0 w-1 rounded-l-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]",
+                        )}
+                      />
+                    </div>
+                    <div
+                      className="absolute z-10 h-6 w-3 cursor-e-resize touch-none select-none"
+                      style={{
+                        left: `${((track.startTime + track.duration) / duration) * 100 - (HANDLE_HITBOX_PX / (timelineWidth || DEFAULT_TIMELINE_WIDTH)) * 100}%`,
+                        top: "1px",
+                      }}
+                      onPointerDown={(e) =>
+                        handlePointerDown(e, track.identifier.id, "resize-end")
+                      }
+                    >
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 right-0 w-1 rounded-r-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]",
+                        )}
+                      />
                     </div>
                   </div>
 
-                  <div
-                    className="absolute z-10 h-6 w-1 cursor-w-resize rounded-l-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]"
-                    style={{
-                      left: `${(track.startTime / duration) * 100}%`,
-                      top: "1px",
-                    }}
-                    onMouseDown={(e) =>
-                      handleMouseDown(e, track.identifier.id, "resize-start")
-                    }
-                  />
-                  <div
-                    className="absolute z-10 h-6 w-1 cursor-e-resize rounded-r-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]"
-                    style={{
-                      left: `${((track.startTime + track.duration) / duration) * 100 - (4 / TIMELINE_WIDTH) * 100}%`,
-                      top: "1px",
-                    }}
-                    onMouseDown={(e) =>
-                      handleMouseDown(e, track.identifier.id, "resize-end")
-                    }
-                  />
+                  <div className="mt-1 text-xs text-[var(--text-tertiary)]">
+                    {track.startTime.toFixed(1)}s -{" "}
+                    {(track.startTime + track.duration).toFixed(1)}s
+                  </div>
                 </div>
-
-                <div className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  {track.startTime.toFixed(1)}s -{" "}
-                  {(track.startTime + track.duration).toFixed(1)}s
-                </div>
-              </div>
-            ))}
+              ))}
             </div>
           </div>
 
