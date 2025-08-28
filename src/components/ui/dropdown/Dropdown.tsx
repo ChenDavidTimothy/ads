@@ -66,7 +66,6 @@ interface TriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 Dropdown.Trigger = function Trigger({ children, disabled, className, ...props }: TriggerProps) {
   const ctx = useDropdownCtx();
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -81,24 +80,9 @@ Dropdown.Trigger = function Trigger({ children, disabled, className, ...props }:
     }
   };
 
-  useEffect(() => {
-    if (!ctx.isOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (buttonRef.current && !buttonRef.current.contains(t)) {
-        // Content handles its own outside click; this is a safeguard
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [ctx.isOpen]);
-
   return (
     <button
-      ref={(el) => {
-        (buttonRef as React.MutableRefObject<HTMLButtonElement | null>).current = el;
-        (ctx.triggerRef as React.MutableRefObject<HTMLButtonElement | null>).current = el ?? null;
-      }}
+      ref={ctx.triggerRef}
       type="button"
       role="button"
       aria-haspopup="listbox"
@@ -128,7 +112,6 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
   const ctx = useDropdownCtx();
   const contentRef = useRef<HTMLDivElement>(null);
   const [portalStyle, setPortalStyle] = useState<React.CSSProperties | null>(null);
-  const scrollAncestorsRef = useRef<(Element | Window)[]>([]);
 
   useEffect(() => {
     if (!ctx.isOpen) return;
@@ -179,8 +162,6 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
       }
       node = node.parentElement;
     }
-    scrollAncestorsRef.current = ancestors;
-
     const onScrollOrResize = () => updatePosition();
     window.addEventListener("resize", onScrollOrResize, { passive: true });
     ancestors.forEach((a) => (a as Element | Window).addEventListener?.("scroll", onScrollOrResize as EventListener, { passive: true } as any));
