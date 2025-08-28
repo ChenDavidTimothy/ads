@@ -233,7 +233,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
             <div className="font-medium text-[var(--text-primary)]">Canvas</div>
           </div>
           <button
-            className="text-sm text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text-primary)]"
+            className="cursor-pointer text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             onClick={() =>
               updateUI({
                 activeTab: "flow",

@@ -63,12 +63,13 @@ export function useNavigationGuard(
       if (!hasUnsavedChanges) return;
 
       const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
+      const link = target.closest("a[href]") as HTMLAnchorElement;
 
       if (!link) return;
 
-      const href = link.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript:"))
+        return;
 
       // Prevent default navigation
       e.preventDefault();
@@ -78,10 +79,10 @@ export function useNavigationGuard(
     };
 
     // Intercept all link clicks within the workspace
-    document.addEventListener('click', handleLinkClick, true);
+    document.addEventListener("click", handleLinkClick, true);
 
     return () => {
-      document.removeEventListener('click', handleLinkClick, true);
+      document.removeEventListener("click", handleLinkClick, true);
     };
   }, [hasUnsavedChanges, onNavigationAttempt]);
 
@@ -96,25 +97,25 @@ export function useNavigationGuard(
 
       return {
         push: (url: string) => {
-          if (url && !url.startsWith('#')) {
+          if (url && !url.startsWith("#")) {
             onNavigationAttempt(url);
             return; // Don't navigate, let modal handle it
           }
-          originalPush.call(window.history, null, '', url);
+          originalPush.call(window.history, null, "", url);
         },
         replace: (url: string) => {
-          if (url && !url.startsWith('#')) {
+          if (url && !url.startsWith("#")) {
             onNavigationAttempt(url);
             return; // Don't navigate, let modal handle it
           }
-          originalReplace.call(window.history, null, '', url);
+          originalReplace.call(window.history, null, "", url);
         },
         back: () => {
           window.history.back();
         },
         forward: () => {
           window.history.forward();
-        }
+        },
       };
     };
 

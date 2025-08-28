@@ -212,11 +212,7 @@ export default function SettingsPage() {
   };
 
   const handleLogout = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to sign out?",
-      )
-    ) {
+    if (!confirm("Are you sure you want to sign out?")) {
       return;
     }
 
@@ -278,10 +274,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[var(--surface-0)]">
       {/* Header */}
-      <PageHeader
-        showBack={true}
-        title="Settings"
-      />
+      <PageHeader showBack={true} title="Settings" />
 
       {/* Main Content */}
       <div className="mx-auto max-w-4xl px-6 py-8">
@@ -448,9 +441,7 @@ export default function SettingsPage() {
                             Signing out...
                           </>
                         ) : (
-                          <>
-                            Sign Out
-                          </>
+                          <>Sign Out</>
                         )}
                       </Button>
                     </div>
@@ -484,7 +475,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
                           onClick={() =>
                             setShowCurrentPassword(!showCurrentPassword)
                           }
@@ -516,7 +507,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
                           {showNewPassword ? (
@@ -546,7 +537,7 @@ export default function SettingsPage() {
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
                           onClick={() =>
                             setShowConfirmPassword(!showConfirmPassword)
                           }

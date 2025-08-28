@@ -103,12 +103,24 @@ export const workspaceRouter = createTRPCRouter({
       const flowData = flowDataSchema.parse(input.flowData);
 
       // Check if the flow data has actually changed to avoid unnecessary updates
-      const { data: currentWorkspace } = (await supabase
+      const { data: currentWorkspace, error: fetchError } = await supabase
         .from("workspaces")
         .select("flow_data, version")
         .eq("id", input.id)
         .eq("user_id", user.id)
-        .single()) as { data: WorkspaceRow | null };
+        .single();
+
+      if (fetchError) {
+        console.error(
+          "[WorkspaceRouter] Failed to fetch current workspace:",
+          fetchError,
+        );
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Workspace not found or access denied.",
+          cause: fetchError,
+        });
+      }
 
       if (
         currentWorkspace &&
@@ -132,7 +144,14 @@ export const workspaceRouter = createTRPCRouter({
         .select("version, updated_at")
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[WorkspaceRouter] Save failed:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to save workspace. Please try again.",
+          cause: error,
+        });
+      }
       if (!data) {
         throw new TRPCError({
           code: "CONFLICT",

@@ -19,6 +19,22 @@ if (supabaseUrl) {
   } catch {}
 }
 
+// Add Google domains for OAuth profile pictures
+const googleDomains = [
+  "lh3.googleusercontent.com",
+  "lh4.googleusercontent.com",
+  "lh5.googleusercontent.com",
+  "lh6.googleusercontent.com",
+];
+
+googleDomains.forEach((domain) => {
+  imageRemotePatterns.push({
+    protocol: "https",
+    hostname: domain,
+    pathname: "/**",
+  });
+});
+
 /** @type {import("next").NextConfig} */
 const config = {
   images: {

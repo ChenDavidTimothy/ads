@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -47,16 +48,28 @@ export function WorkspaceProvider({
 }) {
   const { toast } = useNotifications();
   const router = useRouter();
+  const utils = api.useUtils();
   const { data: workspace, isLoading } = api.workspace.get.useQuery(
     { id: workspaceId },
-    { refetchOnWindowFocus: false },
+    {
+      enabled: Boolean(workspaceId),
+      // Always refetch on mount/navigation and never trust stale cache
+      refetchOnMount: "always",
+      refetchOnReconnect: "always",
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      // Remove from cache immediately when unused to avoid back/forward stale views
+      gcTime: 0,
+    },
   );
 
   const [state, setState] = useState<WorkspaceState | null>(null);
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<
+    string | null
+  >(null);
 
   const {
     saveNow: saveToBackend,
@@ -72,13 +85,29 @@ export function WorkspaceProvider({
       toast.error("Save failed", (error as Error)?.message ?? "Unknown error"),
   });
 
+  // Track last loaded workspace signature to refresh state when backend changes
+  const lastLoadedSignatureRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (workspace && !state) {
+    if (!workspace) return;
+    const signature = `${workspace.id}:${workspace.version}:${workspace.updated_at}`;
+    if (lastLoadedSignatureRef.current !== signature) {
       const initial = extractWorkspaceState(workspace);
       setState(initial);
       initializeFromWorkspace(workspace);
+      lastLoadedSignatureRef.current = signature;
     }
-  }, [workspace, state, initializeFromWorkspace]);
+  }, [workspace, initializeFromWorkspace]);
+
+  // On unmount, drop local state and remove query cache for this workspace
+  useEffect(() => {
+    return () => {
+      setState(null);
+      lastLoadedSignatureRef.current = null;
+      // Explicitly drop cached data for this workspace to avoid stale back/forward cache
+      utils.workspace.get.reset({ id: workspaceId });
+    };
+  }, [workspaceId, utils]);
 
   const updateFlow = useCallback((updates: Partial<WorkspaceState["flow"]>) => {
     setState((prev) => {
@@ -219,7 +248,10 @@ export function WorkspaceProvider({
       await saveToBackend(state);
       if (pendingNavigationUrl) {
         // Use window.location for external URLs, router for internal
-        if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
+        if (
+          pendingNavigationUrl.startsWith("http") ||
+          pendingNavigationUrl.startsWith("//")
+        ) {
           window.location.href = pendingNavigationUrl;
         } else {
           router.push(pendingNavigationUrl);
@@ -228,14 +260,20 @@ export function WorkspaceProvider({
       setShowUnsavedModal(false);
       setPendingNavigationUrl(null);
     } catch (error) {
-      // Error is already handled by saveToBackend
+      console.error('[WorkspaceContext] Failed to save during navigation:', error);
+      // Show user-friendly error message
+      toast.error("Failed to save workspace", (error as Error)?.message ?? "Please try again");
+      // Don't close modal on error - let user try again or choose different action
     }
-  }, [state, saveToBackend, pendingNavigationUrl, router]);
+  }, [state, saveToBackend, pendingNavigationUrl, router, toast]);
 
   const handleModalDiscard = useCallback(() => {
     if (pendingNavigationUrl) {
       // Use window.location for external URLs, router for internal
-      if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
+      if (
+        pendingNavigationUrl.startsWith("http") ||
+        pendingNavigationUrl.startsWith("//")
+      ) {
         window.location.href = pendingNavigationUrl;
       } else {
         router.push(pendingNavigationUrl);

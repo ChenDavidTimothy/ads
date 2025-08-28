@@ -311,7 +311,7 @@ export default async function LandingPage() {
                   SLA guarantee
                 </li>
               </ul>
-              <button className="w-full rounded-lg border border-[var(--border-primary)] px-6 py-3 transition-colors cursor-pointer hover:bg-[var(--surface-2)]">
+              <button className="w-full cursor-pointer rounded-lg border border-[var(--border-primary)] px-6 py-3 transition-colors hover:bg-[var(--surface-2)]">
                 Contact Sales
               </button>
             </div>

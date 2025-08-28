@@ -106,7 +106,8 @@ export function UserProfile({
   }, [loadUserProfile]);
 
   const handleProfileClick = () => {
-    const targetUrl = authState === "authenticated" ? "/dashboard/settings" : "/login";
+    const targetUrl =
+      authState === "authenticated" ? "/dashboard/settings" : "/login";
 
     // Check if there's a guarded router available (when workspace has unsaved changes)
     const guardedRouter = (window as any).__guardedRouter;
@@ -123,7 +124,7 @@ export function UserProfile({
       <button
         onClick={handleProfileClick}
         className={cn(
-          "flex items-center justify-center rounded-full bg-[var(--surface-2)] ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)] cursor-pointer",
+          "flex cursor-pointer items-center justify-center rounded-full bg-[var(--surface-2)] ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)]",
           sizeClasses[size],
           className,
         )}
@@ -140,7 +141,7 @@ export function UserProfile({
       <button
         onClick={handleProfileClick}
         className={cn(
-          "flex items-center justify-center rounded-full bg-[var(--surface-2)] ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)] cursor-pointer",
+          "flex cursor-pointer items-center justify-center rounded-full bg-[var(--surface-2)] ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)]",
           sizeClasses[size],
           className,
         )}
@@ -176,12 +177,14 @@ export function UserProfile({
     <button
       onClick={handleProfileClick}
       className={cn(
-        "relative overflow-hidden rounded-full ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--surface-1)]",
+        "relative cursor-pointer overflow-hidden rounded-full ring-2 ring-[var(--border-primary)] transition-all hover:ring-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--surface-1)] focus:outline-none",
         sizeClasses[size],
         className,
       )}
       aria-label={`Go to settings - Signed in as ${displayName}`}
-      title={showTooltip ? `Go to settings - Signed in as ${displayName}` : undefined}
+      title={
+        showTooltip ? `Go to settings - Signed in as ${displayName}` : undefined
+      }
     >
       {userData?.avatarUrl ? (
         <img
@@ -199,7 +202,7 @@ export function UserProfile({
           }}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-[var(--accent-primary)] text-[var(--text-on-accent)] text-xs font-medium">
+        <div className="flex h-full w-full items-center justify-center bg-[var(--accent-primary)] text-xs font-medium text-[var(--text-on-accent)]">
           {initials}
         </div>
       )}

@@ -60,7 +60,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
               e.stopPropagation();
               onRemove();
             }}
-            className="ml-1 rounded-sm p-0.5 transition-colors cursor-pointer hover:bg-black/10"
+            className="ml-1 cursor-pointer rounded-sm p-0.5 transition-colors hover:bg-black/10"
             title="Reset to default"
           >
             <X size={8} />

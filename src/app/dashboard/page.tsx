@@ -491,9 +491,11 @@ export default function DashboardPage() {
                 {workspaceTemplates.map((template) => (
                   <Button
                     key={template.id}
-                    variant={selectedTemplate?.id === template.id ? "primary" : "ghost"}
+                    variant={
+                      selectedTemplate?.id === template.id ? "primary" : "ghost"
+                    }
                     size="lg"
-                    className="justify-start h-auto p-4 text-left"
+                    className="h-auto justify-start p-4 text-left"
                     onClick={() => selectTemplate(template)}
                   >
                     <div className="mb-2 flex items-center gap-2">
@@ -617,7 +619,7 @@ export default function DashboardPage() {
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
                 }
-                className="rounded p-1 transition-colors cursor-pointer hover:bg-[var(--surface-interactive)]"
+                className="cursor-pointer rounded p-1 transition-colors hover:bg-[var(--surface-interactive)]"
               >
                 {sortOrder === "asc" ? "↑" : "↓"}
               </button>
@@ -711,7 +713,7 @@ export default function DashboardPage() {
                             <Play className="h-5 w-5" />
                           </Button>
                           <button
-                            className="rounded p-1 opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                            className="cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
                             onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                           >
                             <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -764,7 +766,7 @@ export default function DashboardPage() {
                           <Play className="h-5 w-5" />
                         </Button>
                         <button
-                          className="rounded p-1 opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                          className="cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
                           onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                         >
                           <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -835,7 +837,7 @@ export default function DashboardPage() {
                         </Button>
 
                         <button
-                          className="rounded-lg p-2 opacity-0 transition-colors cursor-pointer group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                          className="cursor-pointer rounded-lg p-2 opacity-0 transition-colors group-hover:opacity-100 hover:bg-[var(--surface-2)]"
                           onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                         >
                           <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -863,7 +865,7 @@ export default function DashboardPage() {
           <div className="py-2">
             <button
               onClick={() => handleWorkspaceAction("open", selectedWorkspace)}
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Eye className="h-4 w-4" />
               Open
@@ -872,21 +874,21 @@ export default function DashboardPage() {
               onClick={() =>
                 handleWorkspaceAction("duplicate", selectedWorkspace)
               }
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Copy className="h-4 w-4" />
               Duplicate
             </button>
             <button
               onClick={() => handleWorkspaceAction("rename", selectedWorkspace)}
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Edit3 className="h-4 w-4" />
               Rename
             </button>
             <button
               onClick={() => handleWorkspaceAction("share", selectedWorkspace)}
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Share2 className="h-4 w-4" />
               Share
@@ -895,7 +897,7 @@ export default function DashboardPage() {
               onClick={() =>
                 handleWorkspaceAction("download", selectedWorkspace)
               }
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Download className="h-4 w-4" />
               Download
@@ -905,14 +907,14 @@ export default function DashboardPage() {
               onClick={() =>
                 handleWorkspaceAction("archive", selectedWorkspace)
               }
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-interactive)]"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Archive className="h-4 w-4" />
               Archive
             </button>
             <button
               onClick={() => handleWorkspaceAction("delete", selectedWorkspace)}
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--danger-500)] cursor-pointer hover:bg-[var(--danger-500)]/10"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--danger-500)] hover:bg-[var(--danger-500)]/10"
             >
               <Trash2 className="h-4 w-4" />
               Delete

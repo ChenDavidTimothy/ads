@@ -32,7 +32,7 @@ export function FlowEditorTab() {
     updateTimeline,
     saveNow,
     isSaving,
-    hasUnsavedChanges
+    hasUnsavedChanges,
   } = useWorkspace();
   const isOnline = useOnlineStatus();
   const { nodes: ctxNodes, edges: ctxEdges } = state.flow;

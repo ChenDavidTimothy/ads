@@ -6,7 +6,20 @@ import { Button } from "@/components/ui/button";
 import { PanelLeft, PanelRight } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { UserProfile } from "@/components/auth/user-profile";
-import Link from "next/link";
+
+// Type for the guarded router available on window when there are unsaved changes
+interface GuardedRouter {
+  push: (url: string) => void;
+  replace: (url: string) => void;
+  back: () => void;
+  forward: () => void;
+}
+
+declare global {
+  interface Window {
+    __guardedRouter?: GuardedRouter;
+  }
+}
 
 export function WorkspaceHeader() {
   const { state, updateUI } = useWorkspace();
@@ -27,12 +40,21 @@ export function WorkspaceHeader() {
         </Button>
 
         {/* Brand Logo - Links back to dashboard */}
-        <Link
-          href="/dashboard"
+        <button
+          onClick={() => {
+            // Check if there's a guarded router available (when workspace has unsaved changes)
+            const guardedRouter = window.__guardedRouter;
+            if (guardedRouter) {
+              guardedRouter.push("/dashboard");
+            } else {
+              window.location.href = "/dashboard";
+            }
+          }}
           className="flex flex-shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
+          aria-label="Go to dashboard"
         >
           <Logo className="h-8 w-32" />
-        </Link>
+        </button>
 
         {/* Workspace Tabs */}
         <WorkspaceTabs />

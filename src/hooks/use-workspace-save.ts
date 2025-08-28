@@ -43,7 +43,12 @@ export function useWorkspaceSave({
       onSaveSuccess?.(result as SaveResult);
     },
     onError: (error) => {
+      console.error('[WorkspaceSave] Mutation failed:', error);
       onSaveError?.(error);
+    },
+    onSettled: () => {
+      // Reset the in-flight flag when mutation completes (success or error)
+      isSaveInFlightRef.current = false;
     },
   });
 
@@ -102,6 +107,9 @@ export function useWorkspaceSave({
         setLastSavedState(currentState);
         lastSavedFlowSnapshotRef.current = currentFlowSnapshot;
         return result as SaveResult;
+      } catch (error) {
+        console.error('[WorkspaceSave] Save operation failed:', error);
+        throw error; // Re-throw to maintain error handling chain
       } finally {
         isSaveInFlightRef.current = false;
       }

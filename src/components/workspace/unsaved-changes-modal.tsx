@@ -31,16 +31,19 @@ export function UnsavedChangesModal({
         <div className="flex items-start gap-4">
           <AlertTriangle className="mt-1 h-6 w-6 flex-shrink-0 text-[var(--warning-500)]" />
           <div className="flex-1">
-            <p className="text-[var(--text-primary)] mb-4">
-              You have unsaved changes in your workspace. What would you like to do?
+            <p className="mb-4 text-[var(--text-primary)]">
+              You have unsaved changes in your workspace. What would you like to
+              do?
             </p>
 
             <div className="flex flex-col gap-3">
               <p className="text-sm text-[var(--text-secondary)]">
-                • <strong>Save changes:</strong> Save your work and then navigate away
+                • <strong>Save changes:</strong> Save your work and then
+                navigate away
               </p>
               <p className="text-sm text-[var(--text-secondary)]">
-                • <strong>Discard changes:</strong> Lose your unsaved work and navigate away
+                • <strong>Discard changes:</strong> Lose your unsaved work and
+                navigate away
               </p>
               <p className="text-sm text-[var(--text-secondary)]">
                 • <strong>Cancel:</strong> Stay on this page to continue working
@@ -50,25 +53,13 @@ export function UnsavedChangesModal({
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            disabled={isSaving}
-          >
+          <Button variant="ghost" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button
-            variant="danger"
-            onClick={onDiscard}
-            disabled={isSaving}
-          >
+          <Button variant="danger" onClick={onDiscard} disabled={isSaving}>
             Discard Changes
           </Button>
-          <Button
-            variant="primary"
-            onClick={onSave}
-            disabled={isSaving}
-          >
+          <Button variant="primary" onClick={onSave} disabled={isSaving}>
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>

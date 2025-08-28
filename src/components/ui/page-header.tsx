@@ -69,7 +69,7 @@ export function PageHeader({
             {/* Logo - Always goes to dashboard */}
             <button
               onClick={() => handleLogoClick(isDashboard ? "/" : "/dashboard")}
-              className="flex items-center gap-3 transition-opacity hover:opacity-80 cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-80"
             >
               <Logo className={logoClassName} />
             </button>

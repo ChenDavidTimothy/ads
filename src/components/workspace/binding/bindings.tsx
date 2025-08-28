@@ -405,7 +405,7 @@ export function BindButton({
             : "Bind to Result variable"
         }
         onClick={() => setOpen(true)}
-        className={`relative rounded p-1 cursor-pointer hover:bg-[var(--surface-interactive)] ${isBound ? "text-[var(--accent-primary)]" : ""}`}
+        className={`relative cursor-pointer rounded p-1 hover:bg-[var(--surface-interactive)] ${isBound ? "text-[var(--accent-primary)]" : ""}`}
       >
         <LinkIcon size={14} />
         {isBound && (
@@ -449,7 +449,7 @@ export function BindButton({
                       bind(bindingKey, v.id);
                       setOpen(false);
                     }}
-                    className="w-full rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)] text-left text-sm transition-colors duration-[var(--duration-fast)] cursor-pointer hover:bg-[var(--surface-interactive)] focus:bg-[var(--surface-interactive)] focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none"
+                    className="w-full cursor-pointer rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)] text-left text-sm transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-interactive)] focus:bg-[var(--surface-interactive)] focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none"
                   >
                     <div className="text-refined font-medium text-[var(--text-primary)]">
                       {v.name}
