@@ -7,6 +7,8 @@ import { ChevronDown } from "lucide-react";
 import { GenerationSelector } from "./generation-selector";
 import type { Node } from "reactflow";
 import type { NodeData } from "@/shared/types";
+import { LayerManagementModal } from "@/components/workspace/layer-management/layer-management-modal";
+import { Layers } from "lucide-react";
 
 interface ValidationError {
   type: "error" | "warning";
@@ -60,12 +62,14 @@ export function ActionsToolbar({
   validationSummary,
 }: Props) {
   const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [showLayersModal, setShowLayersModal] = useState(false);
   const [selectedSceneIds, setSelectedSceneIds] = useState<string[]>([]);
   const [selectedFrameIds, setSelectedFrameIds] = useState<string[]>([]);
 
   const sceneNodes = allNodes.filter((n) => n.type === "scene");
   const frameNodes = allNodes.filter((n) => n.type === "frame");
   const hasSelectableContent = sceneNodes.length > 0 || frameNodes.length > 0;
+  const hasLayerableContent = hasSelectableContent;
 
   const getButtonText = (isGenerating: boolean, type: "video" | "image") => {
     if (isGenerating)
@@ -153,6 +157,19 @@ export function ActionsToolbar({
           </Button>
         )}
 
+        {/* Layer Management */}
+        {hasLayerableContent && (
+          <Button
+            onClick={() => setShowLayersModal(true)}
+            disabled={anyGenerating}
+            variant="secondary"
+            size="sm"
+            className="font-medium"
+          >
+            <Layers className="mr-1 h-4 w-4" /> Layers
+          </Button>
+        )}
+
         {/* Reset Button */}
         {(lastError ?? validationSummary?.hasErrors) && onResetGeneration && (
           <Button
@@ -211,6 +228,9 @@ export function ActionsToolbar({
           </div>
         </div>
       </Modal>
+
+      {/* Layers Modal */}
+      <LayerManagementModal isOpen={showLayersModal} onClose={() => setShowLayersModal(false)} />
     </>
   );
 }

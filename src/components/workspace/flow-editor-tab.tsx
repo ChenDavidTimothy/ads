@@ -45,6 +45,9 @@ export function FlowEditorTab() {
     isDragging, // ← ADD: Get drag state
   } = useFlowGraph();
 
+  // Temporary suspension flag to avoid context sync reverting external updates (like layer order)
+  const suspendContextSyncRef = useRef(false);
+
   // Initialize local state from context on mount (load saved nodes) with edge sanitization
   useEffect(() => {
     if (ctxNodes.length > 0 && nodes.length === 0) {
@@ -58,17 +61,51 @@ export function FlowEditorTab() {
     }
   }, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
 
-  // SURGICAL FIX: Drag-aware context sync - completely bypassed during drag
-  const debouncedContextSync = useMemo(
-    () =>
-      debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
-        // CRITICAL: Only sync when not dragging
-        if (!isDragging) {
-          updateFlow({ nodes: newNodes, edges: newEdges });
-        }
-      }, 50),
-    [updateFlow, isDragging], // ← ADD: isDragging dependency
-  );
+  // SURGICAL FIX: Drag-aware context sync with equality guard
+  const debouncedContextSync = useMemo(() => {
+    const areNodesEqual = (a: Node<NodeData>[], b: Node<NodeData>[]) => {
+      if (a === (b as unknown)) return true;
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const na = a[i] as unknown as { id: string; type?: string; data?: unknown; position?: { x: number; y: number } };
+        const nb = b[i] as unknown as { id: string; type?: string; data?: unknown; position?: { x: number; y: number } };
+        if (!na || !nb) return false;
+        if (na.id !== nb.id) return false;
+        if (na.type !== nb.type) return false;
+        const pa = na.position ?? { x: 0, y: 0 };
+        const pb = nb.position ?? { x: 0, y: 0 };
+        if (pa.x !== pb.x || pa.y !== pb.y) return false;
+        // Shallow data identity check (avoid deep compare)
+        if (na.data !== nb.data) return false;
+      }
+      return true;
+    };
+
+    const areEdgesEqual = (a: Edge[], b: Edge[]) => {
+      if (a === (b as unknown)) return true;
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const ea = a[i];
+        const eb = b[i];
+        if (!ea || !eb) return false;
+        if (ea.source !== eb.source || ea.target !== eb.target) return false;
+      }
+      return true;
+    };
+
+    return debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
+      if (isDragging) return;
+      if (suspendContextSyncRef.current) return;
+      const ctxNodesNow = ctxNodes as unknown as Node<NodeData>[];
+      const ctxEdgesNow = ctxEdges as Edge[];
+      if (areNodesEqual(newNodes, ctxNodesNow) && areEdgesEqual(newEdges, ctxEdgesNow)) {
+        return; // No-op
+      }
+      updateFlow({ nodes: newNodes, edges: newEdges });
+    }, 50);
+  }, [updateFlow, isDragging, ctxNodes, ctxEdges]);
 
   // Context sync with drag awareness
   useEffect(() => {
@@ -80,13 +117,37 @@ export function FlowEditorTab() {
   // CRITICAL: Force sync when drag ends
   useEffect(() => {
     if (!isDragging) {
-      // Immediate sync after drag completes
-      updateFlow({
-        nodes: nodes as unknown as Node<NodeData>[],
-        edges,
-      });
+      debouncedContextSync(nodes as unknown as Node<NodeData>[], edges);
     }
-  }, [isDragging, nodes, edges, updateFlow]);
+  }, [isDragging, nodes, edges, debouncedContextSync]);
+
+  // Listen for layer order updates from the Layers modal to update local nodes and avoid snap-back
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>).detail;
+      if (!detail) return;
+
+      // Suspend context sync briefly to prevent overwriting the external change
+      suspendContextSyncRef.current = true;
+      const timer = setTimeout(() => {
+        suspendContextSyncRef.current = false;
+      }, 150);
+
+      setNodes((prev) => {
+        return prev.map((n) => {
+          const nid = (n.data as unknown as { identifier?: { id?: string } })?.identifier?.id;
+          if (nid !== detail.nodeIdentifierId) return n;
+          const data = (n.data as unknown as Record<string, unknown>) || {};
+          return { ...n, data: { ...data, layerOrder: [...detail.order] } as unknown } as typeof n;
+        }) as unknown as Node<NodeData>[];
+      });
+
+      return () => clearTimeout(timer);
+    };
+
+    window.addEventListener("layer-order-updated", handler as EventListener);
+    return () => window.removeEventListener("layer-order-updated", handler as EventListener);
+  }, [setNodes]);
 
   const {
     resultLogModalState,
