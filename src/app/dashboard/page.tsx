@@ -651,7 +651,9 @@ export default function DashboardPage() {
                 <SelectField
                   label={<span className="sr-only">Sort by</span>}
                   value={sortBy}
-                  onChange={(v) => setSortBy(v as "name" | "updated" | "created")}
+                  onChange={(v) =>
+                    setSortBy(v as "name" | "updated" | "created")
+                  }
                   options={[
                     { value: "updated", label: "Last Updated" },
                     { value: "created", label: "Date Created" },

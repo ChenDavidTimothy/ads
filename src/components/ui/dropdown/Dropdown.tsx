@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, useLayoutEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +25,8 @@ interface DropdownContextValue<T extends string = string> {
 const DropdownContext = createContext<DropdownContextValue | null>(null);
 function useDropdownCtx(): DropdownContextValue {
   const ctx = useContext(DropdownContext);
-  if (!ctx) throw new Error("Dropdown components must be used within <Dropdown>");
+  if (!ctx)
+    throw new Error("Dropdown components must be used within <Dropdown>");
   return ctx;
 }
 
@@ -27,19 +37,27 @@ interface DropdownProps {
   className?: string;
 }
 
-export function Dropdown({ value, onChange, children, className }: DropdownProps) {
+export function Dropdown({
+  value,
+  onChange,
+  children,
+  className,
+}: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const listboxId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const ctx = useMemo<DropdownContextValue>(() => ({
-    value,
-    onChange,
-    isOpen,
-    setIsOpen,
-    listboxId,
-    triggerRef,
-  }), [value, onChange, isOpen, listboxId]);
+  const ctx = useMemo<DropdownContextValue>(
+    () => ({
+      value,
+      onChange,
+      isOpen,
+      setIsOpen,
+      listboxId,
+      triggerRef,
+    }),
+    [value, onChange, isOpen, listboxId],
+  );
 
   // Close on Escape globally when open
   useEffect(() => {
@@ -53,7 +71,9 @@ export function Dropdown({ value, onChange, children, className }: DropdownProps
 
   return (
     <div className={cn("relative", className)}>
-      <DropdownContext.Provider value={ctx}>{children}</DropdownContext.Provider>
+      <DropdownContext.Provider value={ctx}>
+        {children}
+      </DropdownContext.Provider>
     </div>
   );
 }
@@ -64,7 +84,12 @@ interface TriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   "aria-label"?: string;
 }
 
-Dropdown.Trigger = function Trigger({ children, disabled, className, ...props }: TriggerProps) {
+Dropdown.Trigger = function Trigger({
+  children,
+  disabled,
+  className,
+  ...props
+}: TriggerProps) {
   const ctx = useDropdownCtx();
 
   const handleToggle = () => {
@@ -108,17 +133,32 @@ interface ContentProps extends React.HTMLAttributes<HTMLDivElement> {
   maxHeight?: number;
 }
 
-Dropdown.Content = function Content({ children, align = "start", sideOffset = 4, className, matchTriggerWidth = true, maxHeight = 240, ...props }: ContentProps) {
+Dropdown.Content = function Content({
+  children,
+  align = "start",
+  sideOffset = 4,
+  className,
+  matchTriggerWidth = true,
+  maxHeight = 240,
+  ...props
+}: ContentProps) {
   const ctx = useDropdownCtx();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [portalStyle, setPortalStyle] = useState<React.CSSProperties | null>(null);
+  const [portalStyle, setPortalStyle] = useState<React.CSSProperties | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!ctx.isOpen) return;
     const onClickOutside = (e: MouseEvent) => {
       const t = e.target as Node;
       const triggerEl = ctx.triggerRef.current;
-      if (contentRef.current && !contentRef.current.contains(t) && triggerEl && !triggerEl.contains(t)) {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(t) &&
+        triggerEl &&
+        !triggerEl.contains(t)
+      ) {
         ctx.setIsOpen(false);
       }
     };
@@ -135,7 +175,10 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
     const left = align === "end" ? rect.right - (width ?? 0) : rect.left;
     const nextStyle: React.CSSProperties = {
       position: "fixed",
-      top: Math.min(window.innerHeight - 8, Math.max(8, rect.bottom + sideOffset)),
+      top: Math.min(
+        window.innerHeight - 8,
+        Math.max(8, rect.bottom + sideOffset),
+      ),
       left: Math.max(8, left),
       width,
       // Ensure above modal overlay which uses z-[9999]
@@ -157,14 +200,23 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
       const style = window.getComputedStyle(node);
       const overflowY = style.overflowY;
       const overflow = style.overflow;
-      if (/auto|scroll|overlay/.test(overflowY) || /auto|scroll|overlay/.test(overflow)) {
+      if (
+        /auto|scroll|overlay/.test(overflowY) ||
+        /auto|scroll|overlay/.test(overflow)
+      ) {
         ancestors.push(node);
       }
       node = node.parentElement;
     }
     const onScrollOrResize = () => updatePosition();
     window.addEventListener("resize", onScrollOrResize, { passive: true });
-    ancestors.forEach((a) => (a as Element | Window).addEventListener?.("scroll", onScrollOrResize as EventListener, { passive: true } as any));
+    ancestors.forEach((a) =>
+      (a as Element | Window).addEventListener?.(
+        "scroll",
+        onScrollOrResize as EventListener,
+        { passive: true } as any,
+      ),
+    );
 
     // Reposition on font/icon load/layout shifts
     const ro = new ResizeObserver(() => updatePosition());
@@ -172,15 +224,20 @@ Dropdown.Content = function Content({ children, align = "start", sideOffset = 4,
 
     return () => {
       window.removeEventListener("resize", onScrollOrResize as EventListener);
-      ancestors.forEach((a) => (a as Element | Window).removeEventListener?.("scroll", onScrollOrResize as EventListener));
+      ancestors.forEach((a) =>
+        (a as Element | Window).removeEventListener?.(
+          "scroll",
+          onScrollOrResize as EventListener,
+        ),
+      );
       ro.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.isOpen, align, sideOffset, matchTriggerWidth, maxHeight]);
 
   useLayoutEffect(() => {
     if (ctx.isOpen) updatePosition();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.isOpen]);
 
   if (!ctx.isOpen || !portalStyle) return null;
@@ -211,7 +268,13 @@ interface ItemProps extends React.HTMLAttributes<HTMLDivElement> {
   disabled?: boolean;
 }
 
-Dropdown.Item = function Item({ value, children, className, disabled, ...props }: ItemProps) {
+Dropdown.Item = function Item({
+  value,
+  children,
+  className,
+  disabled,
+  ...props
+}: ItemProps) {
   const ctx = useDropdownCtx();
   const isSelected = ctx.value === value;
 
@@ -230,16 +293,16 @@ Dropdown.Item = function Item({ value, children, className, disabled, ...props }
         "flex cursor-pointer items-center justify-between px-[var(--space-3)] py-[var(--space-2)] text-[12px]",
         "text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]",
         isSelected ? "bg-[var(--surface-interactive)]" : undefined,
-        disabled ? "opacity-60 cursor-not-allowed" : undefined,
+        disabled ? "cursor-not-allowed opacity-60" : undefined,
         className,
       )}
       onClick={handleClick}
       {...props}
     >
       <div className="truncate">{children}</div>
-      {isSelected && <div className="ml-2 text-[var(--accent-primary)]">✔</div>}
+      {isSelected && (
+        <div className="ml-2 text-[var(--accent-primary)]">✔</div>
+      )}
     </div>
   );
 };
-
-

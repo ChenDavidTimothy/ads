@@ -8,7 +8,13 @@ interface DropdownFieldProps {
   label: React.ReactNode;
   value: string | undefined;
   onChange: (value: string) => void;
-  options: Array<{ value: string; label: string; icon?: React.ReactNode; hint?: React.ReactNode; disabled?: boolean }>;
+  options: Array<{
+    value: string;
+    label: string;
+    icon?: React.ReactNode;
+    hint?: React.ReactNode;
+    disabled?: boolean;
+  }>;
   required?: boolean;
   error?: string;
   className?: string;
@@ -34,7 +40,12 @@ export function DropdownField({
   placeholder,
 }: DropdownFieldProps) {
   return (
-    <FormField label={label} required={required} error={error} className={className}>
+    <FormField
+      label={label}
+      required={required}
+      error={error}
+      className={className}
+    >
       <div className="relative">
         <DropdownSelect
           value={value}
@@ -46,7 +57,9 @@ export function DropdownField({
           placeholder={placeholder}
         />
         {bindAdornment && (
-          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">{bindAdornment}</div>
+          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">
+            {bindAdornment}
+          </div>
         )}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />
@@ -55,5 +68,3 @@ export function DropdownField({
     </FormField>
   );
 }
-
-

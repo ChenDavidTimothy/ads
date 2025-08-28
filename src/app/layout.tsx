@@ -102,7 +102,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${montserrat.variable}`} data-theme="dark" suppressHydrationWarning={process.env.NODE_ENV !== "production"}>
+    <html
+      lang="en"
+      className={`${montserrat.variable}`}
+      data-theme="dark"
+      suppressHydrationWarning={process.env.NODE_ENV !== "production"}
+    >
       <head>
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -141,7 +146,10 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#7c3aed" />
         <meta name="theme-color" content="#7c3aed" />
       </head>
-      <body className="bg-[var(--surface-0)] text-[var(--text-primary)] antialiased" suppressHydrationWarning={process.env.NODE_ENV !== "production"}>
+      <body
+        className="bg-[var(--surface-0)] text-[var(--text-primary)] antialiased"
+        suppressHydrationWarning={process.env.NODE_ENV !== "production"}
+      >
         <NotificationProvider>
           <TRPCReactProvider>
             <ThemeProvider>

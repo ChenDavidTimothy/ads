@@ -4,7 +4,13 @@ import { Dropdown } from "./Dropdown";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 
-type Option = { value: string; label: string; icon?: React.ReactNode; hint?: React.ReactNode; disabled?: boolean };
+type Option = {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+  hint?: React.ReactNode;
+  disabled?: boolean;
+};
 
 interface DropdownSelectProps {
   value: string | undefined;
@@ -16,7 +22,15 @@ interface DropdownSelectProps {
   variant?: "default" | "glass" | "minimal";
 }
 
-export function DropdownSelect({ value, onChange, options, placeholder = "Select…", disabled, className, variant = "default" }: DropdownSelectProps) {
+export function DropdownSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Select…",
+  disabled,
+  className,
+  variant = "default",
+}: DropdownSelectProps) {
   const selected = options.find((o) => o.value === value);
 
   return (
@@ -41,23 +55,34 @@ export function DropdownSelect({ value, onChange, options, placeholder = "Select
         )}
         aria-label={selected?.label ?? placeholder}
       >
-        <span className={cn("truncate", !selected && "text-[var(--text-muted)]")}>{selected?.label ?? placeholder}</span>
+        <span
+          className={cn("truncate", !selected && "text-[var(--text-muted)]")}
+        >
+          {selected?.label ?? placeholder}
+        </span>
         <ChevronDown className="ml-2 h-4 w-4 text-[var(--text-secondary)]" />
       </Dropdown.Trigger>
 
       <Dropdown.Content>
         {options.map((o) => (
-          <Dropdown.Item key={o.value} value={o.value} aria-disabled={o.disabled} className={o.disabled ? "cursor-not-allowed" : undefined}>
+          <Dropdown.Item
+            key={o.value}
+            value={o.value}
+            aria-disabled={o.disabled}
+            className={o.disabled ? "cursor-not-allowed" : undefined}
+          >
             <div className="flex min-w-0 items-center gap-2">
               {o.icon && <span className="shrink-0">{o.icon}</span>}
               <span className="truncate">{o.label}</span>
             </div>
-            {o.hint && <div className="ml-2 shrink-0 text-[10px] text-[var(--text-tertiary)]">{o.hint}</div>}
+            {o.hint && (
+              <div className="ml-2 shrink-0 text-[10px] text-[var(--text-tertiary)]">
+                {o.hint}
+              </div>
+            )}
           </Dropdown.Item>
         ))}
       </Dropdown.Content>
     </Dropdown>
   );
 }
-
-
