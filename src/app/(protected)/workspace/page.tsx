@@ -16,7 +16,7 @@ export default async function WorkspaceEditorPage({
 }: WorkspacePageProps) {
   // Get search params
   const params = await searchParams;
-  const { workspace: workspaceId, tab: _tab, node: _node } = params;
+  const { workspace: workspaceId, tab, node } = params;
 
   const supabase = await createClient();
 
