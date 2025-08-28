@@ -153,6 +153,21 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showWorkspaceMenu]);
 
+  // Close menu on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (showWorkspaceMenu) {
+        setShowWorkspaceMenu(false);
+        setSelectedWorkspace(null);
+      }
+    };
+
+    if (showWorkspaceMenu) {
+      window.addEventListener("scroll", handleScroll, true);
+      return () => window.removeEventListener("scroll", handleScroll, true);
+    }
+  }, [showWorkspaceMenu]);
+
   // Helper functions
   const isRecent = (dateString: string) => {
     const date = new Date(dateString);
@@ -654,7 +669,7 @@ export default function DashboardPage() {
                             <Play className="h-5 w-5" />
                           </Button>
                           <button
-                            className="cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                            className="cursor-pointer rounded p-1 opacity-100 hover:bg-[var(--surface-2)]"
                             onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                           >
                             <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -707,7 +722,7 @@ export default function DashboardPage() {
                           <Play className="h-5 w-5" />
                         </Button>
                         <button
-                          className="cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                          className="cursor-pointer rounded p-1 opacity-100 hover:bg-[var(--surface-2)]"
                           onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                         >
                           <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -778,7 +793,7 @@ export default function DashboardPage() {
                         </Button>
 
                         <button
-                          className="cursor-pointer rounded-lg p-2 opacity-0 transition-colors group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+                          className="cursor-pointer rounded-lg p-2 opacity-100 hover:bg-[var(--surface-2)]"
                           onClick={(e) => openWorkspaceMenu(e, workspace.id)}
                         >
                           <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
