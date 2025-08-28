@@ -13,7 +13,7 @@ export default function TermsPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex cursor-pointer items-center gap-3">
             <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">
               <Logo className="h-8 w-32" />

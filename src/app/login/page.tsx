@@ -117,7 +117,7 @@ function LoginForm() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-[var(--space-6)] py-[var(--space-4)]">
           <Link
             href="/"
-            className="flex items-center gap-3 transition-opacity hover:opacity-80"
+            className="flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-80"
           >
             <ArrowLeft className="h-5 w-5 text-[var(--text-secondary)]" />
             <div className="flex items-center gap-3">

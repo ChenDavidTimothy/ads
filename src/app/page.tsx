@@ -65,7 +65,9 @@ export default async function LandingPage() {
         <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
-              <Logo className="h-16 w-64" />
+              <Link href="/dashboard" className="cursor-pointer">
+                <Logo className="h-16 w-64" />
+              </Link>
             </div>
 
             <nav className="hidden items-center gap-8 md:flex">

@@ -2,12 +2,10 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/form-fields";
-import { UserProfile } from "@/components/auth/user-profile";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";

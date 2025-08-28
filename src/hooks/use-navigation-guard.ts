@@ -9,12 +9,26 @@ interface NavigationGuardOptions {
   onDiscard?: () => void;
 }
 
+// Type for the guarded router available on window when there are unsaved changes
+interface GuardedRouter {
+  push: (url: string) => void;
+  replace: (url: string) => void;
+  back: () => void;
+  forward: () => void;
+}
+
+declare global {
+  interface Window {
+    __guardedRouter?: GuardedRouter;
+  }
+}
+
 export function useNavigationGuard(
   hasUnsavedChanges: boolean,
   getState: () => WorkspaceState | null,
   options?: NavigationGuardOptions,
 ) {
-  const { onNavigationAttempt, onSave, onDiscard } = options || {};
+  const { onNavigationAttempt, onSave: _onSave, onDiscard: _onDiscard } = options ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const handleEmergencyBackup = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -63,7 +77,7 @@ export function useNavigationGuard(
       if (!hasUnsavedChanges) return;
 
       const target = e.target as HTMLElement;
-      const link = target.closest("a[href]") as HTMLAnchorElement;
+      const link = target.closest("a[href]")!;
 
       if (!link) return;
 
@@ -92,8 +106,8 @@ export function useNavigationGuard(
 
     // Create a custom router that intercepts navigation
     const createGuardedRouter = () => {
-      const originalPush = window.history.pushState;
-      const originalReplace = window.history.replaceState;
+      const originalPush = window.history.pushState.bind(window.history);
+      const originalReplace = window.history.replaceState.bind(window.history);
 
       return {
         push: (url: string) => {
@@ -120,10 +134,10 @@ export function useNavigationGuard(
     };
 
     // Make the guarded router available globally for components that need it
-    (window as any).__guardedRouter = createGuardedRouter();
+    window.__guardedRouter = createGuardedRouter();
 
     return () => {
-      delete (window as any).__guardedRouter;
+      delete window.__guardedRouter;
     };
   }, [hasUnsavedChanges, onNavigationAttempt]);
 

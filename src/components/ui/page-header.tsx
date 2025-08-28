@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "./button";
 import Logo from "./logo";
@@ -16,6 +15,20 @@ interface PageHeaderProps {
   isDashboard?: boolean;
   /** Custom logo className */
   logoClassName?: string;
+}
+
+// Type for the guarded router available on window when there are unsaved changes
+interface GuardedRouter {
+  push: (url: string) => void;
+  replace: (url: string) => void;
+  back: () => void;
+  forward: () => void;
+}
+
+declare global {
+  interface Window {
+    __guardedRouter?: GuardedRouter;
+  }
 }
 
 export function PageHeader({
@@ -38,7 +51,7 @@ export function PageHeader({
 
   const handleLogoClick = (href: string) => {
     // Check if there's a guarded router available (when workspace has unsaved changes)
-    const guardedRouter = (window as any).__guardedRouter;
+    const guardedRouter = window.__guardedRouter;
     if (guardedRouter) {
       guardedRouter.push(href);
     } else {

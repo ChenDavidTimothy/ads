@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,20 @@ interface UserProfileData {
   displayName: string | null;
   email: string | null;
   avatarUrl: string | null;
+}
+
+// Type for the guarded router available on window when there are unsaved changes
+interface GuardedRouter {
+  push: (url: string) => void;
+  replace: (url: string) => void;
+  back: () => void;
+  forward: () => void;
+}
+
+declare global {
+  interface Window {
+    __guardedRouter?: GuardedRouter;
+  }
 }
 
 interface UserProfileProps {
@@ -110,7 +125,7 @@ export function UserProfile({
       authState === "authenticated" ? "/dashboard/settings" : "/login";
 
     // Check if there's a guarded router available (when workspace has unsaved changes)
-    const guardedRouter = (window as any).__guardedRouter;
+    const guardedRouter = window.__guardedRouter;
     if (guardedRouter) {
       guardedRouter.push(targetUrl);
     } else {
@@ -187,18 +202,15 @@ export function UserProfile({
       }
     >
       {userData?.avatarUrl ? (
-        <img
+        <Image
           src={userData.avatarUrl}
           alt={`${displayName}'s profile picture`}
+          width={40}
+          height={40}
           className="h-full w-full object-cover"
-          onError={(e) => {
-            // Fallback to initials if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = "none";
-            const parent = target.parentElement;
-            if (parent) {
-              parent.innerHTML = `<div class="flex h-full w-full items-center justify-center bg-[var(--accent-primary)] text-[var(--text-on-accent)] text-xs font-medium">${initials}</div>`;
-            }
+          onError={() => {
+            // This will cause the Image to unmount and show fallback
+            setUserData(prev => prev ? { ...prev, avatarUrl: null } : null);
           }}
         />
       ) : (

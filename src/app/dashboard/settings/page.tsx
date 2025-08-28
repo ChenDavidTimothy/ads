@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AuthStatus } from "@/components/auth/auth-status";
 import { cn } from "@/lib/utils";
 import {
   User,

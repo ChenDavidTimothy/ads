@@ -105,7 +105,7 @@ export function WorkspaceProvider({
       setState(null);
       lastLoadedSignatureRef.current = null;
       // Explicitly drop cached data for this workspace to avoid stale back/forward cache
-      utils.workspace.get.reset({ id: workspaceId });
+      void utils.workspace.get.reset({ id: workspaceId });
     };
   }, [workspaceId, utils]);
 
@@ -260,9 +260,15 @@ export function WorkspaceProvider({
       setShowUnsavedModal(false);
       setPendingNavigationUrl(null);
     } catch (error) {
-      console.error('[WorkspaceContext] Failed to save during navigation:', error);
+      console.error(
+        "[WorkspaceContext] Failed to save during navigation:",
+        error,
+      );
       // Show user-friendly error message
-      toast.error("Failed to save workspace", (error as Error)?.message ?? "Please try again");
+      toast.error(
+        "Failed to save workspace",
+        (error as Error)?.message ?? "Please try again",
+      );
       // Don't close modal on error - let user try again or choose different action
     }
   }, [state, saveToBackend, pendingNavigationUrl, router, toast]);

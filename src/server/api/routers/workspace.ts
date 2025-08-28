@@ -31,8 +31,8 @@ const saveResultSchema = z.object({
 // Define proper type for flow data input instead of using any
 type FlowDataInput = z.infer<typeof flowDataSchema>;
 
-// Type for database workspace row
-type WorkspaceRow = {
+// Define type for database workspace row
+type DatabaseWorkspaceRow = {
   flow_data: FlowDataInput | null;
   version: number;
 };
@@ -103,12 +103,14 @@ export const workspaceRouter = createTRPCRouter({
       const flowData = flowDataSchema.parse(input.flowData);
 
       // Check if the flow data has actually changed to avoid unnecessary updates
-      const { data: currentWorkspace, error: fetchError } = await supabase
+      const { data: currentWorkspaceRaw, error: fetchError } = await supabase
         .from("workspaces")
         .select("flow_data, version")
         .eq("id", input.id)
         .eq("user_id", user.id)
         .single();
+
+      const currentWorkspace = currentWorkspaceRaw as DatabaseWorkspaceRow | null;
 
       if (fetchError) {
         console.error(
