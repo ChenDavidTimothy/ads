@@ -24,7 +24,10 @@ export function SettingsSkeleton() {
           <div className="lg:col-span-1">
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-9 w-full animate-pulse rounded bg-[var(--surface-2)]" />
+                <div
+                  key={i}
+                  className="h-9 w-full animate-pulse rounded bg-[var(--surface-2)]"
+                />
               ))}
             </div>
           </div>
@@ -70,5 +73,3 @@ export function SettingsSkeleton() {
     </div>
   );
 }
-
-
