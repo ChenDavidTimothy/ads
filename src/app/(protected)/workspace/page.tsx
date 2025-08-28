@@ -18,23 +18,7 @@ export default async function WorkspaceEditorPage({
   const params = await searchParams;
   const { workspace: workspaceId, tab, node } = params;
 
-  // Check authentication
   const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    // User is not authenticated, redirect to login with return URL
-    const loginUrl = new URL(
-      "/login",
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-    );
-    const currentUrl = `/workspace${workspaceId ? `?workspace=${workspaceId}` : ""}${tab ? `&tab=${tab}` : ""}${node ? `&node=${node}` : ""}`;
-    loginUrl.searchParams.set("redirectTo", currentUrl);
-    redirect(loginUrl.toString());
-  }
 
   // If no workspace ID is provided, redirect to dashboard
   if (!workspaceId) {
@@ -47,7 +31,6 @@ export default async function WorkspaceEditorPage({
       .from("workspaces")
       .select("id, name")
       .eq("id", workspaceId)
-      .eq("user_id", user.id)
       .single();
 
     if (workspaceError || !workspace) {
@@ -61,7 +44,6 @@ export default async function WorkspaceEditorPage({
       const { data: userWorkspaces } = await supabase
         .from("workspaces")
         .select("id, name")
-        .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(1);
 
@@ -84,7 +66,6 @@ export default async function WorkspaceEditorPage({
       const { data: userWorkspaces } = await supabase
         .from("workspaces")
         .select("id, name")
-        .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(1);
 
@@ -105,3 +86,5 @@ export default async function WorkspaceEditorPage({
 
   return <WorkspaceLayout workspaceId={workspaceId} />;
 }
+
+

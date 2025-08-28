@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "./button";
 import Logo from "./logo";
 import { UserProfile } from "@/components/auth/user-profile";
+import { createBrowserClient } from "@/utils/supabase/client";
 
 interface PageHeaderProps {
   /** Whether to show back navigation */
@@ -52,13 +53,17 @@ export function PageHeader({
     }
   };
 
-  const handleLogoClick = (href: string) => {
-    // Check if there's a guarded router available (when workspace has unsaved changes)
+  const handleLogoClick = async (defaultHref: string) => {
     const guardedRouter = window.__guardedRouter;
-    if (guardedRouter) {
-      guardedRouter.push(href);
-    } else {
-      router.push(href);
+    const route = guardedRouter ?? router;
+    try {
+      const supabase = createBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      const isAuthed = Boolean(data.session?.user);
+      const target = isAuthed ? defaultHref : "/";
+      route.push(target);
+    } catch {
+      route.push(defaultHref);
     }
   };
 
@@ -84,7 +89,7 @@ export function PageHeader({
 
             {/* Logo - Always goes to dashboard */}
             <button
-              onClick={() => handleLogoClick(isDashboard ? "/" : "/dashboard")}
+              onClick={() => void handleLogoClick("/dashboard")}
               className="flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-80"
             >
               <Logo className={logoClassName} />

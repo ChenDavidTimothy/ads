@@ -14,3 +14,5 @@ export default async function Page({
   }
   redirect(`/workspace?workspace=${workspaceId}&tab=timeline&node=${nodeId}`);
 }
+
+

@@ -43,8 +43,8 @@ export async function middleware(request: NextRequest) {
     "/privacy",
     "/contact",
   ];
-  const protectedRoutes = ["/workspace", "/dashboard"];
-  const apiProtectedRoutes = ["/api/trpc"];
+  const protectedRoutes: string[] = []; // Page protection handled by (protected) layout
+  const apiProtectedRoutes = ["/api/trpc"]; // Keep API protection here
 
   const isAuthPage = authPages.includes(url.pathname);
   const isPublicPage = publicPages.includes(url.pathname);
@@ -138,19 +138,8 @@ export async function middleware(request: NextRequest) {
     }
 
     // User is not authenticated
-    if (isProtectedRoute || isApiProtectedRoute) {
-      if (isApiProtectedRoute) {
-        return new NextResponse("Unauthorized", { status: 401 });
-      }
-
-      url.pathname = "/login";
-      if (request.nextUrl.pathname !== "/login") {
-        url.searchParams.set(
-          "redirectTo",
-          request.nextUrl.pathname + request.nextUrl.search,
-        );
-      }
-      return NextResponse.redirect(url);
+    if (isApiProtectedRoute) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     return addSecurityHeaders(response, request);
@@ -162,13 +151,9 @@ export async function middleware(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    // In case of critical error, allow access to public pages but block protected ones
-    if (isProtectedRoute || isApiProtectedRoute) {
-      if (isApiProtectedRoute) {
+    // In case of critical error, allow access to public pages but block API if needed
+    if (isApiProtectedRoute) {
         return new NextResponse("Service Unavailable", { status: 503 });
-      }
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
     }
 
     return addSecurityHeaders(response, request);

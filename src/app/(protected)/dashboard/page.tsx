@@ -61,7 +61,7 @@ export default function DashboardPage() {
     isLoading,
     isError,
     refetch,
-  } = api.workspace.list.useQuery();
+  } = api.workspace.list.useQuery(undefined, { retry: false });
   const createWorkspace = api.workspace.create.useMutation({
     onSuccess: async (ws) => {
       await utils.workspace.list.invalidate();
@@ -365,7 +365,6 @@ export default function DashboardPage() {
             Manage your animation workspaces and create stunning video content.
           </p>
         </div>
-
 
 
         {/* Actions Bar */}
@@ -852,7 +851,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => handleWorkspaceAction("delete", selectedWorkspace)}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--danger-500)] hover:bg-[var(--danger-500)]/10"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -863,3 +862,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
