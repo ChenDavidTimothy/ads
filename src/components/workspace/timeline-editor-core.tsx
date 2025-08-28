@@ -521,7 +521,11 @@ export function TimelineEditorCore({
             ))}
           </div>
 
-          <div className="space-y-[var(--space-3)]">
+          <div
+            className="timeline-tracks-container overflow-y-auto scrollbar-elegant pr-[var(--space-2)]"
+            style={{ maxHeight: "40vh" }}
+          >
+            <div className="space-y-[var(--space-3)]">
             {displayTracks.map((track) => (
               <div key={track.identifier.id} className="relative">
                 <div className="mb-1 flex items-center justify-between">
@@ -547,7 +551,7 @@ export function TimelineEditorCore({
                   </Button>
                 </div>
 
-                <div className="relative h-8 rounded-[var(--radius-sm)] border border-[var(--border-secondary)] bg-[var(--surface-2)]">
+                <div className="relative h-8 glass-panel rounded-[var(--radius-sm)] border border-[var(--border-secondary)] bg-[var(--surface-2)]">
                   <div
                     className={cn(
                       "absolute h-6 cursor-move rounded-[var(--radius-sm)] border border-transparent text-[var(--text-primary)]",
@@ -613,6 +617,7 @@ export function TimelineEditorCore({
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
           {tracks.length === 0 && (
