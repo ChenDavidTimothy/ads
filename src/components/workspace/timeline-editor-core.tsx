@@ -521,7 +521,7 @@ export function TimelineEditorCore({
             ))}
           </div>
 
-          <div className="max-h-[60vh] space-y-[var(--space-3)] overflow-y-auto pr-[var(--space-2)] scrollbar-elegant">
+          <div className="space-y-[var(--space-3)]">
             {displayTracks.map((track) => (
               <div key={track.identifier.id} className="relative">
                 <div className="mb-1 flex items-center justify-between">
@@ -613,15 +613,16 @@ export function TimelineEditorCore({
                 </div>
               </div>
             ))}
-            {tracks.length === 0 && (
-              <div className="py-[var(--space-8)] text-center text-[var(--text-tertiary)]">
-                <div className="mb-2 text-lg">No animation tracks</div>
-                <div className="mb-[var(--space-4)] text-sm">
-                  Click the colored buttons above to add animation tracks
-                </div>
-              </div>
-            )}
           </div>
+
+          {tracks.length === 0 && (
+            <div className="py-[var(--space-8)] text-center text-[var(--text-tertiary)]">
+              <div className="mb-2 text-lg">No animation tracks</div>
+              <div className="mb-[var(--space-4)] text-sm">
+                Click the colored buttons above to add animation tracks
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
