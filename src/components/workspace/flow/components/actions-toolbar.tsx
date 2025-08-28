@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, HardDriveDownload } from "lucide-react";
 import { GenerationSelector } from "./generation-selector";
 import type { Node } from "reactflow";
 import type { NodeData } from "@/shared/types";
@@ -46,6 +46,12 @@ interface Props {
   lastError?: string | null;
   onResetGeneration?: () => void;
   validationSummary?: ValidationSummary | null;
+
+  // Save-related props
+  onSave?: () => void | Promise<void>;
+  isSaving?: boolean;
+  hasUnsavedChanges?: boolean;
+  isOnline?: boolean;
 }
 
 export function ActionsToolbar({
@@ -60,6 +66,10 @@ export function ActionsToolbar({
   lastError,
   onResetGeneration,
   validationSummary,
+  onSave,
+  isSaving = false,
+  hasUnsavedChanges = false,
+  isOnline = true,
 }: Props) {
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [showLayersModal, setShowLayersModal] = useState(false);
@@ -127,6 +137,26 @@ export function ActionsToolbar({
   return (
     <>
       <div className="flex items-center gap-[var(--space-2)]">
+        {/* Save Button - Always visible */}
+        {onSave && (
+          <div className="relative">
+            <Button
+              onClick={() => void onSave()}
+              disabled={isSaving || !isOnline}
+              variant="primary"
+              size="sm"
+              className="font-medium"
+            >
+              <HardDriveDownload size={16} className="mr-2" />
+              {isSaving ? "Saving…" : "Save"}
+            </Button>
+            {/* Small circle indicator for unsaved changes */}
+            {hasUnsavedChanges && !isSaving && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--warning-600)]" />
+            )}
+          </div>
+        )}
+
         {/* Batch Generation - Always visible but disabled when no content */}
         <Button
           onClick={onGenerate}

@@ -2,10 +2,6 @@
 
 import { WorkspaceTabs } from "./workspace-tabs";
 import { useWorkspace } from "./workspace-context";
-import { SaveStatus } from "./save-status";
-import { SaveButton } from "./save-button";
-import { useOnlineStatus } from "@/hooks/use-online-status";
-import { useMultiTabDetection } from "@/hooks/use-multi-tab-detection";
 import { Button } from "@/components/ui/button";
 import { PanelLeft, PanelRight } from "lucide-react";
 import Logo from "@/components/ui/logo";
@@ -13,17 +9,7 @@ import { UserProfile } from "@/components/auth/user-profile";
 import Link from "next/link";
 
 export function WorkspaceHeader() {
-  const {
-    state,
-    saveNow,
-    isSaving,
-    hasUnsavedChanges,
-    lastSaved,
-    hasBackup,
-    updateUI,
-  } = useWorkspace();
-  const isOnline = useOnlineStatus();
-  const { hasMultipleTabs } = useMultiTabDetection(state.meta.workspaceId);
+  const { state, updateUI } = useWorkspace();
 
   return (
     <div className="flex h-14 items-center justify-between border-b border-[var(--border-primary)] bg-[var(--surface-1)] px-[var(--space-4)]">
@@ -58,20 +44,6 @@ export function WorkspaceHeader() {
 
       <div className="flex items-center gap-[var(--space-3)]">
         <UserProfile />
-        <SaveStatus
-          lastSaved={lastSaved}
-          hasUnsavedChanges={hasUnsavedChanges}
-          isSaving={isSaving}
-          isOnline={isOnline}
-          hasBackup={hasBackup}
-          hasMultipleTabs={hasMultipleTabs}
-        />
-        <SaveButton
-          onSave={() => void saveNow()}
-          isSaving={isSaving}
-          hasUnsavedChanges={hasUnsavedChanges}
-          disabled={!isOnline}
-        />
         <Button
           variant="ghost"
           size="sm"

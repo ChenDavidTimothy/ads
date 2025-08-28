@@ -18,13 +18,23 @@ import { DebugProvider } from "./flow/debug-context";
 import type { NodeData, AnimationTrack } from "@/shared/types/nodes";
 import type { Node, Edge } from "reactflow";
 import { useWorkspace } from "./workspace-context";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { generateTransformIdentifier } from "@/lib/defaults/transforms";
 import { debounce } from "@/lib/utils";
 import { FlowTracker } from "@/lib/flow/flow-tracking";
 import { reconcileLayerOrder } from "./layer-management/layer-management-utils";
 
 export function FlowEditorTab() {
-  const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
+  const {
+    state,
+    updateFlow,
+    updateUI,
+    updateTimeline,
+    saveNow,
+    isSaving,
+    hasUnsavedChanges
+  } = useWorkspace();
+  const isOnline = useOnlineStatus();
   const { nodes: ctxNodes, edges: ctxEdges } = state.flow;
 
   const {
@@ -475,6 +485,11 @@ export function FlowEditorTab() {
             lastError={lastError}
             onResetGeneration={resetGeneration}
             validationSummary={validationSummary}
+            // NEW: Save-related props
+            onSave={() => void saveNow()}
+            isSaving={isSaving}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isOnline={isOnline}
           />
         </div>
         <div className="relative flex-1">
