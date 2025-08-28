@@ -1,16 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-} from "@dnd-kit/core";
+import { useMemo } from "react";
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -60,7 +52,6 @@ function SortableItem({ item, index }: { item: SceneObjectInfo; index: number })
 }
 
 export function DraggableObjectList({ objects, currentOrder, onReorder }: Props) {
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Compute the ordered list (back-to-front) from the persisted order
   const orderedBackToFront = useMemo(
@@ -82,13 +73,8 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
     if (!over || active.id === over.id) return;
 
     // Work with the front-to-back presentation array
@@ -115,7 +101,7 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 overflow-x-hidden">
       <div className="mb-3 flex justify-between text-xs text-[var(--text-tertiary)]">
         <span>↑ Front (renders on top)</span>
         <span>
@@ -126,14 +112,14 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
+        modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
         onDragEnd={handleDragEnd}
       >
         <SortableContext
           items={orderedFrontToBack.map((o) => o.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-1 rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-2)] p-2">
+          <div className="space-y-1 overflow-x-hidden rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-2)] p-2">
             {orderedFrontToBack.map((o, index) => (
               <SortableItem key={o.id} item={o} index={index} />
             ))}

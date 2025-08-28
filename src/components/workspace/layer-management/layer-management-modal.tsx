@@ -144,7 +144,7 @@ export function LayerManagementModal({ isOpen, onClose }: Props) {
           />
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-x-hidden">
           {!selectedSceneId ? (
             <div className="flex h-full items-center justify-center text-center text-[var(--text-tertiary)]">
               <div>

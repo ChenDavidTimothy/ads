@@ -20,6 +20,8 @@ import type { Node, Edge } from "reactflow";
 import { useWorkspace } from "./workspace-context";
 import { generateTransformIdentifier } from "@/lib/defaults/transforms";
 import { debounce } from "@/lib/utils";
+import { FlowTracker } from "@/lib/flow/flow-tracking";
+import { reconcileLayerOrder } from "./layer-management/layer-management-utils";
 
 export function FlowEditorTab() {
   const { state, updateFlow, updateUI, updateTimeline } = useWorkspace();
@@ -123,14 +125,17 @@ export function FlowEditorTab() {
 
   // Listen for layer order updates from the Layers modal to update local nodes and avoid snap-back
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>).detail;
       if (!detail) return;
 
       // Suspend context sync briefly to prevent overwriting the external change
       suspendContextSyncRef.current = true;
-      const timer = setTimeout(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
         suspendContextSyncRef.current = false;
+        timer = null;
       }, 150);
 
       setNodes((prev) => {
@@ -141,12 +146,13 @@ export function FlowEditorTab() {
           return { ...n, data: { ...data, layerOrder: [...detail.order] } as unknown } as typeof n;
         }) as unknown as Node<NodeData>[];
       });
-
-      return () => clearTimeout(timer);
     };
 
     window.addEventListener("layer-order-updated", handler as EventListener);
-    return () => window.removeEventListener("layer-order-updated", handler as EventListener);
+    return () => {
+      window.removeEventListener("layer-order-updated", handler as EventListener);
+      if (timer) clearTimeout(timer);
+    };
   }, [setNodes]);
 
   const {
@@ -385,6 +391,35 @@ export function FlowEditorTab() {
     leftSidebarCollapsed?: boolean;
     rightSidebarCollapsed?: boolean;
   };
+
+  // Ensure scenes/frames always have a layerOrder that appends new objects to the front
+  useEffect(() => {
+    // Build updates for any scene/frame whose upstream object set changed
+    const tracker = new FlowTracker();
+    let didChange = false;
+    const nextNodes = (nodes as unknown as Node<NodeData>[]).map((n) => {
+      if (n.type !== "scene" && n.type !== "frame") return n;
+      const identifierId = (n.data as unknown as { identifier?: { id?: string } })?.identifier?.id;
+      if (!identifierId) return n;
+      const objects = tracker.getUpstreamObjects(identifierId, nodes as unknown as Node<NodeData>[], edges);
+      const ids = objects.map((o) => o.id);
+      const saved = (n.data as unknown as { layerOrder?: string[] }).layerOrder;
+      const effective = reconcileLayerOrder(ids, saved);
+      const arraysEqual = (a: string[] | undefined, b: string[]) =>
+        Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]);
+      if (!arraysEqual(saved, effective)) {
+        didChange = true;
+        const data = (n.data as unknown as Record<string, unknown>) || {};
+        return { ...n, data: { ...data, layerOrder: [...effective] } as unknown } as typeof n;
+      }
+      return n;
+    });
+
+    if (didChange) {
+      // Update local nodes; debouncedContextSync will persist to workspace context
+      setNodes(nextNodes as unknown as Node<NodeData>[]);
+    }
+  }, [nodes, edges, setNodes]);
 
   return (
     <div className="flex h-full">

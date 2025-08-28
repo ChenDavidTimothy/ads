@@ -22,11 +22,5 @@ export function reconcileLayerOrder(
   // New objects go to the end (front of stack)
   return [...preserved, ...newOnes];
 }
-
-export function getSceneAndFrameNodes(nodes: Node<NodeData>[]) {
-  const scenes = nodes.filter((n) => n.type === "scene");
-  const frames = nodes.filter((n) => n.type === "frame");
-  return { scenes, frames };
-}
-
+ 
 
