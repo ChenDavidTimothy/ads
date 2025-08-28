@@ -9,7 +9,7 @@ import { useMultiTabDetection } from "@/hooks/use-multi-tab-detection";
 import { Button } from "@/components/ui/button";
 import { PanelLeft, PanelRight } from "lucide-react";
 import Logo from "@/components/ui/logo";
-import { AuthStatus } from "@/components/auth/auth-status";
+import { UserProfile } from "@/components/auth/user-profile";
 import Link from "next/link";
 
 export function WorkspaceHeader() {
@@ -57,7 +57,7 @@ export function WorkspaceHeader() {
       </h1>
 
       <div className="flex items-center gap-[var(--space-3)]">
-        <AuthStatus />
+        <UserProfile />
         <SaveStatus
           lastSaved={lastSaved}
           hasUnsavedChanges={hasUnsavedChanges}

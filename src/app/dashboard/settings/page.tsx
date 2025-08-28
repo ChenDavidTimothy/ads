@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/utils/supabase/client";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthStatus } from "@/components/auth/auth-status";
@@ -49,6 +50,7 @@ interface AuthUser {
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createBrowserClient();
+  const { toast } = useNotifications();
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -205,6 +207,28 @@ export default function SettingsPage() {
       setError(
         err instanceof Error ? err.message : "Failed to update password",
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to sign out?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await supabase.auth.signOut();
+      toast.success("Signed out successfully", "Come back soon!");
+      router.push("/login");
+    } catch (error) {
+      console.error("[SETTINGS] Logout error:", error);
+      toast.error("Logout failed", "Please try again");
     } finally {
       setSaving(false);
     }
@@ -419,6 +443,39 @@ export default function SettingsPage() {
                       )}
                     </Button>
                   </form>
+
+                  {/* Logout Section */}
+                  <div className="mt-8 border-t border-[var(--border-primary)] pt-6">
+                    <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
+                      Account Actions
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
+                          Sign Out
+                        </h4>
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          Sign out of your account and return to the login page
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleLogout}
+                        disabled={saving}
+                        variant="secondary"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing out...
+                          </>
+                        ) : (
+                          <>
+                            Sign Out
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 

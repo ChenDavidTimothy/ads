@@ -7,7 +7,7 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/form-fields";
-import { AuthStatus } from "@/components/auth/auth-status";
+import { UserProfile } from "@/components/auth/user-profile";
 import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";
 import {
@@ -16,7 +16,6 @@ import {
   MoreVertical,
   FolderOpen,
   Users,
-  Settings,
   Play,
   Clock,
   Trash2,
@@ -369,20 +368,9 @@ export default function DashboardPage() {
               <Logo className="h-8 w-32" />
             </Link>
 
-            {/* Navigation */}
-            <nav className="hidden items-center gap-6 md:flex">
-              <Link
-                href="/dashboard/settings"
-                className="flex items-center gap-2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </nav>
-
             {/* User Menu */}
             <div className="flex items-center gap-4">
-              <AuthStatus />
+              <UserProfile />
             </div>
           </div>
         </div>
