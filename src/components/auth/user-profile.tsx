@@ -106,10 +106,14 @@ export function UserProfile({
   }, [loadUserProfile]);
 
   const handleProfileClick = () => {
-    if (authState === "authenticated") {
-      router.push("/dashboard/settings");
+    const targetUrl = authState === "authenticated" ? "/dashboard/settings" : "/login";
+
+    // Check if there's a guarded router available (when workspace has unsaved changes)
+    const guardedRouter = (window as any).__guardedRouter;
+    if (guardedRouter) {
+      guardedRouter.push(targetUrl);
     } else {
-      router.push("/login");
+      router.push(targetUrl);
     }
   };
 

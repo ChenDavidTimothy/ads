@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import type {
   WorkspaceState,
@@ -19,6 +20,7 @@ import { useWorkspaceSave } from "@/hooks/use-workspace-save";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useCrashBackup } from "@/hooks/use-crash-backup";
 import { useNavigationGuard } from "@/hooks/use-navigation-guard";
+import { UnsavedChangesModal } from "./unsaved-changes-modal";
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
@@ -44,12 +46,17 @@ export function WorkspaceProvider({
   workspaceId: string;
 }) {
   const { toast } = useNotifications();
+  const router = useRouter();
   const { data: workspace, isLoading } = api.workspace.get.useQuery(
     { id: workspaceId },
     { refetchOnWindowFocus: false },
   );
 
   const [state, setState] = useState<WorkspaceState | null>(null);
+
+  // Unsaved changes modal state
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
 
   const {
     saveNow: saveToBackend,
@@ -199,9 +206,58 @@ export function WorkspaceProvider({
     await saveToBackend(state);
   }, [state, saveToBackend]);
 
+  // Modal handlers
+  const handleNavigationAttempt = useCallback((url: string) => {
+    setPendingNavigationUrl(url);
+    setShowUnsavedModal(true);
+  }, []);
+
+  const handleModalSave = useCallback(async () => {
+    if (!state) return;
+
+    try {
+      await saveToBackend(state);
+      if (pendingNavigationUrl) {
+        // Use window.location for external URLs, router for internal
+        if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
+          window.location.href = pendingNavigationUrl;
+        } else {
+          router.push(pendingNavigationUrl);
+        }
+      }
+      setShowUnsavedModal(false);
+      setPendingNavigationUrl(null);
+    } catch (error) {
+      // Error is already handled by saveToBackend
+    }
+  }, [state, saveToBackend, pendingNavigationUrl, router]);
+
+  const handleModalDiscard = useCallback(() => {
+    if (pendingNavigationUrl) {
+      // Use window.location for external URLs, router for internal
+      if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
+        window.location.href = pendingNavigationUrl;
+      } else {
+        router.push(pendingNavigationUrl);
+      }
+    }
+    setShowUnsavedModal(false);
+    setPendingNavigationUrl(null);
+  }, [pendingNavigationUrl, router]);
+
+  const handleModalClose = useCallback(() => {
+    // User cancelled navigation - just close the modal
+    setShowUnsavedModal(false);
+    setPendingNavigationUrl(null);
+  }, []);
+
   const getState = useCallback(() => state, [state]);
   const backup = useCrashBackup(workspaceId, getState, { intervalMs: 15000 });
-  useNavigationGuard(Boolean(state && hasUnsavedChanges(state)), getState);
+
+  // Set up navigation guard - no need to capture return values as we handle everything via callbacks
+  useNavigationGuard(Boolean(state && hasUnsavedChanges(state)), getState, {
+    onNavigationAttempt: handleNavigationAttempt,
+  });
 
   const contextValue = useMemo<WorkspaceContextValue | null>(() => {
     if (!state) return null;
@@ -239,6 +295,13 @@ export function WorkspaceProvider({
   return (
     <WorkspaceContext.Provider value={contextValue}>
       {children}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onClose={handleModalClose}
+        onSave={handleModalSave}
+        onDiscard={handleModalDiscard}
+        isSaving={isSaving}
+      />
     </WorkspaceContext.Provider>
   );
 }

@@ -36,6 +36,16 @@ export function PageHeader({
     }
   };
 
+  const handleLogoClick = (href: string) => {
+    // Check if there's a guarded router available (when workspace has unsaved changes)
+    const guardedRouter = (window as any).__guardedRouter;
+    if (guardedRouter) {
+      guardedRouter.push(href);
+    } else {
+      router.push(href);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/80 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-4">
@@ -57,12 +67,12 @@ export function PageHeader({
             )}
 
             {/* Logo - Always goes to dashboard */}
-            <Link
-              href={isDashboard ? "/" : "/dashboard"}
-              className="flex items-center gap-3 transition-opacity hover:opacity-80"
+            <button
+              onClick={() => handleLogoClick(isDashboard ? "/" : "/dashboard")}
+              className="flex items-center gap-3 transition-opacity hover:opacity-80 cursor-pointer"
             >
               <Logo className={logoClassName} />
-            </Link>
+            </button>
 
             {/* Breadcrumb separator */}
             {title && (
