@@ -157,13 +157,16 @@ export function buildAnimationSceneFromPartition(
   let sortedObjects = partition.objects;
   if (layerOrder && layerOrder.length > 0) {
     const indexById = new Map<string, number>();
-    for (let i = 0; i < layerOrder.length; i++) indexById.set(layerOrder[i]!, i);
+    for (let i = 0; i < layerOrder.length; i++) {
+      const id = layerOrder[i];
+      if (id) indexById.set(id, i);
+    }
     // Stable sort: objects with known index ordered by index, others stay behind by original order
     sortedObjects = [...partition.objects]
       .map((obj, originalIndex) => ({ obj, originalIndex }))
       .sort((a, b) => {
-        const ia = indexById.has(a.obj.id) ? (indexById.get(a.obj.id) as number) : -1;
-        const ib = indexById.has(b.obj.id) ? (indexById.get(b.obj.id) as number) : -1;
+        const ia = indexById.has(a.obj.id) ? indexById.get(a.obj.id)! : -1;
+        const ib = indexById.has(b.obj.id) ? indexById.get(b.obj.id)! : -1;
         if (ia === ib) return a.originalIndex - b.originalIndex;
         // Lower index means further back; unknown (-1) sorts to back by staying earlier
         if (ia === -1) return -1;

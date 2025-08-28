@@ -76,7 +76,7 @@ export function ActionsToolbar({
       return type === "video" ? "Generating..." : "Generating...";
     if (lastError || validationSummary?.hasErrors)
       return "Fix Issues & Try Again";
-    
+
     // Show different text when no content is available
     if (type === "video" && sceneNodes.length === 0) {
       return "No Scenes to Generate";
@@ -84,7 +84,7 @@ export function ActionsToolbar({
     if (type === "image" && frameNodes.length === 0) {
       return "No Frames to Generate";
     }
-    
+
     return type === "video" ? "Generate All Videos" : "Generate All Images";
   };
 
@@ -140,7 +140,9 @@ export function ActionsToolbar({
 
         <Button
           onClick={onGenerateImage}
-          disabled={!canGenerateImage || anyGenerating || frameNodes.length === 0}
+          disabled={
+            !canGenerateImage || anyGenerating || frameNodes.length === 0
+          }
           variant={getButtonVariant()}
           size="sm"
           className="font-medium"
@@ -232,7 +234,10 @@ export function ActionsToolbar({
       </Modal>
 
       {/* Layers Modal */}
-      <LayerManagementModal isOpen={showLayersModal} onClose={() => setShowLayersModal(false)} />
+      <LayerManagementModal
+        isOpen={showLayersModal}
+        onClose={() => setShowLayersModal(false)}
+      />
     </>
   );
 }

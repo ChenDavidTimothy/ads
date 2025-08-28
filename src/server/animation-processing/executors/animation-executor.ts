@@ -1073,7 +1073,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
               ? (context.nodeOutputs.get(`${rid}.output`) ??
                 context.nodeOutputs.get(`${rid}.result`))
               : undefined;
-            const display = (entry?.metadata as { displayValue?: unknown } | undefined)?.displayValue;
+            const display = (
+              entry?.metadata as { displayValue?: unknown } | undefined
+            )?.displayValue;
             if (typeof display === "string") nodeOverrides.content = display;
             else nodeOverrides.content = toDisplayString(val);
           }
@@ -1268,13 +1270,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
             if (typeof value === "string") {
               objectOverrides.content = value;
             } else {
-              const rid = bindingsByObject[String(objectId)]?.[key]?.boundResultNodeId;
+              const rid =
+                bindingsByObject[String(objectId)]?.[key]?.boundResultNodeId;
               const entry = rid
                 ? (context.nodeOutputs.get(`${rid}.output`) ??
                   context.nodeOutputs.get(`${rid}.result`))
                 : undefined;
-              const display = (entry?.metadata as { displayValue?: unknown } | undefined)?.displayValue;
-              if (typeof display === "string") objectOverrides.content = display;
+              const display = (
+                entry?.metadata as { displayValue?: unknown } | undefined
+              )?.displayValue;
+              if (typeof display === "string")
+                objectOverrides.content = display;
               else objectOverrides.content = toDisplayString(value);
             }
             break;

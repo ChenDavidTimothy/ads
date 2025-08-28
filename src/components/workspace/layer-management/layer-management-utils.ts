@@ -1,6 +1,3 @@
-import type { Node } from "reactflow";
-import type { NodeData } from "@/shared/types";
-
 export function formatSceneLabel(
   displayName: string,
   type: "scene" | "frame",
@@ -22,5 +19,3 @@ export function reconcileLayerOrder(
   // New objects go to the end (front of stack)
   return [...preserved, ...newOnes];
 }
- 
-

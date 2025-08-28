@@ -1,8 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
-import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from "@dnd-kit/modifiers";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  restrictToVerticalAxis,
+  restrictToFirstScrollableAncestor,
+} from "@dnd-kit/modifiers";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -24,8 +35,21 @@ interface Props {
   onReorder: (newOrder: string[]) => void;
 }
 
-function SortableItem({ item, index }: { item: SceneObjectInfo; index: number }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+function SortableItem({
+  item,
+  index,
+}: {
+  item: SceneObjectInfo;
+  index: number;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -46,13 +70,18 @@ function SortableItem({ item, index }: { item: SceneObjectInfo; index: number })
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="truncate text-sm font-medium">{item.displayName}</span>
       </div>
-      <div className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs text-[var(--text-tertiary)]">{index + 1}</div>
+      <div className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs text-[var(--text-tertiary)]">
+        {index + 1}
+      </div>
     </div>
   );
 }
 
-export function DraggableObjectList({ objects, currentOrder, onReorder }: Props) {
-
+export function DraggableObjectList({
+  objects,
+  currentOrder,
+  onReorder,
+}: Props) {
   // Compute the ordered list (back-to-front) from the persisted order
   const orderedBackToFront = useMemo(
     () =>
@@ -70,7 +99,9 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -94,7 +125,9 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
       <div className="flex h-32 items-center justify-center text-center text-[var(--text-tertiary)]">
         <div>
           <div className="mb-2">No objects in this scene yet</div>
-          <div className="text-xs">Connect shapes, text, or images to see them here</div>
+          <div className="text-xs">
+            Connect shapes, text, or images to see them here
+          </div>
         </div>
       </div>
     );
@@ -105,7 +138,8 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
       <div className="mb-3 flex justify-between text-xs text-[var(--text-tertiary)]">
         <span>↑ Front (renders on top)</span>
         <span>
-          {orderedFrontToBack.length} object{orderedFrontToBack.length !== 1 ? "s" : ""}
+          {orderedFrontToBack.length} object
+          {orderedFrontToBack.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -133,4 +167,3 @@ export function DraggableObjectList({ objects, currentOrder, onReorder }: Props)
     </div>
   );
 }
-

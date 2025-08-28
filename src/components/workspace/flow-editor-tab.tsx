@@ -70,8 +70,18 @@ export function FlowEditorTab() {
       if (!a || !b) return false;
       if (a.length !== b.length) return false;
       for (let i = 0; i < a.length; i++) {
-        const na = a[i] as unknown as { id: string; type?: string; data?: unknown; position?: { x: number; y: number } };
-        const nb = b[i] as unknown as { id: string; type?: string; data?: unknown; position?: { x: number; y: number } };
+        const na = a[i] as unknown as {
+          id: string;
+          type?: string;
+          data?: unknown;
+          position?: { x: number; y: number };
+        };
+        const nb = b[i] as unknown as {
+          id: string;
+          type?: string;
+          data?: unknown;
+          position?: { x: number; y: number };
+        };
         if (!na || !nb) return false;
         if (na.id !== nb.id) return false;
         if (na.type !== nb.type) return false;
@@ -100,9 +110,12 @@ export function FlowEditorTab() {
     return debounce((newNodes: Node<NodeData>[], newEdges: Edge[]) => {
       if (isDragging) return;
       if (suspendContextSyncRef.current) return;
-      const ctxNodesNow = ctxNodes as unknown as Node<NodeData>[];
-      const ctxEdgesNow = ctxEdges as Edge[];
-      if (areNodesEqual(newNodes, ctxNodesNow) && areEdgesEqual(newEdges, ctxEdgesNow)) {
+      const ctxNodesNow = ctxNodes;
+      const ctxEdgesNow = ctxEdges;
+      if (
+        areNodesEqual(newNodes, ctxNodesNow) &&
+        areEdgesEqual(newEdges, ctxEdgesNow)
+      ) {
         return; // No-op
       }
       updateFlow({ nodes: newNodes, edges: newEdges });
@@ -112,14 +125,14 @@ export function FlowEditorTab() {
   // Context sync with drag awareness
   useEffect(() => {
     if (!isDragging) {
-      debouncedContextSync(nodes as unknown as Node<NodeData>[], edges);
+      debouncedContextSync(nodes, edges);
     }
   }, [nodes, edges, debouncedContextSync, isDragging]); // ← ADD: isDragging guard
 
   // CRITICAL: Force sync when drag ends
   useEffect(() => {
     if (!isDragging) {
-      debouncedContextSync(nodes as unknown as Node<NodeData>[], edges);
+      debouncedContextSync(nodes, edges);
     }
   }, [isDragging, nodes, edges, debouncedContextSync]);
 
@@ -127,7 +140,9 @@ export function FlowEditorTab() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>).detail;
+      const detail = (
+        e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>
+      ).detail;
       if (!detail) return;
 
       // Suspend context sync briefly to prevent overwriting the external change
@@ -140,17 +155,24 @@ export function FlowEditorTab() {
 
       setNodes((prev) => {
         return prev.map((n) => {
-          const nid = (n.data as unknown as { identifier?: { id?: string } })?.identifier?.id;
+          const nid = (n.data as unknown as { identifier?: { id?: string } })
+            ?.identifier?.id;
           if (nid !== detail.nodeIdentifierId) return n;
           const data = (n.data as unknown as Record<string, unknown>) || {};
-          return { ...n, data: { ...data, layerOrder: [...detail.order] } as unknown } as typeof n;
+          return {
+            ...n,
+            data: { ...data, layerOrder: [...detail.order] } as unknown,
+          } as typeof n;
         }) as unknown as Node<NodeData>[];
       });
     };
 
     window.addEventListener("layer-order-updated", handler as EventListener);
     return () => {
-      window.removeEventListener("layer-order-updated", handler as EventListener);
+      window.removeEventListener(
+        "layer-order-updated",
+        handler as EventListener,
+      );
       if (timer) clearTimeout(timer);
     };
   }, [setNodes]);
@@ -399,18 +421,29 @@ export function FlowEditorTab() {
     let didChange = false;
     const nextNodes = (nodes as unknown as Node<NodeData>[]).map((n) => {
       if (n.type !== "scene" && n.type !== "frame") return n;
-      const identifierId = (n.data as unknown as { identifier?: { id?: string } })?.identifier?.id;
+      const identifierId = (
+        n.data as unknown as { identifier?: { id?: string } }
+      )?.identifier?.id;
       if (!identifierId) return n;
-      const objects = tracker.getUpstreamObjects(identifierId, nodes as unknown as Node<NodeData>[], edges);
+      const objects = tracker.getUpstreamObjects(
+        identifierId,
+        nodes as unknown as Node<NodeData>[],
+        edges,
+      );
       const ids = objects.map((o) => o.id);
       const saved = (n.data as unknown as { layerOrder?: string[] }).layerOrder;
       const effective = reconcileLayerOrder(ids, saved);
       const arraysEqual = (a: string[] | undefined, b: string[]) =>
-        Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]);
+        Array.isArray(a) &&
+        a.length === b.length &&
+        a.every((v, i) => v === b[i]);
       if (!arraysEqual(saved, effective)) {
         didChange = true;
         const data = (n.data as unknown as Record<string, unknown>) || {};
-        return { ...n, data: { ...data, layerOrder: [...effective] } as unknown } as typeof n;
+        return {
+          ...n,
+          data: { ...data, layerOrder: [...effective] } as unknown,
+        } as typeof n;
       }
       return n;
     });
