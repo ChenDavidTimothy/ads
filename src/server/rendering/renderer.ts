@@ -8,6 +8,9 @@ export interface SceneAnimationConfig {
   backgroundColor: string;
   videoPreset: string;
   videoCrf: number;
+  // Optional output hints (v1 batching)
+  outputBasename?: string; // e.g., key
+  outputSubdir?: string; // e.g., scene id for isolation
 }
 
 export const DEFAULT_SCENE_CONFIG: SceneAnimationConfig = {

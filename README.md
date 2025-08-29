@@ -132,3 +132,11 @@ Additionally, for client notifications, ensure the custom channel exists (no sch
 
 - Enqueue via `renderQueue.enqueueOnly({ scene, config, userId, jobId })`.
 - Clients can wait for completion with the existing `waitForRenderJobEvent` helper.
+
+## Batch Rendering (v1)
+
+- Use the `Batch` node (Logic) to tag objects with a `key` (bindable).
+- Scene renders one video per unique key; non-batched objects appear in all outputs.
+- Deterministic order (keys sorted); runtime IDs are namespaced as `baseId@key`.
+- Filenames are `{key}.mp4` (sanitized); no templating in v1.
+- Overrides precedence unchanged for bound fields. Manual per-key overrides UI planned.

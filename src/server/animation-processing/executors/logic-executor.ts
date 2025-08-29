@@ -43,6 +43,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     this.registerHandler("boolean_op", this.executeBooleanOp.bind(this));
     this.registerHandler("math_op", this.executeMathOp.bind(this));
     this.registerHandler("duplicate", this.executeDuplicate.bind(this));
+    this.registerHandler("batch", this.executeBatch.bind(this));
   }
 
   private async executeConstants(
@@ -1425,6 +1426,83 @@ export class LogicNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: expandedCursors,
         perObjectAnimations: expandedAnimations,
         perObjectAssignments: expandedAssignments,
+      },
+    );
+  }
+
+  private async executeBatch(
+    node: ReactFlowNode<NodeData>,
+    context: ExecutionContext,
+    connections: ReactFlowEdge[],
+  ): Promise<void> {
+    const data = node.data as unknown as Record<string, unknown>;
+    const keyRaw = data.key as unknown;
+
+    const inputs = getConnectedInputs(
+      context,
+      connections as unknown as Array<{
+        target: string;
+        targetHandle: string;
+        source: string;
+        sourceHandle: string;
+      }>,
+      node.data.identifier.id,
+      "input",
+    );
+
+    if (inputs.length === 0) {
+      setNodeOutput(context, node.data.identifier.id, "output", "object_stream", [], {
+        perObjectTimeCursor: {},
+        perObjectAnimations: {},
+        perObjectAssignments: {},
+      });
+      return;
+    }
+
+    // Resolve key once – v1: the same key applies to all objects passing through this node
+    const resolvedKey = String(keyRaw ?? "").trim();
+    if (resolvedKey.length === 0) {
+      const ids = extractObjectIdsFromInputs(inputs as unknown as ExecutionValue[]);
+      throw new Error(`Batch key resolved empty for objects: ${ids.join(", ")}`);
+    }
+
+    const tagged: unknown[] = [];
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      for (const obj of inputData) {
+        if (typeof obj === "object" && obj !== null && "id" in obj) {
+          tagged.push({
+            ...(obj as Record<string, unknown>),
+            batch: true,
+            batchKey: resolvedKey,
+          });
+        } else {
+          tagged.push(obj);
+        }
+      }
+    }
+
+    // Pass through upstream metadata unchanged
+    const perObjectTimeCursor = this.extractCursorsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+    const perObjectAnimations = this.extractPerObjectAnimationsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+    const perObjectAssignments = this.extractPerObjectAssignmentsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+
+    setNodeOutput(
+      context,
+      node.data.identifier.id,
+      "output",
+      "object_stream",
+      tagged,
+      {
+        perObjectTimeCursor,
+        perObjectAnimations,
+        perObjectAssignments,
       },
     );
   }

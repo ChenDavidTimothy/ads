@@ -179,13 +179,15 @@ export class SmartStorageProvider implements StorageProvider {
 
   async prepareTarget(
     extension: string,
-    opts?: { userId?: string },
+    opts?: { userId?: string; basename?: string; subdir?: string },
   ): Promise<StoragePreparedTarget> {
     try {
       const uid = opts?.userId ?? this.userId ?? "anonymous";
       const unique = `${Date.now()}_${randomUUID()}`;
-      const filename = `scene_${unique}.${extension}`;
-      const remoteKey = path.posix.join(uid, filename);
+      const safeBase = sanitizeBasename(opts?.basename);
+      const filename = `${safeBase ?? `scene_${unique}`}.${extension}`;
+      const subdir = sanitizeSubdir(opts?.subdir);
+      const remoteKey = path.posix.join(uid, ...(subdir ? [subdir] : []), filename);
 
       // Create unique temporary file path
       const filePath = path.join(this.tempDir, filename);
@@ -198,6 +200,10 @@ export class SmartStorageProvider implements StorageProvider {
         `Failed to prepare storage target: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
+  }
+
+  // Minimal sanitization: remove path separators and illegal filename chars
+  // Keep underscores for spaces; collapse repeats
   }
 
   async finalize(
@@ -849,4 +855,21 @@ export class SmartStorageProvider implements StorageProvider {
   getMetrics() {
     return this.healthMonitor.getMetrics();
   }
+}
+
+// Filename sanitization helpers
+function sanitizeBasename(input?: string): string | undefined {
+  if (!input) return undefined;
+  const replaced = input
+    .replace(/[\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return replaced.length > 0 ? replaced : undefined;
+}
+
+function sanitizeSubdir(input?: string): string | undefined {
+  if (!input) return undefined;
+  const parts = input.split("/").map((p) => sanitizeBasename(p) ?? "").filter(Boolean);
+  return parts.length > 0 ? parts.join("/") : undefined;
 }

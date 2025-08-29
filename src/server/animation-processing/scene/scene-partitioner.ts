@@ -11,6 +11,10 @@ export interface ScenePartition {
   animations: SceneAnimationTrack[];
 }
 
+export interface BatchedScenePartition extends ScenePartition {
+  batchKey: string | null; // null for non-batched single render
+}
+
 /**
  * Partitions the execution context into separate scenes based on object-to-scene mappings
  * This is the core logic for multi-scene support
@@ -112,6 +116,41 @@ export function partitionObjectsByScenes(
   });
 
   return partitions;
+}
+
+/**
+ * Partition a single-scene partition further by batchKey, returning per-key partitions.
+ * If no batched objects are present, returns a single partition with batchKey=null.
+ */
+export function partitionByBatchKey(
+  base: ScenePartition,
+): BatchedScenePartition[] {
+  const nonBatched = base.objects.filter((o) => !o.batch);
+  const batched = base.objects.filter((o) => o.batch && typeof o.batchKey === "string");
+
+  if (batched.length === 0) {
+    return [{ ...base, batchKey: null }];
+  }
+
+  const keys = Array.from(
+    new Set(batched.map((o) => String(o.batchKey)))
+  ).filter((k) => k.trim().length > 0);
+
+  if (keys.length === 0) {
+    throw new Error("Batched objects present but no unique keys found");
+  }
+
+  keys.sort((a, b) => a.localeCompare(b));
+
+  return keys.map((key) => ({
+    sceneNode: base.sceneNode,
+    animations: base.animations,
+    batchKey: key,
+    objects: [
+      ...nonBatched,
+      ...batched.filter((o) => String(o.batchKey) === key),
+    ],
+  }));
 }
 
 /**

@@ -905,6 +905,41 @@ export const NODE_DEFINITIONS = {
     },
   },
 
+  batch: {
+    type: "batch",
+    label: "Batch",
+    description:
+      "Tags objects for batch rendering using a key. Does not duplicate or alter visuals.",
+    execution: {
+      category: "logic",
+      executor: "logic",
+    },
+    ports: {
+      inputs: [{ id: "input", type: "object_stream", label: "Objects" }],
+      outputs: [{ id: "output", type: "object_stream", label: "Tagged" }],
+    },
+    properties: {
+      properties: [
+        {
+          key: "key",
+          type: "string",
+          label: "Key",
+          defaultValue: "",
+        },
+      ],
+    },
+    rendering: {
+      icon: "🏷️",
+      colors: {
+        primary: "bg-[var(--node-logic)]",
+        handle: "!bg-[var(--node-logic)]",
+      },
+    },
+    defaults: {
+      key: "",
+    },
+  },
+
   image: {
     type: "image",
     label: "Image",
