@@ -20,6 +20,9 @@ export interface SceneObject {
   initialRotation?: number;
   initialScale?: Point2D;
   initialOpacity?: number;
+  // Batch metadata (propagates through object_stream unmodified)
+  batch?: boolean;
+  batchKey?: string;
   // ✅ ADD - Following existing pattern
   initialFillColor?: string;
   initialStrokeColor?: string;

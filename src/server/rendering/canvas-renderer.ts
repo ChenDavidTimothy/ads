@@ -52,7 +52,10 @@ export class CanvasRenderer implements Renderer {
     const sceneRenderer = new SceneRenderer(scene, sceneRenderConfig);
     const frameGenerator = new FrameGenerator(frameConfig, linear);
 
-    const prepared = await this.storageProvider.prepareTarget("mp4");
+    const prepared = await this.storageProvider.prepareTarget("mp4", {
+      basename: config.outputBasename,
+      subdir: config.outputSubdir,
+    });
 
     try {
       await frameGenerator.generateAnimation(

@@ -31,7 +31,32 @@ import { createServiceClient } from "@/utils/supabase/service";
 import {
   partitionObjectsByScenes,
   buildAnimationSceneFromPartition,
+  partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
+import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
+
+// Helper: namespace object and animation IDs deterministically for batch key
+function namespaceObjectsForBatch(
+  objects: SceneObject[],
+  batchKey: string | null,
+): SceneObject[] {
+  if (!batchKey) return objects;
+  const suffix = `@${batchKey}`;
+  return objects.map((o) => ({ ...o, id: `${o.id}${suffix}` }));
+}
+
+function namespaceAnimationsForBatch(
+  animations: SceneAnimationTrack[],
+  batchKey: string | null,
+): SceneAnimationTrack[] {
+  if (!batchKey) return animations;
+  const suffix = `@${batchKey}`;
+  return animations.map((a) => ({
+    ...a,
+    id: `${a.id}${suffix}`,
+    objectId: `${a.objectId}${suffix}`,
+  }));
+}
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
@@ -682,65 +707,76 @@ export const animationRouter = createTRPCRouter({
             throw new NoValidScenesError();
           }
 
-          // Create render jobs for each valid scene
+          // Create render jobs for each valid scene, partitioning by batchKey
           const jobIds: string[] = [];
           await ensureWorkerReady();
 
           for (const partition of scenePartitions) {
-            const scene: AnimationScene =
-              buildAnimationSceneFromPartition(partition);
-            const sceneData = partition.sceneNode.data as SceneNodeData;
-
-            // Prepare scene config using registry defaults
-            const config: SceneAnimationConfig = {
-              ...DEFAULT_SCENE_CONFIG,
-              width: sceneData.width,
-              height: sceneData.height,
-              fps: sceneData.fps,
-              backgroundColor: sceneData.backgroundColor,
-              videoPreset: sceneData.videoPreset,
-              videoCrf: sceneData.videoCrf,
-              ...input.config,
-            };
-
-            // Enforce frame cap per scene
-            if (config.fps * scene.duration > 1800) {
-              logger.warn(
-                `Scene ${partition.sceneNode.data.identifier.displayName} exceeds frame limit`,
-                {
-                  frames: config.fps * scene.duration,
-                  duration: scene.duration,
-                  fps: config.fps,
-                },
-              );
-              continue; // Skip this scene but continue with others
-            }
-
-            // Create job row for this scene
-            const payload = { scene, config } as const;
-            const { data: jobRow, error: insErr } = await supabase
-              .from("render_jobs")
-              .insert({ user_id: ctx.user!.id, status: "queued", payload })
-              .select("id")
-              .single();
-
-            if (insErr || !jobRow) {
-              logger.error("Failed to create job row for scene", {
-                sceneId: partition.sceneNode.data.identifier.id,
-                error: insErr,
+            const subPartitions = partitionByBatchKey(partition);
+            for (const sub of subPartitions) {
+              const scene: AnimationScene = buildAnimationSceneFromPartition({
+                sceneNode: sub.sceneNode,
+                objects: namespaceObjectsForBatch(sub.objects, sub.batchKey),
+                animations: namespaceAnimationsForBatch(
+                  sub.animations,
+                  sub.batchKey,
+                ),
               });
-              continue; // Skip this scene but continue with others
+              const sceneData = sub.sceneNode.data as SceneNodeData;
+
+              // Prepare scene config using registry defaults
+              const config: SceneAnimationConfig = {
+                ...DEFAULT_SCENE_CONFIG,
+                width: sceneData.width,
+                height: sceneData.height,
+                fps: sceneData.fps,
+                backgroundColor: sceneData.backgroundColor,
+                videoPreset: sceneData.videoPreset,
+                videoCrf: sceneData.videoCrf,
+                ...input.config,
+                outputBasename: sub.batchKey ?? undefined,
+                outputSubdir: sub.sceneNode.data.identifier.id,
+              };
+
+              // Enforce frame cap per scene
+              if (config.fps * scene.duration > 1800) {
+                logger.warn(
+                  `Scene ${sub.sceneNode.data.identifier.displayName} exceeds frame limit`,
+                  {
+                    frames: config.fps * scene.duration,
+                    duration: scene.duration,
+                    fps: config.fps,
+                  },
+                );
+                continue; // Skip this scene but continue with others
+              }
+
+              // Create job row for this scene
+              const payload = { scene, config } as const;
+              const { data: jobRow, error: insErr } = await supabase
+                .from("render_jobs")
+                .insert({ user_id: ctx.user!.id, status: "queued", payload })
+                .select("id")
+                .single();
+
+              if (insErr || !jobRow) {
+                logger.error("Failed to create job row for scene", {
+                  sceneId: sub.sceneNode.data.identifier.id,
+                  error: insErr,
+                });
+                continue; // Skip this scene but continue with others
+              }
+
+              // Enqueue the render job
+              await renderQueue.enqueueOnly({
+                scene,
+                config,
+                userId: ctx.user!.id,
+                jobId: jobRow.id as string,
+              });
+
+              jobIds.push(jobRow.id as string);
             }
-
-            // Enqueue the render job
-            await renderQueue.enqueueOnly({
-              scene,
-              config,
-              userId: ctx.user!.id,
-              jobId: jobRow.id as string,
-            });
-
-            jobIds.push(jobRow.id as string);
           }
 
           if (jobIds.length === 0) {
