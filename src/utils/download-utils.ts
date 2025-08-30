@@ -26,6 +26,79 @@ export interface BatchDownloadOptions extends DownloadOptions {
 }
 
 /**
+ * Detect if a URL is a Supabase signed URL
+ */
+function isSupabaseSignedUrl(url: string): boolean {
+  return url.includes("supabase.co") && url.includes("token=");
+}
+
+/**
+ * Ensure filenames are unique inside a ZIP by appending a numeric suffix
+ * Preserves any directory path (e.g. images/name.png -> images/name (2).png)
+ */
+function ensureUniqueZipPath(existing: Set<string>, originalPath: string): string {
+  // Sanitize illegal characters first
+  const sanitized = originalPath.replace(/[<>:"/\\|?*]/g, "_");
+
+  if (!existing.has(sanitized)) {
+    existing.add(sanitized);
+    return sanitized;
+  }
+
+  // Split into dir and filename
+  const lastSlashIndex = sanitized.lastIndexOf("/");
+  const dir = lastSlashIndex >= 0 ? sanitized.slice(0, lastSlashIndex + 1) : "";
+  const name = lastSlashIndex >= 0 ? sanitized.slice(lastSlashIndex + 1) : sanitized;
+
+  // Split filename into base and extension
+  const lastDotIndex = name.lastIndexOf(".");
+  const base = lastDotIndex >= 0 ? name.slice(0, lastDotIndex) : name;
+  const ext = lastDotIndex >= 0 ? name.slice(lastDotIndex) : "";
+
+  let counter = 2;
+  while (true) {
+    const candidate = `${dir}${base} (${counter})${ext}`;
+    if (!existing.has(candidate)) {
+      existing.add(candidate);
+      return candidate;
+    }
+    counter++;
+  }
+}
+
+/**
+ * Fetch a file as Blob with resilient options and tiny retry
+ */
+async function fetchFileBlob(url: string, mimeType?: string): Promise<Blob> {
+  const attempt = async (): Promise<Response> => {
+    const isSupabase = isSupabaseSignedUrl(url);
+    return fetch(url, {
+      headers: {
+        Accept: mimeType ?? "*/*",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+      mode: isSupabase ? "cors" : "cors",
+      cache: "no-store",
+      credentials: "omit",
+    });
+  };
+
+  // Basic retry: 1 retry for transient network TypeError or opaque failure
+  try {
+    const res = await attempt();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    return await res.blob();
+  } catch (err) {
+    // Short backoff then retry once
+    await new Promise((r) => setTimeout(r, 300));
+    const res2 = await attempt();
+    if (!res2.ok) throw new Error(`HTTP ${res2.status}: ${res2.statusText}`);
+    return await res2.blob();
+  }
+}
+
+/**
  * Special download function for Supabase signed URLs
  */
 async function downloadSupabaseFile(
@@ -203,18 +276,23 @@ function forceDownload(blob: Blob, filename: string): void {
     document.body.removeChild(link);
 
     // Method 4: Iframe fallback for stubborn browsers
-    if (typeof window !== "undefined") {
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.style.visibility = "hidden";
-      iframe.style.width = "1px";
-      iframe.style.height = "1px";
-      iframe.src = url;
-      document.body.appendChild(iframe);
+    // IMPORTANT: Only use this if previous methods did NOT trigger
+    if (!downloadAttempted && typeof window !== "undefined") {
+      try {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.style.visibility = "hidden";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.src = url;
+        document.body.appendChild(iframe);
 
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 2000);
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 2000);
+      } catch (iframeError) {
+        console.warn("Iframe download fallback failed:", iframeError);
+      }
     }
 
     // Clean up the object URL after a delay
@@ -367,22 +445,23 @@ export async function downloadFilesAsZip(
   const zip = new JSZip();
   let completedFiles = 0;
   const totalFiles = files.length;
+  const seenZipPaths = new Set<string>();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   const downloadPromises = files.map(async (file) => {
     try {
-      const response = await fetch(file.url, {
-        headers: { Accept: file.mimeType ?? "*/*" },
-      });
+      // Prefer API route if provided to avoid CORS issues
+      const downloadUrl = file.assetId
+        ? `/api/download/${file.assetId}`
+        : file.url;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      const blob = await fetchFileBlob(downloadUrl, file.mimeType);
 
-      const blob = await response.blob();
-
-      // Add file to ZIP with proper path handling
-      const fileName = file.filename.replace(/[<>:"/\\|?*]/g, "_");
-      zip.file(fileName, blob, { compression: compress ? "DEFLATE" : "STORE" });
+      // Add file to ZIP with collision-safe path
+      const uniquePath = ensureUniqueZipPath(seenZipPaths, file.filename);
+      zip.file(uniquePath, blob, { compression: compress ? "DEFLATE" : "STORE" });
 
       completedFiles++;
       onProgress?.(
@@ -416,6 +495,9 @@ export async function downloadFilesAsZip(
     const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : String(error)}`;
     onError?.(errorMessage);
     throw new Error(errorMessage);
+  }
+  finally {
+    clearTimeout(timeoutId);
   }
 }
 

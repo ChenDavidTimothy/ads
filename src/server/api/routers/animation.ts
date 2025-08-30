@@ -34,6 +34,7 @@ import {
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
 import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
+import { buildContentBasename } from "@/shared/utils/naming";
 
 // Helper: namespace object and animation IDs deterministically for batch key
 function namespaceObjectsForBatch(
@@ -709,10 +710,24 @@ export const animationRouter = createTRPCRouter({
 
           // Create render jobs for each valid scene, partitioning by batchKey
           const jobIds: string[] = [];
+          const jobsOut: Array<{
+            jobId: string;
+            nodeId: string;
+            nodeName: string;
+            nodeType: "scene";
+            batchKey: string | null;
+          }> = [];
           await ensureWorkerReady();
 
           for (const partition of scenePartitions) {
             const subPartitions = partitionByBatchKey(partition);
+
+            logger.debug("Processing subPartitions", {
+              sceneId: partition.sceneNode?.data?.identifier?.id,
+              subPartitionsCount: subPartitions.length,
+              subPartitionsValid: subPartitions.filter(sub => sub && sub.sceneNode).length,
+              subPartitionsInvalid: subPartitions.filter(sub => !sub || !sub.sceneNode).length,
+            });
 
             // Deterministic filename and collision detection per scene
             const filenameMap = new Map<string, string[]>(); // filename -> original keys
@@ -743,6 +758,17 @@ export const animationRouter = createTRPCRouter({
               );
             }
             for (const sub of subPartitions) {
+              // Defensive check for undefined sub
+              if (!sub || !sub.sceneNode) {
+                logger.error("Invalid subPartition detected", {
+                  sub: sub,
+                  hasSceneNode: sub?.sceneNode ? true : false,
+                  partitionIndex: subPartitions.indexOf(sub),
+                  totalPartitions: subPartitions.length,
+                });
+                continue; // Skip invalid partitions
+              }
+
               const scene: AnimationScene = buildAnimationSceneFromPartition({
                 sceneNode: sub.sceneNode,
                 objects: namespaceObjectsForBatch(sub.objects, sub.batchKey),
@@ -752,6 +778,7 @@ export const animationRouter = createTRPCRouter({
                 ),
               });
               const sceneData = sub.sceneNode.data as SceneNodeData;
+              const displayName = sub.sceneNode.data.identifier.displayName;
 
               // Prepare scene config using registry defaults
               const config: SceneAnimationConfig = {
@@ -763,7 +790,11 @@ export const animationRouter = createTRPCRouter({
                 videoPreset: sceneData.videoPreset,
                 videoCrf: sceneData.videoCrf,
                 ...input.config,
-                outputBasename: sub.batchKey ?? undefined,
+                // Use standardized naming: <displayName>-<batchKey?>
+                outputBasename: buildContentBasename(
+                  displayName,
+                  sub.batchKey ?? undefined,
+                ),
                 outputSubdir: sub.sceneNode.data.identifier.id,
               };
 
@@ -805,6 +836,13 @@ export const animationRouter = createTRPCRouter({
               });
 
               jobIds.push(jobRow.id as string);
+              jobsOut.push({
+                jobId: jobRow.id as string,
+                nodeId: sub.sceneNode.data.identifier.id,
+                nodeName: sub.sceneNode.data.identifier.displayName,
+                nodeType: "scene" as const,
+                batchKey: sub.batchKey ?? null,
+              });
             }
           }
 
@@ -841,14 +879,24 @@ export const animationRouter = createTRPCRouter({
             });
 
             if (notify && notify.status === "completed" && notify.publicUrl) {
+              const firstPartition = scenePartitions[0];
+              if (!firstPartition?.sceneNode?.data?.identifier) {
+                logger.error("Invalid scene partition for immediate result", {
+                  partitionIndex: 0,
+                  hasPartition: !!firstPartition,
+                  hasSceneNode: !!firstPartition?.sceneNode,
+                  hasIdentifier: !!firstPartition?.sceneNode?.data?.identifier,
+                });
+                throw new Error("Invalid scene partition structure for immediate result");
+              }
+
               return {
                 success: true,
                 immediateResult: {
                   jobId: jobIds[0]!,
                   contentUrl: notify.publicUrl,
-                  nodeId: scenePartitions[0]!.sceneNode.data.identifier.id,
-                  nodeName:
-                    scenePartitions[0]!.sceneNode.data.identifier.displayName,
+                  nodeId: firstPartition.sceneNode.data.identifier.id,
+                  nodeName: firstPartition.sceneNode.data.identifier.displayName,
                   nodeType: "scene" as const,
                 },
               } as const;
@@ -857,14 +905,8 @@ export const animationRouter = createTRPCRouter({
 
           return {
             success: true,
-            jobs: jobIds.map((jobId, index) => ({
-              jobId,
-              nodeId: scenePartitions[index]!.sceneNode.data.identifier.id,
-              nodeName:
-                scenePartitions[index]!.sceneNode.data.identifier.displayName,
-              nodeType: "scene" as const,
-            })),
-            totalNodes: scenePartitions.length,
+            jobs: jobsOut,
+            totalNodes: jobsOut.length,
             generationType: "batch" as const,
           } as const;
         } catch (error) {
@@ -996,43 +1038,68 @@ export const animationRouter = createTRPCRouter({
           // Enqueue image jobs
           const supabase = createServiceClient();
           const jobIds: string[] = [];
+          const jobsOut: Array<{
+            jobId: string;
+            nodeId: string;
+            nodeName: string;
+            nodeType: "frame";
+            batchKey: string | null;
+          }> = [];
           await ensureWorkerReady();
           const { imageQueue } = await import("@/server/jobs/image-queue");
 
           for (const partition of scenePartitions) {
-            const scene: AnimationScene =
-              buildAnimationSceneFromPartition(partition);
-            const frameData = partition.sceneNode.data as unknown as {
-              width: number;
-              height: number;
-              backgroundColor: string;
-              format: "png" | "jpeg";
-              quality: number;
-            };
-            const config = {
-              width: Number(frameData.width),
-              height: Number(frameData.height),
-              backgroundColor: String(frameData.backgroundColor),
-              format: frameData.format === "jpeg" ? "jpeg" : "png",
-              quality: Number(frameData.quality ?? 90),
-            } as const;
+            const subPartitions = partitionByBatchKey(partition);
+            for (const sub of subPartitions) {
+              if (!sub || !sub.sceneNode) continue;
 
-            const payload = { scene, config } as const;
-            const { data: jobRow, error: insErr } = await supabase
-              .from("render_jobs")
-              .insert({ user_id: ctx.user!.id, status: "queued", payload })
-              .select("id")
-              .single();
-            if (insErr || !jobRow) continue;
+              const scene: AnimationScene =
+                buildAnimationSceneFromPartition(sub);
+              const frameData = sub.sceneNode.data as unknown as {
+                width: number;
+                height: number;
+                backgroundColor: string;
+                format: "png" | "jpeg";
+                quality: number;
+              };
+              const config = {
+                width: Number(frameData.width),
+                height: Number(frameData.height),
+                backgroundColor: String(frameData.backgroundColor),
+                format: frameData.format === "jpeg" ? "jpeg" : "png",
+                quality: Number(frameData.quality ?? 90),
+                // Standardized naming: <displayName>-<batchKey?>
+                outputBasename: buildContentBasename(
+                  sub.sceneNode.data.identifier.displayName,
+                  sub.batchKey ?? undefined,
+                ),
+                outputSubdir: sub.sceneNode.data.identifier.id,
+              } as const;
 
-            await imageQueue.enqueueOnly({
-              scene,
-              config: { ...config },
-              userId: ctx.user!.id,
-              jobId: jobRow.id as string,
-            });
+              const payload = { scene, config } as const;
+              const { data: jobRow, error: insErr } = await supabase
+                .from("render_jobs")
+                .insert({ user_id: ctx.user!.id, status: "queued", payload })
+                .select("id")
+                .single();
+              if (insErr || !jobRow) continue;
 
-            jobIds.push(jobRow.id as string);
+              await imageQueue.enqueueOnly({
+                scene,
+                config: { ...config },
+                userId: ctx.user!.id,
+                jobId: jobRow.id as string,
+              });
+
+              jobIds.push(jobRow.id as string);
+              jobsOut.push({
+                jobId: jobRow.id as string,
+                nodeId: sub.sceneNode.data.identifier.id,
+                nodeName: sub.sceneNode.data.identifier.displayName,
+                nodeType: "frame" as const,
+                batchKey: sub.batchKey ?? null,
+              });
+            }
           }
 
           if (jobIds.length === 0) {
@@ -1062,14 +1129,24 @@ export const animationRouter = createTRPCRouter({
               timeoutMs: inlineWaitMs,
             });
             if (notify && notify.status === "completed" && notify.publicUrl) {
+              const firstPartition = scenePartitions[0];
+              if (!firstPartition?.sceneNode?.data?.identifier) {
+                logger.error("Invalid scene partition for frame immediate result", {
+                  partitionIndex: 0,
+                  hasPartition: !!firstPartition,
+                  hasSceneNode: !!firstPartition?.sceneNode,
+                  hasIdentifier: !!firstPartition?.sceneNode?.data?.identifier,
+                });
+                throw new Error("Invalid scene partition structure for frame immediate result");
+              }
+
               return {
                 success: true,
                 immediateResult: {
                   jobId: jobIds[0]!,
                   contentUrl: notify.publicUrl,
-                  nodeId: scenePartitions[0]!.sceneNode.data.identifier.id,
-                  nodeName:
-                    scenePartitions[0]!.sceneNode.data.identifier.displayName,
+                  nodeId: firstPartition.sceneNode.data.identifier.id,
+                  nodeName: firstPartition.sceneNode.data.identifier.displayName,
                   nodeType: "frame" as const,
                 },
               } as const;
@@ -1078,14 +1155,8 @@ export const animationRouter = createTRPCRouter({
 
           return {
             success: true,
-            jobs: jobIds.map((jobId, index) => ({
-              jobId,
-              nodeId: scenePartitions[index]!.sceneNode.data.identifier.id,
-              nodeName:
-                scenePartitions[index]!.sceneNode.data.identifier.displayName,
-              nodeType: "frame" as const,
-            })),
-            totalNodes: scenePartitions.length,
+            jobs: jobsOut,
+            totalNodes: jobsOut.length,
             generationType: "batch" as const,
           } as const;
         } catch (error) {

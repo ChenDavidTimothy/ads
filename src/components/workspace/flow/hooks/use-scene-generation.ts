@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { extractDomainError } from "@/shared/errors/client";
+import { buildContentBasename } from "@/shared/utils/naming";
 import type { NodeData } from "@/shared/types";
 import { createBrowserClient } from "@/utils/supabase/client";
 
@@ -166,7 +167,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if ("jobs" in data && data.jobs) {
         const videoJobs: VideoJob[] = data.jobs.map((job) => ({
           jobId: job.jobId,
-          sceneName: job.nodeName,
+          sceneName: buildContentBasename(
+            job.nodeName,
+            (job as { batchKey?: string | null }).batchKey ?? undefined,
+          ),
           sceneId: job.nodeId,
           status: "pending" as const,
           renderJobId: job.jobId, // Map jobId to renderJobId for save functionality
@@ -343,7 +347,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if ("jobs" in data && data.jobs) {
         const imageJobs: ImageJob[] = data.jobs.map((job) => ({
           jobId: job.jobId,
-          frameName: job.nodeName,
+          frameName: buildContentBasename(
+            job.nodeName,
+            (job as { batchKey?: string | null }).batchKey ?? undefined,
+          ),
           frameId: job.nodeId,
           status: "pending" as const,
           renderJobId: job.jobId, // Map jobId to renderJobId for save functionality
@@ -1079,7 +1086,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   return {
     // Legacy single video support
     videoUrl,
-    handleDownload,
     hasVideo: Boolean(videoUrl),
     // Image support
     imageUrl,
@@ -1121,10 +1127,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     handleGenerateSelected,
 
     // Download handlers for multiple videos/images
-    handleDownloadAll: handleDownload, // Use same handler for now
-    handleDownloadVideo: handleDownload, // Use same handler for now
-    handleDownloadAllImages: handleDownload, // Use same handler for now
-    handleDownloadImage: handleDownload, // Use same handler for now
   } as const;
 }
 

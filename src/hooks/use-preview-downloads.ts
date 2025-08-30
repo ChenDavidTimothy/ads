@@ -55,6 +55,7 @@ export function usePreviewDownloads({
         await downloadFile(
           {
             url: video.videoUrl,
+            // sceneName already includes batch key when applicable (server standardized)
             filename: `${video.sceneName}.mp4`,
             mimeType: "video/mp4",
           },
@@ -100,6 +101,7 @@ export function usePreviewDownloads({
         await downloadFile(
           {
             url: image.imageUrl,
+            // frameName already includes batch key when applicable (server standardized)
             filename: `${image.frameName}.png`,
             mimeType: "image/png",
           },
@@ -142,6 +144,7 @@ export function usePreviewDownloads({
 
     const files: DownloadableFile[] = completedVideos.map((video) => ({
       url: video.videoUrl!,
+      // sceneName standardized to include batch key when present
       filename: `${video.sceneName}.mp4`,
       mimeType: "video/mp4",
     }));
@@ -188,6 +191,7 @@ export function usePreviewDownloads({
 
     const files: DownloadableFile[] = completedImages.map((image) => ({
       url: image.imageUrl!,
+      // frameName standardized to include batch key when present
       filename: `${image.frameName}.png`,
       mimeType: "image/png",
     }));

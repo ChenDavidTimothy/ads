@@ -15,6 +15,9 @@ export interface ImageRenderConfig {
   format: "png" | "jpeg";
   quality?: number; // 1-100 for jpeg
   time?: number; // optional snapshot time; default 0
+  // Optional output naming/location
+  outputBasename?: string;
+  outputSubdir?: string;
 }
 
 // Proper type for jpeg config
@@ -47,7 +50,11 @@ export class ImageRenderer {
     try {
       await sceneRenderer.renderFrame(ctx as never, cfg.time ?? 0);
 
-      const prepared = await this.storageProvider.prepareTarget(cfg.format);
+      const prepared = await this.storageProvider.prepareTarget(cfg.format, {
+        basename: cfg.outputBasename,
+        subdir: cfg.outputSubdir,
+        allowUpsert: true,
+      });
 
       try {
         const buffer =

@@ -94,25 +94,17 @@ interface PreviewPanelProps {
   // Video content
   videoUrl: string | null;
   videos: VideoJob[];
-  onDownloadVideo?: (jobId: string) => void;
-  onDownloadAll?: () => void;
 
   // Image content
   imageUrl?: string | null;
   images?: ImageJob[];
-  onDownloadImage?: (jobId: string) => void;
-  onDownloadAllImages?: () => void;
 }
 
 export function PreviewPanel({
   videoUrl,
   videos,
-  onDownloadVideo: _onDownloadVideo,
-  onDownloadAll: _onDownloadAll,
   imageUrl,
   images = [],
-  onDownloadImage: _onDownloadImage,
-  onDownloadAllImages: _onDownloadAllImages,
 }: PreviewPanelProps) {
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);

@@ -179,7 +179,7 @@ export class SmartStorageProvider implements StorageProvider {
 
   async prepareTarget(
     extension: string,
-    opts?: { userId?: string; basename?: string; subdir?: string },
+    opts?: { userId?: string; basename?: string; subdir?: string; allowUpsert?: boolean },
   ): Promise<StoragePreparedTarget> {
     try {
       const uid = opts?.userId ?? this.userId ?? "anonymous";
@@ -193,7 +193,7 @@ export class SmartStorageProvider implements StorageProvider {
       const filePath = path.join(this.tempDir, filename);
 
       this.logger.debug(`Prepared target: ${remoteKey} -> ${filePath}`);
-      return { filePath, remoteKey };
+      return { filePath, remoteKey, allowUpsert: opts?.allowUpsert ?? false };
     } catch (error) {
       this.logger.error("Failed to prepare target:", error);
       throw new Error(
@@ -239,6 +239,7 @@ export class SmartStorageProvider implements StorageProvider {
         prepared.remoteKey,
         prepared.filePath,
         contentType,
+        prepared.allowUpsert ?? false,
       );
 
       // Create signed URL with retry logic
@@ -275,6 +276,7 @@ export class SmartStorageProvider implements StorageProvider {
     remoteKey: string,
     fileBuffer: Buffer,
     contentType: string,
+    allowUpsert: boolean,
   ): Promise<void> {
     let lastError: Error | null = null;
 
@@ -283,7 +285,7 @@ export class SmartStorageProvider implements StorageProvider {
         const { error } = await this.supabase.storage
           .from(bucket)
           .upload(remoteKey, fileBuffer, {
-            upsert: false,
+            upsert: allowUpsert,
             contentType,
           });
 
@@ -323,6 +325,7 @@ export class SmartStorageProvider implements StorageProvider {
     remoteKey: string,
     filePath: string,
     contentType: string,
+    allowUpsert: boolean,
   ): Promise<void> {
     let lastError: Error | null = null;
 
@@ -344,7 +347,7 @@ export class SmartStorageProvider implements StorageProvider {
         const { error } = await this.supabase.storage
           .from(bucket)
           .upload(remoteKey, webStream, {
-            upsert: false,
+            upsert: allowUpsert,
             contentType,
           });
 

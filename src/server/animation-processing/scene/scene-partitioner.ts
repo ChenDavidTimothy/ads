@@ -145,16 +145,35 @@ export function partitionObjectsByScenes(
 export function partitionByBatchKey(
   base: ScenePartition,
 ): BatchedScenePartition[] {
+  logger.debug("Partitioning by batch key", {
+    sceneId: base.sceneNode?.data?.identifier?.id,
+    totalObjects: base.objects.length,
+    hasSceneNode: !!base.sceneNode,
+  });
+
   const nonBatched = base.objects.filter((o) => !o.batch);
   const batched = base.objects.filter((o) => o.batch && typeof o.batchKey === "string");
 
+  logger.debug("Batch analysis", {
+    nonBatchedCount: nonBatched.length,
+    batchedCount: batched.length,
+    batchedKeys: batched.map(o => o.batchKey),
+  });
+
   if (batched.length === 0) {
-    return [{ ...base, batchKey: null }];
+    const result = [{ ...base, batchKey: null }];
+    logger.debug("No batched objects, returning single partition", {
+      resultCount: result.length,
+      hasSceneNode: !!result[0]?.sceneNode,
+    });
+    return result;
   }
 
   const keys = Array.from(
     new Set(batched.map((o) => String(o.batchKey)))
   ).filter((k) => k.trim().length > 0);
+
+  logger.debug("Extracted keys", { keys, keysCount: keys.length });
 
   if (keys.length === 0) {
     throw new Error("Batched objects present but no unique keys found");
@@ -162,7 +181,7 @@ export function partitionByBatchKey(
 
   keys.sort((a, b) => a.localeCompare(b));
 
-  return keys.map((key) => ({
+  const result = keys.map((key) => ({
     sceneNode: base.sceneNode,
     animations: base.animations,
     batchKey: key,
@@ -172,6 +191,19 @@ export function partitionByBatchKey(
     ],
     batchOverrides: base.batchOverrides,
   }));
+
+  logger.debug("Created sub-partitions", {
+    keysCount: keys.length,
+    resultCount: result.length,
+    partitions: result.map((p, i) => ({
+      index: i,
+      batchKey: p.batchKey,
+      objectCount: p.objects.length,
+      hasSceneNode: !!p.sceneNode,
+    })),
+  });
+
+  return result;
 }
 
 /**

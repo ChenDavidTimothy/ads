@@ -51,12 +51,8 @@ interface Props {
   // Preview panel props
   videoUrl?: string | null;
   videos?: VideoJob[];
-  onDownloadVideo?: (jobId: string) => void;
-  onDownloadAll?: () => void;
   imageUrl?: string | null;
   images?: ImageJob[];
-  onDownloadImage?: (jobId: string) => void;
-  onDownloadAllImages?: () => void;
 }
 
 export function RightSidebar({
@@ -72,12 +68,8 @@ export function RightSidebar({
   // Preview panel props
   videoUrl = null,
   videos = [],
-  onDownloadVideo,
-  onDownloadAll,
   imageUrl = null,
   images = [],
-  onDownloadImage,
-  onDownloadAllImages,
 }: Props) {
   const hasPreviewContent = Boolean(
     !!videoUrl || videos.length > 0 || !!imageUrl || images.length > 0,
@@ -124,12 +116,8 @@ export function RightSidebar({
         <PreviewPanel
           videoUrl={videoUrl}
           videos={videos}
-          onDownloadVideo={onDownloadVideo}
-          onDownloadAll={onDownloadAll}
           imageUrl={imageUrl}
           images={images}
-          onDownloadImage={onDownloadImage}
-          onDownloadAllImages={onDownloadAllImages}
         />
       </CollapsibleSection>
 
