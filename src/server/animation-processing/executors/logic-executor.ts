@@ -1503,6 +1503,8 @@ export class LogicNodeExecutor extends BaseExecutor {
         perObjectTimeCursor,
         perObjectAnimations,
         perObjectAssignments,
+        // Pass-through point for future per-field per-key overrides (v1 UI may write this)
+        // perObjectBatchOverrides?: Record<objectId, Record<fieldId, Record<batchKey, value>>>
       },
     );
   }

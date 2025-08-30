@@ -138,5 +138,5 @@ Additionally, for client notifications, ensure the custom channel exists (no sch
 - Use the `Batch` node (Logic) to tag objects with a `key` (bindable).
 - Scene renders one video per unique key; non-batched objects appear in all outputs.
 - Deterministic order (keys sorted); runtime IDs are namespaced as `baseId@key`.
-- Filenames are `{key}.mp4` (sanitized); no templating in v1.
+- Filenames are `{key}.mp4` with sanitization; if two keys sanitize to the same filename, render is blocked with a clear error listing the colliding keys; no templating in v1.
 - Overrides precedence unchanged for bound fields. Manual per-key overrides UI planned.

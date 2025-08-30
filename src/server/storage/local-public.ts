@@ -23,12 +23,17 @@ export class LocalPublicStorageProvider implements StorageProvider {
     this.subDir = options?.subDir ?? "animations";
   }
 
-  async prepareTarget(extension: string): Promise<StoragePreparedTarget> {
-    const dir = path.join(this.publicDir, this.subDir);
+  async prepareTarget(
+    extension: string,
+    opts?: { userId?: string; basename?: string; subdir?: string },
+  ): Promise<StoragePreparedTarget> {
+    const effectiveSubdir = opts?.subdir ?? this.subDir;
+    const dir = path.join(this.publicDir, effectiveSubdir);
     await fs.promises.mkdir(dir, { recursive: true });
-    const filename = generateUniqueName("scene", extension);
+    const base = sanitizeBasename(opts?.basename) ?? "scene";
+    const filename = generateUniqueName(base, extension);
     const filePath = path.join(dir, filename);
-    const remoteKey = path.posix.join(this.subDir, filename);
+    const remoteKey = path.posix.join(effectiveSubdir, filename);
     return { filePath, remoteKey };
   }
 
@@ -39,4 +44,14 @@ export class LocalPublicStorageProvider implements StorageProvider {
     const publicUrl = path.posix.join("/", prepared.remoteKey);
     return { publicUrl };
   }
+}
+
+function sanitizeBasename(input?: string): string | undefined {
+  if (!input) return undefined;
+  const replaced = input
+    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return replaced.length > 0 ? replaced : undefined;
 }

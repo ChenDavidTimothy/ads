@@ -38,5 +38,16 @@ describe("partitionByBatchKey", () => {
     expect(out[0].objects.map((o) => o.id).sort()).toEqual(["n1", "y"].sort());
     expect(out[1].objects.map((o) => o.id).sort()).toEqual(["n1", "x"].sort());
   });
+
+  it("throws when batched objects exist but keys are empty/whitespace", () => {
+    const base = {
+      sceneNode: { data: { identifier: { id: "scene1" } } } as any,
+      objects: [so("n1"), so("x", "   "), so("y", "\t")],
+      animations: [],
+    };
+    expect(() => partitionByBatchKey(base as any)).toThrow(
+      /no unique keys/i,
+    );
+  });
 });
 

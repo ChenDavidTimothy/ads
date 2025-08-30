@@ -266,7 +266,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
                 </svg>
               </div>
               <div className="mb-[var(--space-2)] text-lg font-medium text-[var(--text-primary)]">
-                Batch Mode coming soon
+                Batch overrides are available per field and per object
               </div>
               <div className="max-w-sm text-sm text-[var(--text-tertiary)]">
                 Select Default or an object on the left to edit its properties.
