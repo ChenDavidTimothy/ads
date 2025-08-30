@@ -45,5 +45,3 @@ export function buildFilename(
     : `.${extensionWithDot}`;
   return `${base}${ext}`;
 }
-
-

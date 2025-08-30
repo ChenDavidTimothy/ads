@@ -89,7 +89,10 @@ export interface TypographyNodeData extends BaseNodeData {
   shadowBlur: number;
   textOpacity: number;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
+  batchOverridesByField?: Record<
+    string,
+    Record<string, Record<string, unknown>>
+  >;
 }
 
 // Insert node data
@@ -276,7 +279,10 @@ export interface CanvasNodeData extends BaseNodeData {
     >
   >;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
+  batchOverridesByField?: Record<
+    string,
+    Record<string, Record<string, unknown>>
+  >;
 }
 
 // Frame node data (static image output configuration)

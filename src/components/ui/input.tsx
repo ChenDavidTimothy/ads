@@ -76,26 +76,31 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       return (
         <div className="relative flex w-full">
           {inputElement}
-          <div className={cn(
-            "flex items-center border border-l-0 px-2",
-            {
-              default: "rounded-r-[var(--radius-sm)] border-[rgba(255,255,255,0.1)] bg-[rgba(8,8,15,0.85)] backdrop-blur-[12px]",
-              glass: "rounded-r-[var(--radius-sm)] glass-input",
-              minimal: "border-0 border-l border-[var(--border-primary)] bg-transparent",
-            }[variant],
-            error ? "border-[var(--danger-500)]" : undefined,
-            props.disabled ? "opacity-60" : undefined,
-          )}
-          style={{
-            ...(variant === "default" && {
-              background: `
+          <div
+            className={cn(
+              "flex items-center border border-l-0 px-2",
+              {
+                default:
+                  "rounded-r-[var(--radius-sm)] border-[rgba(255,255,255,0.1)] bg-[rgba(8,8,15,0.85)] backdrop-blur-[12px]",
+                glass: "glass-input rounded-r-[var(--radius-sm)]",
+                minimal:
+                  "border-0 border-l border-[var(--border-primary)] bg-transparent",
+              }[variant],
+              error ? "border-[var(--danger-500)]" : undefined,
+              props.disabled ? "opacity-60" : undefined,
+            )}
+            style={{
+              ...(variant === "default" && {
+                background: `
                 linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%, rgba(59, 130, 246, 0.01) 100%),
                 linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
                 rgba(8, 8, 15, 0.85)
               `,
-              boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)",
-            }),
-          }}>
+                boxShadow:
+                  "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)",
+              }),
+            }}
+          >
             {endAdornment}
           </div>
         </div>

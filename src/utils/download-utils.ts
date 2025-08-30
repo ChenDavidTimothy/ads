@@ -36,7 +36,10 @@ function isSupabaseSignedUrl(url: string): boolean {
  * Ensure filenames are unique inside a ZIP by appending a numeric suffix
  * Preserves any directory path (e.g. images/name.png -> images/name (2).png)
  */
-function ensureUniqueZipPath(existing: Set<string>, originalPath: string): string {
+function ensureUniqueZipPath(
+  existing: Set<string>,
+  originalPath: string,
+): string {
   // Sanitize illegal characters first
   const sanitized = originalPath.replace(/[<>:"/\\|?*]/g, "_");
 
@@ -48,7 +51,8 @@ function ensureUniqueZipPath(existing: Set<string>, originalPath: string): strin
   // Split into dir and filename
   const lastSlashIndex = sanitized.lastIndexOf("/");
   const dir = lastSlashIndex >= 0 ? sanitized.slice(0, lastSlashIndex + 1) : "";
-  const name = lastSlashIndex >= 0 ? sanitized.slice(lastSlashIndex + 1) : sanitized;
+  const name =
+    lastSlashIndex >= 0 ? sanitized.slice(lastSlashIndex + 1) : sanitized;
 
   // Split filename into base and extension
   const lastDotIndex = name.lastIndexOf(".");
@@ -89,7 +93,7 @@ async function fetchFileBlob(url: string, mimeType?: string): Promise<Blob> {
     const res = await attempt();
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     return await res.blob();
-  } catch (err) {
+  } catch {
     // Short backoff then retry once
     await new Promise((r) => setTimeout(r, 300));
     const res2 = await attempt();
@@ -461,7 +465,9 @@ export async function downloadFilesAsZip(
 
       // Add file to ZIP with collision-safe path
       const uniquePath = ensureUniqueZipPath(seenZipPaths, file.filename);
-      zip.file(uniquePath, blob, { compression: compress ? "DEFLATE" : "STORE" });
+      zip.file(uniquePath, blob, {
+        compression: compress ? "DEFLATE" : "STORE",
+      });
 
       completedFiles++;
       onProgress?.(
@@ -495,8 +501,7 @@ export async function downloadFilesAsZip(
     const errorMessage = `ZIP creation failed: ${error instanceof Error ? error.message : String(error)}`;
     onError?.(errorMessage);
     throw new Error(errorMessage);
-  }
-  finally {
+  } finally {
     clearTimeout(timeoutId);
   }
 }

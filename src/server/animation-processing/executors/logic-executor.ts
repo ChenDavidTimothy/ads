@@ -1436,7 +1436,7 @@ export class LogicNodeExecutor extends BaseExecutor {
     connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const keyRaw = data.key as unknown;
+    const keyRaw = data.key;
 
     const inputs = getConnectedInputs(
       context,
@@ -1451,19 +1451,32 @@ export class LogicNodeExecutor extends BaseExecutor {
     );
 
     if (inputs.length === 0) {
-      setNodeOutput(context, node.data.identifier.id, "output", "object_stream", [], {
-        perObjectTimeCursor: {},
-        perObjectAnimations: {},
-        perObjectAssignments: {},
-      });
+      setNodeOutput(
+        context,
+        node.data.identifier.id,
+        "output",
+        "object_stream",
+        [],
+        {
+          perObjectTimeCursor: {},
+          perObjectAnimations: {},
+          perObjectAssignments: {},
+        },
+      );
       return;
     }
 
+    // Extract object IDs first for validation and method calls
+    const inputObjectIds = extractObjectIdsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+
     // Resolve key once – v1: the same key applies to all objects passing through this node
-    const resolvedKey = String(keyRaw ?? "").trim();
+    const resolvedKey = typeof keyRaw === "string" ? keyRaw : "";
     if (resolvedKey.length === 0) {
-      const ids = extractObjectIdsFromInputs(inputs as unknown as ExecutionValue[]);
-      throw new Error(`Batch key resolved empty for objects: ${ids.join(", ")}`);
+      throw new Error(
+        `Batch key resolved empty for objects: ${inputObjectIds.join(", ")}`,
+      );
     }
 
     const tagged: unknown[] = [];
@@ -1488,9 +1501,11 @@ export class LogicNodeExecutor extends BaseExecutor {
     );
     const perObjectAnimations = this.extractPerObjectAnimationsFromInputs(
       inputs as unknown as ExecutionValue[],
+      inputObjectIds,
     );
     const perObjectAssignments = this.extractPerObjectAssignmentsFromInputs(
       inputs as unknown as ExecutionValue[],
+      inputObjectIds,
     );
 
     setNodeOutput(

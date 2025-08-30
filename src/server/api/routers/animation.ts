@@ -725,8 +725,11 @@ export const animationRouter = createTRPCRouter({
             logger.debug("Processing subPartitions", {
               sceneId: partition.sceneNode?.data?.identifier?.id,
               subPartitionsCount: subPartitions.length,
-              subPartitionsValid: subPartitions.filter(sub => sub && sub.sceneNode).length,
-              subPartitionsInvalid: subPartitions.filter(sub => !sub || !sub.sceneNode).length,
+              subPartitionsValid: subPartitions.filter((sub) => sub?.sceneNode)
+                .length,
+              subPartitionsInvalid: subPartitions.filter(
+                (sub) => !sub?.sceneNode,
+              ).length,
             });
 
             // Deterministic filename and collision detection per scene
@@ -759,7 +762,7 @@ export const animationRouter = createTRPCRouter({
             }
             for (const sub of subPartitions) {
               // Defensive check for undefined sub
-              if (!sub || !sub.sceneNode) {
+              if (!sub?.sceneNode) {
                 logger.error("Invalid subPartition detected", {
                   sub: sub,
                   hasSceneNode: sub?.sceneNode ? true : false,
@@ -887,7 +890,9 @@ export const animationRouter = createTRPCRouter({
                   hasSceneNode: !!firstPartition?.sceneNode,
                   hasIdentifier: !!firstPartition?.sceneNode?.data?.identifier,
                 });
-                throw new Error("Invalid scene partition structure for immediate result");
+                throw new Error(
+                  "Invalid scene partition structure for immediate result",
+                );
               }
 
               return {
@@ -896,7 +901,8 @@ export const animationRouter = createTRPCRouter({
                   jobId: jobIds[0]!,
                   contentUrl: notify.publicUrl,
                   nodeId: firstPartition.sceneNode.data.identifier.id,
-                  nodeName: firstPartition.sceneNode.data.identifier.displayName,
+                  nodeName:
+                    firstPartition.sceneNode.data.identifier.displayName,
                   nodeType: "scene" as const,
                 },
               } as const;
@@ -1051,7 +1057,7 @@ export const animationRouter = createTRPCRouter({
           for (const partition of scenePartitions) {
             const subPartitions = partitionByBatchKey(partition);
             for (const sub of subPartitions) {
-              if (!sub || !sub.sceneNode) continue;
+              if (!sub?.sceneNode) continue;
 
               const scene: AnimationScene =
                 buildAnimationSceneFromPartition(sub);
@@ -1131,13 +1137,19 @@ export const animationRouter = createTRPCRouter({
             if (notify && notify.status === "completed" && notify.publicUrl) {
               const firstPartition = scenePartitions[0];
               if (!firstPartition?.sceneNode?.data?.identifier) {
-                logger.error("Invalid scene partition for frame immediate result", {
-                  partitionIndex: 0,
-                  hasPartition: !!firstPartition,
-                  hasSceneNode: !!firstPartition?.sceneNode,
-                  hasIdentifier: !!firstPartition?.sceneNode?.data?.identifier,
-                });
-                throw new Error("Invalid scene partition structure for frame immediate result");
+                logger.error(
+                  "Invalid scene partition for frame immediate result",
+                  {
+                    partitionIndex: 0,
+                    hasPartition: !!firstPartition,
+                    hasSceneNode: !!firstPartition?.sceneNode,
+                    hasIdentifier:
+                      !!firstPartition?.sceneNode?.data?.identifier,
+                  },
+                );
+                throw new Error(
+                  "Invalid scene partition structure for frame immediate result",
+                );
               }
 
               return {
@@ -1146,7 +1158,8 @@ export const animationRouter = createTRPCRouter({
                   jobId: jobIds[0]!,
                   contentUrl: notify.publicUrl,
                   nodeId: firstPartition.sceneNode.data.identifier.id,
-                  nodeName: firstPartition.sceneNode.data.identifier.displayName,
+                  nodeName:
+                    firstPartition.sceneNode.data.identifier.displayName,
                   nodeType: "frame" as const,
                 },
               } as const;

@@ -16,7 +16,12 @@ export interface StorageProvider {
   // Prepare a unique local target and remote key for a new artifact
   prepareTarget(
     extension: string,
-    opts?: { userId?: string; basename?: string; subdir?: string; allowUpsert?: boolean },
+    opts?: {
+      userId?: string;
+      basename?: string;
+      subdir?: string;
+      allowUpsert?: boolean;
+    },
   ): Promise<StoragePreparedTarget>;
   // Finalize the artifact (e.g., upload to remote storage) and return a public URL
   finalize(

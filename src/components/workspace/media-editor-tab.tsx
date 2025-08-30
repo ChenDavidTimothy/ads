@@ -1131,7 +1131,8 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
                 Batch overrides are available per field and per object
               </div>
               <div className="max-w-sm text-sm text-[var(--text-tertiary)]">
-                Select Default or an image object on the left to edit its properties.
+                Select Default or an image object on the left to edit its
+                properties.
               </div>
             </div>
           </div>

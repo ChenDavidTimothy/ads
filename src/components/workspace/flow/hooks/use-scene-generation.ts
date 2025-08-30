@@ -971,24 +971,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     }
   }, [nodes, edges, generateScene, toast, router]);
 
-  const handleDownload = useCallback(() => {
-    if (!videoUrl) return;
-    try {
-      const link = document.createElement("a");
-      link.href = videoUrl;
-      link.download = `animation_${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Download started", "Your video is being downloaded");
-    } catch {
-      toast.error(
-        "Download failed",
-        'Please try right-clicking the video and selecting "Save video as..."',
-      );
-    }
-  }, [videoUrl, toast]);
-
   const resetGeneration = useCallback(() => {
     console.log("[GENERATION] Force reset triggered");
     if (pollTimeoutRef.current) {

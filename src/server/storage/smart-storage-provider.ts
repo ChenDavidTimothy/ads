@@ -179,7 +179,12 @@ export class SmartStorageProvider implements StorageProvider {
 
   async prepareTarget(
     extension: string,
-    opts?: { userId?: string; basename?: string; subdir?: string; allowUpsert?: boolean },
+    opts?: {
+      userId?: string;
+      basename?: string;
+      subdir?: string;
+      allowUpsert?: boolean;
+    },
   ): Promise<StoragePreparedTarget> {
     try {
       const uid = opts?.userId ?? this.userId ?? "anonymous";
@@ -187,7 +192,11 @@ export class SmartStorageProvider implements StorageProvider {
       const safeBase = sanitizeBasename(opts?.basename);
       const filename = `${safeBase ?? `scene_${unique}`}.${extension}`;
       const subdir = sanitizeSubdir(opts?.subdir);
-      const remoteKey = path.posix.join(uid, ...(subdir ? [subdir] : []), filename);
+      const remoteKey = path.posix.join(
+        uid,
+        ...(subdir ? [subdir] : []),
+        filename,
+      );
 
       // Create unique temporary file path
       const filePath = path.join(this.tempDir, filename);
@@ -872,6 +881,9 @@ function sanitizeBasename(input?: string): string | undefined {
 
 function sanitizeSubdir(input?: string): string | undefined {
   if (!input) return undefined;
-  const parts = input.split("/").map((p) => sanitizeBasename(p) ?? "").filter(Boolean);
+  const parts = input
+    .split("/")
+    .map((p) => sanitizeBasename(p) ?? "")
+    .filter(Boolean);
   return parts.length > 0 ? parts.join("/") : undefined;
 }
