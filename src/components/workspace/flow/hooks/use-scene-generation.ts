@@ -725,13 +725,10 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     [utils.animation.getRenderJobStatus],
   );
 
-
-
   const isSceneConnected = useMemo(() => {
     const sceneNode = nodes.find((n) => n.type === "scene");
     if (!sceneNode) return false;
-    const sceneTargetId = (sceneNode as unknown as { id: string }).id;
-    return edges.some((edge) => edge.target === sceneTargetId);
+    return edges.some((edge) => edge.target === sceneNode.id);
   }, [nodes, edges]);
 
   const canGenerate = useMemo(() => {
@@ -811,8 +808,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const isFrameConnected = useMemo(() => {
     const frameNode = nodes.find((n) => n.type === "frame");
     if (!frameNode) return false;
-    const frameTargetId = (frameNode as unknown as { id: string }).id;
-    return edges.some((edge) => edge.target === frameTargetId);
+    return edges.some((edge) => edge.target === frameNode.id);
   }, [nodes, edges]);
 
   const canGenerateImage = useMemo(() => {

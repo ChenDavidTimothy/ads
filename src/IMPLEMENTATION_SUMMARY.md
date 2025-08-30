@@ -1,4 +1,3 @@
-
 ## Batch Rendering v1 (Batchion)
 
 - Batch node: logic category, input/output `object_stream`, property `key` (bindable).

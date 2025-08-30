@@ -63,12 +63,11 @@ export function FlowEditorTab() {
   // Initialize local state from context on mount (load saved nodes) with edge sanitization
   useEffect(() => {
     if (ctxNodes.length > 0 && nodes.length === 0) {
-      const initialNodes = ctxNodes as unknown as Node<NodeData>[];
-      const nodeIdSet = new Set(initialNodes.map((n) => n.id));
+      const nodeIdSet = new Set(ctxNodes.map((n) => n.id));
       const initialEdges = (ctxEdges ?? []).filter(
         (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target),
       );
-      setNodes(initialNodes);
+      setNodes(ctxNodes);
       if (initialEdges.length > 0) setEdges(initialEdges);
     }
   }, [ctxNodes, ctxEdges, nodes.length, edges.length, setNodes, setEdges]);
@@ -76,22 +75,12 @@ export function FlowEditorTab() {
   // SURGICAL FIX: Drag-aware context sync with equality guard
   const debouncedContextSync = useMemo(() => {
     const areNodesEqual = (a: Node<NodeData>[], b: Node<NodeData>[]) => {
-      if (a === (b as unknown)) return true;
+      if (a === b) return true;
       if (!a || !b) return false;
       if (a.length !== b.length) return false;
       for (let i = 0; i < a.length; i++) {
-        const na = a[i] as unknown as {
-          id: string;
-          type?: string;
-          data?: unknown;
-          position?: { x: number; y: number };
-        };
-        const nb = b[i] as unknown as {
-          id: string;
-          type?: string;
-          data?: unknown;
-          position?: { x: number; y: number };
-        };
+        const na = a[i];
+        const nb = b[i];
         if (!na || !nb) return false;
         if (na.id !== nb.id) return false;
         if (na.type !== nb.type) return false;
@@ -165,15 +154,13 @@ export function FlowEditorTab() {
 
       setNodes((prev) => {
         return prev.map((n) => {
-          const nid = (n.data as unknown as { identifier?: { id?: string } })
-            ?.identifier?.id;
+          const nid = n.data.identifier?.id;
           if (nid !== detail.nodeIdentifierId) return n;
-          const data = (n.data as unknown as Record<string, unknown>) || {};
           return {
             ...n,
-            data: { ...data, layerOrder: [...detail.order] } as unknown,
-          } as typeof n;
-        }) as unknown as Node<NodeData>[];
+            data: { ...n.data, layerOrder: [...detail.order] },
+          };
+        });
       });
     };
 
@@ -425,19 +412,13 @@ export function FlowEditorTab() {
     // Build updates for any scene/frame whose upstream object set changed
     const tracker = new FlowTracker();
     let didChange = false;
-    const nextNodes = (nodes as unknown as Node<NodeData>[]).map((n) => {
+    const nextNodes = nodes.map((n) => {
       if (n.type !== "scene" && n.type !== "frame") return n;
-      const identifierId = (
-        n.data as unknown as { identifier?: { id?: string } }
-      )?.identifier?.id;
+      const identifierId = n.data.identifier?.id;
       if (!identifierId) return n;
-      const objects = tracker.getUpstreamObjects(
-        identifierId,
-        nodes as unknown as Node<NodeData>[],
-        edges,
-      );
+      const objects = tracker.getUpstreamObjects(identifierId, nodes, edges);
       const ids = objects.map((o) => o.id);
-      const saved = (n.data as unknown as { layerOrder?: string[] }).layerOrder;
+      const saved = (n.data as { layerOrder?: string[] }).layerOrder;
       const effective = reconcileLayerOrder(ids, saved);
       const arraysEqual = (a: string[] | undefined, b: string[]) =>
         Array.isArray(a) &&

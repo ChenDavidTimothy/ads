@@ -195,18 +195,16 @@ export function WorkspaceProvider({
 
         // Mirror changes into the corresponding animation node in flow
         const updatedNodes = prev.flow.nodes.map((node) => {
-          const isTarget =
-            (node as unknown as { data?: { identifier?: { id?: string } } })
-              .data?.identifier?.id === nodeId;
+          const isTarget = node.data.identifier?.id === nodeId;
           if (!isTarget) return node;
           return {
             ...node,
             data: {
-              ...(node as unknown as { data: Record<string, unknown> }).data,
+              ...node.data,
               duration: merged.duration,
               tracks: merged.tracks,
-            } as unknown,
-          } as typeof node;
+            },
+          };
         });
 
         return {
