@@ -1,9 +1,11 @@
 // src/server/animation-processing/scene/scene-partitioner.ts - Multi-scene partitioning logic
 import type { NodeData, SceneAnimationTrack } from "@/shared/types";
 import type { AnimationScene, SceneObject } from "@/shared/types/scene";
+import { applyOverridesToObject } from "./batch-overrides-resolver";
 import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
 import { logger } from "@/lib/logger";
+import { DomainError, type DomainErrorCode } from "@/shared/errors/domain";
 
 export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
@@ -11,6 +13,8 @@ export interface ScenePartition {
   animations: SceneAnimationTrack[];
   // Optional: per-object batch overrides collected from inputs metadata
   batchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+  // Optional: list of bound fields per object to enforce resolver mask
+  boundFieldsByObject?: Record<string, string[]>;
 }
 
 export interface BatchedScenePartition extends ScenePartition {
@@ -64,6 +68,7 @@ export function partitionObjectsByScenes(
       // Fallback: For scenes with no assigned animations, try to get them from input metadata
       // This handles direct animation->scene connections that bypass merge nodes
       const incomingEdges = edges.filter((edge) => edge.target === sceneId);
+      const mergedBoundFields: Record<string, string[]> = {};
 
       for (const edge of incomingEdges) {
         const sourceOutput = context.nodeOutputs.get(
@@ -105,7 +110,25 @@ export function partitionObjectsByScenes(
               mergedBatchOverrides[objectId] = mergedFields;
             }
           }
+          const boundFields = (
+            sourceOutput.metadata as {
+              perObjectBoundFields?: Record<string, string[]>;
+            }
+          )?.perObjectBoundFields;
+          if (boundFields) {
+            for (const [objectId, fieldList] of Object.entries(boundFields)) {
+              const existing = mergedBoundFields[objectId] ?? [];
+              mergedBoundFields[objectId] = Array.from(
+                new Set([...existing, ...fieldList.map(String)]),
+              );
+            }
+          }
         }
+      }
+
+      // Attach bound fields to partitions via later object construction
+      if (Object.keys(mergedBoundFields).length > 0) {
+        // no-op placeholder; bound fields are re-collected below to maintain a single code path
       }
     }
 
@@ -134,6 +157,30 @@ export function partitionObjectsByScenes(
 
     // Only include scenes that have objects
     if (sceneObjects.length > 0) {
+      const boundFieldsByObject = (() => {
+        if (!edges) return undefined;
+        const incoming = edges.filter((e) => e.target === sceneId);
+        const out: Record<string, string[]> = {};
+        for (const e of incoming) {
+          const so = context.nodeOutputs.get(
+            `${e.source}.${e.sourceHandle ?? "output"}`,
+          );
+          const m = (
+            so?.metadata as
+              | { perObjectBoundFields?: Record<string, string[]> }
+              | undefined
+          )?.perObjectBoundFields;
+          if (!m) continue;
+          for (const [objectId, list] of Object.entries(m)) {
+            const existing = out[objectId] ?? [];
+            out[objectId] = Array.from(
+              new Set([...existing, ...list.map(String)]),
+            );
+          }
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+      })();
+
       partitions.push({
         sceneNode,
         objects: sceneObjects,
@@ -142,6 +189,7 @@ export function partitionObjectsByScenes(
           Object.keys(mergedBatchOverrides).length > 0
             ? mergedBatchOverrides
             : undefined,
+        boundFieldsByObject,
       });
     }
   }
@@ -161,8 +209,13 @@ export function partitionObjectsByScenes(
 export function partitionByBatchKey(
   base: ScenePartition,
 ): BatchedScenePartition[] {
+  const sceneId = base.sceneNode?.data?.identifier?.id;
+  const sceneName =
+    base.sceneNode?.data?.identifier?.displayName ?? "Unknown Scene";
+
   logger.debug("Partitioning by batch key", {
-    sceneId: base.sceneNode?.data?.identifier?.id,
+    sceneId,
+    sceneName,
     totalObjects: base.objects.length,
     hasSceneNode: !!base.sceneNode,
   });
@@ -193,8 +246,29 @@ export function partitionByBatchKey(
 
   logger.debug("Extracted keys", { keys, keysCount: keys.length });
 
+  // VALIDATION: Batched objects exist but no valid keys found
   if (keys.length === 0) {
-    throw new Error("Batched objects present but no unique keys found");
+    // Throw domain error compatible with runtime
+    throw new DomainError(
+      `Scene '${sceneName}' contains batched objects but no batch keys were found. Ensure batch nodes are properly configured.`,
+      "ERR_SCENE_BATCH_EMPTY_KEYS" as DomainErrorCode,
+      { nodeId: sceneId ?? "", nodeName: sceneName },
+    );
+  }
+
+  // WARNING: Excessive key count guardrail
+  const EXCESSIVE_KEY_THRESHOLD = 1000;
+  if (keys.length > EXCESSIVE_KEY_THRESHOLD) {
+    logger.warn(
+      `Scene '${sceneName}' contains ${keys.length} unique batch keys, exceeding threshold of ${EXCESSIVE_KEY_THRESHOLD}. This may impact performance.`,
+      {
+        sceneId,
+        sceneName,
+        keyCount: keys.length,
+        threshold: EXCESSIVE_KEY_THRESHOLD,
+        keys: keys.slice(0, 10).join(", ") + (keys.length > 10 ? " ..." : ""),
+      },
+    );
   }
 
   keys.sort((a, b) => a.localeCompare(b));
@@ -208,6 +282,7 @@ export function partitionByBatchKey(
       ...batched.filter((o) => String(o.batchKey) === key),
     ],
     batchOverrides: base.batchOverrides,
+    boundFieldsByObject: base.boundFieldsByObject,
   }));
 
   logger.debug("Created sub-partitions", {
@@ -264,7 +339,21 @@ export function buildAnimationSceneFromPartition(
     ? ((sceneData as { layerOrder?: unknown }).layerOrder as string[])
     : undefined;
 
-  let sortedObjects = partition.objects;
+  // Apply batch overrides per object using partition metadata and batch key if present
+  const batchKey =
+    (partition as unknown as { batchKey?: string | null }).batchKey ?? null;
+  const perObjectBatchOverrides = partition.batchOverrides;
+  const perObjectBoundFields = partition.boundFieldsByObject;
+
+  const overriddenObjects: SceneObject[] = partition.objects.map((obj) =>
+    applyOverridesToObject(obj, {
+      batchKey,
+      perObjectBatchOverrides,
+      perObjectBoundFields,
+    }),
+  );
+
+  let sortedObjects = overriddenObjects;
   if (layerOrder && layerOrder.length > 0) {
     // Normalize IDs to be batch-agnostic: strip trailing @<batchKey> suffix if present
     const normalizeId = (id: string): string => id.replace(/@[^@]+$/, "");
@@ -275,7 +364,7 @@ export function buildAnimationSceneFromPartition(
       if (id) indexById.set(normalizeId(id), i);
     }
     // Stable sort: objects with known index ordered by index, others stay behind by original order
-    sortedObjects = [...partition.objects]
+    sortedObjects = [...overriddenObjects]
       .map((obj, originalIndex) => ({ obj, originalIndex }))
       .sort((a, b) => {
         const aId = normalizeId(a.obj.id);

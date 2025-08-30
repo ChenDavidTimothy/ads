@@ -140,3 +140,15 @@ Additionally, for client notifications, ensure the custom channel exists (no sch
 - Deterministic order (keys sorted); runtime IDs are namespaced as `baseId@key`.
 - Filenames are `{key}.mp4` with sanitization; if two keys sanitize to the same filename, render is blocked with a clear error listing the colliding keys; no templating in v1.
 - Overrides precedence unchanged for bound fields. Manual per-key overrides UI planned.
+
+## Batch Overrides v1
+
+- Scope:
+  - Typography.content
+  - Canvas.position.x/y, Canvas.scale.x/y, Canvas.rotation, Canvas.opacity, Canvas.fillColor, Canvas.strokeColor, Canvas.strokeWidth
+  - Media.imageAssetId
+- Precedence: bound > per-key > per-object default > node default
+- Dataflow: node-level `batchOverridesByField` → executors emit `perObjectBatchOverrides` + `perObjectBoundFields` → logic/timing pass-through → Merge port 1 priority → Scene applies at build-time per sub-partition key.
+- Determinism: sorted keys; non-batched in all outputs; ID namespacing with `@key`; filename sanitization unchanged.
+- Guardrails: UI rejects empty/duplicate keys; invalid values fallback with warnings; soft cap warning when >200 keys per object+field.
+- Editor: per-field foldout appears when a Batch is upstream; disabled when bound; supports Default (all keys) and Key|Value overrides; sparse persistence.

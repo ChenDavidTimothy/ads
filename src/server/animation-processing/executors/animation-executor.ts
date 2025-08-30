@@ -220,6 +220,54 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
+    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Media scope)
+    const batchOverridesByField =
+      (
+        data as unknown as {
+          batchOverridesByField?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+        }
+      ).batchOverridesByField ?? {};
+    const emittedPerObjectBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > = {};
+    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      for (const [objectId, byKey] of Object.entries(byObject)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(byKey)) {
+          const key = String(k).trim();
+          if (!key) continue;
+          cleaned[key] = v;
+        }
+        emittedPerObjectBatchOverrides[objectId] ??= {};
+        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
+          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
+          ...cleaned,
+        };
+      }
+    }
+
+    // Bound fields mask for media
+    const perObjectBoundFields: Record<string, string[]> = {};
+    const globalBoundKeys = Object.keys(bindings);
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      for (const obj of inputData) {
+        if (this.isImageObject(obj)) {
+          const imageObj = obj as { id: string };
+          const objectId = imageObj.id;
+          const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+          const combined = Array.from(
+            new Set([...globalBoundKeys, ...objectKeys].map(String)),
+          );
+          if (combined.length > 0) perObjectBoundFields[objectId] = combined;
+        }
+      }
+    }
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -230,6 +278,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
         perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
         perObjectAssignments: mergedAssignments,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : undefined,
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFields).length > 0
+            ? perObjectBoundFields
+            : undefined,
       },
     );
 
@@ -1184,6 +1240,55 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
+    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Typography scope)
+    const batchOverridesByField =
+      (
+        data as unknown as {
+          batchOverridesByField?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+        }
+      ).batchOverridesByField ?? {};
+    const emittedPerObjectBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > = {};
+    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      for (const [objectId, byKey] of Object.entries(byObject)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(byKey)) {
+          const key = String(k).trim();
+          if (!key) continue;
+          cleaned[key] = v;
+        }
+        emittedPerObjectBatchOverrides[objectId] ??= {};
+        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
+          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
+          ...cleaned,
+        };
+      }
+    }
+
+    // Bound fields mask for typography
+    const perObjectBoundFieldsTypo: Record<string, string[]> = {};
+    const globalBoundKeysTypo = Object.keys(bindings);
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      for (const obj of inputData) {
+        if (this.isTextObject(obj)) {
+          const textObj = obj as { id: string };
+          const objectId = textObj.id;
+          const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+          const combined = Array.from(
+            new Set([...globalBoundKeysTypo, ...objectKeys].map(String)),
+          );
+          if (combined.length > 0)
+            perObjectBoundFieldsTypo[objectId] = combined;
+        }
+      }
+    }
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -1194,6 +1299,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
         perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
         perObjectAssignments: mergedAssignments,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : undefined,
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFieldsTypo).length > 0
+            ? perObjectBoundFieldsTypo
+            : undefined,
       },
     );
 

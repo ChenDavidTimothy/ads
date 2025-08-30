@@ -779,6 +779,7 @@ export const animationRouter = createTRPCRouter({
                   sub.animations,
                   sub.batchKey,
                 ),
+                batchOverrides: partition.batchOverrides,
               });
               const sceneData = sub.sceneNode.data as SceneNodeData;
               const displayName = sub.sceneNode.data.identifier.displayName;

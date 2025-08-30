@@ -23,6 +23,7 @@ import {
   DuplicateNodeError,
   DuplicateCountExceededError,
   DomainError,
+  type DomainErrorCode,
 } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
@@ -329,6 +330,29 @@ export class LogicNodeExecutor extends BaseExecutor {
     const upstreamCursorMap = this.extractCursorsFromInputs(
       inputs as unknown as ExecutionValue[],
     );
+    // Collect upstream batch overrides and bound fields
+    const upstreamBatchOverridesList: Array<
+      undefined | Record<string, Record<string, Record<string, unknown>>>
+    > = inputs.map((i) => {
+      const m = i.metadata as
+        | {
+            perObjectBatchOverrides?: Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >;
+          }
+        | undefined;
+      return m?.perObjectBatchOverrides;
+    });
+    const upstreamBoundFieldsList: Array<undefined | Record<string, string[]>> =
+      inputs.map((i) => {
+        const m = i.metadata as
+          | {
+              perObjectBoundFields?: Record<string, string[]>;
+            }
+          | undefined;
+        return m?.perObjectBoundFields;
+      });
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -355,6 +379,32 @@ export class LogicNodeExecutor extends BaseExecutor {
       inputs as unknown as ExecutionValue[],
       filteredIds,
     );
+    // Filter perObjectBatchOverrides and bound fields to allowed IDs
+    const propagatedBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > = {};
+    for (const m of upstreamBatchOverridesList) {
+      if (!m) continue;
+      for (const [objectId, fields] of Object.entries(m)) {
+        if (!filteredIds.includes(objectId)) continue;
+        propagatedBatchOverrides[objectId] = {
+          ...(propagatedBatchOverrides[objectId] ?? {}),
+          ...fields,
+        };
+      }
+    }
+    const propagatedBoundFields: Record<string, string[]> = {};
+    for (const m of upstreamBoundFieldsList) {
+      if (!m) continue;
+      for (const [objectId, list] of Object.entries(m)) {
+        if (!filteredIds.includes(objectId)) continue;
+        const existing = propagatedBoundFields[objectId] ?? [];
+        propagatedBoundFields[objectId] = Array.from(
+          new Set([...existing, ...list.map(String)]),
+        );
+      }
+    }
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -365,6 +415,14 @@ export class LogicNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: propagatedCursors,
         perObjectAnimations: propagatedAnimations,
         perObjectAssignments: propagatedAssignments,
+        perObjectBatchOverrides:
+          Object.keys(propagatedBatchOverrides).length > 0
+            ? propagatedBatchOverrides
+            : undefined,
+        perObjectBoundFields:
+          Object.keys(propagatedBoundFields).length > 0
+            ? propagatedBoundFields
+            : undefined,
       },
     );
   }
@@ -539,6 +597,45 @@ export class LogicNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: mergedCursors,
         perObjectAnimations: propagatedAnimations,
         perObjectAssignments: propagatedAssignments,
+        // Merge perObjectBatchOverrides with port priority (Port 1 wins)
+        perObjectBatchOverrides: (() => {
+          const out: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          > = {};
+          // Process ports in reverse so Port 1 has highest priority
+          for (
+            let portIndex = portInputs.length - 1;
+            portIndex >= 0;
+            portIndex--
+          ) {
+            const inputs = portInputs[portIndex];
+            if (!inputs) continue;
+            for (const input of inputs) {
+              const fromMeta = (
+                input.metadata as
+                  | {
+                      perObjectBatchOverrides?: Record<
+                        string,
+                        Record<string, Record<string, unknown>>
+                      >;
+                    }
+                  | undefined
+              )?.perObjectBatchOverrides;
+              if (!fromMeta) continue;
+              for (const [objectId, fields] of Object.entries(fromMeta)) {
+                const destFields = out[objectId] ?? {};
+                for (const [fieldPath, byKey] of Object.entries(fields)) {
+                  const existing = destFields[fieldPath] ?? {};
+                  // Overwrite byKey entries from higher priority port
+                  destFields[fieldPath] = { ...existing, ...byKey };
+                }
+                out[objectId] = destFields;
+              }
+            }
+          }
+          return Object.keys(out).length > 0 ? out : undefined;
+        })(),
       },
     );
 
@@ -1472,15 +1569,17 @@ export class LogicNodeExecutor extends BaseExecutor {
     );
 
     // Resolve bindings for per-object key evaluation (mirror Canvas/Animation executors)
-    const bindings = (data.variableBindings as
-      | Record<string, { target?: string; boundResultNodeId?: string }>
-      | undefined) ?? {};
-    const bindingsByObject = (data.variableBindingsByObject as
-      | Record<
-          string,
-          Record<string, { target?: string; boundResultNodeId?: string }>
-        >
-      | undefined) ?? {};
+    const bindings =
+      (data.variableBindings as
+        | Record<string, { target?: string; boundResultNodeId?: string }>
+        | undefined) ?? {};
+    const bindingsByObject =
+      (data.variableBindingsByObject as
+        | Record<
+            string,
+            Record<string, { target?: string; boundResultNodeId?: string }>
+          >
+        | undefined) ?? {};
     const readVarGlobal = (key: string): unknown => {
       const rid = bindings[key]?.boundResultNodeId;
       if (!rid) return undefined;
@@ -1504,7 +1603,11 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     // Collect validation data
     const emptyKeyObjectIds: string[] = [];
-    const retaggedObjects: Array<{ id: string; oldKey: string; newKey: string }> = [];
+    const retaggedObjects: Array<{
+      id: string;
+      oldKey: string;
+      newKey: string;
+    }> = [];
 
     const tagged: unknown[] = [];
     for (const input of inputs) {
@@ -1521,16 +1624,31 @@ export class LogicNodeExecutor extends BaseExecutor {
           const perObjectVal = readVarForObject(objectId)("key");
           const globalVal = readVarGlobal("key");
           const literalVal = data.key;
-          const resolvedForObject =
-            perObjectVal ?? globalVal ?? (typeof literalVal === "string" ? literalVal : undefined);
-          const resolvedKeyForObject = String(resolvedForObject ?? "").trim();
+
+          let resolved: unknown =
+            perObjectVal ??
+            globalVal ??
+            (typeof literalVal === "string" ? literalVal : undefined);
+          // Guard: Avoid base-to-string on objects; coerce only strings/numbers/booleans
+          if (
+            typeof resolved !== "string" &&
+            typeof resolved !== "number" &&
+            typeof resolved !== "boolean"
+          ) {
+            resolved = "";
+          }
+          const resolvedForObject = String(resolved);
+          const resolvedKeyForObject = resolvedForObject.trim();
 
           if (resolvedKeyForObject.length === 0) {
             emptyKeyObjectIds.push(objectId);
           }
 
           // Check for re-tagging warnings
-          if (objWithBatch.batch === true && objWithBatch.batchKey !== undefined) {
+          if (
+            objWithBatch.batch === true &&
+            objWithBatch.batchKey !== undefined
+          ) {
             if (objWithBatch.batchKey !== resolvedKeyForObject) {
               retaggedObjects.push({
                 id: objectId,
@@ -1557,15 +1675,16 @@ export class LogicNodeExecutor extends BaseExecutor {
       const maxDisplay = 20;
       const displayedIds = emptyKeyObjectIds.slice(0, maxDisplay);
       const remainingCount = emptyKeyObjectIds.length - maxDisplay;
-      const remainingText = remainingCount > 0 ? ` …+${remainingCount} more` : "";
+      const remainingText =
+        remainingCount > 0 ? ` …+${remainingCount} more` : "";
       const objectIdsText = displayedIds.join(", ") + remainingText;
       throw new DomainError(
         `Batch node '${node.data.identifier.displayName}' received objects with empty keys: [${objectIdsText}]`,
-        "ERR_BATCH_EMPTY_KEY",
+        "ERR_BATCH_EMPTY_KEY" as DomainErrorCode,
         {
           nodeId: node.data.identifier.id,
           nodeName: node.data.identifier.displayName,
-          objectIds: emptyKeyObjectIds,
+          info: { objectIds: emptyKeyObjectIds },
         },
       );
     }

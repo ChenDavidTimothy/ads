@@ -90,6 +90,22 @@ export class TimingNodeExecutor extends BaseExecutor {
       {
         perObjectTimeCursor: upstreamCursorMap,
         perObjectAnimations: clonedAnimations,
+        // Pass through any upstream batch overrides / bound fields if present on first input
+        ...(inputs[0]?.metadata && {
+          perObjectBatchOverrides: (
+            inputs[0]?.metadata as {
+              perObjectBatchOverrides?: Record<
+                string,
+                Record<string, Record<string, unknown>>
+              >;
+            }
+          ).perObjectBatchOverrides,
+          perObjectBoundFields: (
+            inputs[0]?.metadata as {
+              perObjectBoundFields?: Record<string, string[]>;
+            }
+          ).perObjectBoundFields,
+        }),
       },
     );
   }

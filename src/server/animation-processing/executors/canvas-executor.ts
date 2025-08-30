@@ -193,6 +193,40 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return result;
     })();
 
+    // Emit perObjectBatchOverrides from node.data.batchOverridesByField
+    const batchOverridesByField =
+      (
+        data as unknown as {
+          batchOverridesByField?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+        }
+      ).batchOverridesByField ?? {};
+
+    const emittedPerObjectBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > = {};
+    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      for (const [objectId, byKey] of Object.entries(byObject)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(byKey)) {
+          const key = String(k).trim();
+          if (!key) {
+            // Drop invalid keys at emission time
+            continue;
+          }
+          cleaned[key] = v;
+        }
+        emittedPerObjectBatchOverrides[objectId] ??= {};
+        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
+          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
+          ...cleaned,
+        };
+      }
+    }
+
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
@@ -398,7 +432,29 @@ export class CanvasNodeExecutor extends BaseExecutor {
     }
 
     // Pass through existing per-object animations/cursors and the merged assignments
-    const firstMeta = inputs[0]?.metadata;
+    const firstMeta = inputs[0]?.metadata as
+      | (InputWithMetadata["metadata"] & {
+          perObjectBatchOverrides?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+          perObjectBoundFields?: Record<string, string[]>;
+        })
+      | undefined;
+
+    // Emit bound fields per object: merge per-object-specific and global bindings
+    const perObjectBoundFields: Record<string, string[]> = {};
+    const globalBoundKeys = Object.keys(bindings);
+    // Collect from processed objects only (ensures object IDs are available)
+    for (const obj of passThrough) {
+      if (!isSceneObject(obj)) continue;
+      const objectId = obj.id;
+      const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+      const combined = Array.from(
+        new Set([...globalBoundKeys, ...objectKeys].map(String)),
+      );
+      if (combined.length > 0) perObjectBoundFields[objectId] = combined;
+    }
 
     setNodeOutput(
       context,
@@ -411,6 +467,14 @@ export class CanvasNodeExecutor extends BaseExecutor {
         perObjectAnimations: firstMeta?.perObjectAnimations,
         perObjectAssignments:
           mergedAssignments ?? firstMeta?.perObjectAssignments,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : firstMeta?.perObjectBatchOverrides,
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFields).length > 0
+            ? perObjectBoundFields
+            : firstMeta?.perObjectBoundFields,
       },
     );
   }

@@ -10,7 +10,6 @@ import type {
   ObjectAssignments,
 } from "@/shared/properties/assignments";
 import { NumberField } from "@/components/ui/form-fields";
-import { Button } from "@/components/ui/button";
 import { SelectionList } from "@/components/ui/selection";
 import { BindButton } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
@@ -20,6 +19,8 @@ import {
 } from "@/components/workspace/binding/badges";
 import { AssetSelectionModal } from "./media/asset-selection-modal";
 import { Image, ImageOff } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 import type { AssetResponse } from "@/shared/types/assets";
 import NextImage from "next/image";
@@ -574,6 +575,8 @@ function MediaPerObjectProperties({
     onChange({ imageAssetId: "" });
   };
 
+  // Removed UI: BatchOverridesFoldout
+
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="mb-[var(--space-3)] text-sm font-medium text-[var(--text-primary)]">
@@ -1126,13 +1129,6 @@ export function MediaEditorTab({ nodeId }: { nodeId: string }) {
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
-              </div>
-              <div className="mb-[var(--space-2)] text-lg font-medium text-[var(--text-primary)]">
-                Batch overrides are available per field and per object
-              </div>
-              <div className="max-w-sm text-sm text-[var(--text-tertiary)]">
-                Select Default or an image object on the left to edit its
-                properties.
               </div>
             </div>
           </div>

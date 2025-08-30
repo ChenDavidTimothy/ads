@@ -580,6 +580,8 @@ function TypographyPerObjectProperties({
     }
   };
 
+  // Removed UI: BatchOverridesFoldout
+
   return (
     <div className="space-y-[var(--space-4)]">
       <div className="mb-[var(--space-3)] text-sm font-medium text-[var(--text-primary)]">
@@ -607,6 +609,7 @@ function TypographyPerObjectProperties({
             disabled={isBound("content")}
             inputClassName={leftBorderClass("content")}
           />
+
           {(isOverridden("content") || isBound("content")) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
@@ -1067,13 +1070,6 @@ export function TypographyEditorTab({ nodeId }: { nodeId: string }) {
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
-              </div>
-              <div className="mb-[var(--space-2)] text-lg font-medium text-[var(--text-primary)]">
-                Batch overrides are available per field and per object
-              </div>
-              <div className="max-w-sm text-sm text-[var(--text-tertiary)]">
-                Select Default or a text object on the left to edit its
-                properties.
               </div>
             </div>
           </div>
