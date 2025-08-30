@@ -204,7 +204,6 @@ export class SmartStorageProvider implements StorageProvider {
 
   // Minimal sanitization: remove path separators and illegal filename chars
   // Keep underscores for spaces; collapse repeats
-  }
 
   async finalize(
     prepared: StoragePreparedTarget,
