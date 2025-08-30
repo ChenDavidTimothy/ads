@@ -22,6 +22,7 @@ import {
   MultipleResultValuesError,
   DuplicateNodeError,
   DuplicateCountExceededError,
+  DomainError,
 } from "@/shared/errors/domain";
 import { logger } from "@/lib/logger";
 import type { PerObjectAssignments } from "@/shared/properties/assignments";
@@ -1436,7 +1437,6 @@ export class LogicNodeExecutor extends BaseExecutor {
     connections: ReactFlowEdge[],
   ): Promise<void> {
     const data = node.data as unknown as Record<string, unknown>;
-    const keyRaw = data.key;
 
     const inputs = getConnectedInputs(
       context,
@@ -1471,27 +1471,117 @@ export class LogicNodeExecutor extends BaseExecutor {
       inputs as unknown as ExecutionValue[],
     );
 
-    // Resolve key once – v1: the same key applies to all objects passing through this node
-    const resolvedKey = typeof keyRaw === "string" ? keyRaw : "";
-    if (resolvedKey.length === 0) {
-      throw new Error(
-        `Batch key resolved empty for objects: ${inputObjectIds.join(", ")}`,
-      );
-    }
+    // Resolve bindings for per-object key evaluation (mirror Canvas/Animation executors)
+    const bindings = (data.variableBindings as
+      | Record<string, { target?: string; boundResultNodeId?: string }>
+      | undefined) ?? {};
+    const bindingsByObject = (data.variableBindingsByObject as
+      | Record<
+          string,
+          Record<string, { target?: string; boundResultNodeId?: string }>
+        >
+      | undefined) ?? {};
+    const readVarGlobal = (key: string): unknown => {
+      const rid = bindings[key]?.boundResultNodeId;
+      if (!rid) return undefined;
+      return (
+        context.nodeOutputs.get(`${rid}.output`) ??
+        context.nodeOutputs.get(`${rid}.result`)
+      )?.data;
+    };
+    const readVarForObject =
+      (objectId: string | undefined) =>
+      (key: string): unknown => {
+        if (!objectId) return readVarGlobal(key);
+        const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
+        if (rid)
+          return (
+            context.nodeOutputs.get(`${rid}.output`) ??
+            context.nodeOutputs.get(`${rid}.result`)
+          )?.data;
+        return readVarGlobal(key);
+      };
+
+    // Collect validation data
+    const emptyKeyObjectIds: string[] = [];
+    const retaggedObjects: Array<{ id: string; oldKey: string; newKey: string }> = [];
 
     const tagged: unknown[] = [];
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
         if (typeof obj === "object" && obj !== null && "id" in obj) {
+          const objectId = (obj as { id: string }).id;
+          const objWithBatch = obj as Record<string, unknown> & {
+            batch?: boolean;
+            batchKey?: string;
+          };
+
+          // Resolve key per object with precedence: per-object binding -> global binding -> literal
+          const perObjectVal = readVarForObject(objectId)("key");
+          const globalVal = readVarGlobal("key");
+          const literalVal = data.key;
+          const resolvedForObject =
+            perObjectVal ?? globalVal ?? (typeof literalVal === "string" ? literalVal : undefined);
+          const resolvedKeyForObject = String(resolvedForObject ?? "").trim();
+
+          if (resolvedKeyForObject.length === 0) {
+            emptyKeyObjectIds.push(objectId);
+          }
+
+          // Check for re-tagging warnings
+          if (objWithBatch.batch === true && objWithBatch.batchKey !== undefined) {
+            if (objWithBatch.batchKey !== resolvedKeyForObject) {
+              retaggedObjects.push({
+                id: objectId,
+                oldKey: objWithBatch.batchKey,
+                newKey: resolvedKeyForObject,
+              });
+            }
+          }
+
+          // Apply batch tagging (last-write-wins)
           tagged.push({
-            ...(obj as Record<string, unknown>),
+            ...objWithBatch,
             batch: true,
-            batchKey: resolvedKey,
+            batchKey: resolvedKeyForObject,
           });
         } else {
           tagged.push(obj);
         }
+      }
+    }
+
+    // Validate empty keys and throw error if any found
+    if (emptyKeyObjectIds.length > 0) {
+      const maxDisplay = 20;
+      const displayedIds = emptyKeyObjectIds.slice(0, maxDisplay);
+      const remainingCount = emptyKeyObjectIds.length - maxDisplay;
+      const remainingText = remainingCount > 0 ? ` …+${remainingCount} more` : "";
+      const objectIdsText = displayedIds.join(", ") + remainingText;
+      throw new DomainError(
+        `Batch node '${node.data.identifier.displayName}' received objects with empty keys: [${objectIdsText}]`,
+        "ERR_BATCH_EMPTY_KEY",
+        {
+          nodeId: node.data.identifier.id,
+          nodeName: node.data.identifier.displayName,
+          objectIds: emptyKeyObjectIds,
+        },
+      );
+    }
+
+    // Log warnings for re-tagged objects
+    if (retaggedObjects.length > 0) {
+      for (const retag of retaggedObjects) {
+        logger.warn(
+          `Batch node '${node.data.identifier.displayName}': Object ${retag.id} was already batched with key '${retag.oldKey}', re-tagged with '${retag.newKey}' (last-write-wins)`,
+          {
+            nodeId: node.data.identifier.id,
+            objectId: retag.id,
+            oldKey: retag.oldKey,
+            newKey: retag.newKey,
+          },
+        );
       }
     }
 

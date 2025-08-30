@@ -7,3 +7,7 @@
 - Scene executor: partitions by unique keys; renders each key with non-batched + matching objects; keys sorted; runtime IDs namespaced `baseId@key`.
 - Filenames: `{key}.mp4` (sanitized); storage provider supports `outputBasename` and `outputSubdir`.
 - Precedence: bindings remain authoritative; batch overrides UI deferred for v1 runtime; future-compatible.
+
+### Recent Change
+
+- Batch.key now resolves per object using binding precedence (byObject > global > literal). A single Batch node can tag many keys; no need for multiple nodes.
