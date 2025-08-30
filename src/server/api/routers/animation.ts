@@ -1108,9 +1108,14 @@ export const animationRouter = createTRPCRouter({
               if (insErr || !jobRow) continue;
 
               // Compute unique basename for image job
-              const jobShortImg = String(jobRow.id).replace(/-/g, "").slice(0, 8);
+              const jobShortImg = String(jobRow.id)
+                .replace(/-/g, "")
+                .slice(0, 8);
               const uniqueImgBasename = `${config.outputBasename}-${jobShortImg}`;
-              const uniqueImgConfig = { ...config, outputBasename: uniqueImgBasename } as const;
+              const uniqueImgConfig = {
+                ...config,
+                outputBasename: uniqueImgBasename,
+              } as const;
 
               // Persist updated payload
               await supabase

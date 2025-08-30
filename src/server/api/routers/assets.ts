@@ -286,7 +286,10 @@ export const assetsRouter = createTRPCRouter({
             try {
               const filename = asset.storage_path.split("/").pop();
               const parentDir = asset.storage_path.includes("/")
-                ? asset.storage_path.slice(0, asset.storage_path.lastIndexOf("/"))
+                ? asset.storage_path.slice(
+                    0,
+                    asset.storage_path.lastIndexOf("/"),
+                  )
                 : "";
 
               // Check existence by listing parent directory to avoid signing non-existent files
@@ -304,10 +307,22 @@ export const assetsRouter = createTRPCRouter({
               // Create a signed URL (24h)
               const { data: signedUrl } = (await supabase.storage
                 .from(asset.bucket_name)
-                .createSignedUrl(asset.storage_path, 60 * 60 * 24)) as DatabaseResponse<StorageResponse>;
+                .createSignedUrl(
+                  asset.storage_path,
+                  60 * 60 * 24,
+                )) as DatabaseResponse<StorageResponse>;
 
               return {
-                ...asset,
+                id: asset.id,
+                filename: asset.filename,
+                original_name: asset.original_name,
+                file_size: asset.file_size,
+                mime_type: asset.mime_type,
+                bucket_name: asset.bucket_name,
+                storage_path: asset.storage_path,
+                asset_type: asset.asset_type,
+                metadata: asset.metadata,
+                created_at: asset.created_at,
                 public_url: signedUrl?.signedUrl,
               } satisfies AssetResponse;
             } catch (error) {
@@ -318,8 +333,8 @@ export const assetsRouter = createTRPCRouter({
         );
 
         const assetsWithUrls: AssetResponse[] = maybeAssets.filter(
-          (a): a is AssetResponse => a !== null,
-        );
+          (a) => a !== null,
+        ) as AssetResponse[];
 
         return {
           assets: assetsWithUrls,
@@ -507,7 +522,10 @@ export const assetsRouter = createTRPCRouter({
         if (!fileSize || fileSize <= 0) {
           const { data: signed } = (await supabase.storage
             .from(bucket)
-            .createSignedUrl(filePath, 60)) as DatabaseResponse<StorageResponse>;
+            .createSignedUrl(
+              filePath,
+              60,
+            )) as DatabaseResponse<StorageResponse>;
           if (signed?.signedUrl) {
             try {
               const head = await fetch(signed.signedUrl, { method: "HEAD" });

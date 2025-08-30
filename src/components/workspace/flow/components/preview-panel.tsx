@@ -41,7 +41,11 @@ interface SaveButtonProps {
   onSaveSuccess?: () => void;
 }
 
-function SaveToAssetsButton({ renderJobId, contentName, onSaveSuccess }: SaveButtonProps) {
+function SaveToAssetsButton({
+  renderJobId,
+  contentName,
+  onSaveSuccess,
+}: SaveButtonProps) {
   const { toast } = useNotifications();
   const utils = api.useUtils();
 
