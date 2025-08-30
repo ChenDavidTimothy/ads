@@ -798,6 +798,7 @@ export const animationRouter = createTRPCRouter({
                   displayName,
                   sub.batchKey ?? undefined,
                 ),
+                // Group by node id
                 outputSubdir: sub.sceneNode.data.identifier.id,
               };
 
@@ -830,10 +831,25 @@ export const animationRouter = createTRPCRouter({
                 continue; // Skip this scene but continue with others
               }
 
+              // Compute unique basename with job short id (first 8 hex chars, no dashes)
+              const jobShort = String(jobRow.id).replace(/-/g, "").slice(0, 8);
+              const uniqueBasename = `${config.outputBasename}-${jobShort}`;
+              const uniqueConfig: SceneAnimationConfig = {
+                ...config,
+                outputBasename: uniqueBasename,
+              };
+
+              // Update the job payload to persist subdir for traceability
+              await supabase
+                .from("render_jobs")
+                .update({ payload: { scene, config: uniqueConfig } })
+                .eq("id", jobRow.id)
+                .eq("user_id", ctx.user!.id);
+
               // Enqueue the render job
               await renderQueue.enqueueOnly({
                 scene,
-                config,
+                config: uniqueConfig,
                 userId: ctx.user!.id,
                 jobId: jobRow.id as string,
               });
@@ -1079,6 +1095,7 @@ export const animationRouter = createTRPCRouter({
                   sub.sceneNode.data.identifier.displayName,
                   sub.batchKey ?? undefined,
                 ),
+                // Group by node id
                 outputSubdir: sub.sceneNode.data.identifier.id,
               } as const;
 
@@ -1090,9 +1107,21 @@ export const animationRouter = createTRPCRouter({
                 .single();
               if (insErr || !jobRow) continue;
 
+              // Compute unique basename for image job
+              const jobShortImg = String(jobRow.id).replace(/-/g, "").slice(0, 8);
+              const uniqueImgBasename = `${config.outputBasename}-${jobShortImg}`;
+              const uniqueImgConfig = { ...config, outputBasename: uniqueImgBasename } as const;
+
+              // Persist updated payload
+              await supabase
+                .from("render_jobs")
+                .update({ payload: { scene, config: uniqueImgConfig } })
+                .eq("id", jobRow.id)
+                .eq("user_id", ctx.user!.id);
+
               await imageQueue.enqueueOnly({
                 scene,
-                config: { ...config },
+                config: { ...uniqueImgConfig },
                 userId: ctx.user!.id,
                 jobId: jobRow.id as string,
               });

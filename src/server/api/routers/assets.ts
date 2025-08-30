@@ -117,11 +117,12 @@ export const assetsRouter = createTRPCRouter({
           });
         }
 
-        // Generate unique filename and storage path
+        // Generate unique filename and storage path (new format: userId/upl_<key>/filename)
         const assetId = randomUUID();
         const extension = input.filename.split(".").pop() ?? "";
         const uniqueFilename = `${assetId}.${extension}`;
-        const storagePath = `${user.id}/${uniqueFilename}`;
+        const uploadSubdir = `upl_${assetId.replace(/-/g, "")}`;
+        const storagePath = `${user.id}/${uploadSubdir}/${uniqueFilename}`;
         const bucketName = getBucketForMimeType(input.mimeType);
 
         // Create signed upload URL
@@ -279,49 +280,51 @@ export const assetsRouter = createTRPCRouter({
         // Type guard to ensure assets array contains valid data
         const typedAssets = (assets ?? []) as DatabaseUserAsset[];
 
-        // ✅ CRITICAL FIX: Generate public URLs concurrently with individual timeouts
-        const assetsWithUrls: AssetResponse[] = await Promise.all(
+        // Verify storage existence and generate URLs; filter out missing files so refresh reflects storage state
+        const maybeAssets = await Promise.all(
           typedAssets.map(async (asset: DatabaseUserAsset) => {
             try {
-              // Apply 10 second timeout to each signed URL request
-              const signedUrlPromise = supabase.storage
+              const filename = asset.storage_path.split("/").pop();
+              const parentDir = asset.storage_path.includes("/")
+                ? asset.storage_path.slice(0, asset.storage_path.lastIndexOf("/"))
+                : "";
+
+              // Check existence by listing parent directory to avoid signing non-existent files
+              const { data: entries, error: listError } = await supabase.storage
                 .from(asset.bucket_name)
-                .createSignedUrl(asset.storage_path, 60 * 60 * 24); // 24 hours
+                .list(parentDir);
 
-              const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(
-                  () => reject(new Error("Signed URL timeout")),
-                  10000,
-                );
-              });
+              if (listError || !entries || !filename) {
+                return null;
+              }
 
-              const { data: signedUrl } = (await Promise.race([
-                signedUrlPromise,
-                timeoutPromise,
-              ])) as DatabaseResponse<StorageResponse>;
+              const present = entries.some((e) => e.name === filename);
+              if (!present) return null;
+
+              // Create a signed URL (24h)
+              const { data: signedUrl } = (await supabase.storage
+                .from(asset.bucket_name)
+                .createSignedUrl(asset.storage_path, 60 * 60 * 24)) as DatabaseResponse<StorageResponse>;
 
               return {
                 ...asset,
                 public_url: signedUrl?.signedUrl,
-              };
+              } satisfies AssetResponse;
             } catch (error) {
-              // Log error but don't fail entire request
-              console.warn(
-                `Failed to generate signed URL for asset ${asset.id}:`,
-                error,
-              );
-              return {
-                ...asset,
-                public_url: undefined, // Client handles missing URLs gracefully
-              };
+              console.warn(`Asset ${asset.id} reconciliation failed:`, error);
+              return null;
             }
           }),
         );
 
+        const assetsWithUrls: AssetResponse[] = maybeAssets.filter(
+          (a): a is AssetResponse => a !== null,
+        );
+
         return {
           assets: assetsWithUrls,
-          total: count ?? 0,
-          hasMore: input.offset + input.limit < (count ?? 0),
+          total: assetsWithUrls.length,
+          hasMore: input.offset + assetsWithUrls.length < (count ?? 0),
         };
       },
     ),

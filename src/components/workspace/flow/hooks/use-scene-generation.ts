@@ -163,17 +163,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
 
-      // Handle legacy videoUrl format
-      if (
-        "videoUrl" in data &&
-        data.videoUrl &&
-        typeof data.videoUrl === "string"
-      ) {
-        setVideoUrl(data.videoUrl);
-        setIsGenerating(false);
-        toast.success("Video generated successfully!");
-        return;
-      }
+      // Legacy videoUrl format removed
 
       // Handle enhanced job response format
       if ("jobs" in data && data.jobs) {
@@ -202,50 +192,9 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
 
-      // Handle multi-scene response (legacy jobIds array)
-      if ("jobIds" in data && data.jobIds && Array.isArray(data.jobIds)) {
-        console.warn(
-          "[GENERATION] Using legacy response format - migration incomplete",
-        );
-        const sceneNodes = nodes.filter((n) => n.type === "scene");
-        const videoJobs: VideoJob[] = data.jobIds.map(
-          (jobId: string, index: number) => {
-            const sceneNode = sceneNodes[index]!;
-            const idData = sceneNode
-              ? (
-                  sceneNode.data as {
-                    identifier: { id: string; displayName: string };
-                  }
-                ).identifier
-              : { id: `legacy-${index}`, displayName: `Scene ${index + 1}` };
-            return {
-              jobId,
-              sceneName: idData.displayName,
-              sceneId: idData.id,
-              status: "pending" as const,
-              renderJobId: jobId,
-            };
-          },
-        );
+      // Legacy jobIds array removed; expect 'jobs'
 
-        setVideos(videoJobs);
-        startMultiJobPolling(data.jobIds as string[], currentAttempt);
-        return;
-      }
-
-      // Handle single scene response (legacy jobId format)
-      if ("jobId" in data && data.jobId && typeof data.jobId === "string") {
-        const jobId = data.jobId;
-        if (!jobId) {
-          setIsGenerating(false);
-          setLastError("Invalid response from server - no job ID");
-          toast.error("Generation failed", "Invalid response from server");
-          return;
-        }
-
-        startJobPolling(jobId, currentAttempt);
-        return;
-      }
+      // Legacy single jobId removed; expect 'jobs' or 'immediateResult'
 
       // No valid response format found
       setIsGenerating(false);
@@ -357,17 +306,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
 
-      // Handle legacy imageUrl format
-      if (
-        "imageUrl" in data &&
-        data.imageUrl &&
-        typeof data.imageUrl === "string"
-      ) {
-        setImageUrl(data.imageUrl);
-        setIsGeneratingImage(false);
-        toast.success("Image generated successfully!");
-        return;
-      }
+      // Legacy imageUrl format removed
       // Handle enhanced job response format
       if ("jobs" in data && data.jobs) {
         const imageJobs: ImageJob[] = data.jobs.map((job) => ({
@@ -395,38 +334,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         return;
       }
 
-      // Handle legacy jobIds array format
-      if ("jobIds" in data) {
-        console.warn(
-          "[GENERATION] Using legacy response format - migration incomplete",
-        );
-        const jobIds = (data as unknown as { jobIds?: string[] }).jobIds ?? [];
-        if (jobIds.length > 0) {
-          setImages(
-            jobIds.map((jobId, index) => {
-              const frameNode = nodes.filter((n) => n.type === "frame")[index]!;
-              const idData = frameNode
-                ? (
-                    frameNode.data as {
-                      identifier: { id: string; displayName: string };
-                    }
-                  ).identifier
-                : { id: `legacy-${index}`, displayName: `Frame ${index + 1}` };
-              return {
-                jobId,
-                frameName: idData.displayName,
-                frameId: idData.id,
-                status: "pending",
-                renderJobId: jobId,
-              };
-            }),
-          );
-          pollImages(jobIds);
-        } else {
-          setIsGeneratingImage(false);
-          setLastError("No frames could be processed");
-        }
-      }
+      // Legacy jobIds array removed; expect 'jobs' or 'immediateResult'
     },
     onError: (error) => {
       setIsGeneratingImage(false);

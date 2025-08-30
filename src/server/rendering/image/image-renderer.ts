@@ -53,7 +53,7 @@ export class ImageRenderer {
       const prepared = await this.storageProvider.prepareTarget(cfg.format, {
         basename: cfg.outputBasename,
         subdir: cfg.outputSubdir,
-        allowUpsert: true,
+        allowUpsert: false,
       });
 
       try {
