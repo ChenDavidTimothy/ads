@@ -279,16 +279,19 @@ export async function notifyRenderJobEvent(
   }
 }
 
-// Health check - verify listener connection
+// Health check - verify both listener and publisher connections
 export async function checkEventSystemHealth(): Promise<{
   listenerConnected: boolean;
+  publisherConnected: boolean;
   subscribedChannels: string[];
 }> {
   const health = {
     listenerConnected: false,
+    publisherConnected: false,
     subscribedChannels: [] as string[],
   };
 
+  // Check listener connection
   try {
     if (listenerClient && listenerConnected) {
       await listenerClient.query("SELECT 1");
@@ -297,6 +300,14 @@ export async function checkEventSystemHealth(): Promise<{
     }
   } catch {
     health.listenerConnected = false;
+  }
+
+  // Check publisher connection (via pool)
+  try {
+    await pgPool.query("SELECT 1");
+    health.publisherConnected = true;
+  } catch {
+    health.publisherConnected = false;
   }
 
   return health;

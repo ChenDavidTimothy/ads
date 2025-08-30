@@ -21,5 +21,3 @@ export const pgPool = new Pool({
 pgPool.on("error", (err) => {
   logger.errorWithStack("Unexpected PG client error in pool", err);
 });
-
-
