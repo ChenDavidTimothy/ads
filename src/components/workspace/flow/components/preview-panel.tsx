@@ -37,16 +37,11 @@ interface ImageJob {
 
 interface SaveButtonProps {
   renderJobId?: string;
-  contentUrl?: string;
   contentName: string;
   onSaveSuccess?: () => void;
 }
 
-function SaveToAssetsButton({
-  renderJobId,
-  contentName,
-  onSaveSuccess,
-}: SaveButtonProps) {
+function SaveToAssetsButton({ renderJobId, contentName, onSaveSuccess }: SaveButtonProps) {
   const { toast } = useNotifications();
   const utils = api.useUtils();
 
@@ -63,7 +58,6 @@ function SaveToAssetsButton({
     },
   });
 
-  // Find renderJobId from contentUrl if not provided directly
   const handleSave = () => {
     if (renderJobId) {
       saveToAssets.mutate({
@@ -79,7 +73,7 @@ function SaveToAssetsButton({
   return (
     <Button
       onClick={handleSave}
-      disabled={saveToAssets.isPending}
+      disabled={saveToAssets.isPending || !renderJobId}
       variant="glass"
       size="sm"
       className="text-refined flex items-center gap-[var(--space-1)]"
@@ -221,11 +215,8 @@ export function PreviewPanel({
                 Image Preview
               </div>
             </div>
-            <SaveToAssetsButton
-              contentUrl={imageUrl!}
-              contentName={`Generated_Image_${Date.now()}`}
-              renderJobId={undefined} // We'll implement this
-            />
+            {/* In single-image mode, no job object exists; hide Save (no renderJobId) */}
+            {/* The multi-image path below exposes Save with proper renderJobId */}
           </div>
           <Image
             src={imageUrl!}
@@ -315,10 +306,9 @@ export function PreviewPanel({
                   </div>
                   <div className="flex items-center gap-[var(--space-2)]">
                     {/* Save button */}
-                    {img.status === "completed" && img.imageUrl && (
+                    {img.status === "completed" && (
                       <SaveToAssetsButton
                         renderJobId={img.renderJobId}
-                        contentUrl={img.imageUrl}
                         contentName={img.frameName}
                       />
                     )}
@@ -458,10 +448,9 @@ export function PreviewPanel({
                   </div>
                   <div className="flex items-center gap-[var(--space-2)]">
                     {/* Save button */}
-                    {video.status === "completed" && video.videoUrl && (
+                    {video.status === "completed" && (
                       <SaveToAssetsButton
                         renderJobId={video.renderJobId}
-                        contentUrl={video.videoUrl}
                         contentName={video.sceneName}
                       />
                     )}

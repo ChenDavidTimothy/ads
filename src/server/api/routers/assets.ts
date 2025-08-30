@@ -472,21 +472,24 @@ export const assetsRouter = createTRPCRouter({
           });
         }
 
-        // 3. Get file metadata from storage
-        const { data: fileInfo, error: fileError } = await supabase.storage
-          .from(bucket)
-          .list(user.id, {
-            search: filePath.split("/").pop()?.split(".")[0], // Get filename without extension
-          });
+        // 3. Get file metadata from storage (list the exact parent directory)
+        const filename = filePath.split("/").pop();
+        const parentDir = filePath.includes("/")
+          ? filePath.slice(0, filePath.lastIndexOf("/"))
+          : "";
 
-        if (fileError || !fileInfo || fileInfo.length === 0) {
+        const { data: dirEntries, error: fileError } = await supabase.storage
+          .from(bucket)
+          .list(parentDir);
+
+        if (fileError || !dirEntries || dirEntries.length === 0 || !filename) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "File not found in storage",
           });
         }
 
-        const fileData = fileInfo.find((f) => filePath.endsWith(f.name)) as
+        const fileData = dirEntries.find((f) => f.name === filename) as
           | StorageFileInfo
           | undefined;
         if (!fileData) {
@@ -496,15 +499,52 @@ export const assetsRouter = createTRPCRouter({
           });
         }
 
-        // 4. Get file size for asset record
-        const fileSize = fileData.metadata?.size ?? 0;
+        // 4. Get file size for asset record (fallback to HEAD request if missing)
+        let fileSize = fileData.metadata?.size ?? 0;
+        if (!fileSize || fileSize <= 0) {
+          const { data: signed } = (await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 60)) as DatabaseResponse<StorageResponse>;
+          if (signed?.signedUrl) {
+            try {
+              const head = await fetch(signed.signedUrl, { method: "HEAD" });
+              const len = head.headers.get("content-length");
+              const parsed = len ? Number(len) : 0;
+              if (Number.isFinite(parsed) && parsed > 0) {
+                fileSize = parsed;
+              }
+            } catch {
+              // ignore; will use 0 and let DB/policy decide
+            }
+          }
+          // Ensure a positive fallback to satisfy DB constraints if necessary
+          if (!fileSize || fileSize <= 0) {
+            fileSize = 1;
+          }
+        }
 
         // 5. Generate asset details
         const assetId = randomUUID();
         const assetName =
           input.originalName ?? `Generated_${Date.now()}.${extension}`;
 
-        // 6. Create user_assets record
+        // 6. Idempotency: if asset already exists for this storage_path, return it
+        const existing = (await supabase
+          .from("user_assets")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("storage_path", filePath)
+          .limit(1)
+          .maybeSingle()) as DatabaseResponse<{ id: string }>;
+        if (existing?.data?.id) {
+          return {
+            success: true,
+            assetId: existing.data.id,
+            message: `Asset already saved as "${assetName}"`,
+          };
+        }
+
+        // 7. Create user_assets record
         const { error: insertError } = await supabase
           .from("user_assets")
           .insert({
@@ -526,13 +566,21 @@ export const assetsRouter = createTRPCRouter({
           });
 
         if (insertError) {
+          console.error("user_assets insert failed", insertError, {
+            userId: user.id,
+            assetId,
+            bucket,
+            filePath,
+            fileSize,
+            mimeType,
+          });
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to save asset record",
           });
         }
 
-        // 7. Update quota to include this asset in permanent storage
+        // 8. Update quota to include this asset in permanent storage
         // (even though file already exists, we track it as a permanent asset now)
         await updateUserQuota(supabase, user.id, fileSize, mimeType, "add");
 

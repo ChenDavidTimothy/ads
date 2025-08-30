@@ -145,6 +145,18 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
 
       // Handle immediate result (fast completion)
       if ("immediateResult" in data && data.immediateResult) {
+        const videoJob: VideoJob = {
+          jobId: data.immediateResult.jobId,
+          sceneName: buildContentBasename(
+            data.immediateResult.nodeName,
+            undefined,
+          ),
+          sceneId: data.immediateResult.nodeId,
+          status: "completed",
+          videoUrl: data.immediateResult.contentUrl,
+          renderJobId: data.immediateResult.jobId,
+        };
+        setVideos([videoJob]);
         setVideoUrl(data.immediateResult.contentUrl);
         setIsGenerating(false);
         toast.success("Video generated successfully!");
@@ -211,6 +223,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
               sceneName: idData.displayName,
               sceneId: idData.id,
               status: "pending" as const,
+              renderJobId: jobId,
             };
           },
         );
@@ -326,6 +339,18 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       }
       // Handle immediate result (fast completion)
       if ("immediateResult" in data && data.immediateResult) {
+        const job: ImageJob = {
+          jobId: data.immediateResult.jobId,
+          frameName: buildContentBasename(
+            data.immediateResult.nodeName,
+            undefined,
+          ),
+          frameId: data.immediateResult.nodeId,
+          status: "completed",
+          imageUrl: data.immediateResult.contentUrl,
+          renderJobId: data.immediateResult.jobId,
+        };
+        setImages([job]);
         setImageUrl(data.immediateResult.contentUrl);
         setIsGeneratingImage(false);
         toast.success("Image generated successfully!");
@@ -392,6 +417,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                 frameName: idData.displayName,
                 frameId: idData.id,
                 status: "pending",
+                renderJobId: jobId,
               };
             }),
           );
