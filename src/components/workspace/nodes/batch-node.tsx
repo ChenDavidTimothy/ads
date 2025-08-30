@@ -45,7 +45,9 @@ export function BatchNode({ id }: { id: string }) {
           <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
             <span role="img" aria-label="batch">🏷️</span>
           </div>
-          <span className="font-semibold text-[var(--text-primary)]">Batch</span>
+          <span className="font-semibold text-[var(--text-primary)]">
+            {node?.data?.identifier?.displayName ?? "Batch"}
+          </span>
         </div>
       </CardHeader>
 

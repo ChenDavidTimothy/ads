@@ -41,6 +41,7 @@ function getNodeShortId(nodeType: NodeType): string {
     duplicate: "dup",
     image: "img",
     media: "med",
+    batch: "bat",
   };
   return prefixes[nodeType];
 }

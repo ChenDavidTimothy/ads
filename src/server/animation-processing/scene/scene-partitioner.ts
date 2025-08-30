@@ -248,17 +248,22 @@ export function buildAnimationSceneFromPartition(
 
   let sortedObjects = partition.objects;
   if (layerOrder && layerOrder.length > 0) {
+    // Normalize IDs to be batch-agnostic: strip trailing @<batchKey> suffix if present
+    const normalizeId = (id: string): string => id.replace(/@[^@]+$/, "");
+
     const indexById = new Map<string, number>();
     for (let i = 0; i < layerOrder.length; i++) {
       const id = layerOrder[i];
-      if (id) indexById.set(id, i);
+      if (id) indexById.set(normalizeId(id), i);
     }
     // Stable sort: objects with known index ordered by index, others stay behind by original order
     sortedObjects = [...partition.objects]
       .map((obj, originalIndex) => ({ obj, originalIndex }))
       .sort((a, b) => {
-        const ia = indexById.has(a.obj.id) ? indexById.get(a.obj.id)! : -1;
-        const ib = indexById.has(b.obj.id) ? indexById.get(b.obj.id)! : -1;
+        const aId = normalizeId(a.obj.id);
+        const bId = normalizeId(b.obj.id);
+        const ia = indexById.has(aId) ? indexById.get(aId)! : -1;
+        const ib = indexById.has(bId) ? indexById.get(bId)! : -1;
         if (ia === ib) return a.originalIndex - b.originalIndex;
         // Lower index means further back; unknown (-1) sorts to back by staying earlier
         if (ia === -1) return -1;
