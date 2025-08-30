@@ -1,6 +1,6 @@
 // src/server/animation-processing/scene/scene-partitioner.ts - Multi-scene partitioning logic
 import type { NodeData, SceneAnimationTrack } from "@/shared/types";
-import type { AnimationScene, SceneObject } from "@/shared/types/scene";
+import type { AnimationScene, SceneObject, TextProperties } from "@/shared/types/scene";
 import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
 import { logger } from "@/lib/logger";
@@ -9,6 +9,8 @@ export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
   objects: SceneObject[];
   animations: SceneAnimationTrack[];
+  // Optional: per-object batch overrides collected from inputs metadata
+  batchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 export interface BatchedScenePartition extends ScenePartition {
@@ -49,6 +51,8 @@ export function partitionObjectsByScenes(
 
     // FIXED: Get animations for this scene with hybrid approach
     let sceneAnimations: SceneAnimationTrack[] = [];
+    // NEW: Collect per-object batch overrides from upstream inputs
+    const mergedBatchOverrides: Record<string, Record<string, Record<string, unknown>>> = {};
 
     // CRITICAL FIX: Prioritize metadata over global context for animation retrieval
     // Problem: Global context animations were being modified by merge nodes, affecting direct connections
@@ -71,6 +75,21 @@ export function partitionObjectsByScenes(
           if (perObjectAnimations) {
             for (const animations of Object.values(perObjectAnimations)) {
               sceneAnimations.push(...animations);
+            }
+          }
+          const perObjectBatchOverrides = (
+            sourceOutput.metadata as {
+              perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+            }
+          )?.perObjectBatchOverrides;
+          if (perObjectBatchOverrides) {
+            for (const [objectId, fields] of Object.entries(perObjectBatchOverrides)) {
+              const baseFields = mergedBatchOverrides[objectId] ?? {};
+              const mergedFields: Record<string, Record<string, unknown>> = { ...baseFields };
+              for (const [fieldId, byKey] of Object.entries(fields)) {
+                mergedFields[fieldId] = { ...(mergedFields[fieldId] ?? {}), ...byKey };
+              }
+              mergedBatchOverrides[objectId] = mergedFields;
             }
           }
         }
@@ -106,6 +125,7 @@ export function partitionObjectsByScenes(
         sceneNode,
         objects: sceneObjects,
         animations: sceneAnimations,
+        batchOverrides: Object.keys(mergedBatchOverrides).length > 0 ? mergedBatchOverrides : undefined,
       });
     }
   }
@@ -150,6 +170,7 @@ export function partitionByBatchKey(
       ...nonBatched,
       ...batched.filter((o) => String(o.batchKey) === key),
     ],
+    batchOverrides: base.batchOverrides,
   }));
 }
 

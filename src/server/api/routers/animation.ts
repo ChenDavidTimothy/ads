@@ -713,6 +713,35 @@ export const animationRouter = createTRPCRouter({
 
           for (const partition of scenePartitions) {
             const subPartitions = partitionByBatchKey(partition);
+
+            // Deterministic filename and collision detection per scene
+            const filenameMap = new Map<string, string[]>(); // filename -> original keys
+            const safeName = (key: string | null): string => {
+              if (!key) return "scene";
+              return key
+                .replace(/[\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
+                .replace(/\s+/g, "_")
+                .replace(/_+/g, "_")
+                .replace(/^_+|_+$/g, "");
+            };
+            for (const sp of subPartitions) {
+              const base = safeName(sp.batchKey);
+              const name = `${base || "scene"}.mp4`;
+              const list = filenameMap.get(name) ?? [];
+              list.push(sp.batchKey ?? "<single>");
+              filenameMap.set(name, list);
+            }
+            const collisions = Array.from(filenameMap.entries()).filter(
+              ([, keys]) => keys.length > 1,
+            );
+            if (collisions.length > 0) {
+              const detail = collisions
+                .map(([fn, keys]) => `${fn} <= [${keys.join(", ")} ]`)
+                .join("; ");
+              throw new Error(
+                `Filename collision after sanitization: ${detail}. Please choose distinct batch keys.`,
+              );
+            }
             for (const sub of subPartitions) {
               const scene: AnimationScene = buildAnimationSceneFromPartition({
                 sceneNode: sub.sceneNode,

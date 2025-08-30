@@ -30,6 +30,8 @@ describe("Batch node", () => {
     const out = ctx.nodeOutputs.get("batch1.output");
     expect(out?.type).toBe("object_stream");
     const items = out?.data as any[];
+    // No duplication
+    expect(items).toHaveLength(1);
     expect(items[0].batch).toBe(true);
     expect(items[0].batchKey).toBe("SKU123");
 
