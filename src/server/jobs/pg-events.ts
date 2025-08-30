@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { pgPool } from "@/server/db/pool";
 import { logger } from "@/lib/logger";
 
 // Event types for different notification channels
@@ -256,35 +257,13 @@ export async function waitForRenderJobEvent(params: {
   });
 }
 
-// Publisher client for sending notifications
-let publisherClient: Client | null = null;
-let publisherConnecting: Promise<void> | null = null;
-
-async function getPublisher(): Promise<Client> {
-  if (publisherClient) return publisherClient;
-  if (publisherConnecting) {
-    await publisherConnecting;
-    return publisherClient!;
-  }
-
-  publisherClient = createPgClient();
-  publisherConnecting = publisherClient.connect().then(() => {
-    logger.info("PostgreSQL event publisher connected");
-  });
-
-  await publisherConnecting;
-  publisherConnecting = null;
-  return publisherClient;
-}
-
 // Publish render job completion events
 export async function notifyRenderJobEvent(
   payload: RenderJobEventPayload,
 ): Promise<void> {
   try {
-    const client = await getPublisher();
     const text = JSON.stringify(payload);
-    await client.query("SELECT pg_notify($1, $2)", [
+    await pgPool.query("SELECT pg_notify($1, $2)", [
       RENDER_COMPLETION_CHANNEL,
       text,
     ]);
@@ -303,12 +282,10 @@ export async function notifyRenderJobEvent(
 // Health check - verify listener connection
 export async function checkEventSystemHealth(): Promise<{
   listenerConnected: boolean;
-  publisherConnected: boolean;
   subscribedChannels: string[];
 }> {
   const health = {
     listenerConnected: false,
-    publisherConnected: false,
     subscribedChannels: [] as string[],
   };
 
@@ -320,15 +297,6 @@ export async function checkEventSystemHealth(): Promise<{
     }
   } catch {
     health.listenerConnected = false;
-  }
-
-  try {
-    if (publisherClient) {
-      await publisherClient.query("SELECT 1");
-      health.publisherConnected = true;
-    }
-  } catch {
-    health.publisherConnected = false;
   }
 
   return health;
@@ -359,17 +327,6 @@ export async function shutdownPgEvents(): Promise<void> {
   } finally {
     listenerClient = null;
     listenerConnected = null;
-  }
-
-  try {
-    if (publisherClient) {
-      await publisherClient.end();
-    }
-  } catch (error) {
-    logger.errorWithStack("Error closing publisher client", error);
-  } finally {
-    publisherClient = null;
-    publisherConnecting = null;
   }
 
   logger.info("PostgreSQL event system shutdown complete");

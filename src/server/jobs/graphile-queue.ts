@@ -1,6 +1,7 @@
 // src/server/jobs/graphile-queue.ts
 import type { JobQueue } from "./queue";
-import { Client } from "pg";
+import { pgPool } from "@/server/db/pool";
+import { logger } from "@/lib/logger";
 import type { AnimationScene } from "@/shared/types/scene";
 import type { SceneAnimationConfig } from "@/server/rendering/renderer";
 
@@ -38,31 +39,29 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult>
   }
 
   async enqueueOnly(job: TJob): Promise<{ jobId: string }> {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error("DATABASE_URL is not set");
+    const maxAttempts = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? "5");
 
-    const client = new Client({ connectionString });
-    try {
-      await client.connect();
-      await client.query("select graphile_worker.add_job($1, $2, $3)", [
+    await withTransientPgRetry(async () => {
+      await pgPool.query("select graphile_worker.add_job($1, $2, $3)", [
         this.taskIdentifier,
         job,
         {
           job_key: job.jobId,
-          max_attempts: Number(process.env.RENDER_JOB_RETRY_LIMIT ?? "5"),
+          max_attempts: maxAttempts,
         },
       ]);
-      // Signal the worker to wake up immediately (in case its polling interval is long)
+    });
+
+    // Best-effort wake (Graphile Worker already listens internally)
+    void (async () => {
       try {
-        // Graphile Worker listens to its own wake notifications when a job is added;
-        // additionally, we emit an explicit wake signal on a known channel.
-        await client.query("select pg_notify('graphile_worker:jobs', '')");
-      } catch {
-        // Best-effort wake; ignore errors
+        await pgPool.query("select pg_notify('graphile_worker:jobs', '')");
+      } catch (err) {
+        logger.warn("Graphile Worker wake notify failed (best-effort)", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
-    } finally {
-      await client.end();
-    }
+    })();
 
     return { jobId: job.jobId };
   }
@@ -80,13 +79,8 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult>
     completed: number;
     failed: number;
   }> {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error("DATABASE_URL is not set");
-
-    const client = new Client({ connectionString });
-    try {
-      await client.connect();
-      const { rows } = await client.query(
+    const { rows } = await withTransientPgRetry(async () => {
+      return await pgPool.query(
         `select
            count(*) filter (where r.status in ('created','retry')) as pending,
            count(*) filter (where r.status = 'active') as active,
@@ -98,21 +92,39 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult>
          where j.task_identifier = $1`,
         [this.taskIdentifier],
       );
+    });
 
-      // Type-safe row access instead of using any
-      const row: unknown = rows[0];
-      if (!isValidQueueStatsRow(row)) {
-        return { pending: 0, active: 0, completed: 0, failed: 0 };
-      }
+    const row: unknown = rows[0];
+    if (!isValidQueueStatsRow(row)) {
+      return { pending: 0, active: 0, completed: 0, failed: 0 };
+    }
 
-      return {
-        pending: Number(row.pending ?? 0),
-        active: Number(row.active ?? 0),
-        completed: Number(row.completed ?? 0),
-        failed: Number(row.failed ?? 0),
-      };
-    } finally {
-      await client.end();
+    return {
+      pending: Number(row.pending ?? 0),
+      active: Number(row.active ?? 0),
+      completed: Number(row.completed ?? 0),
+      failed: Number(row.failed ?? 0),
+    };
+  }
+}
+
+// Minimal transient retry for connection drops; avoid for non-idempotent ops
+async function withTransientPgRetry<T>(fn: () => Promise<T>): Promise<T> {
+  const transientPatterns = [
+    /Connection terminated unexpectedly/i,
+    /ECONNRESET/i,
+    /57P01/, // admin_shutdown
+  ];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const message = String((error as Error)?.message ?? error);
+      const isTransient = transientPatterns.some((re) => re.test(message));
+      if (!isTransient || attempt === 3) throw error;
+      const backoffMs = 250 * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, backoffMs));
     }
   }
+  throw new Error("unreachable");
 }
