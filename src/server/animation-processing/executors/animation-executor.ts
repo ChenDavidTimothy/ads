@@ -34,6 +34,7 @@ import {
   pickAssignmentsForObject,
   mergePerObjectAssignments,
 } from "@/shared/properties/override-utils";
+import { resolveFieldValue, type BatchResolveContext } from "../scene/batch-overrides-resolver";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -65,6 +66,21 @@ function toDisplayString(value: unknown): string {
     return Object.prototype.toString.call(value);
   }
 }
+
+// Coercion functions following Canvas executor pattern
+const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
+  if (typeof value === "number" && Number.isFinite(value)) return { ok: true, value };
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) return { ok: true, value: parsed };
+  }
+  return { ok: false, warn: `Expected number, got ${typeof value}` };
+};
+
+const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+  if (typeof value === "string") return { ok: true, value };
+  return { ok: false, warn: `Expected string, got ${typeof value}` };
+};
 
 export class AnimationNodeExecutor extends BaseExecutor {
   // Register animation node handlers
@@ -739,6 +755,34 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return result;
     })();
 
+    // Extract bound fields for Timeline batch overrides (following Typography pattern)
+    const mergedBoundFields: Record<string, string[]> = (() => {
+      const result: Record<string, string[]> = {};
+      const globalBoundKeysTimeline = Object.keys(bindings);
+
+      for (const input of inputs) {
+        const inputData = Array.isArray(input.data) ? input.data : [input.data];
+        for (const timedObject of inputData) {
+          const objectId = (timedObject as { id?: unknown }).id as string | undefined;
+          if (objectId) {
+            const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
+
+            // Filter for Timeline-specific bound keys
+            const timelineKeys = [...globalBoundKeysTimeline, ...objectKeys].filter(key =>
+              key.startsWith("Timeline.") || key.includes("track.")
+            );
+
+            if (timelineKeys.length > 0) {
+              const existing = result[objectId] ?? [];
+              result[objectId] = Array.from(new Set([...existing, ...timelineKeys.map(String)]));
+            }
+          }
+        }
+      }
+
+      return Object.keys(result).length > 0 ? result : undefined;
+    })();
+
     // Get fallback metadata from first input (like canvas executor does)
     const firstInputMeta = inputs[0]?.metadata as
       | {
@@ -917,8 +961,20 @@ export class AnimationNodeExecutor extends BaseExecutor {
           return { [objectId]: next } as PerObjectAssignments;
         })();
 
+        // Apply Timeline batch overrides to tracks before converting to scene animations
+        const batchOverrideAppliedTracks = objectId
+          ? this.applyTimelineBatchOverridesToTracks(
+              resolvedForObject,
+              objectId,
+              mergedBatchOverrides,
+              mergedBoundFields,
+              // Batch key resolution will happen at scene partition level
+              null
+            )
+          : resolvedForObject;
+
         const animations = convertTracksToSceneAnimations(
-          resolvedForObject,
+          batchOverrideAppliedTracks,
           objectId ?? "",
           baseline,
           priorForObject,
@@ -961,8 +1017,174 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectAssignments: mergedAssignments ?? firstInputMeta?.perObjectAssignments,
         perObjectBatchOverrides:
           mergedBatchOverrides ?? firstInputMeta?.perObjectBatchOverrides,
+        perObjectBoundFields:
+          mergedBoundFields ?? firstInputMeta?.perObjectBoundFields,
       },
     );
+  }
+
+  /**
+   * Apply Timeline-specific batch overrides to animation tracks.
+   * Follows the same pattern as Canvas/Typography batch override application.
+   */
+  private applyTimelineBatchOverridesToTracks(
+    tracks: AnimationTrack[],
+    objectId: string,
+    batchOverrides?: Record<string, Record<string, Record<string, unknown>>>,
+    boundFields?: Record<string, string[]>,
+    batchKey?: string | null
+  ): AnimationTrack[] {
+    if (!batchOverrides?.[objectId]) return tracks;
+
+    const ctx: BatchResolveContext = {
+      batchKey: batchKey ?? null,
+      perObjectBatchOverrides: batchOverrides,
+      perObjectBoundFields: boundFields,
+    };
+
+    return tracks.map(track => {
+      const properties = track.properties as unknown as Record<string, unknown>;
+      const updatedProperties = { ...properties };
+
+      // Apply Timeline batch overrides per track type
+      switch (track.type) {
+        case "move": {
+          const moveProps = updatedProperties as { from?: { x: number; y: number }; to?: { x: number; y: number } };
+
+          if (moveProps.from) {
+            moveProps.from.x = resolveFieldValue(
+              objectId,
+              "Timeline.move.from.x",
+              moveProps.from.x,
+              ctx,
+              numberCoerce
+            );
+            moveProps.from.y = resolveFieldValue(
+              objectId,
+              "Timeline.move.from.y",
+              moveProps.from.y,
+              ctx,
+              numberCoerce
+            );
+          }
+
+          if (moveProps.to) {
+            moveProps.to.x = resolveFieldValue(
+              objectId,
+              "Timeline.move.to.x",
+              moveProps.to.x,
+              ctx,
+              numberCoerce
+            );
+            moveProps.to.y = resolveFieldValue(
+              objectId,
+              "Timeline.move.to.y",
+              moveProps.to.y,
+              ctx,
+              numberCoerce
+            );
+          }
+          break;
+        }
+
+        case "rotate": {
+          const rotateProps = updatedProperties as { from?: number; to?: number };
+          if (typeof rotateProps.from === "number") {
+            rotateProps.from = resolveFieldValue(
+              objectId,
+              "Timeline.rotate.from",
+              rotateProps.from,
+              ctx,
+              numberCoerce
+            );
+          }
+          if (typeof rotateProps.to === "number") {
+            rotateProps.to = resolveFieldValue(
+              objectId,
+              "Timeline.rotate.to",
+              rotateProps.to,
+              ctx,
+              numberCoerce
+            );
+          }
+          break;
+        }
+
+        case "scale": {
+          const scaleProps = updatedProperties as { from?: number; to?: number };
+          if (typeof scaleProps.from === "number") {
+            scaleProps.from = resolveFieldValue(
+              objectId,
+              "Timeline.scale.from",
+              scaleProps.from,
+              ctx,
+              numberCoerce
+            );
+          }
+          if (typeof scaleProps.to === "number") {
+            scaleProps.to = resolveFieldValue(
+              objectId,
+              "Timeline.scale.to",
+              scaleProps.to,
+              ctx,
+              numberCoerce
+            );
+          }
+          break;
+        }
+
+        case "fade": {
+          const fadeProps = updatedProperties as { from?: number; to?: number };
+          if (typeof fadeProps.from === "number") {
+            fadeProps.from = resolveFieldValue(
+              objectId,
+              "Timeline.fade.from",
+              fadeProps.from,
+              ctx,
+              numberCoerce
+            );
+          }
+          if (typeof fadeProps.to === "number") {
+            fadeProps.to = resolveFieldValue(
+              objectId,
+              "Timeline.fade.to",
+              fadeProps.to,
+              ctx,
+              numberCoerce
+            );
+          }
+          break;
+        }
+
+        case "color": {
+          const colorProps = updatedProperties as { from?: string; to?: string };
+          if (typeof colorProps.from === "string") {
+            colorProps.from = resolveFieldValue(
+              objectId,
+              "Timeline.color.from",
+              colorProps.from,
+              ctx,
+              stringCoerce
+            );
+          }
+          if (typeof colorProps.to === "string") {
+            colorProps.to = resolveFieldValue(
+              objectId,
+              "Timeline.color.to",
+              colorProps.to,
+              ctx,
+              stringCoerce
+            );
+          }
+          break;
+        }
+      }
+
+      return {
+        ...track,
+        properties: updatedProperties as typeof track.properties
+      };
+    });
   }
 
   private clonePerObjectAnimations(
