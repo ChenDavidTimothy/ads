@@ -1660,16 +1660,23 @@ export class LogicNodeExecutor extends BaseExecutor {
             emptyKeyObjectIds.push(objectId);
           }
 
-          // Check for re-tagging
-          const alreadyTagged =
-            objWithBatch.batch === true &&
-            (objWithBatch as { batchKeys?: string[] }).batchKeys !== undefined;
+          // Check for re-tagging (support legacy batchKey and new batchKeys)
+          const legacyBatchKey = (objWithBatch as { batchKey?: unknown }).batchKey;
+          const prevKeys = (() => {
+            const arr = (objWithBatch as { batchKeys?: unknown }).batchKeys;
+            if (Array.isArray(arr)) return arr as string[];
+            if (
+              typeof legacyBatchKey === "string" ||
+              typeof legacyBatchKey === "number" ||
+              typeof legacyBatchKey === "boolean"
+            ) {
+              const s = String(legacyBatchKey).trim();
+              return s.length > 0 ? [s] : [];
+            }
+            return [] as string[];
+          })();
+          const alreadyTagged = objWithBatch.batch === true && prevKeys.length > 0;
           if (alreadyTagged) {
-            const prevKeys = Array.isArray(
-              (objWithBatch as { batchKeys?: string[] }).batchKeys,
-            )
-              ? (objWithBatch as { batchKeys?: string[] }).batchKeys!
-              : [];
             const same =
               prevKeys.length === resolvedKeys.length &&
               prevKeys.every((k) => resolvedKeys.includes(k));
@@ -1687,12 +1694,16 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
           }
 
-          // Apply batch tagging; emit batchKeys only (legacy batchKey removed)
-          tagged.push({
+          // Apply batch tagging; emit batchKeys and legacy batchKey (for single-key compatibility)
+          const outTagged = {
             ...objWithBatch,
             batch: true,
             batchKeys: resolvedKeys,
-          });
+          } as Record<string, unknown>;
+          if (resolvedKeys.length === 1) {
+            outTagged.batchKey = resolvedKeys[0];
+          }
+          tagged.push(outTagged);
         } else {
           tagged.push(obj);
         }
