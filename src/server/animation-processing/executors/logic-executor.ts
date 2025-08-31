@@ -1617,7 +1617,7 @@ export class LogicNodeExecutor extends BaseExecutor {
           const objectId = (obj as { id: string }).id;
           const objWithBatch = obj as Record<string, unknown> & {
             batch?: boolean;
-            batchKey?: string;
+            batchKeys?: string[];
           };
 
           // Resolve key(s) per object with precedence: per-object binding -> global binding -> literal
@@ -1656,13 +1656,11 @@ export class LogicNodeExecutor extends BaseExecutor {
           }
 
           // Check for re-tagging
-          const alreadyTagged = objWithBatch.batch === true && (objWithBatch.batchKey !== undefined || (objWithBatch as { batchKeys?: string[] }).batchKeys);
+          const alreadyTagged = objWithBatch.batch === true && (objWithBatch as { batchKeys?: string[] }).batchKeys !== undefined;
           if (alreadyTagged) {
             const prevKeys = Array.isArray((objWithBatch as { batchKeys?: string[] }).batchKeys)
               ? ((objWithBatch as { batchKeys?: string[] }).batchKeys as string[])
-              : typeof objWithBatch.batchKey === "string"
-                ? [objWithBatch.batchKey]
-                : [];
+              : [];
             const same = prevKeys.length === resolvedKeys.length && prevKeys.every((k) => resolvedKeys.includes(k));
             if (!same) {
               // Enforce strict error: no retagging allowed
@@ -1678,12 +1676,10 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
           }
 
-          // Apply batch tagging; emit both batchKeys and legacy batchKey for BC
-          const first = resolvedKeys[0] ?? "";
+          // Apply batch tagging; emit batchKeys only (legacy batchKey removed)
           tagged.push({
             ...objWithBatch,
             batch: true,
-            batchKey: first,
             batchKeys: resolvedKeys,
           });
         } else {

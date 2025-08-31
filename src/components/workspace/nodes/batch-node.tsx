@@ -16,11 +16,9 @@ export function BatchNode({ id }: { id: string }) {
   const nodeId = node?.data?.identifier?.id ?? id;
 
   const data = (node?.data ?? {}) as unknown as Record<string, unknown> & {
-    key?: string;
     keys?: string[];
     variableBindings?: Record<string, { boundResultNodeId?: string }>;
   };
-  const keyVal = typeof data.key === "string" ? data.key : "";
   const keys = Array.isArray(data.keys)
     ? (data.keys as unknown[]).filter((k) => typeof k === "string")
     : [];
