@@ -1,10 +1,22 @@
 // src/shared/utils/naming.ts
 
 /**
- * Sanitize a string for safe filename usage across platforms.
- * - Replaces illegal characters with '-'
- * - Collapses whitespace to '-'
- * - Collapses repeated '-' and trims from ends
+ * SINGLE SOURCE OF TRUTH for filename sanitization across the entire application.
+ *
+ * This module provides consistent filename sanitization to prevent:
+ * - Filesystem security issues (null bytes, control characters)
+ * - Cross-platform compatibility problems
+ * - Filename collision detection failures
+ * - Data loss from file overwrites
+ *
+ * IMPORTANT: All filename sanitization in the application MUST use these functions.
+ * Do NOT create new sanitization logic elsewhere - always import and use these functions.
+ *
+ * Security considerations:
+ * - Handles null bytes (\0) and control characters (\n\r\t\f\v) that could cause filesystem issues
+ * - Prevents directory traversal attacks
+ * - Ensures cross-platform compatibility (Windows, Linux, macOS)
+ * - Prevents filename collisions that could lead to data loss
  */
 export function sanitizeForFilename(input: string): string {
   return input

@@ -2,6 +2,7 @@
 import path from "path";
 import fs from "fs";
 import type { StorageProvider, StoragePreparedTarget } from "./provider";
+import { sanitizeForFilename } from "@/shared/utils/naming";
 
 function generateUniqueName(prefix: string, extension: string): string {
   const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -48,10 +49,6 @@ export class LocalPublicStorageProvider implements StorageProvider {
 
 function sanitizeBasename(input?: string): string | undefined {
   if (!input) return undefined;
-  const replaced = input
-    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  const replaced = sanitizeForFilename(input);
   return replaced.length > 0 ? replaced : undefined;
 }

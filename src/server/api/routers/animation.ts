@@ -34,7 +34,7 @@ import {
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
 import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
-import { buildContentBasename } from "@/shared/utils/naming";
+import { buildContentBasename, sanitizeForFilename } from "@/shared/utils/naming";
 
 // Helper: namespace object and animation IDs deterministically for batch key
 function namespaceObjectsForBatch(
@@ -734,16 +734,8 @@ export const animationRouter = createTRPCRouter({
 
             // Deterministic filename and collision detection per scene
             const filenameMap = new Map<string, string[]>(); // filename -> original keys
-            const safeName = (key: string | null): string => {
-              if (!key) return "scene";
-              return key
-                .replace(/[\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
-                .replace(/\s+/g, "_")
-                .replace(/_+/g, "_")
-                .replace(/^_+|_+$/g, "");
-            };
             for (const sp of subPartitions) {
-              const base = safeName(sp.batchKey);
+              const base = sp.batchKey ? sanitizeForFilename(sp.batchKey) : "";
               const name = `${base || "scene"}.mp4`;
               const list = filenameMap.get(name) ?? [];
               list.push(sp.batchKey ?? "<single>");

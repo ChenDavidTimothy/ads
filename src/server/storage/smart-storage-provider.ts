@@ -17,6 +17,7 @@ import type {
   SupportedImageExtension,
   SupportedVideoExtension,
 } from "./config";
+import { sanitizeForFilename } from "@/shared/utils/naming";
 
 export class SmartStorageProvider implements StorageProvider {
   private readonly userId: string | undefined;
@@ -871,11 +872,7 @@ export class SmartStorageProvider implements StorageProvider {
 // Filename sanitization helpers
 function sanitizeBasename(input?: string): string | undefined {
   if (!input) return undefined;
-  const replaced = input
-    .replace(/[\\/\0\n\r\t\f\v:*?"<>|]/g, "_")
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  const replaced = sanitizeForFilename(input);
   return replaced.length > 0 ? replaced : undefined;
 }
 
