@@ -62,6 +62,22 @@ function namespaceAnimationsForBatch(
   }));
 }
 
+// Helper: namespace batch overrides to match namespaced object IDs
+function namespaceBatchOverridesForBatch(
+  batchOverrides: Record<string, Record<string, Record<string, unknown>>> | undefined,
+  batchKey: string | null,
+): Record<string, Record<string, Record<string, unknown>>> | undefined {
+  if (!batchKey || !batchOverrides) return batchOverrides;
+  const suffix = `@${batchKey}`;
+  const namespaced: Record<string, Record<string, Record<string, unknown>>> = {};
+
+  for (const [objectId, fieldOverrides] of Object.entries(batchOverrides)) {
+    namespaced[`${objectId}${suffix}`] = fieldOverrides;
+  }
+
+  return namespaced;
+}
+
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 // Type for backend nodes after processing
@@ -774,7 +790,10 @@ export const animationRouter = createTRPCRouter({
                   sub.animations,
                   sub.batchKey,
                 ),
-                batchOverrides: partition.batchOverrides,
+                batchOverrides: namespaceBatchOverridesForBatch(
+                  partition.batchOverrides,
+                  sub.batchKey,
+                ),
               });
               const sceneData = sub.sceneNode.data as SceneNodeData;
               const displayName = sub.sceneNode.data.identifier.displayName;

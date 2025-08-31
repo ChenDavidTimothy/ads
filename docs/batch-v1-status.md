@@ -137,12 +137,10 @@ setNodeOutput(context, node.data.identifier.id, "output", "object_stream", filte
 // applyOverridesToObject with { batchKey, perObjectBatchOverrides, perObjectBoundFields }
 ```
 
-### 2.5 Editor UI state — PASS
-- Batch overrides UI flag remains off by default
-```3:7:src/shared/feature-flags.ts
-export const features = { batchOverridesUI: false } as const;
-```
+### 2.5 Editor UI state — PARTIAL
+- Batch overrides UI not implemented in property panels
 - Batch Keys modal on the Batch node provides Add/Remove (no bulk), autosave, and double-click to open. Right sidebar shows a hint only.
+- **Status**: Backend batch resolution works, but no editor UI for per-field batch overrides
 
 ### 2.6 Developer API for overrides — ❌ NOT IMPLEMENTED
 - **Status**: No programmatic API exists for external override management
@@ -166,4 +164,3 @@ export const features = { batchOverridesUI: false } as const;
 - Media/Typography executor: `src/server/animation-processing/executors/animation-executor.ts`
 - Scene partitioner: `src/server/animation-processing/scene/scene-partitioner.ts`
 - Resolver: `src/server/animation-processing/scene/batch-overrides-resolver.ts`
-- Feature flags: `src/shared/feature-flags.ts` — `batchOverridesUI`

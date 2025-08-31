@@ -227,5 +227,9 @@ export function applyOverridesToObject(
     }
   }
 
+  // Timeline animation tracks - these are handled differently
+  // The animation executor should apply track-specific batch overrides
+  // But we don't need to resolve them here as they're applied during animation processing
+
   return next;
 }

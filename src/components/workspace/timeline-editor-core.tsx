@@ -41,6 +41,8 @@ import {
   useVariableBinding,
 } from "@/components/workspace/binding/bindings";
 import { Badge } from "@/components/ui/badge";
+import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
+import { getResolverFieldPath } from "@/shared/properties/field-paths";
 
 function BindingBadge({
   nodeId,
@@ -798,13 +800,36 @@ export function TrackProperties({
   const { state } = useWorkspace();
 
   const bindButton = (fieldKey: string) => {
-    // Prefer track-specific key when a track is selected
-    const specific = `track.${track.identifier.id}.${fieldKey}`;
+    // Use the field path for batch controls
+    const fieldPath = getResolverFieldPath("timeline", fieldKey);
+    if (!fieldPath) {
+      // Fallback to old binding system if no field path mapping
+      const specific = `track.${track.identifier.id}.${fieldKey}`;
+      return (
+        <BindButton
+          nodeId={animationNodeId}
+          bindingKey={specific}
+          objectId={selectedObjectId}
+        />
+      );
+    }
+
+    // Determine value type based on field
+    const valueType: "number" | "string" = fieldKey.includes("color") ? "string" : "number";
+
     return (
-      <BindButton
-        nodeId={animationNodeId}
-        bindingKey={specific}
-        objectId={selectedObjectId}
+      <BindingAndBatchControls
+        bindProps={{
+          nodeId: animationNodeId,
+          bindingKey: `track.${track.identifier.id}.${fieldKey}`,
+          objectId: selectedObjectId
+        }}
+        batchProps={{
+          nodeId: animationNodeId,
+          fieldPath,
+          objectId: selectedObjectId,
+          valueType,
+        }}
       />
     );
   };

@@ -18,6 +18,9 @@ import {
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
 import { OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
+// Batch overrides: only used in per-object panel
+import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
+import { getResolverFieldPath } from "@/shared/properties/field-paths";
 
 function CanvasBindingBadge({
   nodeId,
@@ -389,7 +392,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             }
             defaultValue={0}
             bindAdornment={
-              <BindButton nodeId={nodeId} bindingKey="position.x" />
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "position.x" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "position.x")!,
+                  valueType: "number",
+                }}
+              />
             }
             disabled={isBound("position.x")}
             inputClassName={leftBorderClass("position.x")}
@@ -430,7 +440,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             }
             defaultValue={0}
             bindAdornment={
-              <BindButton nodeId={nodeId} bindingKey="position.y" />
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "position.y" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "position.y")!,
+                  valueType: "number",
+                }}
+              />
             }
             disabled={isBound("position.y")}
             inputClassName={leftBorderClass("position.y")}
@@ -471,7 +488,16 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             defaultValue={1}
             min={0}
             step={0.1}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.x" />}
+            bindAdornment={
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "scale.x" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "scale.x")!,
+                  valueType: "number",
+                }}
+              />
+            }
             disabled={isBound("scale.x")}
             inputClassName={leftBorderClass("scale.x")}
           />
@@ -509,7 +535,16 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             defaultValue={1}
             min={0}
             step={0.1}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="scale.y" />}
+            bindAdornment={
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "scale.y" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "scale.y")!,
+                  valueType: "number",
+                }}
+              />
+            }
             disabled={isBound("scale.y")}
             inputClassName={leftBorderClass("scale.y")}
           />
@@ -542,7 +577,16 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             }
             step={0.1}
             defaultValue={0}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="rotation" />}
+            bindAdornment={
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "rotation" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "rotation")!,
+                  valueType: "number",
+                }}
+              />
+            }
             disabled={isBound("rotation")}
             inputClassName={leftBorderClass("rotation")}
           />
@@ -575,7 +619,16 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             max={1}
             step={0.05}
             defaultValue={1}
-            bindAdornment={<BindButton nodeId={nodeId} bindingKey="opacity" />}
+            bindAdornment={
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "opacity" }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "opacity")!,
+                  valueType: "number",
+                }}
+              />
+            }
             disabled={isBound("opacity")}
             inputClassName={leftBorderClass("opacity")}
           />
@@ -607,7 +660,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                   })
                 }
                 bindAdornment={
-                  <BindButton nodeId={nodeId} bindingKey="fillColor" />
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "fillColor" }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "fillColor")!,
+                      valueType: "string",
+                    }}
+                  />
                 }
                 disabled={isBound("fillColor")}
                 inputClassName={leftBorderClass("fillColor")}
@@ -635,7 +695,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                   })
                 }
                 bindAdornment={
-                  <BindButton nodeId={nodeId} bindingKey="strokeColor" />
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "strokeColor" }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "strokeColor")!,
+                      valueType: "string",
+                    }}
+                  />
                 }
                 disabled={isBound("strokeColor")}
                 inputClassName={leftBorderClass("strokeColor")}
@@ -666,7 +733,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                 step={0.5}
                 defaultValue={1}
                 bindAdornment={
-                  <BindButton nodeId={nodeId} bindingKey="strokeWidth" />
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "strokeWidth" }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "strokeWidth")!,
+                      valueType: "number",
+                    }}
+                  />
                 }
                 disabled={isBound("strokeWidth")}
                 inputClassName={leftBorderClass("strokeWidth")}
@@ -895,10 +969,14 @@ function CanvasPerObjectProperties({
             onChange={(x) => onChange({ position: { x } })}
             defaultValue={0}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="position.x"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "position.x", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "position.x")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("position.x")}
@@ -936,10 +1014,14 @@ function CanvasPerObjectProperties({
             onChange={(y) => onChange({ position: { y } })}
             defaultValue={0}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="position.y"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "position.y", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "position.y")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("position.y")}
@@ -982,10 +1064,14 @@ function CanvasPerObjectProperties({
             min={0}
             step={0.1}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="scale.x"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "scale.x", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "scale.x")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("scale.x")}
@@ -1025,10 +1111,14 @@ function CanvasPerObjectProperties({
             min={0}
             step={0.1}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="scale.y"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "scale.y", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "scale.y")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("scale.y")}
@@ -1070,10 +1160,14 @@ function CanvasPerObjectProperties({
             step={0.1}
             defaultValue={0}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="rotation"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "rotation", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "rotation")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("rotation")}
@@ -1114,10 +1208,14 @@ function CanvasPerObjectProperties({
             step={0.05}
             defaultValue={1}
             bindAdornment={
-              <BindButton
-                nodeId={nodeId}
-                bindingKey="opacity"
-                objectId={objectId}
+              <BindingAndBatchControls
+                bindProps={{ nodeId, bindingKey: "opacity", objectId }}
+                batchProps={{
+                  nodeId,
+                  fieldPath: getResolverFieldPath("canvas", "opacity")!,
+                  objectId,
+                  valueType: "number",
+                }}
               />
             }
             disabled={isBound("opacity")}
@@ -1157,10 +1255,14 @@ function CanvasPerObjectProperties({
                 value={getStringValue("fillColor", "")}
                 onChange={(fillColor) => onChange({ fillColor })}
                 bindAdornment={
-                  <BindButton
-                    nodeId={nodeId}
-                    bindingKey="fillColor"
-                    objectId={objectId}
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "fillColor", objectId }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "fillColor")!,
+                      objectId,
+                      valueType: "string",
+                    }}
                   />
                 }
                 disabled={isBound("fillColor")}
@@ -1194,10 +1296,14 @@ function CanvasPerObjectProperties({
                 value={getStringValue("strokeColor", "")}
                 onChange={(strokeColor) => onChange({ strokeColor })}
                 bindAdornment={
-                  <BindButton
-                    nodeId={nodeId}
-                    bindingKey="strokeColor"
-                    objectId={objectId}
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "strokeColor", objectId }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "strokeColor")!,
+                      objectId,
+                      valueType: "string",
+                    }}
                   />
                 }
                 disabled={isBound("strokeColor")}
@@ -1234,10 +1340,14 @@ function CanvasPerObjectProperties({
                 step={0.5}
                 defaultValue={1}
                 bindAdornment={
-                  <BindButton
-                    nodeId={nodeId}
-                    bindingKey="strokeWidth"
-                    objectId={objectId}
+                  <BindingAndBatchControls
+                    bindProps={{ nodeId, bindingKey: "strokeWidth", objectId }}
+                    batchProps={{
+                      nodeId,
+                      fieldPath: getResolverFieldPath("canvas", "strokeWidth")!,
+                      objectId,
+                      valueType: "number",
+                    }}
                   />
                 }
                 disabled={isBound("strokeWidth")}

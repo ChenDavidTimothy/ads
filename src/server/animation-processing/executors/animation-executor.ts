@@ -1240,7 +1240,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Typography scope)
+    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Animation scope)
     const batchOverridesByField =
       (
         data as unknown as {
@@ -1294,18 +1294,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
       node.data.identifier.id,
       "output",
       "object_stream",
-      processedObjects,
+      passThoughObjects,
       {
-        perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
-        perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
+        perObjectTimeCursor: outputCursorMap,
+        perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
         perObjectAssignments: mergedAssignments,
         perObjectBatchOverrides:
           Object.keys(emittedPerObjectBatchOverrides).length > 0
             ? emittedPerObjectBatchOverrides
-            : undefined,
-        perObjectBoundFields:
-          Object.keys(perObjectBoundFieldsTypo).length > 0
-            ? perObjectBoundFieldsTypo
             : undefined,
       },
     );

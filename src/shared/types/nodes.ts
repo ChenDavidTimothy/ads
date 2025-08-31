@@ -374,6 +374,11 @@ export interface MediaNodeData extends BaseNodeData {
     Record<string, { target?: string; boundResultNodeId?: string }>
   >;
   perObjectAssignments?: PerObjectAssignments;
+  // Batch overrides: field -> objectId -> batchKey -> value
+  batchOverridesByField?: Record<
+    string,
+    Record<string, Record<string, unknown>>
+  >;
 }
 
 // Union type for all node data

@@ -12,6 +12,8 @@ import type {
 import { NumberField } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
 import { BindButton } from "@/components/workspace/binding/bindings";
+import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
+import { getResolverFieldPath } from "@/shared/properties/field-paths";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import {
   BindingBadge,
@@ -144,10 +146,15 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
         {/* Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">
-              Image Asset
-            </label>
-            <BindButton nodeId={nodeId} bindingKey="imageAssetId" />
+            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
+            <BindingAndBatchControls
+              bindProps={{ nodeId, bindingKey: "imageAssetId" }}
+              batchProps={{
+                nodeId,
+                fieldPath: getResolverFieldPath("media", "imageAssetId")!,
+                valueType: "string",
+              }}
+            />
           </div>
 
           {/* Current Asset Display */}
@@ -269,7 +276,16 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                 })
               }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropX" />}
+              bindAdornment={
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropX" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropX")!,
+                    valueType: "number",
+                  }}
+                />
+              }
               disabled={isBound("cropX")}
               inputClassName={leftBorderClass("cropX")}
             />
@@ -296,7 +312,16 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                 })
               }
               min={0}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="cropY" />}
+              bindAdornment={
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropY" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropY")!,
+                    valueType: "number",
+                  }}
+                />
+              }
               disabled={isBound("cropY")}
               inputClassName={leftBorderClass("cropY")}
             />
@@ -328,7 +353,14 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               }
               min={0}
               bindAdornment={
-                <BindButton nodeId={nodeId} bindingKey="cropWidth" />
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropWidth" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropWidth")!,
+                    valueType: "number",
+                  }}
+                />
               }
               disabled={isBound("cropWidth")}
               inputClassName={leftBorderClass("cropWidth")}
@@ -357,7 +389,14 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               }
               min={0}
               bindAdornment={
-                <BindButton nodeId={nodeId} bindingKey="cropHeight" />
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropHeight" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropHeight")!,
+                    valueType: "number",
+                  }}
+                />
               }
               disabled={isBound("cropHeight")}
               inputClassName={leftBorderClass("cropHeight")}
@@ -397,7 +436,14 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               }
               min={0}
               bindAdornment={
-                <BindButton nodeId={nodeId} bindingKey="displayWidth" />
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "displayWidth" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "displayWidth")!,
+                    valueType: "number",
+                  }}
+                />
               }
               disabled={isBound("displayWidth")}
               inputClassName={leftBorderClass("displayWidth")}
@@ -426,7 +472,14 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               }
               min={0}
               bindAdornment={
-                <BindButton nodeId={nodeId} bindingKey="displayHeight" />
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "displayHeight" }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "displayHeight")!,
+                    valueType: "number",
+                  }}
+                />
               }
               disabled={isBound("displayHeight")}
               inputClassName={leftBorderClass("displayHeight")}
@@ -592,13 +645,15 @@ function MediaPerObjectProperties({
         {/* Per-Object Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">
-              Image Asset
-            </label>
-            <BindButton
-              nodeId={nodeId}
-              bindingKey="imageAssetId"
-              objectId={objectId}
+            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
+            <BindingAndBatchControls
+              bindProps={{ nodeId, bindingKey: "imageAssetId", objectId }}
+              batchProps={{
+                nodeId,
+                fieldPath: getResolverFieldPath("media", "imageAssetId")!,
+                objectId,
+                valueType: "string",
+              }}
             />
           </div>
 
@@ -726,10 +781,14 @@ function MediaPerObjectProperties({
               onChange={(cropX) => onChange({ cropX })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="cropX"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropX", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropX")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("cropX")}
@@ -765,10 +824,14 @@ function MediaPerObjectProperties({
               onChange={(cropY) => onChange({ cropY })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="cropY"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropY", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropY")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("cropY")}
@@ -806,10 +869,14 @@ function MediaPerObjectProperties({
               onChange={(cropWidth) => onChange({ cropWidth })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="cropWidth"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropWidth", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropWidth")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("cropWidth")}
@@ -845,10 +912,14 @@ function MediaPerObjectProperties({
               onChange={(cropHeight) => onChange({ cropHeight })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="cropHeight"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "cropHeight", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "cropHeight")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("cropHeight")}
@@ -893,10 +964,14 @@ function MediaPerObjectProperties({
               onChange={(displayWidth) => onChange({ displayWidth })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="displayWidth"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "displayWidth", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "displayWidth")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("displayWidth")}
@@ -932,10 +1007,14 @@ function MediaPerObjectProperties({
               onChange={(displayHeight) => onChange({ displayHeight })}
               min={0}
               bindAdornment={
-                <BindButton
-                  nodeId={nodeId}
-                  bindingKey="displayHeight"
-                  objectId={objectId}
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "displayHeight", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("media", "displayHeight")!,
+                    objectId,
+                    valueType: "number",
+                  }}
                 />
               }
               disabled={isBound("displayHeight")}

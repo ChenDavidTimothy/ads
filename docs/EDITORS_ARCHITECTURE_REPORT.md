@@ -31,19 +31,17 @@
    - [Editor Integration](#editor-integration)
    - [Object Reachability](#object-reachability)
 
-6. [Feature Flags](#feature-flags)
-
-7. [Persistence/Serialization](#persistenceserialization)
+6. [Persistence/Serialization](#persistenceserialization)
    - [Node Data Storage](#node-data-storage)
    - [Workspace Serialization](#workspace-serialization)
    - [Migration Points](#migration-points)
 
-8. [Scene/Render Interaction](#scenerender-interaction)
+7. [Scene/Render Interaction](#scenerender-interaction)
    - [Data Collection](#data-collection)
    - [Scene Assembly](#scene-assembly)
    - [Render Pipeline](#render-pipeline)
 
-9. [Mount Points and Risks](#mount-points-and-risks)
+8. [Mount Points and Risks](#mount-points-and-risks)
    - [Typography Editor](#typography-editor-1)
    - [Canvas Editor](#canvas-editor-1)
    - [Media Editor](#media-editor-1)
@@ -535,23 +533,6 @@ const upstreamObjects = useMemo(() => {
 }, [nodeId, state.flow.nodes, state.flow.edges]);
 ```
 
-## Feature Flags
-
-**Editor-Related Flags:**
-```typescript
-// src/shared/feature-flags.ts
-export const features = {
-  // Batch overrides editor UI foldouts (Canvas/Typography/Media)
-  // Disabled by default; backend functionality remains enabled.
-  batchOverridesUI: false,
-} as const;
-```
-
-**Usage Sites:**
-- Not currently used in codebase (flag is false)
-- Intended to control batch overrides UI in editors
-- Backend batch resolution works regardless of flag
-
 ## Persistence/Serialization
 
 ### Node Data Storage
@@ -816,7 +797,6 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 1. **Timeline Editor Complexity:** Separate state management requires careful integration
 2. **Deep Merge Conflicts:** Animation track property merging needs verification
 3. **Migration Strategy:** Adding batchOverridesByField requires migration planning
-4. **Feature Flag Usage:** Current batchOverridesUI flag is unused - verify intended behavior
 
 ### Success Criteria
 
