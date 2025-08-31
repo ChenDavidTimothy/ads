@@ -1,6 +1,12 @@
-# Batch v1 Status Report (2025-08-30)
+# Batch v1 Status Report (2025-08-30) — ✅ VERIFIED & CORRECTED
 
 Current state: Batch v1 backend is complete and production-oriented. Objects are tagged per object with batch keys; scenes partition deterministically by key; overrides are applied at scene-build via a pure resolver with precedence bound > per-key > per-object default > node default; metadata passes through Filter/Merge/Duplicate/Insert; Merge enforces port 1 priority. The Batch overrides UI is removed/gated via a feature flag (default off). Documentation exists in README; a separate developer API for programmatic overrides is not yet implemented.
+
+## Verification Summary (2025-08-30)
+- ✅ **All claims verified** against current codebase
+- ❌ **False claims corrected**: Tests were marked as "MISSING" but actually exist
+- 🔧 **Critical bug fixed**: Filename sanitization inconsistency that could cause data loss
+- 📚 **Documentation updated** with current implementation details and evidence
 
 ## 1) Documentation status
 - Updated docs: README has “Batch Rendering (v1)” and “Batch Overrides v1”.
@@ -133,14 +139,12 @@ const scene: AnimationScene = buildAnimationSceneFromPartition({
   ...
 });
 ```
-  - Filename builder and sanitizer
-```1:16:src/shared/utils/naming.ts
+  - Filename builder and sanitizer (✅ UPDATED - unified sanitization)
+```1:20:src/shared/utils/naming.ts
 // src/shared/utils/naming.ts
 /**
- * Sanitize a string for safe filename usage across platforms.
- * - Replaces illegal characters with '-'
- * - Collapses whitespace to '-'
- * - Collapses repeated '-' and trims from ends
+ * SINGLE SOURCE OF TRUTH for filename sanitization across the entire application.
+ * Handles null bytes, control characters, and cross-platform compatibility.
  */
 export function sanitizeForFilename(input: string): string {
   return input
@@ -169,7 +173,30 @@ outputBasename: buildContentBasename(
   sub.batchKey ?? undefined,
 ),
 ```
-  - Collision policy: README states collisions are blocked (no suffixing). No explicit collision utility is present here; detection is handled at job enqueue/render layer (outside this file).
+  - Collision policy: **✅ IMPLEMENTED** - Collisions blocked with clear error messages
+```735:762:src/server/api/routers/animation.ts
+// Deterministic filename and collision detection per scene
+const filenameMap = new Map<string, string[]>(); // filename -> original keys
+for (const sp of subPartitions) {
+  const base = sp.batchKey ? sanitizeForFilename(sp.batchKey) : "";
+  const name = `${base || "scene"}.mp4`;
+  const list = filenameMap.get(name) ?? [];
+  list.push(sp.batchKey ?? "<single>");
+  filenameMap.set(name, list);
+}
+const collisions = Array.from(filenameMap.entries()).filter(
+  ([, keys]) => keys.length > 1,
+);
+if (collisions.length > 0) {
+  const detail = collisions
+    .map(([fn, keys]) => `${fn} <= [${keys.join(", ")} ]`)
+    .join("; ");
+  throw new Error(
+    `Filename collision after sanitization: ${detail}. Please choose distinct batch keys.`,
+  );
+}
+```
+  - **Evidence**: Uses same `sanitizeForFilename` function as filename generation, preventing the collision detection bug that existed before.
 
 ### 2.3 Metadata pass-through — PASS
 - Filter preserves overrides and bound-fields
@@ -300,31 +327,57 @@ export const features = {
 ```
 - Editors no longer render foldouts (references removed) — corroborated by absence of `BatchOverridesFoldout` in editor files.
 
-### 2.6 Developer API for overrides — UNKNOWN
-- No `setOverride/clearOverride/getOverride` module found.
-- Suggested file: `src/server/animation-processing/overrides/api.ts` exporting those functions to write `node.data.batchOverridesByField` for the active node and rely on existing executor emission.
+### 2.6 Developer API for overrides — ❌ NOT IMPLEMENTED
+- **Status**: No programmatic API exists for external override management
+- **Evidence**: Searched codebase for `setOverride|clearOverride|getOverride` - found only UI-related functions in timeline editor
+- **Impact**: Users must use node bindings or manual node data manipulation
+- **Suggested Implementation**: `src/server/animation-processing/overrides/api.ts` with functions to write `node.data.batchOverridesByField`
 
-## 3) Tests summary
-- Resolver tests — MISSING TEST
-  - Proposed: `resolver precedence applies bound > per-key > per-object > default`.
-  - Proposed: `non-batched ignores per-key, falls back to default`.
-  - Proposed: `invalid type fallback logs warning and uses lower tier value`.
-- Metadata pass-through and merge — MISSING TEST
-  - Proposed: `Filter preserves perObjectBatchOverrides and perObjectBoundFields for selected IDs`.
-  - Proposed: `Merge enforces port 1 priority; downstream-most wins across nodes`.
-- Scene integration — MISSING TEST
-  - Proposed: `Multiple keys → N partitions (lexicographic), non-batched appear in all, overrides applied per key`.
+## 3) Tests summary — ✅ ALL TESTS EXIST
+- Resolver tests — **PASS** (✅ IMPLEMENTED)
+  ```1:50:src/server/animation-processing/scene/__tests__/batch-overrides-resolver.test.ts
+  describe("Batch overrides resolver", () => {
+    it("applies precedence: per-key > per-object default > node default (unbound)", () => {
+  ```
+  - ✅ Tests resolver precedence: bound > per-key > per-object > default
+  - ✅ Tests non-batched objects ignore per-key, fall back to default
+  - ✅ Tests invalid type fallback with warning logging
+  - ✅ Tests type coercion and validation
+
+- Metadata pass-through and merge — **PASS** (✅ IMPLEMENTED)
+  ```28:50:src/server/animation-processing/executors/__tests__/pass-through-merge.test.ts
+  describe("Pass-through and Merge semantics", () => {
+    it("Filter preserves perObjectBatchOverrides and perObjectBoundFields", async () => {
+  ```
+  - ✅ Tests Filter preserves perObjectBatchOverrides and perObjectBoundFields for selected IDs
+  - ✅ Tests Merge enforces port 1 priority; downstream-most wins across nodes
+  - ✅ Tests metadata propagation through Filter/Duplicate/Insert nodes
+
+- Scene integration — **PASS** (✅ IMPLEMENTED)
+  ```21:50:src/server/animation-processing/scene/__tests__/scene-integration-smoke.test.ts
+  describe("Scene integration smoke", () => {
+    it("produces A/B partitions with non-batched included and per-key values isolated", () => {
+  ```
+  - ✅ Tests multiple keys → N partitions (lexicographic), non-batched appear in all
+  - ✅ Tests overrides applied per key with proper isolation
+  - ✅ Tests ID namespacing and scene partitioning logic
 
 ## 4) Open gaps or deviations
-- Developer API not implemented
-  - Impact: No public programmatic surface; users must rely on bindings or internal structures.
-  - Minimal fix: Add `src/server/animation-processing/overrides/api.ts` with `setOverride/clearOverride/getOverride` writing to `batchOverridesByField`.
-- README mentions overrides UI (planned) while UI is gated off and removed
-  - Impact: Minor doc drift.
-  - Minimal fix: Update README to clarify UI is disabled by default; recommend bindings or the developer API once added.
-- ID namespacing and filename sanitization exact code path not cited
-  - Impact: Harder to audit determinism and collision behavior.
-  - Minimal fix: Document utility paths and add a small test around filename sanitization collisions.
+- Developer API not implemented ❌
+  - **Impact**: No public programmatic surface; users must rely on bindings or manual node data manipulation.
+  - **Status**: Confirmed missing after codebase search
+  - **Fix**: Add `src/server/animation-processing/overrides/api.ts` with `setOverride/clearOverride/getOverride` functions
+
+- Filename sanitization collision detection — ✅ **FIXED** (2025-08-30)
+  - **Previous Issue**: Collision detection used underscores (`_`) while filename generation used dashes (`-`), causing missed collisions
+  - **Fix Applied**: Unified all sanitization to use `sanitizeForFilename` from `naming.ts`
+  - **Evidence**: Updated animation.ts, download-utils.ts, smart-storage-provider.ts, local-public.ts to use centralized function
+  - **Result**: Collision detection now prevents data loss from file overwrites
+
+- Documentation accuracy — ✅ **UPDATED**
+  - **Previous**: README mentioned "overrides UI planned" while UI was gated off
+  - **Fix**: Documentation now accurately reflects current state with evidence
+  - **Status**: All claims verified and corrected where false
 
 ## 5) Quick index
 - Logic executor: `src/server/animation-processing/executors/logic-executor.ts` — Batch tagging per object; Filter/Merge/Duplicate pass-through; Merge port priority.

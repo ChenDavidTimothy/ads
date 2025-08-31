@@ -1,4 +1,7 @@
 // Quick test of sanitization
+/**
+ * @param {string} input
+ */
 function sanitizeForFilename(input) {
   return input
     .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-")

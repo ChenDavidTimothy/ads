@@ -11,7 +11,7 @@ describe("Filename Sanitization", () => {
   describe("sanitizeForFilename", () => {
     it("should replace illegal characters with dashes", () => {
       expect(sanitizeForFilename('file\\with/invalid:chars*"<>|')).toBe(
-        "file-with-invalid-chars"
+        "file-with-invalid-chars",
       );
     });
 
@@ -21,7 +21,7 @@ describe("Filename Sanitization", () => {
 
     it("should collapse multiple dashes", () => {
       expect(sanitizeForFilename("file--with---multiple----dashes")).toBe(
-        "file-with-multiple-dashes"
+        "file-with-multiple-dashes",
       );
     });
 
@@ -31,13 +31,13 @@ describe("Filename Sanitization", () => {
 
     it("should handle null bytes and control characters", () => {
       expect(sanitizeForFilename("file\x00with\ncontrol\rchars\t")).toBe(
-        "file-with-control-chars"
+        "file-with-control-chars",
       );
     });
 
     it("should handle vertical tab and form feed", () => {
       expect(sanitizeForFilename("file\x0bwith\x0cchars")).toBe(
-        "file-with-chars"
+        "file-with-chars",
       );
     });
 
@@ -55,7 +55,9 @@ describe("Filename Sanitization", () => {
     });
 
     it("should preserve alphanumeric characters and safe symbols", () => {
-      expect(sanitizeForFilename("file_123.test-file")).toBe("file_123.test-file");
+      expect(sanitizeForFilename("file_123.test-file")).toBe(
+        "file_123.test-file",
+      );
     });
   });
 
@@ -65,12 +67,14 @@ describe("Filename Sanitization", () => {
     });
 
     it("should build basename with batch key", () => {
-      expect(buildContentBasename("My Scene", "batch1")).toBe("My-Scene-batch1");
+      expect(buildContentBasename("My Scene", "batch1")).toBe(
+        "My-Scene-batch1",
+      );
     });
 
     it("should sanitize both display name and batch key", () => {
       expect(buildContentBasename('Scene\\:*?"<>|', 'batch\\:*?"<>|')).toBe(
-        "Scene-batch"
+        "Scene-batch",
       );
     });
 
@@ -98,14 +102,14 @@ describe("Filename Sanitization", () => {
 
     it("should include batch key in filename", () => {
       expect(buildFilename("My Scene", ".mp4", "batch1")).toBe(
-        "My-Scene-batch1.mp4"
+        "My-Scene-batch1.mp4",
       );
     });
 
     it("should sanitize all components", () => {
-      expect(
-        buildFilename('Scene\\:*?"<>|', ".mp4", 'batch\\:*?"<>|')
-      ).toBe("Scene-batch.mp4");
+      expect(buildFilename('Scene\\:*?"<>|', ".mp4", 'batch\\:*?"<>|')).toBe(
+        "Scene-batch.mp4",
+      );
     });
   });
 
@@ -151,8 +155,8 @@ describe("Filename Sanitization", () => {
       ];
 
       collisionPairs.forEach(([input1, input2]) => {
-        const result1 = sanitizeForFilename(input1);
-        const result2 = sanitizeForFilename(input2);
+        const result1 = sanitizeForFilename(input1!);
+        const result2 = sanitizeForFilename(input2!);
         // Both should produce the same sanitized result
         expect(result1).toBe(result2);
       });

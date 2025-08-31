@@ -41,7 +41,11 @@ function ensureUniqueZipPath(
   originalPath: string,
 ): string {
   // Sanitize illegal characters first
-  const sanitized = originalPath.replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  const sanitized = originalPath
+    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
   if (!existing.has(sanitized)) {
     existing.add(sanitized);
@@ -557,7 +561,11 @@ export function getExtensionFromMimeType(mimeType: string): string {
  */
 export function generateSafeFilename(baseName: string, extension = "") {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  const safeName = baseName.replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  const safeName = baseName
+    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
   return `${safeName}_${timestamp}${extension}`;
 }
 

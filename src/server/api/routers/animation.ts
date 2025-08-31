@@ -34,7 +34,10 @@ import {
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
 import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
-import { buildContentBasename, sanitizeForFilename } from "@/shared/utils/naming";
+import {
+  buildContentBasename,
+  sanitizeForFilename,
+} from "@/shared/utils/naming";
 
 // Helper: namespace object and animation IDs deterministically for batch key
 function namespaceObjectsForBatch(
