@@ -921,10 +921,11 @@ export const NODE_DEFINITIONS = {
     properties: {
       properties: [
         {
-          key: "key",
-          type: "string",
-          label: "Key",
-          defaultValue: "",
+          key: "keys",
+          type: "array",
+          label: "Keys",
+          defaultValue: [],
+          itemType: "string",
         },
       ],
     },

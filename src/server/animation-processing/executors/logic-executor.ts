@@ -1618,12 +1618,8 @@ export class LogicNodeExecutor extends BaseExecutor {
           // Resolve key(s) per object with precedence: per-object binding -> global binding -> literal
           const perObjectVal = readVarForObject(objectId)("key");
           const globalVal = readVarGlobal("key");
-          // Literal fallback supports both new array `keys` and legacy `key`
-          const literalVal = (() => {
-            const maybeArray = (data as { keys?: unknown }).keys;
-            if (Array.isArray(maybeArray)) return maybeArray as unknown[];
-            return (data as { key?: unknown }).key;
-          })();
+          // Literal value from key property
+          const literalVal = (data as { key?: unknown }).key;
 
           const coerceToKeys = (v: unknown): string[] => {
             if (Array.isArray(v)) {
@@ -1660,18 +1656,13 @@ export class LogicNodeExecutor extends BaseExecutor {
             emptyKeyObjectIds.push(objectId);
           }
 
-          // Check for re-tagging (support legacy batchKey and new batchKeys)
-          const legacyBatchKey = (objWithBatch as { batchKey?: unknown }).batchKey;
+          // Check for re-tagging (support both legacy batchKey and batchKeys)
           const prevKeys = (() => {
             const arr = (objWithBatch as { batchKeys?: unknown }).batchKeys;
             if (Array.isArray(arr)) return arr as string[];
-            if (
-              typeof legacyBatchKey === "string" ||
-              typeof legacyBatchKey === "number" ||
-              typeof legacyBatchKey === "boolean"
-            ) {
-              const s = String(legacyBatchKey).trim();
-              return s.length > 0 ? [s] : [];
+            const legacy = (objWithBatch as { batchKey?: unknown }).batchKey;
+            if (typeof legacy === "string" && legacy.trim()) {
+              return [legacy.trim()];
             }
             return [] as string[];
           })();
@@ -1694,15 +1685,12 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
           }
 
-          // Apply batch tagging; emit batchKeys and legacy batchKey (for single-key compatibility)
+          // Apply batch tagging; emit batchKeys array
           const outTagged = {
             ...objWithBatch,
             batch: true,
             batchKeys: resolvedKeys,
           } as Record<string, unknown>;
-          if (resolvedKeys.length === 1) {
-            outTagged.batchKey = resolvedKeys[0];
-          }
           tagged.push(outTagged);
         } else {
           tagged.push(obj);

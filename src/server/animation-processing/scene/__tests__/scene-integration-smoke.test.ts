@@ -38,10 +38,10 @@ describe("Scene integration smoke", () => {
       initialPosition: { x: 0, y: 0 },
       initialOpacity: 1,
       batch: true,
-      batchKey: "A",
+      batchKeys: ["A"],
     } as unknown as SceneObject;
 
-    const textB: SceneObject = { ...textA, batchKey: "B" } as SceneObject;
+    const textB: SceneObject = { ...textA, batchKeys: ["B"] } as SceneObject;
 
     const partition: ScenePartition = {
       sceneNode: sNode,

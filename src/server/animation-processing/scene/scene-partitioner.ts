@@ -224,15 +224,12 @@ export function partitionByBatchKey(
   const nonBatched = base.objects.filter((o) => !o.batch);
   const batched = base.objects.filter((o) => {
     if (!o.batch) return false;
-    const hasArray =
+    return (
       Array.isArray((o as { batchKeys?: unknown }).batchKeys) &&
       (o as { batchKeys?: unknown[] }).batchKeys!.some(
         (k) => typeof k === "string" && k.trim() !== "",
-      );
-    const hasLegacy =
-      typeof (o as { batchKey?: unknown }).batchKey === "string" &&
-      ((o as { batchKey?: string }).batchKey ?? "").trim() !== "";
-    return hasArray || hasLegacy;
+      )
+    );
   });
 
   logger.debug("Batch analysis", {
@@ -253,15 +250,13 @@ export function partitionByBatchKey(
   const keys = Array.from(
     new Set(
       batched.flatMap((o) => {
-        const b = o as { batchKeys?: string[]; batchKey?: string };
-        const arrKeys = Array.isArray(b.batchKeys)
+        const b = o as { batchKeys?: string[] };
+        return Array.isArray(b.batchKeys)
           ? b.batchKeys
               .filter((k) => typeof k === "string")
               .map((k) => k.trim())
               .filter((k) => k.length > 0)
           : [];
-        const legacy = typeof b.batchKey === "string" ? b.batchKey.trim() : "";
-        return legacy ? [...arrKeys, legacy] : arrKeys;
       }),
     ),
   ).filter((k) => k.trim().length > 0);
@@ -302,10 +297,8 @@ export function partitionByBatchKey(
     objects: [
       ...nonBatched,
       ...batched.filter((o) => {
-        const b = o as { batchKeys?: string[]; batchKey?: string };
-        const inArray = Array.isArray(b.batchKeys) && b.batchKeys.includes(key);
-        const isLegacy = typeof b.batchKey === "string" && b.batchKey === key;
-        return inArray || isLegacy;
+        const b = o as { batchKeys?: string[] };
+        return Array.isArray(b.batchKeys) && b.batchKeys.includes(key);
       }),
     ],
     batchOverrides: base.batchOverrides,
