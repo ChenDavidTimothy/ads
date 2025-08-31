@@ -32,7 +32,7 @@ export function BatchNode({ id }: { id: string }) {
 
   return (
     <Card
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
       onDoubleClick={() => setOpen(true)}
     >
       {nodeDefinition?.ports.inputs.map((port) => (
