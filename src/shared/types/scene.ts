@@ -23,6 +23,8 @@ export interface SceneObject {
   // Batch metadata (propagates through object_stream unmodified)
   batch?: boolean;
   batchKey?: string;
+  // New: support multiple keys per object (backward compatible with batchKey)
+  batchKeys?: string[];
   // ✅ ADD - Following existing pattern
   initialFillColor?: string;
   initialStrokeColor?: string;

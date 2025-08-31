@@ -1620,49 +1620,71 @@ export class LogicNodeExecutor extends BaseExecutor {
             batchKey?: string;
           };
 
-          // Resolve key per object with precedence: per-object binding -> global binding -> literal
+          // Resolve key(s) per object with precedence: per-object binding -> global binding -> literal
           const perObjectVal = readVarForObject(objectId)("key");
           const globalVal = readVarGlobal("key");
-          const literalVal = data.key;
+          // Literal fallback supports both new array `keys` and legacy `key`
+          const literalVal = (() => {
+            const maybeArray = (data as { keys?: unknown }).keys;
+            if (Array.isArray(maybeArray)) return maybeArray as unknown[];
+            return (data as { key?: unknown }).key;
+          })();
 
-          let resolved: unknown =
-            perObjectVal ??
-            globalVal ??
-            (typeof literalVal === "string" ? literalVal : undefined);
-          // Guard: Avoid base-to-string on objects; coerce only strings/numbers/booleans
-          if (
-            typeof resolved !== "string" &&
-            typeof resolved !== "number" &&
-            typeof resolved !== "boolean"
-          ) {
-            resolved = "";
-          }
-          const resolvedForObject = String(resolved);
-          const resolvedKeyForObject = resolvedForObject.trim();
+          const coerceToKeys = (v: unknown): string[] => {
+            if (Array.isArray(v)) {
+              return v
+                .map((x) => (typeof x === "string" || typeof x === "number" || typeof x === "boolean" ? String(x).trim() : ""))
+                .filter((s) => s.length > 0);
+            }
+            if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+              const s = String(v).trim();
+              return s.length > 0 ? [s] : [];
+            }
+            return [];
+          };
 
-          if (resolvedKeyForObject.length === 0) {
+          const resolvedKeys = (() => {
+            const fromPerObject = coerceToKeys(perObjectVal);
+            if (fromPerObject.length > 0) return fromPerObject;
+            const fromGlobal = coerceToKeys(globalVal);
+            if (fromGlobal.length > 0) return fromGlobal;
+            return coerceToKeys(literalVal);
+          })();
+
+          if (resolvedKeys.length === 0) {
             emptyKeyObjectIds.push(objectId);
           }
 
-          // Check for re-tagging warnings
-          if (
-            objWithBatch.batch === true &&
-            objWithBatch.batchKey !== undefined
-          ) {
-            if (objWithBatch.batchKey !== resolvedKeyForObject) {
-              retaggedObjects.push({
-                id: objectId,
-                oldKey: objWithBatch.batchKey,
-                newKey: resolvedKeyForObject,
-              });
+          // Check for re-tagging
+          const alreadyTagged = objWithBatch.batch === true && (objWithBatch.batchKey !== undefined || (objWithBatch as { batchKeys?: string[] }).batchKeys);
+          if (alreadyTagged) {
+            const prevKeys = Array.isArray((objWithBatch as { batchKeys?: string[] }).batchKeys)
+              ? ((objWithBatch as { batchKeys?: string[] }).batchKeys as string[])
+              : typeof objWithBatch.batchKey === "string"
+                ? [objWithBatch.batchKey]
+                : [];
+            const same = prevKeys.length === resolvedKeys.length && prevKeys.every((k) => resolvedKeys.includes(k));
+            if (!same) {
+              // Enforce strict error: no retagging allowed
+              throw new DomainError(
+                `Batch node '${node.data.identifier.displayName}' received already-tagged objects. Only one Batch node allowed per object path.`,
+                "ERR_BATCH_DOUBLE_TAG" as DomainErrorCode,
+                {
+                  nodeId: node.data.identifier.id,
+                  nodeName: node.data.identifier.displayName,
+                  objectIds: [objectId],
+                },
+              );
             }
           }
 
-          // Apply batch tagging (last-write-wins)
+          // Apply batch tagging; emit both batchKeys and legacy batchKey for BC
+          const first = resolvedKeys[0] ?? "";
           tagged.push({
             ...objWithBatch,
             batch: true,
-            batchKey: resolvedKeyForObject,
+            batchKey: first,
+            batchKeys: resolvedKeys,
           });
         } else {
           tagged.push(obj);
@@ -1689,20 +1711,7 @@ export class LogicNodeExecutor extends BaseExecutor {
       );
     }
 
-    // Log warnings for re-tagged objects
-    if (retaggedObjects.length > 0) {
-      for (const retag of retaggedObjects) {
-        logger.warn(
-          `Batch node '${node.data.identifier.displayName}': Object ${retag.id} was already batched with key '${retag.oldKey}', re-tagged with '${retag.newKey}' (last-write-wins)`,
-          {
-            nodeId: node.data.identifier.id,
-            objectId: retag.id,
-            oldKey: retag.oldKey,
-            newKey: retag.newKey,
-          },
-        );
-      }
-    }
+    // Strict mode: no retag log spam since it's an error now
 
     // Pass through upstream metadata unchanged
     const perObjectTimeCursor = this.extractCursorsFromInputs(

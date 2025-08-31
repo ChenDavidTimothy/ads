@@ -102,6 +102,16 @@ export function PropertyPanel({
     );
   }
 
+  // Minimal UX for Batch node: hide properties and show a simple hint
+  if (node.type === "batch") {
+    return (
+      <div className="space-y-[var(--space-3)] text-xs text-gray-400">
+        <div className="text-sm text-white">Batch</div>
+        <div>Double-click the Batch node to set keys.</div>
+      </div>
+    );
+  }
+
   const handleSaveDisplayName = () => {
     const success = onDisplayNameChange(
       node.data.identifier.id,

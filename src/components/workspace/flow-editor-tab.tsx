@@ -174,6 +174,45 @@ export function FlowEditorTab() {
     };
   }, [setNodes]);
 
+  // Listen for batch-keys updates to sync local nodes and avoid snap-back overwrite
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handler = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ nodeIdentifierId: string; keys: string[] }>
+      ).detail;
+      if (!detail) return;
+
+      // Suspend context sync briefly to prevent overwriting the external change
+      suspendContextSyncRef.current = true;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        suspendContextSyncRef.current = false;
+        timer = null;
+      }, 150);
+
+      setNodes((prev) => {
+        return prev.map((n) => {
+          const nid = n.data.identifier?.id;
+          if (nid !== detail.nodeIdentifierId) return n;
+          return {
+            ...n,
+            data: { ...n.data, keys: [...detail.keys] },
+          };
+        });
+      });
+    };
+
+    window.addEventListener("batch-keys-updated", handler as EventListener);
+    return () => {
+      window.removeEventListener(
+        "batch-keys-updated",
+        handler as EventListener,
+      );
+      if (timer) clearTimeout(timer);
+    };
+  }, [setNodes]);
+
   const {
     resultLogModalState,
     handleOpenResultLogViewer,

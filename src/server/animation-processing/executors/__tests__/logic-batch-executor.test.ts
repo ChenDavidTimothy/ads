@@ -148,13 +148,11 @@ describe("Batch node executor", () => {
     );
   });
 
-  it("warns on re-tagging with a different key and applies last-write-wins", async () => {
+  it("throws on re-tagging with a different key (strict no-retag)", async () => {
     const inputs = [{ id: "r1", batch: true, batchKey: "X" }];
-    const ctx = await runBatch(inputs, { key: "Y" });
-    const out = ctx.nodeOutputs.get("batch1.output");
-    const data = Array.isArray(out?.data)
-      ? (out.data as Array<{ id: string; batch?: boolean; batchKey?: string }>)
-      : [];
-    expect(data[0]?.batchKey).toBe("Y");
+    await expect(runBatch(inputs, { key: "Y" })).rejects.toHaveProperty(
+      "code",
+      "ERR_BATCH_DOUBLE_TAG",
+    );
   });
 });

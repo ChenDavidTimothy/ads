@@ -220,6 +220,8 @@ export class ExecutionEngine {
     edges: ReactFlowEdge[],
     options?: { requireScene?: boolean },
   ): Promise<ExecutionContext> {
+    // Enforce: allow only a single Batch node per object path
+    this.validateSingleBatchPerPath(nodes, edges);
     // Run comprehensive validation (scene optional)
     this.runComprehensiveValidation(nodes, edges, options);
 
@@ -297,6 +299,66 @@ export class ExecutionEngine {
     }
 
     return context;
+  }
+
+  private validateSingleBatchPerPath(
+    nodes: ReactFlowNode<NodeData>[],
+    edges: ReactFlowEdge[],
+  ): void {
+    const byId = new Map(nodes.map((n) => [n.data.identifier.id, n] as const));
+    const incoming = new Map<string, ReactFlowEdge[]>();
+    for (const e of edges) {
+      const list = incoming.get(e.target) ?? [];
+      list.push(e);
+      incoming.set(e.target, list);
+    }
+
+    const isBatch = (nodeId: string) => byId.get(nodeId)?.type === "batch";
+
+    const memo = new Map<string, string[][]>();
+    const dfs = (nodeId: string): string[][] => {
+      if (memo.has(nodeId)) return memo.get(nodeId)!;
+      const inc = incoming.get(nodeId) ?? [];
+      if (inc.length === 0) {
+        const path = [nodeId];
+        memo.set(nodeId, [path]);
+        return [path];
+      }
+      const paths: string[][] = [];
+      for (const e of inc) {
+        const sub = dfs(e.source);
+        for (const p of sub) paths.push([...p, nodeId]);
+      }
+      memo.set(nodeId, paths);
+      return paths;
+    };
+
+    const errors: string[] = [];
+    for (const n of nodes) {
+      if (n.type !== "scene" && n.type !== "frame") continue;
+      const sceneId = n.data.identifier.id;
+      const paths = dfs(sceneId);
+      for (const path of paths) {
+        const batches = path.filter((pid) => isBatch(pid));
+        if (batches.length > 1) {
+          const names = batches
+            .map((id) => byId.get(id)?.data.identifier.displayName || id)
+            .join(" → ");
+          errors.push(
+            `Multiple Batch nodes on path to '${n.data.identifier.displayName}': ${names}`,
+          );
+        }
+      }
+    }
+    if (errors.length > 0) {
+      // Use DomainError for consistent handling
+      const { DomainError } = require("@/shared/errors/domain");
+      throw new DomainError(
+        `Batch node validation failed (single tag per path):\n${errors.join("\n")}`,
+        "ERR_BATCH_MULTIPLE_IN_PATH",
+        { errors },
+      );
+    }
   }
 
   async executeFlowDebug(

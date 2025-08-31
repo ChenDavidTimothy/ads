@@ -221,14 +221,20 @@ export function partitionByBatchKey(
   });
 
   const nonBatched = base.objects.filter((o) => !o.batch);
-  const batched = base.objects.filter(
-    (o) => o.batch && typeof o.batchKey === "string",
-  );
+  const batched = base.objects.filter((o) => {
+    if (!o.batch) return false;
+    const hasLegacy = typeof o.batchKey === "string" && o.batchKey.trim() !== "";
+    const hasMulti = Array.isArray((o as { batchKeys?: unknown }).batchKeys)
+      && ((o as { batchKeys?: unknown[] }).batchKeys as unknown[]).some(
+        (k) => typeof k === "string" && k.trim() !== "",
+      );
+    return hasLegacy || hasMulti;
+  });
 
   logger.debug("Batch analysis", {
     nonBatchedCount: nonBatched.length,
     batchedCount: batched.length,
-    batchedKeys: batched.map((o) => o.batchKey),
+    batchedKeys: batched.map((o) => (o as { batchKeys?: string[]; batchKey?: string }).batchKeys ?? (o as { batchKey?: string }).batchKey),
   });
 
   if (batched.length === 0) {
@@ -241,7 +247,19 @@ export function partitionByBatchKey(
   }
 
   const keys = Array.from(
-    new Set(batched.map((o) => String(o.batchKey))),
+    new Set(
+      batched.flatMap((o) => {
+        const b = o as { batchKey?: string; batchKeys?: string[] };
+        if (Array.isArray(b.batchKeys)) {
+          return b.batchKeys
+            .filter((k) => typeof k === "string")
+            .map((k) => k.trim())
+            .filter((k) => k.length > 0);
+        }
+        if (typeof b.batchKey === "string") return [b.batchKey.trim()].filter((k) => k.length > 0);
+        return [] as string[];
+      }),
+    ),
   ).filter((k) => k.trim().length > 0);
 
   logger.debug("Extracted keys", { keys, keysCount: keys.length });
@@ -279,7 +297,11 @@ export function partitionByBatchKey(
     batchKey: key,
     objects: [
       ...nonBatched,
-      ...batched.filter((o) => String(o.batchKey) === key),
+      ...batched.filter((o) => {
+        const b = o as { batchKey?: string; batchKeys?: string[] };
+        if (Array.isArray(b.batchKeys)) return b.batchKeys.includes(key);
+        return String(b.batchKey) === key;
+      }),
     ],
     batchOverrides: base.batchOverrides,
     boundFieldsByObject: base.boundFieldsByObject,
