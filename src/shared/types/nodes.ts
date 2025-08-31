@@ -216,6 +216,11 @@ export interface AnimationNodeData extends BaseNodeData {
   duration: number;
   tracks: AnimationTrack[];
   perObjectAssignments?: PerObjectAssignments;
+  // Batch overrides: field -> objectId -> batchKey -> value
+  batchOverridesByField?: Record<
+    string,
+    Record<string, Record<string, unknown>>
+  >;
   // Node-level variable bindings (defaults) for transform properties
   variableBindings?: Record<
     string,

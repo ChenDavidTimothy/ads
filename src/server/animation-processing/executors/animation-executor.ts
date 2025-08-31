@@ -692,7 +692,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     );
 
     const allAnimations: SceneAnimationTrack[] = [];
-    const passThoughObjects: unknown[] = [];
+    const passThroughObjects: unknown[] = [];
     const upstreamCursorMap = this.extractCursorsFromInputs(
       inputs as unknown as ExecutionValue[],
     );
@@ -718,7 +718,37 @@ export class AnimationNodeExecutor extends BaseExecutor {
       inputs as unknown as ExecutionValue[],
     );
 
-    // Merge upstream + node-level; node-level takes precedence per object
+    // Extract perObjectBatchOverrides from node data (timeline editor)
+    const nodeBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > | undefined = this.extractPerObjectBatchOverridesFromNode(data);
+
+    // Merge upstream + node-level batch overrides; node-level takes precedence per object
+    const mergedBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > | undefined = (() => {
+      if (!upstreamBatchOverrides && !nodeBatchOverrides) return upstreamBatchOverrides;
+      const result: Record<string, Record<string, Record<string, unknown>>> = { ...upstreamBatchOverrides };
+      if (nodeBatchOverrides) {
+        for (const [objectId, fieldOverrides] of Object.entries(nodeBatchOverrides)) {
+          result[objectId] = { ...result[objectId], ...fieldOverrides };
+        }
+      }
+      return result;
+    })();
+
+    // Get fallback metadata from first input (like canvas executor does)
+    const firstInputMeta = inputs[0]?.metadata as
+      | {
+          perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+          perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+          perObjectAssignments?: PerObjectAssignments;
+        }
+      | undefined;
+
+    // Merge upstream + node-level assignments; node-level takes precedence per object
     const mergedAssignments: PerObjectAssignments | undefined = (() => {
       if (!upstreamAssignments && !nodeAssignments) return undefined;
       const result: PerObjectAssignments = {};
@@ -903,7 +933,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         }
 
         allAnimations.push(...animations);
-        passThoughObjects.push(timedObject);
+        passThroughObjects.push(timedObject);
 
         if (objectId) {
           const localEnd =
@@ -923,12 +953,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
       node.data.identifier.id,
       "output",
       "object_stream",
-      passThoughObjects,
+      passThroughObjects,
       {
         perObjectTimeCursor: outputCursorMap,
-        perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
-        perObjectAssignments: mergedAssignments,
-        perObjectBatchOverrides: upstreamBatchOverrides,
+        perObjectAnimations:
+          this.clonePerObjectAnimations(perObjectAnimations) ?? firstInputMeta?.perObjectAnimations,
+        perObjectAssignments: mergedAssignments ?? firstInputMeta?.perObjectAssignments,
+        perObjectBatchOverrides:
+          mergedBatchOverrides ?? firstInputMeta?.perObjectBatchOverrides,
       },
     );
   }
@@ -1024,6 +1056,38 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
     return found ? merged : undefined;
+  }
+
+  private extractPerObjectBatchOverridesFromNode(
+    data: Record<string, unknown>,
+  ): Record<string, Record<string, Record<string, unknown>>> | undefined {
+    const batchOverridesByField = (
+      data as {
+        batchOverridesByField?: Record<
+          string,
+          Record<string, Record<string, unknown>>
+        >;
+      }
+    ).batchOverridesByField;
+    if (!batchOverridesByField) return undefined;
+
+    const result: Record<string, Record<string, Record<string, unknown>>> = {};
+    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      for (const [objectId, byKey] of Object.entries(byObject)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(byKey)) {
+          const key = String(k).trim();
+          if (!key) continue;
+          cleaned[key] = v;
+        }
+        result[objectId] ??= {};
+        result[objectId][fieldPath] = {
+          ...(result[objectId][fieldPath] ?? {}),
+          ...cleaned,
+        };
+      }
+    }
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   private async executeTypography(
@@ -1314,7 +1378,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       node.data.identifier.id,
       "output",
       "object_stream",
-      passThoughObjects,
+      passThroughObjects,
       {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),

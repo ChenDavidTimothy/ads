@@ -79,14 +79,33 @@ function namespaceAnimationsForBatch(
   }));
 }
 ```
-  - Usage in scene generation
-```770:780:src/server/api/routers/animation.ts
-const scene: AnimationScene = buildAnimationSceneFromPartition({
+  - Usage in scene generation (video path)
+```786:804:src/server/api/routers/animation.ts
+// Create a properly namespaced sub-partition for the batch key
+const namespacedSubPartition = {
   sceneNode: sub.sceneNode,
   objects: namespaceObjectsForBatch(sub.objects, sub.batchKey),
-  animations: namespaceAnimationsForBatch(sub.animations, sub.batchKey),
-  ...
-});
+  animations: namespaceAnimationsForBatch(
+    sub.animations,
+    sub.batchKey,
+  ),
+  batchOverrides: namespaceBatchOverridesForBatch(
+    partition.batchOverrides,
+    sub.batchKey,
+  ),
+  boundFieldsByObject: sub.boundFieldsByObject,
+  batchKey: sub.batchKey,
+};
+
+const scene: AnimationScene = buildAnimationSceneFromPartition(
+  namespacedSubPartition,
+);
+```
+
+  - Usage in image generation (frame path)
+```1093:1094:src/server/api/routers/animation.ts
+const scene: AnimationScene =
+  buildAnimationSceneFromPartition(sub);
 ```
   - Collision policy: collisions blocked with clear error messages
 ```739:762:src/server/api/routers/animation.ts

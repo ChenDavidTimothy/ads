@@ -33,6 +33,7 @@ import {
   buildAnimationSceneFromPartition,
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
+import type { ScenePartition, BatchedScenePartition } from "@/server/animation-processing/scene/scene-partitioner";
 import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
 import {
   buildContentBasename,
@@ -76,6 +77,21 @@ function namespaceBatchOverridesForBatch(
   }
 
   return namespaced;
+}
+
+// Helper: create a fully namespaced partition for batch key processing
+function namespacePartitionForBatch(
+  partition: ScenePartition,
+  batchKey: string | null,
+): BatchedScenePartition {
+  return {
+    sceneNode: partition.sceneNode,
+    objects: namespaceObjectsForBatch(partition.objects, batchKey),
+    animations: namespaceAnimationsForBatch(partition.animations, batchKey),
+    batchOverrides: namespaceBatchOverridesForBatch(partition.batchOverrides, batchKey),
+    boundFieldsByObject: partition.boundFieldsByObject,
+    batchKey: batchKey,
+  };
 }
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -784,20 +800,7 @@ export const animationRouter = createTRPCRouter({
               }
 
               // Create a properly namespaced sub-partition for the batch key
-              const namespacedSubPartition = {
-                sceneNode: sub.sceneNode,
-                objects: namespaceObjectsForBatch(sub.objects, sub.batchKey),
-                animations: namespaceAnimationsForBatch(
-                  sub.animations,
-                  sub.batchKey,
-                ),
-                batchOverrides: namespaceBatchOverridesForBatch(
-                  partition.batchOverrides,
-                  sub.batchKey,
-                ),
-                boundFieldsByObject: sub.boundFieldsByObject,
-                batchKey: sub.batchKey,
-              };
+              const namespacedSubPartition = namespacePartitionForBatch(sub, sub.batchKey);
 
               const scene: AnimationScene = buildAnimationSceneFromPartition(
                 namespacedSubPartition,
