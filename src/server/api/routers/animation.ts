@@ -783,7 +783,8 @@ export const animationRouter = createTRPCRouter({
                 continue; // Skip invalid partitions
               }
 
-              const scene: AnimationScene = buildAnimationSceneFromPartition({
+              // Create a properly namespaced sub-partition for the batch key
+              const namespacedSubPartition = {
                 sceneNode: sub.sceneNode,
                 objects: namespaceObjectsForBatch(sub.objects, sub.batchKey),
                 animations: namespaceAnimationsForBatch(
@@ -794,7 +795,13 @@ export const animationRouter = createTRPCRouter({
                   partition.batchOverrides,
                   sub.batchKey,
                 ),
-              });
+                boundFieldsByObject: sub.boundFieldsByObject,
+                batchKey: sub.batchKey,
+              };
+
+              const scene: AnimationScene = buildAnimationSceneFromPartition(
+                namespacedSubPartition,
+              );
               const sceneData = sub.sceneNode.data as SceneNodeData;
               const displayName = sub.sceneNode.data.identifier.displayName;
 

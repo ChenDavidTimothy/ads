@@ -710,6 +710,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const nodeAssignments: PerObjectAssignments | undefined =
       data.perObjectAssignments as PerObjectAssignments | undefined;
 
+    // Extract perObjectBatchOverrides from inputs
+    const upstreamBatchOverrides: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    > | undefined = this.extractPerObjectBatchOverridesFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+
     // Merge upstream + node-level; node-level takes precedence per object
     const mergedAssignments: PerObjectAssignments | undefined = (() => {
       if (!upstreamAssignments && !nodeAssignments) return undefined;
@@ -920,6 +928,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
         perObjectAssignments: mergedAssignments,
+        perObjectBatchOverrides: upstreamBatchOverrides,
       },
     );
   }
@@ -987,20 +996,31 @@ export class AnimationNodeExecutor extends BaseExecutor {
           | undefined
       )?.perObjectAssignments;
       if (!fromMeta) continue;
-      for (const input of inputs) {
-        // FIX: Properly type the metadata instead of using any
-        const fromMeta = (
-          input.metadata as
-            | { perObjectAssignments?: PerObjectAssignments }
-            | undefined
-        )?.perObjectAssignments;
-        if (!fromMeta) continue;
-        for (const [objectId, assignment] of Object.entries(fromMeta)) {
-          found = true;
-          const base = merged[objectId];
-          const combined = mergeObjectAssignments(base, assignment);
-          if (combined) merged[objectId] = combined;
-        }
+      for (const [objectId, assignment] of Object.entries(fromMeta)) {
+        found = true;
+        const base = merged[objectId];
+        const combined = mergeObjectAssignments(base, assignment);
+        if (combined) merged[objectId] = combined;
+      }
+    }
+    return found ? merged : undefined;
+  }
+
+  private extractPerObjectBatchOverridesFromInputs(
+    inputs: ExecutionValue[],
+  ): Record<string, Record<string, Record<string, unknown>>> | undefined {
+    const merged: Record<string, Record<string, Record<string, unknown>>> = {};
+    let found = false;
+    for (const input of inputs) {
+      const fromMeta = (
+        input.metadata as
+          | { perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>> }
+          | undefined
+      )?.perObjectBatchOverrides;
+      if (!fromMeta) continue;
+      for (const [objectId, batchOverrides] of Object.entries(fromMeta)) {
+        found = true;
+        merged[objectId] = { ...merged[objectId], ...batchOverrides };
       }
     }
     return found ? merged : undefined;
