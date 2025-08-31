@@ -6,7 +6,10 @@ import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
 import { logger } from "@/lib/logger";
 import { DomainError, type DomainErrorCode } from "@/shared/errors/domain";
-import { resolveFieldValue, type BatchResolveContext } from "./batch-overrides-resolver";
+import {
+  resolveFieldValue,
+  type BatchResolveContext,
+} from "./batch-overrides-resolver";
 
 export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
@@ -403,15 +406,20 @@ export function buildAnimationSceneFromPartition(
   })();
 
   // Coercion helpers for Timeline overrides
-  const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
-    if (typeof value === "number" && Number.isFinite(value)) return { ok: true, value };
+  const numberCoerce = (
+    value: unknown,
+  ): { ok: boolean; value?: number; warn?: string } => {
+    if (typeof value === "number" && Number.isFinite(value))
+      return { ok: true, value };
     if (typeof value === "string") {
       const parsed = Number.parseFloat(value);
       if (Number.isFinite(parsed)) return { ok: true, value: parsed };
     }
     return { ok: false, warn: `Expected number, got ${typeof value}` };
   };
-  const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+  const stringCoerce = (
+    value: unknown,
+  ): { ok: boolean; value?: string; warn?: string } => {
     if (typeof value === "string") return { ok: true, value };
     return { ok: false, warn: `Expected string, got ${typeof value}` };
   };
@@ -430,35 +438,110 @@ export function buildAnimationSceneFromPartition(
         case "move": {
           const from = { ...anim.properties.from };
           const to = { ...anim.properties.to };
-          from.x = resolveFieldValue(objId, "Timeline.move.from.x", from.x, ctx, numberCoerce);
-          from.y = resolveFieldValue(objId, "Timeline.move.from.y", from.y, ctx, numberCoerce);
-          to.x = resolveFieldValue(objId, "Timeline.move.to.x", to.x, ctx, numberCoerce);
-          to.y = resolveFieldValue(objId, "Timeline.move.to.y", to.y, ctx, numberCoerce);
+          from.x = resolveFieldValue(
+            objId,
+            "Timeline.move.from.x",
+            from.x,
+            ctx,
+            numberCoerce,
+          );
+          from.y = resolveFieldValue(
+            objId,
+            "Timeline.move.from.y",
+            from.y,
+            ctx,
+            numberCoerce,
+          );
+          to.x = resolveFieldValue(
+            objId,
+            "Timeline.move.to.x",
+            to.x,
+            ctx,
+            numberCoerce,
+          );
+          to.y = resolveFieldValue(
+            objId,
+            "Timeline.move.to.y",
+            to.y,
+            ctx,
+            numberCoerce,
+          );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
         case "rotate": {
-          const from = resolveFieldValue(objId, "Timeline.rotate.from", anim.properties.from, ctx, numberCoerce);
-          const to = resolveFieldValue(objId, "Timeline.rotate.to", anim.properties.to, ctx, numberCoerce);
+          const from = resolveFieldValue(
+            objId,
+            "Timeline.rotate.from",
+            anim.properties.from,
+            ctx,
+            numberCoerce,
+          );
+          const to = resolveFieldValue(
+            objId,
+            "Timeline.rotate.to",
+            anim.properties.to,
+            ctx,
+            numberCoerce,
+          );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
         case "scale": {
           const currentFrom = anim.properties.from;
           const currentTo = anim.properties.to;
-          if (typeof currentFrom === "number" && typeof currentTo === "number") {
-            const from = resolveFieldValue(objId, "Timeline.scale.from", currentFrom, ctx, numberCoerce);
-            const to = resolveFieldValue(objId, "Timeline.scale.to", currentTo, ctx, numberCoerce);
+          if (
+            typeof currentFrom === "number" &&
+            typeof currentTo === "number"
+          ) {
+            const from = resolveFieldValue(
+              objId,
+              "Timeline.scale.from",
+              currentFrom,
+              ctx,
+              numberCoerce,
+            );
+            const to = resolveFieldValue(
+              objId,
+              "Timeline.scale.to",
+              currentTo,
+              ctx,
+              numberCoerce,
+            );
             return { ...anim, properties: { from, to } } as typeof anim;
           }
           return anim;
         }
         case "fade": {
-          const from = resolveFieldValue(objId, "Timeline.fade.from", anim.properties.from, ctx, numberCoerce);
-          const to = resolveFieldValue(objId, "Timeline.fade.to", anim.properties.to, ctx, numberCoerce);
+          const from = resolveFieldValue(
+            objId,
+            "Timeline.fade.from",
+            anim.properties.from,
+            ctx,
+            numberCoerce,
+          );
+          const to = resolveFieldValue(
+            objId,
+            "Timeline.fade.to",
+            anim.properties.to,
+            ctx,
+            numberCoerce,
+          );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
         case "color": {
-          const from = resolveFieldValue(objId, "Timeline.color.from", anim.properties.from, ctx, stringCoerce);
-          const to = resolveFieldValue(objId, "Timeline.color.to", anim.properties.to, ctx, stringCoerce);
+          const from = resolveFieldValue(
+            objId,
+            "Timeline.color.from",
+            anim.properties.from,
+            ctx,
+            stringCoerce,
+          );
+          const to = resolveFieldValue(
+            objId,
+            "Timeline.color.to",
+            anim.properties.to,
+            ctx,
+            stringCoerce,
+          );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
         default:

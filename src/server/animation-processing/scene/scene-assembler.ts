@@ -9,13 +9,19 @@ import type {
   PerObjectAssignments,
   TrackOverride,
 } from "@/shared/properties/assignments";
-import { resolveFieldValue, type BatchResolveContext } from "./batch-overrides-resolver";
+import {
+  resolveFieldValue,
+  type BatchResolveContext,
+} from "./batch-overrides-resolver";
 
 export type PerObjectCursorMap = Record<string, number>;
 
 // Coercion functions for Timeline batch overrides
-const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
-  if (typeof value === "number" && Number.isFinite(value)) return { ok: true, value };
+const numberCoerce = (
+  value: unknown,
+): { ok: boolean; value?: number; warn?: string } => {
+  if (typeof value === "number" && Number.isFinite(value))
+    return { ok: true, value };
   if (typeof value === "string") {
     const parsed = Number.parseFloat(value);
     if (Number.isFinite(parsed)) return { ok: true, value: parsed };
@@ -23,7 +29,9 @@ const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: str
   return { ok: false, warn: `Expected number, got ${typeof value}` };
 };
 
-const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+const stringCoerce = (
+  value: unknown,
+): { ok: boolean; value?: string; warn?: string } => {
   if (typeof value === "string") return { ok: true, value };
   return { ok: false, warn: `Expected string, got ${typeof value}` };
 };
@@ -178,9 +186,12 @@ function applyTimelineBatchOverridesToTracks(
   objectId: string,
   context: {
     batchKey: string | null;
-    perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+    perObjectBatchOverrides?: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    >;
     perObjectBoundFields?: Record<string, string[]>;
-  }
+  },
 ): AnimationTrack[] {
   if (!context.perObjectBatchOverrides?.[objectId]) return tracks;
 
@@ -190,14 +201,17 @@ function applyTimelineBatchOverridesToTracks(
     perObjectBoundFields: context.perObjectBoundFields,
   };
 
-  return tracks.map(track => {
+  return tracks.map((track: AnimationTrack): AnimationTrack => {
     const properties = track.properties as unknown as Record<string, unknown>;
     const updatedProperties = { ...properties };
 
     // Apply Timeline batch overrides per track type
     switch (track.type) {
       case "move": {
-        const moveProps = updatedProperties as { from?: { x: number; y: number }; to?: { x: number; y: number } };
+        const moveProps = updatedProperties as {
+          from?: { x: number; y: number };
+          to?: { x: number; y: number };
+        };
 
         if (moveProps.from) {
           moveProps.from.x = resolveFieldValue(
@@ -205,14 +219,14 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.move.from.x",
             moveProps.from.x,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
           moveProps.from.y = resolveFieldValue(
             objectId,
             "Timeline.move.from.y",
             moveProps.from.y,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
 
@@ -222,14 +236,14 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.move.to.x",
             moveProps.to.x,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
           moveProps.to.y = resolveFieldValue(
             objectId,
             "Timeline.move.to.y",
             moveProps.to.y,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         break;
@@ -243,7 +257,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.rotate.from",
             rotateProps.from,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         if (typeof rotateProps.to === "number") {
@@ -252,7 +266,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.rotate.to",
             rotateProps.to,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         break;
@@ -266,7 +280,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.scale.from",
             scaleProps.from,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         if (typeof scaleProps.to === "number") {
@@ -275,7 +289,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.scale.to",
             scaleProps.to,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         break;
@@ -289,7 +303,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.fade.from",
             fadeProps.from,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         if (typeof fadeProps.to === "number") {
@@ -298,7 +312,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.fade.to",
             fadeProps.to,
             ctx,
-            numberCoerce
+            numberCoerce,
           );
         }
         break;
@@ -312,7 +326,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.color.from",
             colorProps.from,
             ctx,
-            stringCoerce
+            stringCoerce,
           );
         }
         if (typeof colorProps.to === "string") {
@@ -321,7 +335,7 @@ function applyTimelineBatchOverridesToTracks(
             "Timeline.color.to",
             colorProps.to,
             ctx,
-            stringCoerce
+            stringCoerce,
           );
         }
         break;
@@ -330,8 +344,8 @@ function applyTimelineBatchOverridesToTracks(
 
     return {
       ...track,
-      properties: updatedProperties as typeof track.properties
-    };
+      properties: updatedProperties as unknown,
+    } as AnimationTrack;
   });
 }
 
@@ -344,9 +358,12 @@ export function convertTracksToSceneAnimations(
   // Optional batch override context for Timeline batch overrides
   batchOverrideContext?: {
     batchKey: string | null;
-    perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+    perObjectBatchOverrides?: Record<
+      string,
+      Record<string, Record<string, unknown>>
+    >;
     perObjectBoundFields?: Record<string, string[]>;
-  }
+  },
 ): SceneAnimationTrack[] {
   // Helper: deep-ish equality for 'from' defaults
   const isDefaultFrom = (type: string, value: unknown): boolean => {
@@ -434,9 +451,13 @@ export function convertTracksToSceneAnimations(
   };
 
   // Apply Timeline batch overrides to tracks if context provided
-  const processedTracks = batchOverrideContext ?
-    applyTimelineBatchOverridesToTracks(tracks, objectId, batchOverrideContext) :
-    tracks;
+  const processedTracks = batchOverrideContext
+    ? applyTimelineBatchOverridesToTracks(
+        tracks,
+        objectId,
+        batchOverrideContext,
+      )
+    : tracks;
 
   const sceneTracks: SceneAnimationTrack[] = [];
 

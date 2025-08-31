@@ -9,6 +9,7 @@ This document outlines the complete implementation plan for the batch override U
 ### Current State Analysis
 
 The existing codebase has:
+
 - ✅ **Data Structure**: `node.data.batchOverridesByField[fieldPath][objectId][key]` fully implemented
 - ✅ **Backend Resolution**: Complete precedence logic in `batch-overrides-resolver.ts`
 - ✅ **Batch Key Management**: Working `BatchNode` component with key input modal
@@ -40,22 +41,25 @@ The existing codebase has:
 **Purpose**: Visual indicator that appears next to supported fields when batch keys are available upstream.
 
 **Props**:
+
 ```typescript
 interface BatchButtonProps {
   nodeId: string;
-  fieldPath: string;        // e.g., "Canvas.position.x", "Typography.content"
-  objectId?: string;        // For per-object overrides
+  fieldPath: string; // e.g., "Canvas.position.x", "Typography.content"
+  objectId?: string; // For per-object overrides
   className?: string;
 }
 ```
 
 **Behavior**:
+
 - Shows only when upstream objects have batch keys attached
 - Opens BatchModal when clicked
 - Visual indicator: `🏷️` emoji or icon
 - Tooltip: "Edit batch overrides for this field"
 
 **Implementation Details**:
+
 ```typescript
 // Detect batch keys using FlowTracker
 const upstreamBatchKeys = useBatchKeysForField(nodeId, fieldPath);
@@ -81,6 +85,7 @@ return (
 **Purpose**: Comprehensive interface for editing per-object and per-key property overrides.
 
 **Props**:
+
 ```typescript
 interface BatchModalProps {
   isOpen: boolean;
@@ -88,13 +93,14 @@ interface BatchModalProps {
   nodeId: string;
   fieldPath: string;
   objectId?: string;
-  currentValue: unknown;    // Current field value for fallbacks
-  valueType: 'string' | 'number' | 'color' | 'boolean';
+  currentValue: unknown; // Current field value for fallbacks
+  valueType: "string" | "number" | "color" | "boolean";
   onValueChange: (value: unknown) => void;
 }
 ```
 
 **Layout Structure**:
+
 ```
 ┌─ Batch Overrides: Canvas.position.x ──────────────────────────┐
 │ ┌─ Left Column ─┬─ Right Column ──────────────────────────────┐ │
@@ -142,13 +148,13 @@ interface BatchModalProps {
 ```typescript
 interface BatchKeysResult {
   keys: string[];
-  objectsWithKeys: string[];  // objectIds that have batch keys
+  objectsWithKeys: string[]; // objectIds that have batch keys
   hasBatchKeys: boolean;
 }
 
 export function useBatchKeysForField(
   nodeId: string,
-  fieldPath: string
+  fieldPath: string,
 ): BatchKeysResult {
   // Implementation uses FlowTracker to find upstream batch nodes
   // Returns deduplicated list of keys from all upstream batch nodes
@@ -166,7 +172,7 @@ export function getKeysForObject(
   nodeId: string,
   objectId: string,
   nodes: Node<NodeData>[],
-  edges: Edge[]
+  edges: Edge[],
 ): string[] {
   // Find upstream batch nodes from the current node
   // Check which batch nodes affect this specific object
@@ -189,7 +195,7 @@ interface BatchOverridesData {
 export function useBatchOverrides(
   nodeId: string,
   fieldPath: string,
-  objectId?: string
+  objectId?: string,
 ): {
   data: BatchOverridesData;
   setPerObjectDefault: (value: unknown) => void;
@@ -248,6 +254,7 @@ export function useBatchOverrides(
 ```
 
 **When Batch Overrides Exist**:
+
 - Base input becomes read-only
 - Show "Batch-managed (N keys)" badge
 - Keep Bind button for node-level binding
@@ -256,14 +263,17 @@ export function useBatchOverrides(
 #### 3.2 Editor-Specific Integration
 
 **Typography Editor** (`typography-editor-tab.tsx`):
+
 - 8 integration points identified in architecture report
 - Fields: content, fontFamily, fontSize, fontWeight, fontStyle, fillColor, strokeColor, strokeWidth
 
 **Canvas Editor** (`canvas-editor-tab.tsx`):
+
 - 9 integration points identified
 - Fields: position.x/y, scale.x/y, rotation, opacity, fillColor, strokeColor, strokeWidth
 
 **Media Editor** (`media-editor-tab.tsx`):
+
 - 7 integration points identified
 - Fields: imageAssetId, cropX/Y/Width/Height, displayWidth/Height
 
@@ -298,26 +308,31 @@ updateFlow() ← BatchModal State
 ### 5. Edge Cases and Error Handling
 
 #### 5.1 Orphaned Keys
+
 - **Scenario**: Batch key deleted after per-key override set
 - **UI Response**: Show warning badge + "Remove" button
 - **Auto-Cleanup**: Option to remove orphaned overrides
 
 #### 5.2 Conflicting Bindings
+
 - **Scenario**: Both node-level binding and per-key overrides exist
 - **Resolution**: Node-level binding takes precedence (existing behavior)
 - **UI Indication**: Disable batch editing when node-level binding active
 
 #### 5.3 Large Key Sets
+
 - **Threshold**: >50 keys triggers virtualized list
 - **Performance**: Search/filter functionality
 - **UX**: Collapsible sections, pagination if needed
 
 #### 5.4 Type Validation
+
 - **Scenario**: Invalid value type for field (string in number field)
 - **UI Response**: Validation error with suggestion
 - **Fallback**: Revert to last valid value
 
 #### 5.5 Concurrent Editing
+
 - **Scenario**: Multiple editors open simultaneously
 - **Resolution**: Last-write-wins via `updateFlow()`
 - **UX**: Real-time sync across editor instances
@@ -327,24 +342,28 @@ updateFlow() ← BatchModal State
 #### 6.1 Unit Tests
 
 **Component Tests**:
+
 - `BatchButton.test.tsx` - Visibility logic, click handling
 - `BatchModal.test.tsx` - Modal interactions, value editing
 - `useBatchKeys.test.ts` - Key detection logic
 - `useBatchOverrides.test.ts` - Data CRUD operations
 
 **Helper Function Tests**:
+
 - `batch-helpers.test.ts` - Key resolution algorithms
 - FlowTracker integration tests
 
 #### 6.2 Integration Tests
 
 **Editor Integration**:
+
 - Typography editor batch UI integration
 - Canvas editor batch UI integration
 - Media editor batch UI integration
 - Cross-editor synchronization
 
 **Data Flow Tests**:
+
 - UI changes propagate to node data
 - Node data changes reflect in UI
 - Scene assembler receives correct override data
@@ -353,6 +372,7 @@ updateFlow() ← BatchModal State
 #### 6.3 End-to-End Tests
 
 **Workflow Tests**:
+
 - Complete batch override workflow
 - Multi-key override scenarios
 - Binding + batch override interactions
@@ -361,24 +381,28 @@ updateFlow() ← BatchModal State
 ### 7. Implementation Phases
 
 #### Phase 1: Core Infrastructure (Week 1)
+
 - [ ] `BatchButton` component
 - [ ] `useBatchKeysForField` hook
 - [ ] `getKeysForObject` helper
 - [ ] Basic modal skeleton
 
 #### Phase 2: Modal Functionality (Week 2)
+
 - [ ] Complete `BatchModal` component
 - [ ] `useBatchOverrides` hook
 - [ ] Value editors integration
 - [ ] Search/filter for large key sets
 
 #### Phase 3: Editor Integration (Week 3)
+
 - [ ] Typography editor integration (8 fields)
 - [ ] Canvas editor integration (9 fields)
 - [ ] Media editor integration (7 fields)
 - [ ] Cross-editor testing
 
 #### Phase 4: Polish and Edge Cases (Week 4)
+
 - [ ] Error handling and validation
 - [ ] Orphaned key management
 - [ ] Performance optimization
@@ -387,6 +411,7 @@ updateFlow() ← BatchModal State
 ### 8. Success Criteria
 
 #### Functional Requirements
+
 - [ ] Batch button appears when upstream objects have batch keys
 - [ ] Modal opens with correct key list and current values
 - [ ] Per-key and per-object overrides can be set
@@ -394,17 +419,20 @@ updateFlow() ← BatchModal State
 - [ ] Existing binding system remains unaffected
 
 #### Performance Requirements
+
 - [ ] Modal opens in <100ms for key sets up to 100 items
 - [ ] Search/filter works smoothly for 1000+ keys
 - [ ] No impact on existing editor performance
 
 #### UX Requirements
+
 - [ ] Intuitive workflow for batch override management
 - [ ] Clear visual indicators for batch-managed fields
 - [ ] Helpful error messages and validation feedback
 - [ ] Consistent with existing editor patterns
 
 #### Compatibility Requirements
+
 - [ ] No breaking changes to existing functionality
 - [ ] Backward compatible with existing workspaces
 - [ ] Works with all supported field types
@@ -413,34 +441,39 @@ updateFlow() ← BatchModal State
 ### 9. Risk Assessment and Mitigation
 
 #### High Risk
+
 - **Data Corruption**: Risk of corrupting existing override data
-  - *Mitigation*: Comprehensive testing, data validation, backup mechanisms
+  - _Mitigation_: Comprehensive testing, data validation, backup mechanisms
 
 - **Performance Impact**: Large key sets could slow down editors
-  - *Mitigation*: Virtualized lists, pagination, lazy loading
+  - _Mitigation_: Virtualized lists, pagination, lazy loading
 
 #### Medium Risk
+
 - **UI Complexity**: Modal could become confusing with many keys
-  - *Mitigation*: Progressive disclosure, search/filter, clear information hierarchy
+  - _Mitigation_: Progressive disclosure, search/filter, clear information hierarchy
 
 - **State Synchronization**: Changes not reflecting across editors
-  - *Mitigation*: Leverage existing `updateFlow()` mechanism, add sync validation
+  - _Mitigation_: Leverage existing `updateFlow()` mechanism, add sync validation
 
 #### Low Risk
+
 - **Type Safety**: TypeScript integration with existing codebase
-  - *Mitigation*: Strict typing, comprehensive type guards
+  - _Mitigation_: Strict typing, comprehensive type guards
 
 - **Styling Consistency**: Matching existing editor visual design
-  - *Mitigation*: Reuse existing UI components and design tokens
+  - _Mitigation_: Reuse existing UI components and design tokens
 
 ### 10. Future Enhancements
 
 #### Short Term (Post-Launch)
+
 - **Bulk Operations**: Select multiple keys for batch editing
 - **Import/Export**: Batch override templates
 - **Visual Diff**: Show before/after preview of overrides
 
 #### Long Term
+
 - **Advanced Key Management**: Key groups, hierarchies
 - **Override Templates**: Reusable override configurations
 - **Collaborative Editing**: Real-time override collaboration

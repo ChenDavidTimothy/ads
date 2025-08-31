@@ -69,7 +69,8 @@ export function BatchModal({
       <div className="p-[var(--space-4)]">
         <div className="mb-[var(--space-3)] flex items-center justify-between gap-[var(--space-2)]">
           <div className="text-sm text-[var(--text-secondary)]">
-            Field: <span className="text-[var(--text-primary)]">{fieldPath}</span>
+            Field:{" "}
+            <span className="text-[var(--text-primary)]">{fieldPath}</span>
           </div>
           <input
             className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs"
@@ -86,9 +87,19 @@ export function BatchModal({
             </div>
             <div className="flex items-center gap-[var(--space-2)]">
               <Input
-                value={String(
-                  data.perObjectDefault ?? (valueType === "number" ? "" : ""),
-                )}
+                value={(() => {
+                  if (data.perObjectDefault == null) return "";
+                  if (
+                    typeof data.perObjectDefault === "object" &&
+                    data.perObjectDefault !== null
+                  ) {
+                    return JSON.stringify(data.perObjectDefault);
+                  }
+                  // At this point, data.perObjectDefault is not an object, so String() is safe
+                  return String(
+                    data.perObjectDefault as string | number | boolean,
+                  );
+                })()}
                 onChange={(e) => handleSetDefault(e.target.value)}
               />
               <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
@@ -112,10 +123,22 @@ export function BatchModal({
                       key={k}
                       className="flex items-center justify-between gap-[var(--space-2)] border-b border-[var(--border-primary)] p-2 last:border-b-0"
                     >
-                      <div className="text-xs text-[var(--text-secondary)]">{k}</div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        {k}
+                      </div>
                       <div className="flex items-center gap-[var(--space-2)]">
                         <Input
-                          value={String(current ?? "")}
+                          value={(() => {
+                            if (current == null) return "";
+                            if (
+                              typeof current === "object" &&
+                              current !== null
+                            ) {
+                              return JSON.stringify(current);
+                            }
+                            // At this point, current is not an object, so String() is safe
+                            return String(current as string | number | boolean);
+                          })()}
                           onChange={(e) => handleSet(k, e.target.value)}
                         />
                         <Button
@@ -145,11 +168,17 @@ export function BatchModal({
               <div className="rounded border border-[var(--warning-600)] bg-[var(--warning-950)] p-2 text-xs text-[var(--warning-300)]">
                 <div className="mb-1 font-semibold">Orphaned overrides</div>
                 <div className="mb-2">
-                  {orphaned.length} key{orphaned.length > 1 ? "s" : ""} no longer present upstream
+                  {orphaned.length} key{orphaned.length > 1 ? "s" : ""} no
+                  longer present upstream
                 </div>
                 <div className="flex flex-wrap gap-[var(--space-1)]">
                   {orphaned.slice(0, 6).map((k) => (
-                    <span key={k} className="rounded bg-[var(--warning-800)] px-1 py-0.5">{k}</span>
+                    <span
+                      key={k}
+                      className="rounded bg-[var(--warning-800)] px-1 py-0.5"
+                    >
+                      {k}
+                    </span>
                   ))}
                   {orphaned.length > 6 && <span>…</span>}
                 </div>
@@ -176,5 +205,3 @@ export function BatchModal({
     </Modal>
   );
 }
-
-

@@ -11,7 +11,7 @@ import type {
 } from "@/shared/properties/assignments";
 import { NumberField } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
-import { BindButton } from "@/components/workspace/binding/bindings";
+
 import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
 import { getResolverFieldPath } from "@/shared/properties/field-paths";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
@@ -146,7 +146,9 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
         {/* Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
+            <label className="text-xs text-[var(--text-tertiary)]">
+              Image Asset
+            </label>
             <BindingAndBatchControls
               bindProps={{ nodeId, bindingKey: "imageAssetId" }}
               batchProps={{
@@ -645,7 +647,9 @@ function MediaPerObjectProperties({
         {/* Per-Object Asset Selection */}
         <div className="space-y-[var(--space-2)]">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[var(--text-tertiary)]">Image Asset</label>
+            <label className="text-xs text-[var(--text-tertiary)]">
+              Image Asset
+            </label>
             <BindingAndBatchControls
               bindProps={{ nodeId, bindingKey: "imageAssetId", objectId }}
               batchProps={{

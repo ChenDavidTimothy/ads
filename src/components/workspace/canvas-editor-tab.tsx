@@ -11,10 +11,7 @@ import type {
 } from "@/shared/properties/assignments";
 import { NumberField, ColorField } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
-import {
-  BindButton,
-  useVariableBinding,
-} from "@/components/workspace/binding/bindings";
+import { useVariableBinding } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
 import { OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";

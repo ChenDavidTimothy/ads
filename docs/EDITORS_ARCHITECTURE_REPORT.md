@@ -53,11 +53,13 @@
 ### Typography Editor
 
 **Main Components:**
+
 - `src/components/workspace/typography-editor-tab.tsx` - Main editor component
 - `src/components/workspace/binding/bindings.tsx` - Binding system components
 - `src/components/ui/form-fields.tsx` - Form field components
 
 **Component Tree:**
+
 ```
 TypographyEditorTab
 ├── TypographyDefaultProperties (center panel)
@@ -72,11 +74,13 @@ TypographyEditorTab
 ```
 
 **Shared Components:**
+
 - `src/components/ui/selection.tsx` - SelectionList for object selection
 - `src/components/ui/badge.tsx` - Binding/override badges
 - `src/components/workspace/binding/badges.tsx` - Unified badge components
 
 **Hooks/Stores:**
+
 - `useWorkspace()` - Main workspace state management
 - `useVariableBinding()` - Binding system logic
 - `FlowTracker` - Object detection and flow analysis
@@ -84,9 +88,11 @@ TypographyEditorTab
 ### Canvas Editor
 
 **Main Components:**
+
 - `src/components/workspace/canvas-editor-tab.tsx` - Main editor component
 
 **Component Tree:**
+
 ```
 CanvasEditorTab
 ├── CanvasDefaultProperties (center panel)
@@ -99,15 +105,18 @@ CanvasEditorTab
 ```
 
 **Shared Components:**
+
 - Same as Typography Editor
 
 ### Media Editor
 
 **Main Components:**
+
 - `src/components/workspace/media-editor-tab.tsx` - Main editor component
 - `src/components/workspace/media/asset-selection-modal.tsx` - Asset selection
 
 **Component Tree:**
+
 ```
 MediaEditorTab
 ├── MediaDefaultProperties (center panel)
@@ -121,16 +130,19 @@ MediaEditorTab
 ```
 
 **Shared Components:**
+
 - Same as Typography Editor
 - `api.assets.list` - Asset API integration
 
 ### Animation/Timeline Editor
 
 **Main Components:**
+
 - `src/components/workspace/timeline-editor-tab.tsx` - Main editor component
 - `src/components/workspace/timeline-editor-core.tsx` - Timeline visualization
 
 **Component Tree:**
+
 ```
 TimelineEditorTab
 ├── TimelineEditorCore (center panel)
@@ -143,6 +155,7 @@ TimelineEditorTab
 ```
 
 **Shared Components:**
+
 - `src/components/workspace/timeline-editor-core.tsx` - TimelineEditorCore component
 
 ## Field Rendering Pipeline
@@ -165,15 +178,19 @@ export interface NodeDefinition {
 ```
 
 Node definitions are registered in `NODE_DEFINITIONS` and accessed via:
+
 ```typescript
 // src/shared/registry/registry-utils.ts
-export function getNodeDefinition(nodeType: string): NodeDefinition | undefined
-export function getNodeDefaults(nodeType: string): Record<string, unknown> | undefined
+export function getNodeDefinition(nodeType: string): NodeDefinition | undefined;
+export function getNodeDefaults(
+  nodeType: string,
+): Record<string, unknown> | undefined;
 ```
 
 ### Value Resolution
 
 Value resolution follows a 3-tier precedence system:
+
 1. **Per-object overrides** (highest priority)
 2. **Node-level defaults** (medium priority)
 3. **Definition defaults** (lowest priority)
@@ -188,6 +205,7 @@ const content = data.content ?? def.content ?? "Sample Text";
 ### Typography.content Example
 
 **Schema Definition:**
+
 ```typescript
 // From node definitions - Typography node has content property
 defaults: {
@@ -197,11 +215,13 @@ defaults: {
 ```
 
 **Value Resolution Path:**
+
 ```129:129:src/components/workspace/typography-editor-tab.tsx
 const content = data.content ?? def.content ?? "Sample Text";
 ```
 
 **Per-Object Override Resolution:**
+
 ```498:502:src/components/workspace/typography-editor-tab.tsx
 const fontFamily =
   initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? "Arial";
@@ -209,6 +229,7 @@ const fontSize = initial.fontSize ?? base.fontSize ?? def.fontSize ?? 24;
 ```
 
 **Field Rendering:**
+
 ```596:611:src/components/workspace/typography-editor-tab.tsx
 <TextareaField
   label="Content"
@@ -230,6 +251,7 @@ const fontSize = initial.fontSize ?? base.fontSize ?? def.fontSize ?? 24;
 ### Canvas.position.x Example
 
 **Schema Definition:**
+
 ```typescript
 // Canvas node defaults
 defaults: {
@@ -239,12 +261,14 @@ defaults: {
 ```
 
 **Value Resolution Path:**
+
 ```331:332:src/components/workspace/canvas-editor-tab.tsx
 const posX = data.position?.x ?? def.position?.x ?? 0;
 const posY = data.position?.y ?? def.position?.y ?? 0;
 ```
 
 **Per-Object Override Resolution:**
+
 ```812:817:src/components/workspace/canvas-editor-tab.tsx
 case "position.x":
   return (
@@ -256,6 +280,7 @@ case "position.x":
 ```
 
 **Field Rendering:**
+
 ```888:906:src/components/workspace/canvas-editor-tab.tsx
 <NumberField
   label=""
@@ -277,6 +302,7 @@ case "position.x":
 ### Media.imageAssetId Example
 
 **Schema Definition:**
+
 ```typescript
 // Media node defaults
 defaults: {
@@ -286,11 +312,13 @@ defaults: {
 ```
 
 **Value Resolution Path:**
+
 ```75:75:src/components/workspace/media-editor-tab.tsx
 const imageAssetId: string = data?.imageAssetId ?? defImageAssetId;
 ```
 
 **Per-Object Override Resolution:**
+
 ```507:514:src/components/workspace/media-editor-tab.tsx
 case "imageAssetId":
   return (
@@ -302,6 +330,7 @@ case "imageAssetId":
 ```
 
 **Field Rendering:**
+
 ```592:611:src/components/workspace/media-editor-tab.tsx
 <AssetSelectionModal
   isOpen={showAssetModal}
@@ -318,11 +347,12 @@ case "imageAssetId":
 ### Per-Object Overrides
 
 **Data Structures:**
+
 ```typescript
 // src/shared/properties/assignments.ts
 export interface ObjectAssignments {
-  initial?: ObjectInitialOverrides;  // Static property overrides
-  tracks?: TrackOverride[];         // Animation track overrides
+  initial?: ObjectInitialOverrides; // Static property overrides
+  tracks?: TrackOverride[]; // Animation track overrides
 }
 
 export interface ObjectInitialOverrides {
@@ -333,25 +363,28 @@ export interface ObjectInitialOverrides {
   fillColor?: string;
   strokeColor?: string;
   strokeWidth?: number;
-  [key: string]: unknown;  // Extensible for other properties
+  [key: string]: unknown; // Extensible for other properties
 }
 
 export type PerObjectAssignments = Record<string, ObjectAssignments>;
 ```
 
 **Storage Location:**
+
 - Stored in `node.data.perObjectAssignments` for each editor node
 - Keyed by `objectId` (upstream object identifier)
 
 ### Default Overrides
 
 **Node-Level Defaults:**
+
 - Stored directly in `node.data` properties
 - Override definition defaults but are overridden by per-object assignments
 
 ### Precedence Rules
 
 **Complete Precedence Chain:**
+
 1. **Per-object binding** (highest - disables manual input)
 2. **Per-object manual override** (initial values)
 3. **Node-level binding** (disables input for all objects)
@@ -359,6 +392,7 @@ export type PerObjectAssignments = Record<string, ObjectAssignments>;
 5. **Definition defaults** (lowest)
 
 **Precedence Implementation:**
+
 ```804:823:src/components/workspace/canvas-editor-tab.tsx
 const getValue = (key: string, fallbackValue: number | string) => {
   // Check per-object binding first (highest priority)
@@ -383,12 +417,14 @@ const getValue = (key: string, fallbackValue: number | string) => {
 ### UI Flow
 
 **Binding Creation:**
+
 1. User clicks bind button next to field
 2. `BindButton` opens modal with available Result variables
 3. User selects Result node from filtered list
 4. `bind()` function updates node data with binding reference
 
 **Binding UI Components:**
+
 ```376:473:src/components/workspace/binding/bindings.tsx
 export function BindButton({ ... }) {
   // Modal-based variable selection
@@ -400,33 +436,36 @@ export function BindButton({ ... }) {
 ### Data Storage
 
 **Binding Reference Structure:**
+
 ```typescript
 // Node-level bindings
 node.data.variableBindings = {
   [bindingKey]: {
-    target: string,        // e.g., "position.x"
-    boundResultNodeId: string  // Result node identifier
-  }
-}
+    target: string, // e.g., "position.x"
+    boundResultNodeId: string, // Result node identifier
+  },
+};
 
 // Per-object bindings
 node.data.variableBindingsByObject = {
   [objectId]: {
     [bindingKey]: {
       target: string,
-      boundResultNodeId: string
-    }
-  }
-}
+      boundResultNodeId: string,
+    },
+  },
+};
 ```
 
 **Storage Location:**
+
 - `node.data.variableBindings` - Global bindings (apply to all objects)
 - `node.data.variableBindingsByObject` - Per-object bindings (override global)
 
 ### Disabled State Logic
 
 **Binding Detection:**
+
 ```767:771:src/components/workspace/canvas-editor-tab.tsx
 const isBound = (key: string) => {
   const vbAll = node?.data?.variableBindingsByObject ?? {};
@@ -435,6 +474,7 @@ const isBound = (key: string) => {
 ```
 
 **Field Disabling:**
+
 ```904:904:src/components/workspace/canvas-editor-tab.tsx
 disabled={isBound("position.x")}
 ```
@@ -442,6 +482,7 @@ disabled={isBound("position.x")}
 ### Badge Rendering
 
 **Binding Badge:**
+
 ```22:52:src/components/workspace/canvas-editor-tab.tsx
 function CanvasBindingBadge({ ... }) {
   // Shows "Bound: {resultName}" or "Bound"
@@ -450,6 +491,7 @@ function CanvasBindingBadge({ ... }) {
 ```
 
 **Override Badge:**
+
 ```55:71:src/components/workspace/canvas-editor-tab.tsx
 function OverrideBadge({ ... }) {
   // Shows "Manual" with remove button
@@ -458,6 +500,7 @@ function OverrideBadge({ ... }) {
 ```
 
 **Badge Display Logic:**
+
 ```908:927:src/components/workspace/canvas-editor-tab.tsx
 {(isOverridden("position.x") || isBound("position.x")) && (
   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
@@ -478,6 +521,7 @@ function OverrideBadge({ ... }) {
 ### Batch Metadata Types
 
 **Batch Override Types:**
+
 ```typescript
 // src/server/animation-processing/scene/batch-overrides-resolver.ts
 export type PerObjectBatchOverrides = Record<
@@ -492,6 +536,7 @@ export type PerObjectBoundFields = Record<string, string[]>; // objectId -> fiel
 ```
 
 **Batch Resolve Context:**
+
 ```16:19:src/server/animation-processing/scene/batch-overrides-resolver.ts
 export interface BatchResolveContext {
   batchKey: string | null;
@@ -503,6 +548,7 @@ export interface BatchResolveContext {
 ### Editor Integration
 
 **Current State:** Not found
+
 - No direct integration with batch metadata in editor components
 - Batch overrides UI feature flag is disabled
 - Backend batch resolution exists but editors don't read batch metadata
@@ -510,6 +556,7 @@ export interface BatchResolveContext {
 ### Object Reachability
 
 **FlowTracker Integration:**
+
 ```90:111:src/components/workspace/canvas-editor-tab.tsx
 const upstreamObjects = useMemo(() => {
   const tracker = new FlowTracker();
@@ -538,6 +585,7 @@ const upstreamObjects = useMemo(() => {
 ### Node Data Storage
 
 **Editor State Storage:**
+
 ```typescript
 // Node data structure for editors
 interface TypographyNodeData extends BaseNodeData {
@@ -557,12 +605,14 @@ interface TypographyNodeData extends BaseNodeData {
 ```
 
 **Timeline Editor Storage:**
+
 - Timeline data stored separately in `state.editors.timeline[nodeId]`
 - Merged into node data during serialization
 
 ### Workspace Serialization
 
 **Merge Process:**
+
 ```96:121:src/utils/workspace-state.ts
 export function mergeEditorsIntoFlow(state: WorkspaceState): {
   nodes: Node<NodeData>[];
@@ -595,11 +645,13 @@ export function mergeEditorsIntoFlow(state: WorkspaceState): {
 ### Migration Points
 
 **Data Structure Changes:**
+
 - Adding `batchOverridesByField` to node data would require migration
 - `perObjectAssignments` structure changes need careful migration
 - Binding system structure changes impact all editors
 
 **Migration Strategy:**
+
 - Node data migrations in `extractWorkspaceState()` function
 - Version-based migration logic in workspace loading
 - Backward compatibility for existing workspaces
@@ -609,12 +661,14 @@ export function mergeEditorsIntoFlow(state: WorkspaceState): {
 ### Data Collection
 
 **Editor Data Flow:**
+
 1. Editors modify `node.data` properties
 2. `updateFlow()` persists changes to workspace state
 3. Scene assembler reads node data during rendering
 4. Backend processes node data into scene objects
 
 **Scene Assembly Input:**
+
 ```typescript
 // Editors provide data to scene assembler
 node.data = {
@@ -635,12 +689,14 @@ node.data = {
 ### Scene Assembly
 
 **Data Reading Pattern:**
+
 ```251:252:src/server/animation-processing/scene/scene-assembler.ts
 const overrides = perObjectAssignments?.[objectId]?.tracks;
 const override = pickOverridesForTrack(overrides, track);
 ```
 
 **Override Application:**
+
 ```98:142:src/server/animation-processing/scene/scene-assembler.ts
 function applyTrackOverride(
   base: AnimationTrack,
@@ -663,11 +719,13 @@ function applyTrackOverride(
 ### Render Pipeline
 
 **No Direct Scene Preview Dependency:**
+
 - Confirmed: editors do not depend on Scene preview
 - Render pipeline is separate from editor UI
 - Scene data flows: Editor → Node Data → Scene Assembler → Render
 
 **Data Flow Summary:**
+
 ```
 Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 ```
@@ -677,12 +735,14 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 ### Typography Editor
 
 **Per-Field Drawer Mount Points:**
+
 - **Location:** `src/components/workspace/typography-editor-tab.tsx`
 - **TypographyDefaultProperties component:** Lines 145-396
 - **TypographyPerObjectProperties component:** Lines 400-905
 - **Exact insertion point:** After each field component, before badge rendering
 
 **Specific Mount Points:**
+
 - Content field: After line 181 (`</div>`)
 - Font Family: After line 213 (`</div>`)
 - Font Size: After line 243 (`</div>`)
@@ -695,11 +755,13 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 ### Canvas Editor
 
 **Per-Field Drawer Mount Points:**
+
 - **Location:** `src/components/workspace/canvas-editor-tab.tsx`
 - **CanvasDefaultProperties component:** Lines 294-695
 - **CanvasPerObjectProperties component:** Lines 698-1283
 
 **Specific Mount Points:**
+
 - Position X: After line 404 (`</div>`)
 - Position Y: After line 445 (`</div>`)
 - Scale X: After line 485 (`</div>`)
@@ -713,11 +775,13 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 ### Media Editor
 
 **Per-Field Drawer Mount Points:**
+
 - **Location:** `src/components/workspace/media-editor-tab.tsx`
 - **MediaDefaultProperties component:** Lines 57-456
 - **MediaPerObjectProperties component:** Lines 459-981
 
 **Specific Mount Points:**
+
 - Image Asset: After line 246 (`</div>`)
 - Crop X: After line 283 (`</div>`)
 - Crop Y: After line 310 (`</div>`)
@@ -729,27 +793,32 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 ### Animation Editor
 
 **Per-Field Drawer Mount Points:**
+
 - **Location:** `src/components/workspace/timeline-editor-core.tsx`
 - **TrackProperties component:** Lines 22-356
 
 **Specific Mount Points:**
+
 - Track properties are rendered in `TrackProperties` component
 - Mount points would be after each property field in the track editor
 
 ### Risk Assessment
 
 **Low-Risk Patterns:**
+
 - All editors follow consistent component structure
 - Badge rendering already exists as insertion pattern
 - No conflicts with existing drawer/modal systems
 - Form field components are self-contained
 
 **Medium-Risk Patterns:**
+
 - Deep-merge logic in `mergeObjectAssignments()` could conflict if per-key overrides introduce new nesting
 - Binding reset paths in `resetToDefault()` might need updates for per-key override cleanup
 - Animation track override merging might need extension for per-key values
 
 **High-Risk Areas:**
+
 - Timeline editor has separate state management (`state.editors.timeline`)
 - Scene assembler deep-merge logic for track properties
 - Migration points for adding batch override data structures

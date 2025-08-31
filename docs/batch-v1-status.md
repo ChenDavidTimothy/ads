@@ -3,6 +3,7 @@
 Current state: Batch v1 backend is complete and production-ready. Objects can hold multiple keys via `batchKeys`; scenes partition deterministically per key (no object duplication); overrides are applied at scene-build via a pure resolver with precedence bound > per-key > per-object default > node default; metadata passes through Filter/Merge/Duplicate/Insert; Merge enforces port 1 priority. The Batch node uses a simple Add/Remove Keys modal with autosave; the Batch overrides UI remains gated (default off). A developer API for programmatic overrides is not yet implemented.
 
 ## Implementation Summary (2025-01-15)
+
 - ✅ **Timeline batch overrides fully implemented**
 - ✅ **All editor types supported**: Canvas, Typography, Media, Timeline
 - ✅ **Complete test coverage** with 15 test cases across executor and scene assembler
@@ -10,9 +11,11 @@ Current state: Batch v1 backend is complete and production-ready. Objects can ho
 - ✅ **Documentation updated** to reflect completion status
 
 ## 1) Documentation status
+
 - README should reflect “Batch Rendering (multi-key)” and “Batch Overrides v1”.
 
 ## Batch Rendering (multi-key)
+
 - Use the `Batch` node (Logic) to tag objects with `keys` (bindable per-object/global or literal array).
 - Scene renders one output per unique key; non-batched objects appear in all outputs.
 - Deterministic order (keys sorted); runtime IDs are namespaced as `baseId@key`.
@@ -20,6 +23,7 @@ Current state: Batch v1 backend is complete and production-ready. Objects can ho
 - Overrides precedence unchanged for bound fields. Per-key overrides UI remains gated.
 
 ## Batch Overrides v1
+
 - Scope:
   - Typography.content
   - Canvas.position.x/y, Canvas.scale.x/y, Canvas.rotation, Canvas.opacity, Canvas.fillColor, Canvas.strokeColor, Canvas.strokeWidth
@@ -33,15 +37,20 @@ Current state: Batch v1 backend is complete and production-ready. Objects can ho
 ## 2) Current capabilities (with evidence)
 
 ### 2.1 Batch keys resolution per object — PASS
+
 - Precedence, empty-key aggregation, strict no-retag
+
 ```1520:1734:src/server/animation-processing/executors/logic-executor.ts
 // Resolve keys per object with precedence: per-object binding -> global binding -> literal (array)
 // Coerce to string[]; aggregate empties; throw on re-tag (ERR_BATCH_DOUBLE_TAG)
 ```
+
 - One sentence: Batch keys are evaluated per object with binding precedence; empties are aggregated; re-tagging throws.
 
 ### 2.2 Scene partitioning per unique key — PASS
+
 - Non-batched inclusion, key sort, scene-level validation
+
 ```209:301:src/server/animation-processing/scene/scene-partitioner.ts
 const nonBatched = base.objects.filter((o) => !o.batch);
 const batched = base.objects.filter((o) => o.batch && Array.isArray(o.batchKeys) && o.batchKeys.some(Boolean));
@@ -59,8 +68,10 @@ const result = keys.map((key) => ({
   boundFieldsByObject: base.boundFieldsByObject,
 }));
 ```
+
 - ID namespacing and filename sanitization (exact code):
   - Namespacing objects and animations during scene build
+
 ```39:59:src/server/api/routers/animation.ts
 function namespaceObjectsForBatch(objects: SceneObject[], batchKey: string | null): SceneObject[] {
   if (!batchKey) return objects;
@@ -81,7 +92,9 @@ function namespaceAnimationsForBatch(
   }));
 }
 ```
-  - Usage in scene generation (video path)
+
+- Usage in scene generation (video path)
+
 ```786:804:src/server/api/routers/animation.ts
 // Create a properly namespaced sub-partition for the batch key
 const namespacedSubPartition = {
@@ -104,12 +117,15 @@ const scene: AnimationScene = buildAnimationSceneFromPartition(
 );
 ```
 
-  - Usage in image generation (frame path)
+- Usage in image generation (frame path)
+
 ```1093:1094:src/server/api/routers/animation.ts
 const scene: AnimationScene =
   buildAnimationSceneFromPartition(sub);
 ```
-  - Collision policy: collisions blocked with clear error messages
+
+- Collision policy: collisions blocked with clear error messages
+
 ```739:762:src/server/api/routers/animation.ts
 const filenameMap = new Map<string, string[]>();
 for (const sp of subPartitions) {
@@ -127,7 +143,9 @@ if (collisions.length > 0) {
 ```
 
 ### 2.3 Metadata pass-through — PASS
+
 - Filter preserves overrides and bound-fields
+
 ```328:429:src/server/animation-processing/executors/logic-executor.ts
 setNodeOutput(context, node.data.identifier.id, "output", "object_stream", filteredResults, {
   perObjectTimeCursor: propagatedCursors,
@@ -139,42 +157,54 @@ setNodeOutput(context, node.data.identifier.id, "output", "object_stream", filte
     Object.keys(propagatedBoundFields).length > 0 ? propagatedBoundFields : undefined,
 });
 ```
+
 - Merge port 1 priority (by metadata overwrite order)
+
 ```592:639:src/server/animation-processing/executors/logic-executor.ts
 // Merge perObjectBatchOverrides with port priority (Port 1 wins)
 ```
 
 ### 2.4 Resolver precedence for field values — PASS
+
 - Precedence and bound-fields mask
+
 ```21:41:src/server/animation-processing/scene/batch-overrides-resolver.ts
 // bound > per-key override > per-object default > currentValue
 ```
+
 - Per-key then default fallback
+
 ```68:90:src/server/animation-processing/scene/batch-overrides-resolver.ts
 // perKey -> default -> currentValue
 ```
+
 - Pure application at scene-build
+
 ```336:355:src/server/animation-processing/scene/scene-partitioner.ts
 // applyOverridesToObject with { batchKey, perObjectBatchOverrides, perObjectBoundFields }
 ```
 
 ### 2.5 Editor UI state — ✅ COMPLETE
+
 - Timeline batch overrides fully functional
 - Canvas, Typography, Media, Timeline all supported
 - **Status**: Complete implementation with UI and backend
 
 ### 2.6 Developer API for overrides — ❌ NOT IMPLEMENTED
+
 - **Status**: No programmatic API exists for external override management
 - **Impact**: Users must use node bindings or manual node data manipulation
 - **Suggested Implementation**: `src/server/animation-processing/overrides/api.ts` with `setOverride/clearOverride/getOverride` functions
 
 ## 3) Tests summary — ✅ ALL TESTS EXIST
+
 - Resolver tests — **PASS**
 - Metadata pass-through and merge — **PASS**
 - Scene integration — **PASS**
 - Retagging — now **throws** `ERR_BATCH_DOUBLE_TAG` (updated test)
 
 ## 4) Open gaps or deviations
+
 - Developer API not implemented ❌
 - Filename sanitization collision detection — ✅ **FIXED** (2025-08-30)
 - Documentation accuracy — ✅ **UPDATED**
@@ -182,6 +212,7 @@ setNodeOutput(context, node.data.identifier.id, "output", "object_stream", filte
 ## 5) Implementation Details
 
 ### Timeline Batch Overrides Architecture
+
 - **Animation Executor** (`src/server/animation-processing/executors/animation-executor.ts`):
   - `applyTimelineBatchOverridesToTracks()`: Applies default batch overrides to tracks
   - Supports all track types: move, rotate, scale, fade, color
@@ -192,11 +223,13 @@ setNodeOutput(context, node.data.identifier.id, "output", "object_stream", filte
   - Backward compatible with existing calls
 
 ### Test Coverage
+
 - **Animation Executor Tests**: 7 test cases covering default value application
 - **Scene Assembler Tests**: 8 test cases covering per-key override application
 - **Resolver Tests**: Existing tests cover Timeline field path resolution
 
 ## 6) Quick index
+
 - Logic executor: `src/server/animation-processing/executors/logic-executor.ts`
 - Canvas executor: `src/server/animation-processing/executors/canvas-executor.ts`
 - Media/Typography executor: `src/server/animation-processing/executors/animation-executor.ts`

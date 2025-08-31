@@ -9,6 +9,7 @@ export type PropertyType =
   | "color"
   | "boolean"
   | "point2d"
+  | "array"
   | "select"
   | "range";
 
@@ -17,7 +18,7 @@ export interface BasePropertySchema {
   label: string;
   type: PropertyType;
   required?: boolean;
-  defaultValue?: string | number | boolean | Point2D;
+  defaultValue?: string | number | boolean | Point2D | readonly unknown[];
 }
 
 export interface NumberPropertySchema extends BasePropertySchema {
@@ -54,6 +55,12 @@ export interface Point2DPropertySchema extends BasePropertySchema {
   defaultValue?: Point2D;
 }
 
+export interface ArrayPropertySchema extends BasePropertySchema {
+  type: "array";
+  itemType: string;
+  defaultValue?: readonly unknown[];
+}
+
 export interface SelectPropertySchema extends BasePropertySchema {
   type: "select";
   options: Array<{ value: string; label: string }>;
@@ -75,6 +82,7 @@ export type PropertySchema =
   | ColorPropertySchema
   | BooleanPropertySchema
   | Point2DPropertySchema
+  | ArrayPropertySchema
   | SelectPropertySchema
   | RangePropertySchema;
 
@@ -85,12 +93,20 @@ export interface NodePropertyConfig {
 // Helper to get default values from schema
 export function getDefaultPropertiesFromSchema(
   schemas: PropertySchema[],
-): Record<string, string | number | boolean | Point2D> {
-  const defaults: Record<string, string | number | boolean | Point2D> = {};
+): Record<string, string | number | boolean | Point2D | unknown[]> {
+  const defaults: Record<
+    string,
+    string | number | boolean | Point2D | unknown[]
+  > = {};
 
   for (const schema of schemas) {
     if (schema.defaultValue !== undefined) {
-      defaults[schema.key] = schema.defaultValue;
+      defaults[schema.key] = schema.defaultValue as
+        | string
+        | number
+        | boolean
+        | Point2D
+        | unknown[];
     }
   }
 

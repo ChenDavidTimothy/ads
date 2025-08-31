@@ -815,14 +815,16 @@ export function TrackProperties({
     }
 
     // Determine value type based on field
-    const valueType: "number" | "string" = fieldKey.includes("color") ? "string" : "number";
+    const valueType: "number" | "string" = fieldKey.includes("color")
+      ? "string"
+      : "number";
 
     return (
       <BindingAndBatchControls
         bindProps={{
           nodeId: animationNodeId,
           bindingKey: `track.${track.identifier.id}.${fieldKey}`,
-          objectId: selectedObjectId
+          objectId: selectedObjectId,
         }}
         batchProps={{
           nodeId: animationNodeId,

@@ -5,5 +5,3 @@ describe("BatchModal", () => {
     expect(true).toBe(true);
   });
 });
-
-

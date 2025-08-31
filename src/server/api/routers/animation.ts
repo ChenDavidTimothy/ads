@@ -33,7 +33,10 @@ import {
   buildAnimationSceneFromPartition,
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
-import type { ScenePartition, BatchedScenePartition } from "@/server/animation-processing/scene/scene-partitioner";
+import type {
+  ScenePartition,
+  BatchedScenePartition,
+} from "@/server/animation-processing/scene/scene-partitioner";
 import type { SceneObject, SceneAnimationTrack } from "@/shared/types/scene";
 import {
   buildContentBasename,
@@ -65,12 +68,17 @@ function namespaceAnimationsForBatch(
 
 // Helper: namespace batch overrides to match namespaced object IDs
 function namespaceBatchOverridesForBatch(
-  batchOverrides: Record<string, Record<string, Record<string, unknown>>> | undefined,
+  batchOverrides:
+    | Record<string, Record<string, Record<string, unknown>>>
+    | undefined,
   batchKey: string | null,
 ): Record<string, Record<string, Record<string, unknown>>> | undefined {
   if (!batchKey || !batchOverrides) return batchOverrides;
   const suffix = `@${batchKey}`;
-  const namespaced: Record<string, Record<string, Record<string, unknown>>> = {};
+  const namespaced: Record<
+    string,
+    Record<string, Record<string, unknown>>
+  > = {};
 
   for (const [objectId, fieldOverrides] of Object.entries(batchOverrides)) {
     namespaced[`${objectId}${suffix}`] = fieldOverrides;
@@ -88,7 +96,10 @@ function namespacePartitionForBatch(
     sceneNode: partition.sceneNode,
     objects: namespaceObjectsForBatch(partition.objects, batchKey),
     animations: namespaceAnimationsForBatch(partition.animations, batchKey),
-    batchOverrides: namespaceBatchOverridesForBatch(partition.batchOverrides, batchKey),
+    batchOverrides: namespaceBatchOverridesForBatch(
+      partition.batchOverrides,
+      batchKey,
+    ),
     boundFieldsByObject: partition.boundFieldsByObject,
     batchKey: batchKey,
   };
@@ -800,7 +811,10 @@ export const animationRouter = createTRPCRouter({
               }
 
               // Create a properly namespaced sub-partition for the batch key
-              const namespacedSubPartition = namespacePartitionForBatch(sub, sub.batchKey);
+              const namespacedSubPartition = namespacePartitionForBatch(
+                sub,
+                sub.batchKey,
+              );
 
               const scene: AnimationScene = buildAnimationSceneFromPartition(
                 namespacedSubPartition,

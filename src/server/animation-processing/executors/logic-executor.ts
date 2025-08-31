@@ -1649,7 +1649,19 @@ export class LogicNodeExecutor extends BaseExecutor {
             if (fromPerObject.length > 0) return fromPerObject;
             const fromGlobal = coerceToKeys(globalVal);
             if (fromGlobal.length > 0) return fromGlobal;
-            return coerceToKeys(literalVal);
+            const fromLiteral = coerceToKeys(literalVal);
+            if (fromLiteral.length > 0) return fromLiteral;
+            // Check the data.keys array as configured in the UI
+            const keysArray = (data as { keys?: unknown[] }).keys;
+            if (Array.isArray(keysArray)) {
+              const fromKeysArray = keysArray
+                .map((k) =>
+                  typeof k === "string" ? k.trim() : String(k).trim(),
+                )
+                .filter((k) => k.length > 0);
+              if (fromKeysArray.length > 0) return fromKeysArray;
+            }
+            return [];
           })();
 
           if (resolvedKeys.length === 0) {
@@ -1666,7 +1678,8 @@ export class LogicNodeExecutor extends BaseExecutor {
             }
             return [] as string[];
           })();
-          const alreadyTagged = objWithBatch.batch === true && prevKeys.length > 0;
+          const alreadyTagged =
+            objWithBatch.batch === true && prevKeys.length > 0;
           if (alreadyTagged) {
             const same =
               prevKeys.length === resolvedKeys.length &&

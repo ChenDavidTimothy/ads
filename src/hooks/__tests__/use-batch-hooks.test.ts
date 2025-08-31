@@ -5,5 +5,3 @@ describe("batch hooks", () => {
     expect(1 + 1).toBe(2);
   });
 });
-
-

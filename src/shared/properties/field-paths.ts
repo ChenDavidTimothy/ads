@@ -68,5 +68,3 @@ export function getResolverFieldPath(
       return undefined;
   }
 }
-
-

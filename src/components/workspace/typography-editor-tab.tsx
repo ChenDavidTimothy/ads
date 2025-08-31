@@ -16,10 +16,7 @@ import {
   TextareaField,
 } from "@/components/ui/form-fields";
 import { SelectionList } from "@/components/ui/selection";
-import {
-  BindButton,
-  useVariableBinding,
-} from "@/components/workspace/binding/bindings";
+import { useVariableBinding } from "@/components/workspace/binding/bindings";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import { Badge } from "@/components/ui/badge";
 import { Type } from "lucide-react";
@@ -373,7 +370,10 @@ function TypographyDefaultProperties({ nodeId }: { nodeId: string }) {
                   bindProps={{ nodeId, bindingKey: "strokeColor" }}
                   batchProps={{
                     nodeId,
-                    fieldPath: getResolverFieldPath("typography", "strokeColor")!,
+                    fieldPath: getResolverFieldPath(
+                      "typography",
+                      "strokeColor",
+                    )!,
                     valueType: "string",
                   }}
                 />
@@ -826,27 +826,27 @@ function TypographyPerObjectProperties({
         {/* Colors Row 1 - 2x2 grid for Fill and Stroke Color */}
         <div className="grid grid-cols-2 gap-[var(--space-2)]">
           <div>
-                          <ColorField
-                label="Fill Color"
-                value={
-                  isBound("fillColor")
-                    ? (base.fillColor ?? def.fillColor ?? "#000000")
-                    : getStringValue("fillColor", "#000000")
-                }
-                onChange={(fillColor) => onChange({ fillColor })}
-                bindAdornment={
-                  <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "fillColor", objectId }}
-                    batchProps={{
-                      nodeId,
-                      fieldPath: getResolverFieldPath("typography", "fillColor")!,
-                      objectId,
-                      valueType: "string",
-                    }}
-                  />
-                }
-                disabled={isBound("fillColor")}
-              />
+            <ColorField
+              label="Fill Color"
+              value={
+                isBound("fillColor")
+                  ? (base.fillColor ?? def.fillColor ?? "#000000")
+                  : getStringValue("fillColor", "#000000")
+              }
+              onChange={(fillColor) => onChange({ fillColor })}
+              bindAdornment={
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "fillColor", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath("typography", "fillColor")!,
+                    objectId,
+                    valueType: "string",
+                  }}
+                />
+              }
+              disabled={isBound("fillColor")}
+            />
             {/* Badge - Show when overridden or bound */}
             {(isOverridden("fillColor") || isBound("fillColor")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
@@ -870,27 +870,30 @@ function TypographyPerObjectProperties({
             )}
           </div>
           <div>
-                          <ColorField
-                label="Stroke Color"
-                value={
-                  isBound("strokeColor")
-                    ? (base.strokeColor ?? def.strokeColor ?? "#ffffff")
-                    : getStringValue("strokeColor", "#ffffff")
-                }
-                onChange={(strokeColor) => onChange({ strokeColor })}
-                bindAdornment={
-                  <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "strokeColor", objectId }}
-                    batchProps={{
-                      nodeId,
-                      fieldPath: getResolverFieldPath("typography", "strokeColor")!,
-                      objectId,
-                      valueType: "string",
-                    }}
-                  />
-                }
-                disabled={isBound("strokeColor")}
-              />
+            <ColorField
+              label="Stroke Color"
+              value={
+                isBound("strokeColor")
+                  ? (base.strokeColor ?? def.strokeColor ?? "#ffffff")
+                  : getStringValue("strokeColor", "#ffffff")
+              }
+              onChange={(strokeColor) => onChange({ strokeColor })}
+              bindAdornment={
+                <BindingAndBatchControls
+                  bindProps={{ nodeId, bindingKey: "strokeColor", objectId }}
+                  batchProps={{
+                    nodeId,
+                    fieldPath: getResolverFieldPath(
+                      "typography",
+                      "strokeColor",
+                    )!,
+                    objectId,
+                    valueType: "string",
+                  }}
+                />
+              }
+              disabled={isBound("strokeColor")}
+            />
             {/* Badge - Show when overridden or bound */}
             {(isOverridden("strokeColor") || isBound("strokeColor")) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">

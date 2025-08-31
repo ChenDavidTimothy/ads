@@ -1,8 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Node, Edge } from "reactflow";
+import type { Node } from "reactflow";
 import { useWorkspace } from "@/components/workspace/workspace-context";
+
+interface NodeData {
+  identifier?: {
+    id: string;
+  };
+  keys?: string[];
+}
 
 interface BatchKeysResult {
   keys: string[];
@@ -22,8 +29,8 @@ export function useBatchKeysForField(
   const { state } = useWorkspace();
 
   return useMemo(() => {
-    const nodes = state.flow.nodes as Node[];
-    const edges = state.flow.edges as Edge[];
+    const nodes = state.flow.nodes;
+    const edges = state.flow.edges;
 
     // Debug logging
     console.log("[useBatchKeysForField] Debug:", {
@@ -31,18 +38,24 @@ export function useBatchKeysForField(
       objectId,
       totalNodes: nodes.length,
       totalEdges: edges.length,
-      nodeTypes: nodes.map(n => ({ id: n.id, type: n.type, identifierId: (n.data as any)?.identifier?.id }))
+      nodeTypes: nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        identifierId: (n.data as NodeData)?.identifier?.id,
+      })),
     });
 
     // Build adjacency of incoming edges by canonical identifier id
     const idToNode = new Map<string, Node>();
     for (const n of nodes) {
-      const identifierId = (n.data as any)?.identifier?.id ?? n.id;
+      const identifierId = (n.data as NodeData)?.identifier?.id ?? n.id;
       idToNode.set(identifierId, n);
       idToNode.set(n.id, n);
     }
 
-    const start = idToNode.has(nodeId) ? nodeId : (idToNode.get(nodeId)?.id ?? nodeId);
+    const start = idToNode.has(nodeId)
+      ? nodeId
+      : (idToNode.get(nodeId)?.id ?? nodeId);
     const keys = new Set<string>();
 
     if (!objectId) {
@@ -50,7 +63,11 @@ export function useBatchKeysForField(
       const visited = new Set<string>();
 
       const incomingOf = (targetId: string) =>
-        edges.filter((e) => e.target === targetId || e.target === (idToNode.get(targetId)?.id ?? targetId));
+        edges.filter(
+          (e) =>
+            e.target === targetId ||
+            e.target === (idToNode.get(targetId)?.id ?? targetId),
+        );
 
       const dfs = (cur: string) => {
         if (visited.has(cur)) return;
@@ -58,22 +75,36 @@ export function useBatchKeysForField(
         const n = idToNode.get(cur);
         if (!n) return;
 
-        console.log("[useBatchKeysForField] Checking node:", { id: cur, type: n.type, data: n.data });
+        const nodeData = (n.data as Record<string, unknown>) ?? {};
+        console.log("[useBatchKeysForField] Checking node:", {
+          id: cur,
+          type: n.type,
+          data: JSON.parse(JSON.stringify(nodeData)) as Record<string, unknown>,
+        });
 
         if (n.type === "batch") {
-          const data = (n.data ?? {}) as any;
+          const data = (n.data as NodeData) ?? {};
           const arr = Array.isArray(data.keys) ? data.keys : [];
-          console.log("[useBatchKeysForField] Found batch node with keys:", arr);
-          for (const k of arr) if (typeof k === "string" && k.trim()) keys.add(k.trim());
+          console.log(
+            "[useBatchKeysForField] Found batch node with keys:",
+            arr,
+          );
+          for (const k of arr)
+            if (typeof k === "string" && k.trim()) keys.add(k.trim());
         }
 
         const incomings = incomingOf(cur);
-        console.log("[useBatchKeysForField] Incoming edges for", cur, ":", incomings);
+        console.log(
+          "[useBatchKeysForField] Incoming edges for",
+          cur,
+          ":",
+          incomings,
+        );
 
         for (const e of incomings) {
           const src = e.source;
           const srcNode = idToNode.get(src);
-          const next = (srcNode?.data as any)?.identifier?.id ?? src;
+          const next = (srcNode?.data as NodeData)?.identifier?.id ?? src;
           dfs(next);
         }
       };
@@ -95,29 +126,44 @@ export function useBatchKeysForField(
         const currentNode = idToNode.get(currentId);
         if (!currentNode) continue;
 
+        const currentNodeData =
+          (currentNode.data as Record<string, unknown>) ?? {};
         console.log("[useBatchKeysForField] Object path through:", {
           id: currentId,
           type: currentNode.type,
-          data: currentNode.data
+          data: JSON.parse(JSON.stringify(currentNodeData)) as Record<
+            string,
+            unknown
+          >,
         });
 
         // If this is a batch node that the object passes through, collect its keys
         if (currentNode.type === "batch") {
-          const data = (currentNode.data ?? {}) as any;
+          const data = (currentNode.data as NodeData) ?? {};
           const arr = Array.isArray(data.keys) ? data.keys : [];
-          console.log("[useBatchKeysForField] Object", objectId, "passed through batch node", currentId, "with keys:", arr);
-          for (const k of arr) if (typeof k === "string" && k.trim()) keys.add(k.trim());
+          console.log(
+            "[useBatchKeysForField] Object",
+            objectId,
+            "passed through batch node",
+            currentId,
+            "with keys:",
+            arr,
+          );
+          for (const k of arr)
+            if (typeof k === "string" && k.trim()) keys.add(k.trim());
         }
 
         // Find outgoing edges from this node to continue tracing the object's path
-        const outgoingEdges = edges.filter(e =>
-          e.source === currentId ||
-          e.source === (currentNode.data as any)?.identifier?.id
+        const outgoingEdges = edges.filter(
+          (e) =>
+            e.source === currentId ||
+            e.source === (currentNode.data as NodeData)?.identifier?.id,
         );
 
         for (const edge of outgoingEdges) {
           const targetNode = idToNode.get(edge.target);
-          const targetId = (targetNode?.data as any)?.identifier?.id ?? edge.target;
+          const targetId =
+            (targetNode?.data as NodeData)?.identifier?.id ?? edge.target;
           if (!objectVisited.has(targetId)) {
             stack.push(targetId);
           }
@@ -129,10 +175,8 @@ export function useBatchKeysForField(
     console.log("[useBatchKeysForField] Final result:", {
       keys: list,
       hasBatchKeys: list.length > 0,
-      objectId
+      objectId,
     });
     return { keys: list, hasBatchKeys: list.length > 0 };
-  }, [state.flow.nodes, state.flow.edges, nodeId, _fieldPath, objectId]);
+  }, [state.flow.nodes, state.flow.edges, nodeId, objectId]);
 }
-
-

@@ -34,7 +34,10 @@ import {
   pickAssignmentsForObject,
   mergePerObjectAssignments,
 } from "@/shared/properties/override-utils";
-import { resolveFieldValue, type BatchResolveContext } from "../scene/batch-overrides-resolver";
+import {
+  resolveFieldValue,
+  type BatchResolveContext,
+} from "../scene/batch-overrides-resolver";
 
 // Safe deep clone that preserves types without introducing `any`
 function deepClone<T>(value: T): T {
@@ -68,8 +71,11 @@ function toDisplayString(value: unknown): string {
 }
 
 // Coercion functions following Canvas executor pattern
-const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
-  if (typeof value === "number" && Number.isFinite(value)) return { ok: true, value };
+const numberCoerce = (
+  value: unknown,
+): { ok: boolean; value?: number; warn?: string } => {
+  if (typeof value === "number" && Number.isFinite(value))
+    return { ok: true, value };
   if (typeof value === "string") {
     const parsed = Number.parseFloat(value);
     if (Number.isFinite(parsed)) return { ok: true, value: parsed };
@@ -77,7 +83,9 @@ const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: str
   return { ok: false, warn: `Expected number, got ${typeof value}` };
 };
 
-const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+const stringCoerce = (
+  value: unknown,
+): { ok: boolean; value?: string; warn?: string } => {
   if (typeof value === "string") return { ok: true, value };
   return { ok: false, warn: `Expected string, got ${typeof value}` };
 };
@@ -727,28 +735,30 @@ export class AnimationNodeExecutor extends BaseExecutor {
       data.perObjectAssignments as PerObjectAssignments | undefined;
 
     // Extract perObjectBatchOverrides from inputs
-    const upstreamBatchOverrides: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    > | undefined = this.extractPerObjectBatchOverridesFromInputs(
+    const upstreamBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = this.extractPerObjectBatchOverridesFromInputs(
       inputs as unknown as ExecutionValue[],
     );
 
     // Extract perObjectBatchOverrides from node data (timeline editor)
-    const nodeBatchOverrides: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    > | undefined = this.extractPerObjectBatchOverridesFromNode(data);
+    const nodeBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = this.extractPerObjectBatchOverridesFromNode(data);
 
     // Merge upstream + node-level batch overrides; node-level takes precedence per object
-    const mergedBatchOverrides: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    > | undefined = (() => {
-      if (!upstreamBatchOverrides && !nodeBatchOverrides) return upstreamBatchOverrides;
-      const result: Record<string, Record<string, Record<string, unknown>>> = { ...upstreamBatchOverrides };
+    const mergedBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = (() => {
+      if (!upstreamBatchOverrides && !nodeBatchOverrides)
+        return upstreamBatchOverrides;
+      const result: Record<string, Record<string, Record<string, unknown>>> = {
+        ...upstreamBatchOverrides,
+      };
       if (nodeBatchOverrides) {
-        for (const [objectId, fieldOverrides] of Object.entries(nodeBatchOverrides)) {
+        for (const [objectId, fieldOverrides] of Object.entries(
+          nodeBatchOverrides,
+        )) {
           result[objectId] = { ...result[objectId], ...fieldOverrides };
         }
       }
@@ -756,25 +766,32 @@ export class AnimationNodeExecutor extends BaseExecutor {
     })();
 
     // Extract bound fields for Timeline batch overrides (following Typography pattern)
-    const mergedBoundFields: Record<string, string[]> = (() => {
+    const mergedBoundFields: Record<string, string[]> | undefined = (() => {
       const result: Record<string, string[]> = {};
       const globalBoundKeysTimeline = Object.keys(bindings);
 
       for (const input of inputs) {
         const inputData = Array.isArray(input.data) ? input.data : [input.data];
         for (const timedObject of inputData) {
-          const objectId = (timedObject as { id?: unknown }).id as string | undefined;
+          const objectId = (timedObject as { id?: unknown }).id as
+            | string
+            | undefined;
           if (objectId) {
             const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
 
             // Filter for Timeline-specific bound keys
-            const timelineKeys = [...globalBoundKeysTimeline, ...objectKeys].filter(key =>
-              key.startsWith("Timeline.") || key.includes("track.")
+            const timelineKeys = [
+              ...globalBoundKeysTimeline,
+              ...objectKeys,
+            ].filter(
+              (key) => key.startsWith("Timeline.") || key.includes("track."),
             );
 
             if (timelineKeys.length > 0) {
               const existing = result[objectId] ?? [];
-              result[objectId] = Array.from(new Set([...existing, ...timelineKeys.map(String)]));
+              result[objectId] = Array.from(
+                new Set([...existing, ...timelineKeys.map(String)]),
+              );
             }
           }
         }
@@ -786,9 +803,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Get fallback metadata from first input (like canvas executor does)
     const firstInputMeta = inputs[0]?.metadata as
       | {
-          perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+          perObjectBatchOverrides?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
           perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
           perObjectAssignments?: PerObjectAssignments;
+          perObjectBoundFields?: Record<string, string[]>;
         }
       | undefined;
 
@@ -969,7 +990,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
               mergedBatchOverrides,
               mergedBoundFields,
               // Batch key resolution will happen at scene partition level
-              null
+              null,
             )
           : resolvedForObject;
 
@@ -1013,8 +1034,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations:
-          this.clonePerObjectAnimations(perObjectAnimations) ?? firstInputMeta?.perObjectAnimations,
-        perObjectAssignments: mergedAssignments ?? firstInputMeta?.perObjectAssignments,
+          this.clonePerObjectAnimations(perObjectAnimations) ??
+          firstInputMeta?.perObjectAnimations,
+        perObjectAssignments:
+          mergedAssignments ?? firstInputMeta?.perObjectAssignments,
         perObjectBatchOverrides:
           mergedBatchOverrides ?? firstInputMeta?.perObjectBatchOverrides,
         perObjectBoundFields:
@@ -1032,7 +1055,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     objectId: string,
     batchOverrides?: Record<string, Record<string, Record<string, unknown>>>,
     boundFields?: Record<string, string[]>,
-    batchKey?: string | null
+    batchKey?: string | null,
   ): AnimationTrack[] {
     if (!batchOverrides?.[objectId]) return tracks;
 
@@ -1042,14 +1065,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
       perObjectBoundFields: boundFields,
     };
 
-    return tracks.map(track => {
+    return tracks.map((track) => {
       const properties = track.properties as unknown as Record<string, unknown>;
       const updatedProperties = { ...properties };
 
       // Apply Timeline batch overrides per track type
       switch (track.type) {
         case "move": {
-          const moveProps = updatedProperties as { from?: { x: number; y: number }; to?: { x: number; y: number } };
+          const moveProps = updatedProperties as {
+            from?: { x: number; y: number };
+            to?: { x: number; y: number };
+          };
 
           if (moveProps.from) {
             moveProps.from.x = resolveFieldValue(
@@ -1057,14 +1083,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.move.from.x",
               moveProps.from.x,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
             moveProps.from.y = resolveFieldValue(
               objectId,
               "Timeline.move.from.y",
               moveProps.from.y,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
 
@@ -1074,28 +1100,31 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.move.to.x",
               moveProps.to.x,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
             moveProps.to.y = resolveFieldValue(
               objectId,
               "Timeline.move.to.y",
               moveProps.to.y,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           break;
         }
 
         case "rotate": {
-          const rotateProps = updatedProperties as { from?: number; to?: number };
+          const rotateProps = updatedProperties as {
+            from?: number;
+            to?: number;
+          };
           if (typeof rotateProps.from === "number") {
             rotateProps.from = resolveFieldValue(
               objectId,
               "Timeline.rotate.from",
               rotateProps.from,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           if (typeof rotateProps.to === "number") {
@@ -1104,21 +1133,24 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.rotate.to",
               rotateProps.to,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           break;
         }
 
         case "scale": {
-          const scaleProps = updatedProperties as { from?: number; to?: number };
+          const scaleProps = updatedProperties as {
+            from?: number;
+            to?: number;
+          };
           if (typeof scaleProps.from === "number") {
             scaleProps.from = resolveFieldValue(
               objectId,
               "Timeline.scale.from",
               scaleProps.from,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           if (typeof scaleProps.to === "number") {
@@ -1127,7 +1159,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.scale.to",
               scaleProps.to,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           break;
@@ -1141,7 +1173,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.fade.from",
               fadeProps.from,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           if (typeof fadeProps.to === "number") {
@@ -1150,21 +1182,24 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.fade.to",
               fadeProps.to,
               ctx,
-              numberCoerce
+              numberCoerce,
             );
           }
           break;
         }
 
         case "color": {
-          const colorProps = updatedProperties as { from?: string; to?: string };
+          const colorProps = updatedProperties as {
+            from?: string;
+            to?: string;
+          };
           if (typeof colorProps.from === "string") {
             colorProps.from = resolveFieldValue(
               objectId,
               "Timeline.color.from",
               colorProps.from,
               ctx,
-              stringCoerce
+              stringCoerce,
             );
           }
           if (typeof colorProps.to === "string") {
@@ -1173,7 +1208,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
               "Timeline.color.to",
               colorProps.to,
               ctx,
-              stringCoerce
+              stringCoerce,
             );
           }
           break;
@@ -1182,8 +1217,8 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
       return {
         ...track,
-        properties: updatedProperties as typeof track.properties
-      };
+        properties: updatedProperties as unknown,
+      } as AnimationTrack;
     });
   }
 
@@ -1268,7 +1303,12 @@ export class AnimationNodeExecutor extends BaseExecutor {
     for (const input of inputs) {
       const fromMeta = (
         input.metadata as
-          | { perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>> }
+          | {
+              perObjectBatchOverrides?: Record<
+                string,
+                Record<string, Record<string, unknown>>
+              >;
+            }
           | undefined
       )?.perObjectBatchOverrides;
       if (!fromMeta) continue;
@@ -1500,6 +1540,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     const processedObjects: unknown[] = [];
+    const passThroughObjects: unknown[] = [];
+    const upstreamCursorMap = this.extractCursorsFromInputs(
+      inputs as unknown as ExecutionValue[],
+    );
+    const outputCursorMap: Record<string, number> = { ...upstreamCursorMap };
+    const perObjectAnimations: Record<string, SceneAnimationTrack[]> =
+      this.extractPerObjectAnimationsFromInputs(
+        inputs as unknown as ExecutionValue[],
+      );
 
     // Read optional per-object assignments metadata (from upstream)
     const upstreamAssignments: PerObjectAssignments | undefined =

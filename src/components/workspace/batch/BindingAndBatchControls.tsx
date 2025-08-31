@@ -10,12 +10,20 @@ export function BindingAndBatchControls({
   batchProps,
 }: {
   bindProps: { nodeId: string; bindingKey: string; objectId?: string };
-  batchProps: { nodeId: string; fieldPath: string; objectId?: string; valueType: "number" | "string" };
+  batchProps: {
+    nodeId: string;
+    fieldPath: string;
+    objectId?: string;
+    valueType: "number" | "string";
+  };
 }) {
   const [open, setOpen] = React.useState(false);
 
   // Debug logging
-  console.log("[BindingAndBatchControls] Rendering:", { bindProps, batchProps });
+  console.log("[BindingAndBatchControls] Rendering:", {
+    bindProps,
+    batchProps,
+  });
 
   return (
     <div className="flex items-center gap-[var(--space-1)]">
@@ -39,5 +47,3 @@ export function BindingAndBatchControls({
     </div>
   );
 }
-
-

@@ -25,7 +25,7 @@ export function BatchButton({
     fieldPath,
     featuresEnabled: features.batchOverridesUI,
     hasBatchKeys,
-    willRender: features.batchOverridesUI && hasBatchKeys
+    willRender: features.batchOverridesUI && hasBatchKeys,
   });
 
   if (!features.batchOverridesUI) {
@@ -44,9 +44,9 @@ export function BatchButton({
       title="Batch overrides"
       className={className}
     >
-      <span role="img" aria-label="batch">🏷️</span>
+      <span role="img" aria-label="batch">
+        🏷️
+      </span>
     </button>
   );
 }
-
-
