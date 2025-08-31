@@ -165,8 +165,15 @@ export function validateLogicNodePortConnections(
     }
 
     // Check for multiple connections to same port
+    // Exception: Batch nodes can accept multiple connections to their "input" port
+    // since they are designed to batch multiple object streams together
     for (const [portId, connectedEdges] of portConnections.entries()) {
       if (connectedEdges.length > 1) {
+        // Allow batch nodes to have multiple connections to their "input" port
+        if (logicNode.type === "batch" && portId === "input") {
+          continue;
+        }
+
         const sourceNodeNames = connectedEdges.map((edge) => {
           const sourceNode = nodes.find(
             (n) => n.data?.identifier?.id === edge.source,
