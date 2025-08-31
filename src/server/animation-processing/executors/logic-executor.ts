@@ -1603,11 +1603,6 @@ export class LogicNodeExecutor extends BaseExecutor {
 
     // Collect validation data
     const emptyKeyObjectIds: string[] = [];
-    const retaggedObjects: Array<{
-      id: string;
-      oldKey: string;
-      newKey: string;
-    }> = [];
 
     const tagged: unknown[] = [];
     for (const input of inputs) {
@@ -1633,10 +1628,20 @@ export class LogicNodeExecutor extends BaseExecutor {
           const coerceToKeys = (v: unknown): string[] => {
             if (Array.isArray(v)) {
               return v
-                .map((x) => (typeof x === "string" || typeof x === "number" || typeof x === "boolean" ? String(x).trim() : ""))
+                .map((x) =>
+                  typeof x === "string" ||
+                  typeof x === "number" ||
+                  typeof x === "boolean"
+                    ? String(x).trim()
+                    : "",
+                )
                 .filter((s) => s.length > 0);
             }
-            if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+            if (
+              typeof v === "string" ||
+              typeof v === "number" ||
+              typeof v === "boolean"
+            ) {
               const s = String(v).trim();
               return s.length > 0 ? [s] : [];
             }
@@ -1656,12 +1661,18 @@ export class LogicNodeExecutor extends BaseExecutor {
           }
 
           // Check for re-tagging
-          const alreadyTagged = objWithBatch.batch === true && (objWithBatch as { batchKeys?: string[] }).batchKeys !== undefined;
+          const alreadyTagged =
+            objWithBatch.batch === true &&
+            (objWithBatch as { batchKeys?: string[] }).batchKeys !== undefined;
           if (alreadyTagged) {
-            const prevKeys = Array.isArray((objWithBatch as { batchKeys?: string[] }).batchKeys)
-              ? ((objWithBatch as { batchKeys?: string[] }).batchKeys as string[])
+            const prevKeys = Array.isArray(
+              (objWithBatch as { batchKeys?: string[] }).batchKeys,
+            )
+              ? (objWithBatch as { batchKeys?: string[] }).batchKeys!
               : [];
-            const same = prevKeys.length === resolvedKeys.length && prevKeys.every((k) => resolvedKeys.includes(k));
+            const same =
+              prevKeys.length === resolvedKeys.length &&
+              prevKeys.every((k) => resolvedKeys.includes(k));
             if (!same) {
               // Enforce strict error: no retagging allowed
               throw new DomainError(

@@ -16,18 +16,23 @@ export type DomainErrorCode =
   | "ERR_NO_VALID_SCENES"
   | "ERR_MULTIPLE_RESULT_VALUES"
   | "ERR_DUPLICATE_NODE_ERROR"
-  | "ERR_DUPLICATE_COUNT_EXCEEDED";
+  | "ERR_DUPLICATE_COUNT_EXCEEDED"
+  | "ERR_BATCH_EMPTY_KEY"
+  | "ERR_SCENE_BATCH_EMPTY_KEYS"
+  | "ERR_BATCH_MULTIPLE_IN_PATH";
 
 export interface DomainErrorDetails {
   nodeId?: string;
   nodeName?: string;
   duplicateIds?: string[];
+  objectIds?: string[];
   sourceNodeId?: string;
   targetNodeId?: string;
   edgeId?: string;
   insertNodeNames?: string[];
   pathDescription?: string;
   info?: Record<string, unknown>;
+  errors?: string[];
 }
 
 export class DomainError extends Error {
@@ -213,6 +218,34 @@ export class DuplicateCountExceededError extends DuplicateNodeError {
       { requestedCount, maxCount },
     );
     this.name = "DuplicateCountExceededError";
+  }
+}
+
+export class BatchEmptyKeyError extends DomainError {
+  constructor(nodeName: string, nodeId: string, objectIds: string[]) {
+    const maxDisplay = 20;
+    const displayedIds = objectIds.slice(0, maxDisplay);
+    const remainingCount = objectIds.length - maxDisplay;
+    const remainingText = remainingCount > 0 ? ` …+${remainingCount} more` : "";
+    const objectIdsText = displayedIds.join(", ") + remainingText;
+
+    super(
+      `Batch node '${nodeName}' received objects with empty keys: [${objectIdsText}]`,
+      "ERR_BATCH_EMPTY_KEY",
+      { nodeId, nodeName, objectIds },
+    );
+    this.name = "BatchEmptyKeyError";
+  }
+}
+
+export class SceneBatchEmptyKeysError extends DomainError {
+  constructor(sceneName: string, sceneId: string) {
+    super(
+      `Scene '${sceneName}' contains batched objects but no batch keys were found. Ensure batch nodes are properly configured.`,
+      "ERR_SCENE_BATCH_EMPTY_KEYS",
+      { nodeId: sceneId, nodeName: sceneName },
+    );
+    this.name = "SceneBatchEmptyKeysError";
   }
 }
 

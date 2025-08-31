@@ -4,11 +4,12 @@ import React from "react";
 import { Handle, Position } from "reactflow";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { Input } from "@/components/ui/input";
-import { BindButton } from "@/components/workspace/binding/bindings";
+
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import type { NodeData } from "@/shared/types/nodes";
 
 export function BatchNode({ id }: { id: string }) {
   const { state, updateFlow } = useWorkspace();
@@ -22,7 +23,7 @@ export function BatchNode({ id }: { id: string }) {
   const keys = Array.isArray(data.keys)
     ? (data.keys as unknown[]).filter((k) => typeof k === "string")
     : [];
-  const isBound = Boolean(data.variableBindings?.key?.boundResultNodeId);
+
   const [open, setOpen] = React.useState(false);
   const [localInput, setLocalInput] = React.useState("");
 
@@ -64,7 +65,7 @@ export function BatchNode({ id }: { id: string }) {
 
       <CardContent className="space-y-2 p-0">
         <div className="flex items-center gap-[var(--space-2)]">
-          <Button variant="outline" onClick={() => setOpen(true)}>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
             Keys
           </Button>
           <div className="text-[10px] text-[var(--text-tertiary)]">
@@ -113,10 +114,13 @@ export function BatchNode({ id }: { id: string }) {
                     nodes: state.flow.nodes.map((n) =>
                       n.id !== id
                         ? n
-                        : ({
+                        : {
                             ...n,
-                            data: { ...(n.data as Record<string, unknown>), keys: nextKeys },
-                          } as typeof n),
+                            data: {
+                              ...n.data,
+                              keys: nextKeys,
+                            } as NodeData,
+                          },
                     ),
                   });
                   // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
@@ -158,10 +162,13 @@ export function BatchNode({ id }: { id: string }) {
                           nodes: state.flow.nodes.map((n) =>
                             n.id !== id
                               ? n
-                              : ({
+                              : {
                                   ...n,
-                                  data: { ...(n.data as Record<string, unknown>), keys: nextKeys },
-                                } as typeof n),
+                                  data: {
+                                    ...n.data,
+                                    keys: nextKeys,
+                                  } as NodeData,
+                                },
                           ),
                         });
                         if (typeof window !== "undefined") {

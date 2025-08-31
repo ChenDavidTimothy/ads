@@ -6,7 +6,7 @@
 3. [Field Model and Rendering Pipeline](#field-model-and-rendering-pipeline)
 4. [Object Targeting and Per-Object Overrides](#object-targeting-and-per-object-overrides)
 5. [Binding System Integration](#binding-system-integration)
-6. [Graph Reachability / Batching Potential](#graph-reachability--batching-potential)
+6. [Batching Model (Multi-Key)](#batching-model-multi-key)
 7. [Metadata Pass-Through in UI](#metadata-pass-through-in-ui)
 8. [Feature Flags and Gating](#feature-flags-and-gating)
 9. [Persistence and Serialization](#persistence-and-serialization)
@@ -18,7 +18,7 @@
 
 ## Overview
 
-The Batchion codebase implements a sophisticated property editor system for Typography, Animation, Canvas, and Media nodes. The architecture follows a consistent three-panel layout with object selection, content area, and properties sidebar. Each editor supports per-object overrides, variable bindings, and batch override capabilities (currently feature-flagged).
+The editor system provides dedicated tabs for Typography, Animation, Canvas, and Media nodes. The canvas uses a three-panel layout (palette, canvas, sidebar). Each editor supports per-object overrides and variable bindings. The Batch node is configured via a simple "Batch Keys" modal with autosave. Batch overrides UI is gated behind a feature flag (disabled by default).
 
 ### Framework and Major Modules
 
@@ -28,7 +28,7 @@ The editor system is built on React with the following key architectural compone
 - **Shared Form Fields**: `src/components/ui/form-fields.tsx` provides unified field rendering
 - **Binding System**: `src/components/workspace/binding/bindings.tsx` handles variable connections
 - **Property Resolution**: `src/shared/properties/` handles override precedence and assignment merging
-- **Feature Flags**: `src/shared/feature-flags.ts` controls batch override UI visibility
+- **Feature Flags**: `src/shared/feature-flags.ts` controls batch overrides UI visibility
 
 ### Primary Editors Covered
 
@@ -407,41 +407,50 @@ const getValue = (key: string, fallbackValue: number | string) => {
 
 ---
 
-## Graph Reachability / Batching Potential
+## Batching Model (Multi-Key)
 
-### Current Implementation Status
+### Current Implementation (Strict Policy)
 
-**Not found** - There is no compile-time or validation pass that marks objects "potentially batched" for UI purposes. The batch system operates entirely at runtime in the executors.
+- Objects carry multiple batch keys via `batchKeys: string[]` (legacy `batchKey` removed).
+- Batch node resolves keys per object with precedence: per-object binding → global binding → literal `data.keys` (array).
+- Retagging is forbidden: attempting to tag already-batched objects throws `ERR_BATCH_DOUBLE_TAG`.
+- Compile-time validation forbids multiple Batch nodes on the same path to a Scene/Frame (throws `ERR_BATCH_MULTIPLE_IN_PATH`).
+- Scene partitioning collects unique keys from `batchKeys` and filters objects per key without duplication.
 
-#### Backend Implementation
+#### Code References
 
-The batch logic is implemented in the executor pipeline:
-
-```1561:1667:src/server/animation-processing/executors/logic-executor.ts
-// Resolve key per object with precedence: per-object binding -> global binding -> literal
-const perObjectVal = readVarForObject(objectId)("key");
-const globalVal = readVarGlobal("key");
-const literalVal = data.key;
-let resolved: unknown = perObjectVal ?? globalVal ?? (typeof literalVal === "string" ? literalVal : undefined);
+```1520:1734:src/server/animation-processing/executors/logic-executor.ts
+// Resolves keys (array), enforces no-retag, emits batchKeys
 ```
 
-#### Scene Partitioning
-
-Scene partitioning happens in `scene-partitioner.ts`:
-
-```217:281:src/server/animation-processing/scene/scene-partitioner.ts
-const nonBatched = base.objects.filter((o) => !o.batch);
-const batched = base.objects.filter((o) => o.batch && typeof o.batchKey === "string");
-// ... partitioning logic
+```209:301:src/server/animation-processing/scene/scene-partitioner.ts
+// Partitions by unique keys from batchKeys; filters per key
 ```
 
-### Suggested Implementation Location
+```218:275:src/server/animation-processing/execution-engine.ts
+// Always-on validation: single Batch per path (DomainError)
+```
 
-To add compile-time batching potential detection, implement in:
+### Batch Keys Modal (UX)
 
-1. **FlowTracker Enhancement**: `src/lib/flow/flow-tracking.ts`
-2. **UI Integration**: Add to each editor's `upstreamObjects` computation
-3. **Visual Indicators**: Show batch-eligible objects with special badges
+- Batch node shows a Keys button and a count badge.
+- Double-click opens a simple Add/Remove modal (no bulk CSV; no JSON).
+- Autosaves immediately to the flow; Flow editor listens to a sync event to prevent snap-back.
+- Right sidebar hides properties for Batch nodes and shows a hint: “Double-click the Batch node to set keys.”
+
+#### Code References
+
+```1:200:src/components/workspace/nodes/batch-node.tsx
+// Modal with Add/Remove, autosave, sync event dispatch
+```
+
+```440:480:src/components/workspace/flow-editor-tab.tsx
+// Listens for batch-keys-updated to sync local nodes and avoid snap-back
+```
+
+```1:200:src/components/workspace/property-panel.tsx
+// Early-return hint for batch nodes; no properties panel
+```
 
 ---
 
@@ -449,14 +458,14 @@ To add compile-time batching potential detection, implement in:
 
 ### Current Status
 
-**Not found** - The editors do not currently read or display `perObjectBatchOverrides`, `perObjectBoundFields`, or batch metadata. The batch system operates entirely at the backend level.
+**Not found** - The editors do not currently read or display `perObjectBatchOverrides`, `perObjectBoundFields`, or batch metadata. The batch system operates at the backend level.
 
 #### Backend Metadata Flow
 
 The backend passes batch metadata through the executor pipeline:
 
 ```typescript
-// From logic-executor.ts
+// From logic-executor.ts (Filter/Merge pass-through)
 output.metadata = {
   perObjectBatchOverrides: resolvedKeys,
   perObjectBoundFields: boundFields,
@@ -466,19 +475,11 @@ output.metadata = {
 
 #### UI Gap
 
-The editors have no mechanism to:
-- Display which objects are batch-eligible
+Editors currently do not:
+- Display batch-eligible objects
 - Show current batch key assignments
 - Preview batch override effects
 - Indicate batch-related conflicts
-
-### Potential Implementation
-
-To add metadata awareness, editors would need:
-- Access to batch metadata from upstream nodes
-- Visual indicators for batch-eligible objects
-- Preview of batch key resolution
-- Conflict detection UI
 
 ---
 
@@ -490,24 +491,7 @@ To add metadata awareness, editors would need:
 batchOverridesUI: false,
 ```
 
-### Flag Usage Locations
-
-The batch overrides UI is gated in multiple editors:
-
-#### Typography Editor
-```583:583:src/components/workspace/typography-editor-tab.tsx
-// Removed UI: BatchOverridesFoldout
-```
-
-#### Media Editor
-```578:578:src/components/workspace/media-editor-tab.tsx
-// Removed UI: BatchOverridesFoldout
-```
-
-#### Canvas Editor
-The canvas editor does not have batch override UI implemented yet.
-
-### Flag Implementation Pattern
+### Flag Usage Pattern
 
 Flags are accessed through the shared feature flags module:
 
@@ -565,87 +549,19 @@ interface WorkspaceState {
 }
 ```
 
-#### JSON Schema Structure
-
-```json
-{
-  "flow": {
-    "nodes": [
-      {
-        "data": {
-          "identifier": { "id": "node_123", "type": "typography" },
-          "content": "Hello World",
-          "fontSize": 24,
-          "perObjectAssignments": {
-            "obj_456": {
-              "initial": {
-                "fontSize": 36
-              }
-            }
-          },
-          "variableBindings": {
-            "fontSize": { "boundResultNodeId": "result_789" }
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-### Migration Considerations
-
-Current migration patterns focus on node data transformation rather than per-key overrides. Adding batch overrides would require:
-
-1. **Schema Extension**: Add `batchOverridesByField` to node data types
-2. **Migration Logic**: Transform existing overrides to batch-aware format
-3. **Backward Compatibility**: Handle nodes without batch override data
-
 ---
 
 ## Scene/Render Interaction
 
 ### Scene Preview State Independence
 
-**Confirmed**: Editors do not depend on Scene preview state. The Batch v1 system operates without real-time preview, as confirmed by the batch status document.
-
-#### Editor Isolation
-
-Editors operate independently of render state:
-
-```typescript
-// Editors work with flow state only
-const { state, updateFlow } = useWorkspace();
-// No preview state dependencies
-```
-
-### Render Action Gathering
-
-Render actions gather editor data through the execution pipeline:
-
-#### Canvas Executor Integration
-
-```73:100:src/server/animation-processing/executors/canvas-executor.ts
-private async executeCanvas(
-  node: ReactFlowNode<NodeData>,
-  context: ExecutionContext,
-  connections: ReactFlowEdge[],
-): Promise<void> {
-  // Gather node data, bindings, and assignments
-  const data = node.data as unknown as NodeDataWithBindings;
-  const bindings = data.variableBindings ?? {};
-  const bindingsByObject = data.variableBindingsByObject ?? {};
-  const assignments = data.perObjectAssignments ?? {};
-  
-  // Process objects with resolved properties
-}
-```
+Editors do not depend on Scene preview state. The batch system operates without real-time preview.
 
 #### Backend Data Flow
 
 1. **Editor State**: Stored in `node.data` (global defaults + per-object assignments)
 2. **Execution Pipeline**: Canvas/Animation/Media executors process the data
-3. **Scene Building**: Scene partitioner applies overrides at render time
+3. **Scene Building**: Scene partitioner applies overrides per sub-partition key
 4. **Final Output**: Rendered frames/videos with applied transformations
 
 ---
@@ -654,58 +570,8 @@ private async executeCanvas(
 
 ### Missing Pieces for Minimal Batch v1 UI
 
-#### 1. Batch Node Inspector Integration
-**Location**: `src/components/workspace/property-panel.tsx`
-**Current State**: Property panel handles basic node properties but not batch-specific UI
-**Missing**: Key input field with validation and error surfacing
-
-#### 2. Per-Field Batch Overrides UI
-**Location**: Individual editor components
-**Current State**: `BatchOverridesFoldout` components are removed/commented out
-**Missing**: 
-- Per-field batch override foldout component
-- Key-value override management UI
-- Default vs key-specific value handling
-
-#### 3. Render Error Display Integration
-**Location**: `src/components/workspace/result-log-modal.tsx`
-**Current State**: Basic error display exists
-**Missing**:
-- Empty keys error surfacing
-- Filename collision error display
-- Batch-specific validation feedback
-
-### Code Patterns That Could Conflict
-
-#### 1. Conditional Rendering Based on Object Type
-
-```593:693:src/components/workspace/canvas-editor-tab.tsx
-{!upstreamObjectTypes.allText && (
-  // Color properties - could conflict with batch overrides
-)}
-```
-
-#### 2. Complex Override Merging Logic
-
-```152:177:src/components/workspace/canvas-editor-tab.tsx
-// Deep merging for position/scale - batch overrides need similar treatment
-if (typeof baseInitial.position === "object" && baseInitial.position !== null) {
-  mergedInitial.position = {
-    ...(baseInitial.position as Record<string, unknown>),
-    ...(updates.position as Record<string, unknown>),
-  };
-}
-```
-
-#### 3. Binding State Management
-
-```217:371:src/components/workspace/binding/bindings.tsx
-// Complex binding reset logic - batch overrides need integration
-const resetToDefault = (rawKey: string): void => {
-  // Current logic handles per-object overrides
-  // Would need extension for batch override clearing
-};
-```
+1. Batch per-field overrides foldouts (gated feature) are still disabled.
+2. Render error display could surface batch-specific validation (empty keys, collisions).
 
 ---
 
@@ -726,86 +592,6 @@ const resetToDefault = (rawKey: string): void => {
 
 ### Backend Integration
 - `src/server/animation-processing/executors/canvas-executor.ts` - Lines 1-401
-- `src/server/animation-processing/executors/logic-executor.ts` - Lines 1561-1667
-- `src/server/animation-processing/scene/scene-partitioner.ts` - Lines 217-281
+- `src/server/animation-processing/executors/logic-executor.ts` - Lines 1520-1734
+- `src/server/animation-processing/scene/scene-partitioner.ts` - Lines 209-301
 - `src/server/animation-processing/scene/batch-overrides-resolver.ts` - Batch override resolution
-
-### Key Symbols Index
-- `PerObjectAssignments` - Main per-object override structure
-- `ObjectAssignments` - Individual object assignment container
-- `variableBindings` - Node-level variable bindings
-- `variableBindingsByObject` - Per-object variable bindings
-- `batchOverridesByField` - Batch override data structure (defined but not used)
-- `BindButton` - Variable binding UI component
-- `FlowTracker` - Object detection and flow analysis
-- `updateFlow` - Main state update mechanism
-
----
-
-## One-Page Summary
-
-### Exact Components to Modify for Batch v1 UI Wiring
-
-#### 1. Batch Node Inspector
-**File**: `src/components/workspace/property-panel.tsx` (lines 200+)
-**Required Changes**:
-- Add key input field with validation
-- Integrate error surfacing for empty keys/filename collisions
-- Add batch metadata display (object count, key distribution)
-
-#### 2. Editor Subpanel Mount Points
-**Files**:
-- `src/components/workspace/typography-editor-tab.tsx` (line ~583)
-- `src/components/workspace/canvas-editor-tab.tsx` (after line 693)
-- `src/components/workspace/media-editor-tab.tsx` (line ~578)
-- `src/components/workspace/timeline-editor-tab.tsx` (after track properties)
-
-**Required Changes**:
-- Restore `BatchOverridesFoldout` component
-- Add per-field override management UI
-- Implement key-value override persistence
-
-#### 3. Render Error Display
-**File**: `src/components/workspace/result-log-modal.tsx`
-**Required Changes**:
-- Add batch-specific error categories
-- Surface empty key validation errors
-- Display filename collision warnings
-
-### Blockers/Ambiguities Needing Decisions
-
-#### 1. Feature Flag Strategy
-**Decision Needed**: Whether to enable `batchOverridesUI` flag immediately or implement behind separate flag
-
-#### 2. UI Component Ownership
-**Decision Needed**: Whether batch override foldouts should be shared components or editor-specific
-
-#### 3. Error Display Integration
-**Decision Needed**: How to route batch validation errors from backend to specific UI components
-
-#### 4. Batch Metadata Access
-**Decision Needed**: How editors access batch metadata from upstream nodes for eligibility indication
-
-### Suggested Next Steps for Minimal Batch v1 UI
-
-1. **Phase 1**: Enable batch node inspector with key input and basic validation
-2. **Phase 2**: Restore batch override foldouts with feature flag control
-3. **Phase 3**: Implement error surfacing for batch-specific validation
-4. **Phase 4**: Add batch eligibility indicators in object selection lists
-5. **Phase 5**: Complete per-field override management with persistence
-
-### Technical Readiness Assessment
-
-**High Confidence Areas**:
-- Node data structures support batch overrides
-- Backend batch system is complete and tested
-- UI patterns for per-object overrides are established
-
-**Medium Risk Areas**:
-- Integration between editor UI and batch metadata flow
-- Error propagation from backend to specific UI components
-- Performance impact of batch override calculations in UI
-
-**Low Confidence Areas**:
-- Real-time preview integration (not required for v1)
-- Cross-editor consistency for batch override UI patterns

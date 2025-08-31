@@ -26,7 +26,7 @@ import {
   validateNumberTypeConnections,
 } from "./graph/validation";
 import { logger } from "@/lib/logger";
-import { DuplicateObjectIdsError } from "@/shared/errors/domain";
+import { DuplicateObjectIdsError, DomainError } from "@/shared/errors/domain";
 import { CanvasNodeExecutor } from "./executors/canvas-executor";
 import { ImageExecutor } from "./executors/image-executor";
 
@@ -342,7 +342,7 @@ export class ExecutionEngine {
         const batches = path.filter((pid) => isBatch(pid));
         if (batches.length > 1) {
           const names = batches
-            .map((id) => byId.get(id)?.data.identifier.displayName || id)
+            .map((id) => byId.get(id)?.data.identifier.displayName ?? id)
             .join(" → ");
           errors.push(
             `Multiple Batch nodes on path to '${n.data.identifier.displayName}': ${names}`,
@@ -352,7 +352,6 @@ export class ExecutionEngine {
     }
     if (errors.length > 0) {
       // Use DomainError for consistent handling
-      const { DomainError } = require("@/shared/errors/domain");
       throw new DomainError(
         `Batch node validation failed (single tag per path):\n${errors.join("\n")}`,
         "ERR_BATCH_MULTIPLE_IN_PATH",

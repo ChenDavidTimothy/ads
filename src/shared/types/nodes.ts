@@ -331,6 +331,18 @@ export interface DuplicateNodeData extends BaseNodeData {
   count: number;
 }
 
+// Batch node data
+export interface BatchNodeData extends BaseNodeData {
+  keys?: string[];
+  // Variable binding support (follows Canvas pattern)
+  variableBindings?: Record<
+    string,
+    {
+      boundResultNodeId?: string;
+    }
+  >;
+}
+
 // Image node data
 export interface ImageNodeData extends BaseNodeData {
   // No additional properties - basic image object only
@@ -383,6 +395,7 @@ export type NodeData =
   | BooleanOpNodeData
   | MathOpNodeData
   | DuplicateNodeData
+  | BatchNodeData
   | ImageNodeData
   | MediaNodeData;
 

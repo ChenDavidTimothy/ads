@@ -223,8 +223,9 @@ export function partitionByBatchKey(
   const nonBatched = base.objects.filter((o) => !o.batch);
   const batched = base.objects.filter((o) => {
     if (!o.batch) return false;
-    const hasMulti = Array.isArray((o as { batchKeys?: unknown }).batchKeys)
-      && ((o as { batchKeys?: unknown[] }).batchKeys as unknown[]).some(
+    const hasMulti =
+      Array.isArray((o as { batchKeys?: unknown }).batchKeys) &&
+      (o as { batchKeys?: unknown[] }).batchKeys!.some(
         (k) => typeof k === "string" && k.trim() !== "",
       );
     return hasMulti;
