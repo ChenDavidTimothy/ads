@@ -1,597 +1,826 @@
-# EDITORS_ARCHITECTURE_REPORT.md
+# Editors Architecture Report
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [File Map and Components](#file-map-and-components)
-3. [Field Model and Rendering Pipeline](#field-model-and-rendering-pipeline)
-4. [Object Targeting and Per-Object Overrides](#object-targeting-and-per-object-overrides)
-5. [Binding System Integration](#binding-system-integration)
-6. [Batching Model (Multi-Key)](#batching-model-multi-key)
-7. [Metadata Pass-Through in UI](#metadata-pass-through-in-ui)
-8. [Feature Flags and Gating](#feature-flags-and-gating)
-9. [Persistence and Serialization](#persistence-and-serialization)
-10. [Scene/Render Interaction](#scenerender-interaction)
-11. [Gaps and Risks for Batch v1 UI](#gaps-and-risks-for-batch-v1-ui)
-12. [Appendix: Code References](#appendix-code-references)
 
----
+1. [Component/File Map Per Editor](#componentfile-map-per-editor)
+   - [Typography Editor](#typography-editor)
+   - [Canvas Editor](#canvas-editor)
+   - [Media Editor](#media-editor)
+   - [Animation/Timeline Editor](#animationtimeline-editor)
 
-## Overview
+2. [Field Rendering Pipeline](#field-rendering-pipeline)
+   - [Schema Definition](#schema-definition)
+   - [Value Resolution](#value-resolution)
+   - [Typography.content Example](#typographycontent-example)
+   - [Canvas.position.x Example](#canvaspositionx-example)
+   - [Media.imageAssetId Example](#mediaimageassetid-example)
 
-The editor system provides dedicated tabs for Typography, Animation, Canvas, and Media nodes. The canvas uses a three-panel layout (palette, canvas, sidebar). Each editor supports per-object overrides and variable bindings. The Batch node is configured via a simple "Batch Keys" modal with autosave. Batch overrides UI is gated behind a feature flag (disabled by default).
+3. [Overrides and Precedence](#overrides-and-precedence)
+   - [Per-Object Overrides](#per-object-overrides)
+   - [Default Overrides](#default-overrides)
+   - [Precedence Rules](#precedence-rules)
 
-### Framework and Major Modules
+4. [Binding System](#binding-system)
+   - [UI Flow](#ui-flow)
+   - [Data Storage](#data-storage)
+   - [Disabled State Logic](#disabled-state-logic)
+   - [Badge Rendering](#badge-rendering)
 
-The editor system is built on React with the following key architectural components:
+5. [Batch Reachability and Metadata](#batch-reachability-and-metadata)
+   - [Batch Metadata Types](#batch-metadata-types)
+   - [Editor Integration](#editor-integration)
+   - [Object Reachability](#object-reachability)
 
-- **Main Editor Tabs**: Located in `src/components/workspace/` as separate components
-- **Shared Form Fields**: `src/components/ui/form-fields.tsx` provides unified field rendering
-- **Binding System**: `src/components/workspace/binding/bindings.tsx` handles variable connections
-- **Property Resolution**: `src/shared/properties/` handles override precedence and assignment merging
-- **Feature Flags**: `src/shared/feature-flags.ts` controls batch overrides UI visibility
+6. [Feature Flags](#feature-flags)
 
-### Primary Editors Covered
+7. [Persistence/Serialization](#persistenceserialization)
+   - [Node Data Storage](#node-data-storage)
+   - [Workspace Serialization](#workspace-serialization)
+   - [Migration Points](#migration-points)
 
-1. **Typography Editor** (`typography-editor-tab.tsx`)
-   - Text content, font properties, colors, stroke settings
-   - Supports text object filtering and per-object overrides
+8. [Scene/Render Interaction](#scenerender-interaction)
+   - [Data Collection](#data-collection)
+   - [Scene Assembly](#scene-assembly)
+   - [Render Pipeline](#render-pipeline)
 
-2. **Canvas Editor** (`canvas-editor-tab.tsx`)
-   - Position, scale, rotation, opacity, colors, stroke properties
-   - Handles all upstream object types with conditional color rendering
+9. [Mount Points and Risks](#mount-points-and-risks)
+   - [Typography Editor](#typography-editor-1)
+   - [Canvas Editor](#canvas-editor-1)
+   - [Media Editor](#media-editor-1)
+   - [Animation Editor](#animation-editor-1)
+   - [Risk Assessment](#risk-assessment)
 
-3. **Media Editor** (`media-editor-tab.tsx`)
-   - Image asset selection, crop settings, display sizing
-   - Asset management with modal-based selection
-
-4. **Animation Editor** (`timeline-editor-tab.tsx`)
-   - Timeline-based track editing with per-object assignments
-   - Complex track property overrides and bindings
-
----
-
-## File Map and Components
+## Component/File Map Per Editor
 
 ### Typography Editor
-- **Main Component**: `src/components/workspace/typography-editor-tab.tsx`
-- **Key Features**: Lines 78-905 contain the complete editor implementation
-- **Supporting Components**:
-  - `TypographyDefaultProperties` (lines 78-398): Global typography defaults
-  - `TypographyPerObjectProperties` (lines 400-905): Per-object overrides
-  - Badge components for binding/override status
+
+**Main Components:**
+- `src/components/workspace/typography-editor-tab.tsx` - Main editor component
+- `src/components/workspace/binding/bindings.tsx` - Binding system components
+- `src/components/ui/form-fields.tsx` - Form field components
+
+**Component Tree:**
+```
+TypographyEditorTab
+├── TypographyDefaultProperties (center panel)
+│   ├── TextareaField (content)
+│   ├── SelectField (fontFamily, fontWeight, fontStyle)
+│   ├── NumberField (fontSize, strokeWidth)
+│   └── ColorField (fillColor, strokeColor)
+├── TypographyPerObjectProperties (right panel)
+│   ├── Same field components as above
+│   └── TypographyBindingBadge/TypographyOverrideBadge
+└── SelectionList (left sidebar - text objects)
+```
+
+**Shared Components:**
+- `src/components/ui/selection.tsx` - SelectionList for object selection
+- `src/components/ui/badge.tsx` - Binding/override badges
+- `src/components/workspace/binding/badges.tsx` - Unified badge components
+
+**Hooks/Stores:**
+- `useWorkspace()` - Main workspace state management
+- `useVariableBinding()` - Binding system logic
+- `FlowTracker` - Object detection and flow analysis
 
 ### Canvas Editor
-- **Main Component**: `src/components/workspace/canvas-editor-tab.tsx`
-- **Key Features**: Lines 73-292 contain the main editor structure
-- **Supporting Components**:
-  - `CanvasDefaultProperties` (lines 294-696): Global canvas defaults with conditional color rendering
-  - `CanvasPerObjectProperties` (lines 698-1283): Per-object overrides with object-type awareness
-  - Unified badge components using `UnifiedOverrideBadge`
+
+**Main Components:**
+- `src/components/workspace/canvas-editor-tab.tsx` - Main editor component
+
+**Component Tree:**
+```
+CanvasEditorTab
+├── CanvasDefaultProperties (center panel)
+│   ├── NumberField (position.x/y, scale.x/y, rotation, opacity)
+│   └── ColorField (fillColor, strokeColor)
+├── CanvasPerObjectProperties (right panel)
+│   ├── Same field components as above
+│   └── CanvasBindingBadge/OverrideBadge
+└── SelectionList (left sidebar - all objects)
+```
+
+**Shared Components:**
+- Same as Typography Editor
 
 ### Media Editor
-- **Main Component**: `src/components/workspace/media-editor-tab.tsx`
-- **Key Features**: Lines 56-981 contain the complete editor implementation
-- **Supporting Components**:
-  - `MediaDefaultProperties` (lines 56-457): Global media defaults with asset selection
-  - `MediaPerObjectProperties` (lines 459-981): Per-object media overrides
-  - `AssetSelectionModal` for image asset management
 
-### Animation Editor
-- **Main Component**: `src/components/workspace/timeline-editor-tab.tsx`
-- **Key Features**: Lines 24-352 contain the main editor structure
-- **Supporting Components**:
-  - `TimelineEditorCore`: Core timeline rendering and track manipulation
-  - Track property editing with complex override merging
+**Main Components:**
+- `src/components/workspace/media-editor-tab.tsx` - Main editor component
+- `src/components/workspace/media/asset-selection-modal.tsx` - Asset selection
 
-### Shared Components
-- **Form Fields**: `src/components/ui/form-fields.tsx` (lines 1-477)
-  - `NumberField`, `ColorField`, `SelectField`, `TextareaField` with binding support
-- **Binding System**: `src/components/workspace/binding/bindings.tsx` (lines 1-473)
-  - `BindButton`, `useVariableBinding` hook, modal-based variable selection
-- **Selection UI**: `src/components/ui/selection.tsx` for object lists
-- **Badge System**: `src/components/workspace/binding/badges.tsx` for status indicators
+**Component Tree:**
+```
+MediaEditorTab
+├── MediaDefaultProperties (center panel)
+│   ├── Asset display/selection UI
+│   ├── NumberField (cropX/Y/Width/Height, displayWidth/Height)
+│   └── MediaBindingBadge
+├── MediaPerObjectProperties (right panel)
+│   ├── Same components as above
+│   └── Asset override UI
+└── SelectionList (left sidebar - image objects)
+```
 
----
+**Shared Components:**
+- Same as Typography Editor
+- `api.assets.list` - Asset API integration
 
-## Field Model and Rendering Pipeline
+### Animation/Timeline Editor
 
-### Field Schema Definition
+**Main Components:**
+- `src/components/workspace/timeline-editor-tab.tsx` - Main editor component
+- `src/components/workspace/timeline-editor-core.tsx` - Timeline visualization
 
-Field schemas are defined in the node registry system. Each editor field follows a consistent pattern:
+**Component Tree:**
+```
+TimelineEditorTab
+├── TimelineEditorCore (center panel)
+│   ├── Track rendering and interaction
+│   └── Timeline visualization
+├── TrackProperties (right panel)
+│   ├── Property editors for selected track
+│   └── Override UI
+└── SelectionList (left sidebar - all objects)
+```
+
+**Shared Components:**
+- `src/components/workspace/timeline-editor-core.tsx` - TimelineEditorCore component
+
+## Field Rendering Pipeline
+
+### Schema Definition
+
+Field schemas are defined in the node registry system:
 
 ```typescript
-// Example from typography node definition
-properties: {
-  content: { type: "string", required: true },
-  fontFamily: { type: "string", default: "Arial" },
-  fontSize: { type: "number", default: 24, min: 8, max: 200 },
-  // ... more fields
+// src/shared/types/definitions.ts - Node definitions with property schemas
+export interface NodeDefinition {
+  type: string;
+  label: string;
+  properties: {
+    properties: PropertyDefinition[];
+  };
+  defaults: Record<string, unknown>;
+  // ...
 }
 ```
 
-### Field Rendering Pipeline
+Node definitions are registered in `NODE_DEFINITIONS` and accessed via:
+```typescript
+// src/shared/registry/registry-utils.ts
+export function getNodeDefinition(nodeType: string): NodeDefinition | undefined
+export function getNodeDefaults(nodeType: string): Record<string, unknown> | undefined
+```
 
-The field rendering follows this consistent pattern across all editors:
+### Value Resolution
 
-1. **Data Resolution**: Node-level defaults merged with user values
-2. **Value Resolution**: Per-object overrides → node defaults → system defaults
-3. **UI Rendering**: Form field components with binding adornments
-4. **State Management**: Direct flow updates via `updateFlow`
+Value resolution follows a 3-tier precedence system:
+1. **Per-object overrides** (highest priority)
+2. **Node-level defaults** (medium priority)
+3. **Definition defaults** (lowest priority)
 
-#### Typography.content Example
+**Resolution Logic (Typography.content example):**
 
-```12:15:src/components/workspace/typography-editor-tab.tsx
-// Value resolution for content field
+```typescript
+// src/components/workspace/typography-editor-tab.tsx:129
 const content = data.content ?? def.content ?? "Sample Text";
 ```
 
-```156:182:src/components/workspace/typography-editor-tab.tsx
+### Typography.content Example
+
+**Schema Definition:**
+```typescript
+// From node definitions - Typography node has content property
+defaults: {
+  content: "Sample Text",
+  // ... other defaults
+}
+```
+
+**Value Resolution Path:**
+```129:129:src/components/workspace/typography-editor-tab.tsx
+const content = data.content ?? def.content ?? "Sample Text";
+```
+
+**Per-Object Override Resolution:**
+```498:502:src/components/workspace/typography-editor-tab.tsx
+const fontFamily =
+  initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? "Arial";
+const fontSize = initial.fontSize ?? base.fontSize ?? def.fontSize ?? 24;
+```
+
+**Field Rendering:**
+```596:611:src/components/workspace/typography-editor-tab.tsx
 <TextareaField
-  label="Text Content"
-  value={content}
-  onChange={(content) =>
-    updateFlow({
-      nodes: state.flow.nodes.map((n) =>
-        n.data?.identifier?.id !== nodeId
-          ? n
-          : { ...n, data: { ...n.data, content } },
-      ),
-    })
-  }
+  label="Content"
+  value={getValue("content", "Sample Text") as string}
+  onChange={(content) => onChange({ content })}
   rows={4}
-  bindAdornment={<BindButton nodeId={nodeId} bindingKey="content" />}
+  bindAdornment={
+    <BindButton
+      nodeId={nodeId}
+      bindingKey="content"
+      objectId={objectId}
+    />
+  }
   disabled={isBound("content")}
   inputClassName={leftBorderClass("content")}
 />
 ```
 
-#### Canvas.position.x Example
+### Canvas.position.x Example
 
-```369:387:src/components/workspace/canvas-editor-tab.tsx
+**Schema Definition:**
+```typescript
+// Canvas node defaults
+defaults: {
+  position: { x: 0, y: 0 },
+  // ... other defaults
+}
+```
+
+**Value Resolution Path:**
+```331:332:src/components/workspace/canvas-editor-tab.tsx
+const posX = data.position?.x ?? def.position?.x ?? 0;
+const posY = data.position?.y ?? def.position?.y ?? 0;
+```
+
+**Per-Object Override Resolution:**
+```812:817:src/components/workspace/canvas-editor-tab.tsx
+case "position.x":
+  return (
+    initial.position?.x ??
+    base.position?.x ??
+    def.position?.x ??
+    fallbackValue
+  );
+```
+
+**Field Rendering:**
+```888:906:src/components/workspace/canvas-editor-tab.tsx
 <NumberField
   label=""
-  value={posX}
-  onChange={(x) =>
-    updateFlow({
-      nodes: state.flow.nodes.map((n) =>
-        n.data?.identifier?.id !== nodeId
-          ? n
-          : {
-              ...n,
-              data: {
-                ...(n.data as CanvasNodeData),
-                position: {
-                  ...(n.data as CanvasNodeData)?.position,
-                  x,
-                },
-              },
-            },
-      ),
-    })
-  }
+  value={getValue("position.x", 0)}
+  onChange={(x) => onChange({ position: { x } })}
   defaultValue={0}
-  bindAdornment={<BindButton nodeId={nodeId} bindingKey="position.x" />}
+  bindAdornment={
+    <BindButton
+      nodeId={nodeId}
+      bindingKey="position.x"
+      objectId={objectId}
+    />
+  }
   disabled={isBound("position.x")}
   inputClassName={leftBorderClass("position.x")}
 />
 ```
 
-#### Media.imageAssetId Example
+### Media.imageAssetId Example
 
-```144:246:src/components/workspace/media-editor-tab.tsx
-// Asset selection with modal
-<Button
-  variant="secondary"
-  size="sm"
-  onClick={() => setShowAssetModal(true)}
-  disabled={isBound("imageAssetId")}
-  className={`w-full ${leftBorderClass("imageAssetId")}`}
->
-  <Image size={14} className="mr-2" aria-label="Image icon" />
-  {imageAssetId ? "Change Image" : "Override Image"}
-</Button>
-
-// Asset details display
-{imageAssetId && assetDetails ? (
-  <div className="flex items-center gap-[var(--space-3)]">
-    <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
-      {assetDetails.public_url && (
-        <NextImage
-          src={assetDetails.public_url}
-          alt={assetDetails.original_name}
-          width={48}
-          height={48}
-          className="h-full w-full object-cover"
-        />
-      )}
-    </div>
-    // ... more asset details
-  </div>
-) : null}
-```
-
-### Call Graph for Field Rendering
-
-```
-FormField Component
-├── Field-specific component (NumberField, ColorField, etc.)
-├── BindButton (binding system integration)
-├── Badge components (status indicators)
-├── State update via updateFlow
-└── Value resolution pipeline
-    ├── Per-object override check
-    ├── Node-level default fallback
-    └── System default fallback
-```
-
----
-
-## Object Targeting and Per-Object Overrides
-
-### Multiple Object ID Collection/Display
-
-All editors use a consistent pattern for object collection via `FlowTracker`:
-
-```12:15:src/components/workspace/typography-editor-tab.tsx
-const upstreamObjects = useMemo(() => {
-  const tracker = new FlowTracker();
-  const objectDescriptors = tracker.getUpstreamObjects(
-    nodeId,
-    state.flow.nodes,
-    state.flow.edges,
-  );
-  // Filter and convert to display format
-}, [nodeId, state.flow.nodes, state.flow.edges]);
-```
-
-The `SelectionList` component provides consistent object selection UI:
-
-```1008:1020:src/components/workspace/typography-editor-tab.tsx
-<SelectionList
-  mode="single"
-  items={upstreamObjects.map((o) => ({
-    id: o.data.identifier.id,
-    label: o.data.identifier.displayName,
-  }))}
-  selectedId={selectedObjectId}
-  onSelect={setSelectedObjectId}
-  showDefault={true}
-  defaultLabel="Default"
-  emptyLabel="No text objects detected"
-/>
-```
-
-### Per-Object Override Data Structures
-
-#### ObjectAssignments Structure
-
-```34:36:src/shared/properties/assignments.ts
-export interface ObjectAssignments {
-  initial?: ObjectInitialOverrides;
-  tracks?: TrackOverride[];
+**Schema Definition:**
+```typescript
+// Media node defaults
+defaults: {
+  imageAssetId: "",
+  // ... other defaults
 }
 ```
 
-#### PerObjectAssignments Map
+**Value Resolution Path:**
+```75:75:src/components/workspace/media-editor-tab.tsx
+const imageAssetId: string = data?.imageAssetId ?? defImageAssetId;
+```
 
-```38:39:src/shared/properties/assignments.ts
+**Per-Object Override Resolution:**
+```507:514:src/components/workspace/media-editor-tab.tsx
+case "imageAssetId":
+  return (
+    initial.imageAssetId ??
+    base.imageAssetId ??
+    defImageAssetId ??
+    fallbackValue
+  );
+```
+
+**Field Rendering:**
+```592:611:src/components/workspace/media-editor-tab.tsx
+<AssetSelectionModal
+  isOpen={showAssetModal}
+  onClose={() => setShowAssetModal(false)}
+  onSelect={handleAssetSelect}
+  selectedAssetId={
+    currentAssetId && currentAssetId !== "" ? currentAssetId : undefined
+  }
+/>
+```
+
+## Overrides and Precedence
+
+### Per-Object Overrides
+
+**Data Structures:**
+```typescript
+// src/shared/properties/assignments.ts
+export interface ObjectAssignments {
+  initial?: ObjectInitialOverrides;  // Static property overrides
+  tracks?: TrackOverride[];         // Animation track overrides
+}
+
+export interface ObjectInitialOverrides {
+  position?: Point2D;
+  rotation?: number;
+  scale?: Point2D;
+  opacity?: number;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  [key: string]: unknown;  // Extensible for other properties
+}
+
 export type PerObjectAssignments = Record<string, ObjectAssignments>;
 ```
 
-#### Node-Level Storage
+**Storage Location:**
+- Stored in `node.data.perObjectAssignments` for each editor node
+- Keyed by `objectId` (upstream object identifier)
 
-```78:81:src/shared/types/nodes.ts
-variableBindingsByObject?: Record<
-  string,
-  Record<string, { target?: string; boundResultNodeId?: string }>
->;
-perObjectAssignments?: PerObjectAssignments;
-```
+### Default Overrides
 
-### Current Override Precedence
+**Node-Level Defaults:**
+- Stored directly in `node.data` properties
+- Override definition defaults but are overridden by per-object assignments
 
-Precedence is handled by the resolution system in `src/shared/properties/resolver.ts`:
+### Precedence Rules
 
-1. **Bound values** (highest priority)
-2. **Per-object overrides** (`perObjectAssignments[objectId].initial`)
-3. **Node-level defaults** (`node.data.*`)
-4. **System defaults** (from node definition)
+**Complete Precedence Chain:**
+1. **Per-object binding** (highest - disables manual input)
+2. **Per-object manual override** (initial values)
+3. **Node-level binding** (disables input for all objects)
+4. **Node-level manual values**
+5. **Definition defaults** (lowest)
 
-#### Precedence Implementation
-
-```498:543:src/components/workspace/typography-editor-tab.tsx
+**Precedence Implementation:**
+```804:823:src/components/workspace/canvas-editor-tab.tsx
 const getValue = (key: string, fallbackValue: number | string) => {
+  // Check per-object binding first (highest priority)
   if (isBound(key)) return undefined; // Blank when bound
 
+  // Check manual override second (if not bound)
   switch (key) {
-    case "content":
-      return initial.content ?? base.content ?? def.content ?? fallbackValue;
-    case "fontFamily":
-      return fontFamily; // Already resolved above
-    // ... more cases
+    case "position.x":
+      return (
+        initial.position?.x ??
+        base.position?.x ??
+        def.position?.x ??
+        fallbackValue
+      );
+    // ... other cases
   }
 };
 ```
 
----
+## Binding System
 
-## Binding System Integration
+### UI Flow
 
-### Field Binding Process
+**Binding Creation:**
+1. User clicks bind button next to field
+2. `BindButton` opens modal with available Result variables
+3. User selects Result node from filtered list
+4. `bind()` function updates node data with binding reference
 
-Fields become "bound" through the `BindButton` component:
-
+**Binding UI Components:**
 ```376:473:src/components/workspace/binding/bindings.tsx
-export function BindButton({ nodeId, bindingKey, objectId }: BindButtonProps) {
-  const { variables, getBinding, getBoundName, bind } = useVariableBinding(
-    nodeId,
-    objectId,
-  );
-  // Modal-based variable selection and binding
+export function BindButton({ ... }) {
+  // Modal-based variable selection
+  // Search/filter functionality
+  // Bind action triggers updateFlow
 }
 ```
 
-### BindingRef Storage
+### Data Storage
 
-Bindings are stored in two locations depending on scope:
-
-#### Node-Level Bindings (Global Defaults)
-```220:227:src/shared/types/nodes.ts
-variableBindings?: Record<
-  string,
-  {
-    target?: string;
-    boundResultNodeId?: string;
+**Binding Reference Structure:**
+```typescript
+// Node-level bindings
+node.data.variableBindings = {
+  [bindingKey]: {
+    target: string,        // e.g., "position.x"
+    boundResultNodeId: string  // Result node identifier
   }
->;
-```
+}
 
-#### Per-Object Bindings
-```228:237:src/shared/types/nodes.ts
-variableBindingsByObject?: Record<
-  string,
-  Record<
-    string,
-    {
-      target?: string;
-      boundResultNodeId?: string;
+// Per-object bindings
+node.data.variableBindingsByObject = {
+  [objectId]: {
+    [bindingKey]: {
+      target: string,
+      boundResultNodeId: string
     }
-  >
->;
+  }
+}
 ```
 
-### UI State When Bound
+**Storage Location:**
+- `node.data.variableBindings` - Global bindings (apply to all objects)
+- `node.data.variableBindingsByObject` - Per-object bindings (override global)
 
-When a field is bound, the UI shows several indicators:
+### Disabled State Logic
 
-1. **Disabled Input**: `disabled={isBound("fieldName")}`
-2. **Visual Border**: `inputClassName={leftBorderClass("fieldName")}`
-3. **Binding Badge**: Shows "Bound: NodeName"
-4. **Bind Button Indicator**: Shows filled link icon
-
-#### Bound Field Rendering
-
-```156:173:src/components/workspace/typography-editor-tab.tsx
-<TextareaField
-  label="Text Content"
-  value={content}
-  onChange={(content) => /* update logic */}
-  bindAdornment={<BindButton nodeId={nodeId} bindingKey="content" />}
-  disabled={isBound("content")}
-  inputClassName={leftBorderClass("content")}
-/>
+**Binding Detection:**
+```767:771:src/components/workspace/canvas-editor-tab.tsx
+const isBound = (key: string) => {
+  const vbAll = node?.data?.variableBindingsByObject ?? {};
+  return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
+};
 ```
 
-#### Binding Badge Display
+**Field Disabling:**
+```904:904:src/components/workspace/canvas-editor-tab.tsx
+disabled={isBound("position.x")}
+```
 
-```174:181:src/components/workspace/typography-editor-tab.tsx
-{isBound("content") && (
+### Badge Rendering
+
+**Binding Badge:**
+```22:52:src/components/workspace/canvas-editor-tab.tsx
+function CanvasBindingBadge({ ... }) {
+  // Shows "Bound: {resultName}" or "Bound"
+  // Includes remove button for unbinding
+}
+```
+
+**Override Badge:**
+```55:71:src/components/workspace/canvas-editor-tab.tsx
+function OverrideBadge({ ... }) {
+  // Shows "Manual" with remove button
+  // Uses unified badge component
+}
+```
+
+**Badge Display Logic:**
+```908:927:src/components/workspace/canvas-editor-tab.tsx
+{(isOverridden("position.x") || isBound("position.x")) && (
   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
     <div className="flex items-center gap-[var(--space-1)]">
-      <TypographyBindingBadge nodeId={nodeId} keyName="content" />
+      {isOverridden("position.x") && !isBound("position.x") && (
+        <OverrideBadge ... />
+      )}
+      {isBound("position.x") && (
+        <CanvasBindingBadge ... />
+      )}
     </div>
   </div>
 )}
 ```
 
-### Bound Value Resolution
+## Batch Reachability and Metadata
 
-When bound, the field shows the resolved value but input is disabled:
+### Batch Metadata Types
 
-```498:510:src/components/workspace/typography-editor-tab.tsx
-const getValue = (key: string, fallbackValue: number | string) => {
-  if (isBound(key)) return undefined; // Blank when bound in per-object context
-  // ... normal resolution logic
-};
-```
-
----
-
-## Batching Model (Multi-Key)
-
-### Current Implementation (Strict Policy)
-
-- Objects carry multiple batch keys via `batchKeys: string[]` (legacy `batchKey` removed).
-- Batch node resolves keys per object with precedence: per-object binding → global binding → literal `data.keys` (array).
-- Retagging is forbidden: attempting to tag already-batched objects throws `ERR_BATCH_DOUBLE_TAG`.
-- Compile-time validation forbids multiple Batch nodes on the same path to a Scene/Frame (throws `ERR_BATCH_MULTIPLE_IN_PATH`).
-- Scene partitioning collects unique keys from `batchKeys` and filters objects per key without duplication.
-
-#### Code References
-
-```1520:1734:src/server/animation-processing/executors/logic-executor.ts
-// Resolves keys (array), enforces no-retag, emits batchKeys
-```
-
-```209:301:src/server/animation-processing/scene/scene-partitioner.ts
-// Partitions by unique keys from batchKeys; filters per key
-```
-
-```218:275:src/server/animation-processing/execution-engine.ts
-// Always-on validation: single Batch per path (DomainError)
-```
-
-### Batch Keys Modal (UX)
-
-- Batch node shows a Keys button and a count badge.
-- Double-click opens a simple Add/Remove modal (no bulk CSV; no JSON).
-- Autosaves immediately to the flow; Flow editor listens to a sync event to prevent snap-back.
-- Right sidebar hides properties for Batch nodes and shows a hint: “Double-click the Batch node to set keys.”
-
-#### Code References
-
-```1:200:src/components/workspace/nodes/batch-node.tsx
-// Modal with Add/Remove, autosave, sync event dispatch
-```
-
-```440:480:src/components/workspace/flow-editor-tab.tsx
-// Listens for batch-keys-updated to sync local nodes and avoid snap-back
-```
-
-```1:200:src/components/workspace/property-panel.tsx
-// Early-return hint for batch nodes; no properties panel
-```
-
----
-
-## Metadata Pass-Through in UI
-
-### Current Status
-
-**Not found** - The editors do not currently read or display `perObjectBatchOverrides`, `perObjectBoundFields`, or batch metadata. The batch system operates at the backend level.
-
-#### Backend Metadata Flow
-
-The backend passes batch metadata through the executor pipeline:
-
+**Batch Override Types:**
 ```typescript
-// From logic-executor.ts (Filter/Merge pass-through)
-output.metadata = {
-  perObjectBatchOverrides: resolvedKeys,
-  perObjectBoundFields: boundFields,
-  // ... other metadata
-};
+// src/server/animation-processing/scene/batch-overrides-resolver.ts
+export type PerObjectBatchOverrides = Record<
+  string, // objectId
+  Record<
+    string, // fieldPath (e.g., "Canvas.position.x")
+    Record<string, unknown> // { [batchKey | "default"]: value }
+  >
+>;
+
+export type PerObjectBoundFields = Record<string, string[]>; // objectId -> fieldPaths
 ```
 
-#### UI Gap
-
-Editors currently do not:
-- Display batch-eligible objects
-- Show current batch key assignments
-- Preview batch override effects
-- Indicate batch-related conflicts
-
----
-
-## Feature Flags and Gating
-
-### Current Batch Override UI Flag
-
-```4:6:src/shared/feature-flags.ts
-batchOverridesUI: false,
+**Batch Resolve Context:**
+```16:19:src/server/animation-processing/scene/batch-overrides-resolver.ts
+export interface BatchResolveContext {
+  batchKey: string | null;
+  perObjectBatchOverrides?: PerObjectBatchOverrides;
+  perObjectBoundFields?: PerObjectBoundFields;
+}
 ```
 
-### Flag Usage Pattern
+### Editor Integration
 
-Flags are accessed through the shared feature flags module:
+**Current State:** Not found
+- No direct integration with batch metadata in editor components
+- Batch overrides UI feature flag is disabled
+- Backend batch resolution exists but editors don't read batch metadata
 
+### Object Reachability
+
+**FlowTracker Integration:**
+```90:111:src/components/workspace/canvas-editor-tab.tsx
+const upstreamObjects = useMemo(() => {
+  const tracker = new FlowTracker();
+
+  const objectDescriptors = tracker.getUpstreamObjects(
+    nodeId,
+    state.flow.nodes,
+    state.flow.edges,
+  );
+
+  return objectDescriptors.map((obj) => ({
+    data: {
+      identifier: {
+        id: obj.id,
+        displayName: obj.displayName,
+        type: obj.type,
+      },
+    },
+    type: obj.type,
+  }));
+}, [nodeId, state.flow.nodes, state.flow.edges]);
+```
+
+## Feature Flags
+
+**Editor-Related Flags:**
 ```typescript
-import { features } from "@/shared/feature-flags";
-// Usage: features.batchOverridesUI
+// src/shared/feature-flags.ts
+export const features = {
+  // Batch overrides editor UI foldouts (Canvas/Typography/Media)
+  // Disabled by default; backend functionality remains enabled.
+  batchOverridesUI: false,
+} as const;
 ```
 
----
+**Usage Sites:**
+- Not currently used in codebase (flag is false)
+- Intended to control batch overrides UI in editors
+- Backend batch resolution works regardless of flag
 
-## Persistence and Serialization
+## Persistence/Serialization
 
-### Global Defaults Persistence
+### Node Data Storage
 
-Global defaults are stored directly in node data:
-
+**Editor State Storage:**
 ```typescript
-// Example from TypographyNodeData
-export interface TypographyNodeData extends BaseNodeData {
+// Node data structure for editors
+interface TypographyNodeData extends BaseNodeData {
+  // Typography properties
   content?: string;
   fontFamily: string;
   fontSize: number;
-  // ... other fields
+  // ... other properties
+
+  // Override system
+  perObjectAssignments?: PerObjectAssignments;
+
+  // Binding system
+  variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
+  variableBindingsByObject?: Record<string, Record<string, { ... }>>;
 }
 ```
 
-### Per-Object Overrides Persistence
+**Timeline Editor Storage:**
+- Timeline data stored separately in `state.editors.timeline[nodeId]`
+- Merged into node data during serialization
 
-Per-object overrides use the `PerObjectAssignments` structure:
+### Workspace Serialization
 
-```typescript
-node.data.perObjectAssignments = {
-  [objectId]: {
-    initial: {
-      fontSize: 36,
-      fillColor: "#ff0000"
+**Merge Process:**
+```96:121:src/utils/workspace-state.ts
+export function mergeEditorsIntoFlow(state: WorkspaceState): {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+} {
+  const nodes = state.flow.nodes.map((node) => {
+    if (node.type === "animation") {
+      const nodeId = node?.data?.identifier?.id;
+      if (nodeId) {
+        const timelineData = state.editors.timeline[nodeId];
+        if (timelineData) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              duration: timelineData.duration,
+              tracks: timelineData.tracks,
+            } as NodeData,
+          } as Node<NodeData>;
+        }
+      }
     }
-  }
-};
-```
+    return node;
+  });
 
-### Serialization Paths
-
-#### Node Data Serialization
-The entire node data structure is serialized as part of the workspace state:
-
-```typescript
-// Workspace state includes all node data
-interface WorkspaceState {
-  flow: {
-    nodes: Node<NodeData>[];
-    edges: Edge[];
-  };
-  // ... other state
+  return { nodes, edges: state.flow.edges };
 }
 ```
 
----
+### Migration Points
+
+**Data Structure Changes:**
+- Adding `batchOverridesByField` to node data would require migration
+- `perObjectAssignments` structure changes need careful migration
+- Binding system structure changes impact all editors
+
+**Migration Strategy:**
+- Node data migrations in `extractWorkspaceState()` function
+- Version-based migration logic in workspace loading
+- Backward compatibility for existing workspaces
 
 ## Scene/Render Interaction
 
-### Scene Preview State Independence
+### Data Collection
 
-Editors do not depend on Scene preview state. The batch system operates without real-time preview.
+**Editor Data Flow:**
+1. Editors modify `node.data` properties
+2. `updateFlow()` persists changes to workspace state
+3. Scene assembler reads node data during rendering
+4. Backend processes node data into scene objects
 
-#### Backend Data Flow
+**Scene Assembly Input:**
+```typescript
+// Editors provide data to scene assembler
+node.data = {
+  // Typography properties
+  content: string;
+  fontFamily: string;
+  fontSize: number;
 
-1. **Editor State**: Stored in `node.data` (global defaults + per-object assignments)
-2. **Execution Pipeline**: Canvas/Animation/Media executors process the data
-3. **Scene Building**: Scene partitioner applies overrides per sub-partition key
-4. **Final Output**: Rendered frames/videos with applied transformations
+  // Override system
+  perObjectAssignments: PerObjectAssignments;
 
----
+  // Binding system
+  variableBindings: Record<...>;
+  variableBindingsByObject: Record<...>;
+}
+```
 
-## Gaps and Risks for Batch v1 UI
+### Scene Assembly
 
-### Missing Pieces for Minimal Batch v1 UI
+**Data Reading Pattern:**
+```251:252:src/server/animation-processing/scene/scene-assembler.ts
+const overrides = perObjectAssignments?.[objectId]?.tracks;
+const override = pickOverridesForTrack(overrides, track);
+```
 
-1. Batch per-field overrides foldouts (gated feature) are still disabled.
-2. Render error display could surface batch-specific validation (empty keys, collisions).
+**Override Application:**
+```98:142:src/server/animation-processing/scene/scene-assembler.ts
+function applyTrackOverride(
+  base: AnimationTrack,
+  override: TrackOverride,
+): AnimationTrack {
+  // Deep merge override properties
+  const mergedProps: Record<string, unknown> = {
+    ...baseProps,
+    ...overrideProps,
+  };
 
----
+  // Deep-merge nested 'from'/'to' objects
+  if (typeof baseProps.from === "object" && typeof overrideProps.from === "object") {
+    mergedProps.from = { ...baseProps.from, ...overrideProps.from };
+  }
+  // ...
+}
+```
 
-## Appendix: Code References
+### Render Pipeline
 
-### Core Editor Components
-- `src/components/workspace/typography-editor-tab.tsx` - Lines 1-1098
-- `src/components/workspace/canvas-editor-tab.tsx` - Lines 1-1283  
-- `src/components/workspace/media-editor-tab.tsx` - Lines 1-1157
-- `src/components/workspace/timeline-editor-tab.tsx` - Lines 1-352
+**No Direct Scene Preview Dependency:**
+- Confirmed: editors do not depend on Scene preview
+- Render pipeline is separate from editor UI
+- Scene data flows: Editor → Node Data → Scene Assembler → Render
 
-### Shared Systems
-- `src/components/ui/form-fields.tsx` - Lines 1-477 (Form field components)
-- `src/components/workspace/binding/bindings.tsx` - Lines 1-473 (Binding system)
-- `src/shared/properties/assignments.ts` - Lines 1-187 (Assignment structures)
-- `src/shared/properties/precedence.ts` - Lines 1-22 (Precedence rules)
-- `src/shared/feature-flags.ts` - Lines 1-6 (Feature gating)
+**Data Flow Summary:**
+```
+Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
+```
 
-### Backend Integration
-- `src/server/animation-processing/executors/canvas-executor.ts` - Lines 1-401
-- `src/server/animation-processing/executors/logic-executor.ts` - Lines 1520-1734
-- `src/server/animation-processing/scene/scene-partitioner.ts` - Lines 209-301
-- `src/server/animation-processing/scene/batch-overrides-resolver.ts` - Batch override resolution
+## Mount Points and Risks
+
+### Typography Editor
+
+**Per-Field Drawer Mount Points:**
+- **Location:** `src/components/workspace/typography-editor-tab.tsx`
+- **TypographyDefaultProperties component:** Lines 145-396
+- **TypographyPerObjectProperties component:** Lines 400-905
+- **Exact insertion point:** After each field component, before badge rendering
+
+**Specific Mount Points:**
+- Content field: After line 181 (`</div>`)
+- Font Family: After line 213 (`</div>`)
+- Font Size: After line 243 (`</div>`)
+- Font Weight: After line 271 (`</div>`)
+- Font Style: After line 293 (`</div>`)
+- Fill Color: After line 329 (`</div>`)
+- Stroke Color: After line 359 (`</div>`)
+- Stroke Width: After line 393 (`</div>`)
+
+### Canvas Editor
+
+**Per-Field Drawer Mount Points:**
+- **Location:** `src/components/workspace/canvas-editor-tab.tsx`
+- **CanvasDefaultProperties component:** Lines 294-695
+- **CanvasPerObjectProperties component:** Lines 698-1283
+
+**Specific Mount Points:**
+- Position X: After line 404 (`</div>`)
+- Position Y: After line 445 (`</div>`)
+- Scale X: After line 485 (`</div>`)
+- Scale Y: After line 525 (`</div>`)
+- Rotation: After line 556 (`</div>`)
+- Opacity: After line 590 (`</div>`)
+- Fill Color: After line 622 (`</div>`)
+- Stroke Color: After line 650 (`</div>`)
+- Stroke Width: After line 682 (`</div>`)
+
+### Media Editor
+
+**Per-Field Drawer Mount Points:**
+- **Location:** `src/components/workspace/media-editor-tab.tsx`
+- **MediaDefaultProperties component:** Lines 57-456
+- **MediaPerObjectProperties component:** Lines 459-981
+
+**Specific Mount Points:**
+- Image Asset: After line 246 (`</div>`)
+- Crop X: After line 283 (`</div>`)
+- Crop Y: After line 310 (`</div>`)
+- Crop Width: After line 343 (`</div>`)
+- Crop Height: After line 370 (`</div>`)
+- Display Width: After line 412 (`</div>`)
+- Display Height: After line 439 (`</div>`)
+
+### Animation Editor
+
+**Per-Field Drawer Mount Points:**
+- **Location:** `src/components/workspace/timeline-editor-core.tsx`
+- **TrackProperties component:** Lines 22-356
+
+**Specific Mount Points:**
+- Track properties are rendered in `TrackProperties` component
+- Mount points would be after each property field in the track editor
+
+### Risk Assessment
+
+**Low-Risk Patterns:**
+- All editors follow consistent component structure
+- Badge rendering already exists as insertion pattern
+- No conflicts with existing drawer/modal systems
+- Form field components are self-contained
+
+**Medium-Risk Patterns:**
+- Deep-merge logic in `mergeObjectAssignments()` could conflict if per-key overrides introduce new nesting
+- Binding reset paths in `resetToDefault()` might need updates for per-key override cleanup
+- Animation track override merging might need extension for per-key values
+
+**High-Risk Areas:**
+- Timeline editor has separate state management (`state.editors.timeline`)
+- Scene assembler deep-merge logic for track properties
+- Migration points for adding batch override data structures
+
+## Summary: Exact Implementation Plan
+
+### Components to Modify
+
+1. **Batch Node Inspector Key Input** (`src/components/workspace/nodes/batch-node.tsx`)
+   - Add key input field to batch node UI
+   - Integrate with existing key management system
+
+2. **Per-Field Drawer Mount Points**
+   - Typography Editor: 8 mount points (content, fontFamily, fontSize, fontWeight, fontStyle, fillColor, strokeColor, strokeWidth)
+   - Canvas Editor: 9 mount points (position.x/y, scale.x/y, rotation, opacity, fillColor, strokeColor, strokeWidth)
+   - Media Editor: 7 mount points (imageAssetId, cropX/Y/Width/Height, displayWidth/Height)
+   - Animation Editor: Track property mount points in TrackProperties component
+
+### Error Surfacing Strategy
+
+- Use existing toast/notification system for batch-related errors
+- Add validation in drawer components for invalid per-key values
+- Surface batch key conflicts and missing key errors
+
+### Next Steps
+
+1. **Immediate (Low Risk):**
+   - Implement batch key input in BatchNode component
+   - Create shared PerKeyOverridesDrawer component
+   - Add feature flag check for drawer visibility
+
+2. **Short Term (Medium Risk):**
+   - Integrate drawer into Typography editor mount points
+   - Test with existing per-object override system
+   - Add validation and error handling
+
+3. **Long Term (Higher Risk):**
+   - Extend to Canvas and Media editors
+   - Update scene assembler for per-key resolution
+   - Add migration logic for batch override data structures
+   - Test with animation timeline overrides
+
+### Blockers/Ambiguities
+
+1. **Timeline Editor Complexity:** Separate state management requires careful integration
+2. **Deep Merge Conflicts:** Animation track property merging needs verification
+3. **Migration Strategy:** Adding batchOverridesByField requires migration planning
+4. **Feature Flag Usage:** Current batchOverridesUI flag is unused - verify intended behavior
+
+### Success Criteria
+
+- Per-key drawer appears on supported fields without UI conflicts
+- Batch key input integrates with existing batch node UI
+- No regressions in existing per-object override functionality
+- Clean separation between per-object and per-key override systems
