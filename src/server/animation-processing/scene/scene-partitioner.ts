@@ -6,6 +6,7 @@ import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
 import { logger } from "@/lib/logger";
 import { DomainError, type DomainErrorCode } from "@/shared/errors/domain";
+import { resolveFieldValue, type BatchResolveContext } from "./batch-overrides-resolver";
 
 export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
@@ -365,6 +366,108 @@ export function buildAnimationSceneFromPartition(
   const perObjectBatchOverrides = partition.batchOverrides;
   const perObjectBoundFields = partition.boundFieldsByObject;
 
+  // Normalize bound field keys so Timeline.* field paths are recognized when masking overrides
+  const normalizedBoundFields: Record<string, string[]> | undefined = (() => {
+    if (!perObjectBoundFields) return undefined;
+    const out: Record<string, string[]> = {};
+    const add = (objId: string, key: string) => {
+      out[objId] ??= [];
+      if (!out[objId].includes(key)) out[objId].push(key);
+    };
+    const maybeMapTrackKey = (raw: string): string[] => {
+      const mappings: Array<{ test: (s: string) => boolean; map: string }> = [
+        { test: (s) => s.includes("move.from.x"), map: "Timeline.move.from.x" },
+        { test: (s) => s.includes("move.from.y"), map: "Timeline.move.from.y" },
+        { test: (s) => s.includes("move.to.x"), map: "Timeline.move.to.x" },
+        { test: (s) => s.includes("move.to.y"), map: "Timeline.move.to.y" },
+        { test: (s) => s.includes("rotate.from"), map: "Timeline.rotate.from" },
+        { test: (s) => s.includes("rotate.to"), map: "Timeline.rotate.to" },
+        { test: (s) => s.includes("scale.from"), map: "Timeline.scale.from" },
+        { test: (s) => s.includes("scale.to"), map: "Timeline.scale.to" },
+        { test: (s) => s.includes("fade.from"), map: "Timeline.fade.from" },
+        { test: (s) => s.includes("fade.to"), map: "Timeline.fade.to" },
+        { test: (s) => s.includes("color.from"), map: "Timeline.color.from" },
+        { test: (s) => s.includes("color.to"), map: "Timeline.color.to" },
+      ];
+      const hits: string[] = [];
+      for (const m of mappings) if (m.test(raw)) hits.push(m.map);
+      return hits;
+    };
+    for (const [objId, list] of Object.entries(perObjectBoundFields)) {
+      for (const key of list) {
+        if (key.startsWith("Timeline.")) add(objId, key);
+        const mapped = maybeMapTrackKey(key);
+        for (const mk of mapped) add(objId, mk);
+      }
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  })();
+
+  // Coercion helpers for Timeline overrides
+  const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
+    if (typeof value === "number" && Number.isFinite(value)) return { ok: true, value };
+    if (typeof value === "string") {
+      const parsed = Number.parseFloat(value);
+      if (Number.isFinite(parsed)) return { ok: true, value: parsed };
+    }
+    return { ok: false, warn: `Expected number, got ${typeof value}` };
+  };
+  const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+    if (typeof value === "string") return { ok: true, value };
+    return { ok: false, warn: `Expected string, got ${typeof value}` };
+  };
+
+  // Apply Timeline per-key overrides to scene animations using the active batchKey
+  const resolvedAnimations = (() => {
+    if (!perObjectBatchOverrides) return partition.animations;
+    const ctx: BatchResolveContext = {
+      batchKey,
+      perObjectBatchOverrides,
+      perObjectBoundFields: normalizedBoundFields,
+    };
+    return partition.animations.map((anim) => {
+      const objId = anim.objectId;
+      switch (anim.type) {
+        case "move": {
+          const from = { ...anim.properties.from };
+          const to = { ...anim.properties.to };
+          from.x = resolveFieldValue(objId, "Timeline.move.from.x", from.x, ctx, numberCoerce);
+          from.y = resolveFieldValue(objId, "Timeline.move.from.y", from.y, ctx, numberCoerce);
+          to.x = resolveFieldValue(objId, "Timeline.move.to.x", to.x, ctx, numberCoerce);
+          to.y = resolveFieldValue(objId, "Timeline.move.to.y", to.y, ctx, numberCoerce);
+          return { ...anim, properties: { from, to } } as typeof anim;
+        }
+        case "rotate": {
+          const from = resolveFieldValue(objId, "Timeline.rotate.from", anim.properties.from, ctx, numberCoerce);
+          const to = resolveFieldValue(objId, "Timeline.rotate.to", anim.properties.to, ctx, numberCoerce);
+          return { ...anim, properties: { from, to } } as typeof anim;
+        }
+        case "scale": {
+          const currentFrom = anim.properties.from;
+          const currentTo = anim.properties.to;
+          if (typeof currentFrom === "number" && typeof currentTo === "number") {
+            const from = resolveFieldValue(objId, "Timeline.scale.from", currentFrom, ctx, numberCoerce);
+            const to = resolveFieldValue(objId, "Timeline.scale.to", currentTo, ctx, numberCoerce);
+            return { ...anim, properties: { from, to } } as typeof anim;
+          }
+          return anim;
+        }
+        case "fade": {
+          const from = resolveFieldValue(objId, "Timeline.fade.from", anim.properties.from, ctx, numberCoerce);
+          const to = resolveFieldValue(objId, "Timeline.fade.to", anim.properties.to, ctx, numberCoerce);
+          return { ...anim, properties: { from, to } } as typeof anim;
+        }
+        case "color": {
+          const from = resolveFieldValue(objId, "Timeline.color.from", anim.properties.from, ctx, stringCoerce);
+          const to = resolveFieldValue(objId, "Timeline.color.to", anim.properties.to, ctx, stringCoerce);
+          return { ...anim, properties: { from, to } } as typeof anim;
+        }
+        default:
+          return anim;
+      }
+    });
+  })();
+
   const overriddenObjects: SceneObject[] = partition.objects.map((obj) =>
     applyOverridesToObject(obj, {
       batchKey,
@@ -403,7 +506,7 @@ export function buildAnimationSceneFromPartition(
   return {
     duration,
     objects: sortedObjects,
-    animations: partition.animations,
+    animations: resolvedAnimations,
     background: {
       color:
         typeof sceneData.backgroundColor === "string"
