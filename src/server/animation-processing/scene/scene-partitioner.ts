@@ -101,23 +101,17 @@ export function partitionObjectsByScenes(
             for (const [objectId, fields] of Object.entries(
               perObjectBatchOverrides,
             )) {
-              // Ensure base object structure exists
-              if (!mergedBatchOverrides[objectId]) {
-                mergedBatchOverrides[objectId] = {};
-              }
-
-              // Merge fields from this source, preserving existing values
+              const baseFields = mergedBatchOverrides[objectId] ?? {};
+              const mergedFields: Record<string, Record<string, unknown>> = {
+                ...baseFields,
+              };
               for (const [fieldId, byKey] of Object.entries(fields)) {
-                if (!mergedBatchOverrides[objectId][fieldId]) {
-                  mergedBatchOverrides[objectId][fieldId] = {};
-                }
-
-                // Merge byKey values, preserving existing ones (source takes precedence for same keys)
-                mergedBatchOverrides[objectId][fieldId] = {
-                  ...mergedBatchOverrides[objectId][fieldId],
+                mergedFields[fieldId] = {
+                  ...(mergedFields[fieldId] ?? {}),
                   ...byKey,
                 };
               }
+              mergedBatchOverrides[objectId] = mergedFields;
             }
           }
           const boundFields = (
