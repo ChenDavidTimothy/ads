@@ -1261,7 +1261,7 @@ export function TrackProperties({
                   onChange={(x) =>
                     updateProperties({
                       from: { x },
-                    })
+                    } as Partial<ScaleTrackProperties>)
                   }
                   step={0.1}
                   defaultValue={1}
@@ -1287,7 +1287,7 @@ export function TrackProperties({
                   onChange={(y) =>
                     updateProperties({
                       from: { y },
-                    })
+                    } as Partial<ScaleTrackProperties>)
                   }
                   step={0.1}
                   defaultValue={1}
@@ -1316,9 +1316,7 @@ export function TrackProperties({
                     getOverrideProperty<number>("to.x"),
                     track.properties.to.x,
                   )}
-                  onChange={(x) =>
-                    updateProperties({ to: { x } })
-                  }
+                  onChange={(x) => updateProperties({ to: { x } } as Partial<ScaleTrackProperties>)}
                   step={0.1}
                   defaultValue={1.5}
                   bindAdornment={bindButton(`scale.to.x`)}
@@ -1340,9 +1338,7 @@ export function TrackProperties({
                     getOverrideProperty<number>("to.y"),
                     track.properties.to.y,
                   )}
-                  onChange={(y) =>
-                    updateProperties({ to: { y } })
-                  }
+                  onChange={(y) => updateProperties({ to: { y } } as Partial<ScaleTrackProperties>)}
                   step={0.1}
                   defaultValue={1.5}
                   bindAdornment={bindButton(`scale.to.y`)}
