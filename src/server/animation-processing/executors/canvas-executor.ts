@@ -456,45 +456,6 @@ export class CanvasNodeExecutor extends BaseExecutor {
       if (combined.length > 0) perObjectBoundFields[objectId] = combined;
     }
 
-    // Merge upstream per-object batch overrides with this node's emitted overrides (this node wins on conflicts)
-    const upstreamPerObjectBatchOverrides = firstMeta?.perObjectBatchOverrides;
-    const mergedPerObjectBatchOverrides = (() => {
-      const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      const mergeInto = (
-        src:
-          | Record<string, Record<string, Record<string, unknown>>>
-          | undefined,
-      ) => {
-        if (!src) return;
-        for (const [objectId, fields] of Object.entries(src)) {
-          const destFields = out[objectId] ?? {};
-          for (const [fieldPath, byKey] of Object.entries(fields)) {
-            const existing = destFields[fieldPath] ?? {};
-            destFields[fieldPath] = { ...existing, ...byKey };
-          }
-          out[objectId] = destFields;
-        }
-      };
-      mergeInto(upstreamPerObjectBatchOverrides);
-      mergeInto(emittedPerObjectBatchOverrides);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    // Merge upstream bound field masks with this node's masks (union)
-    const mergedPerObjectBoundFields = (() => {
-      const out: Record<string, string[]> = {};
-      const mergeInto = (src: Record<string, string[]> | undefined) => {
-        if (!src) return;
-        for (const [objectId, keys] of Object.entries(src)) {
-          const existing = out[objectId] ?? [];
-          out[objectId] = Array.from(new Set([...existing, ...keys.map(String)]));
-        }
-      };
-      mergeInto(firstMeta?.perObjectBoundFields);
-      mergeInto(perObjectBoundFields);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -506,8 +467,14 @@ export class CanvasNodeExecutor extends BaseExecutor {
         perObjectAnimations: firstMeta?.perObjectAnimations,
         perObjectAssignments:
           mergedAssignments ?? firstMeta?.perObjectAssignments,
-        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
-        perObjectBoundFields: mergedPerObjectBoundFields,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : firstMeta?.perObjectBatchOverrides,
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFields).length > 0
+            ? perObjectBoundFields
+            : firstMeta?.perObjectBoundFields,
       },
     );
   }

@@ -309,88 +309,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Merge upstream per-object batch overrides with this node's emitted overrides (this node wins on conflicts)
-    const upstreamPerObjectBatchOverrides = (() => {
-      const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      for (const input of inputs) {
-        const meta = input.metadata as
-          | {
-              perObjectBatchOverrides?: Record<
-                string,
-                Record<string, Record<string, unknown>>
-              >;
-            }
-          | undefined;
-        const src = meta?.perObjectBatchOverrides;
-        if (!src) continue;
-        for (const [objectId, fields] of Object.entries(src)) {
-          const destFields = out[objectId] ?? {};
-          for (const [fieldPath, byKey] of Object.entries(fields)) {
-            const existing = destFields[fieldPath] ?? {};
-            destFields[fieldPath] = { ...existing, ...byKey };
-          }
-          out[objectId] = destFields;
-        }
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    const mergedPerObjectBatchOverrides = (() => {
-      const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      const mergeInto = (
-        src:
-          | Record<string, Record<string, Record<string, unknown>>>
-          | undefined,
-      ) => {
-        if (!src) return;
-        for (const [objectId, fields] of Object.entries(src)) {
-          const destFields = out[objectId] ?? {};
-          for (const [fieldPath, byKey] of Object.entries(fields)) {
-            const existing = destFields[fieldPath] ?? {};
-            destFields[fieldPath] = { ...existing, ...byKey };
-          }
-          out[objectId] = destFields;
-        }
-      };
-      // Upstream first, then this node (this node wins for same keys)
-      mergeInto(upstreamPerObjectBatchOverrides);
-      mergeInto(emittedPerObjectBatchOverrides);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    // Merge upstream bound field masks with this node's masks (union)
-    const upstreamPerObjectBoundFields = (() => {
-      const out: Record<string, string[]> = {};
-      for (const input of inputs) {
-        const meta = input.metadata as
-          | { perObjectBoundFields?: Record<string, string[]> }
-          | undefined;
-        const src = meta?.perObjectBoundFields;
-        if (!src) continue;
-        for (const [objectId, list] of Object.entries(src)) {
-          const existing = out[objectId] ?? [];
-          out[objectId] = Array.from(new Set([...existing, ...list.map(String)]));
-        }
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    const mergedPerObjectBoundFields = (() => {
-      const out: Record<string, string[]> = {};
-      const mergeInto = (
-        src: Record<string, string[]> | undefined,
-      ): void => {
-        if (!src) return;
-        for (const [objectId, keys] of Object.entries(src)) {
-          const existing = out[objectId] ?? [];
-          out[objectId] = Array.from(new Set([...existing, ...keys.map(String)]));
-        }
-      };
-      mergeInto(upstreamPerObjectBoundFields);
-      mergeInto(perObjectBoundFields);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -401,8 +319,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
         perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
         perObjectAssignments: mergedAssignments,
-        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
-        perObjectBoundFields: mergedPerObjectBoundFields,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : undefined,
+        // Ensure bound fields are passed even if empty to maintain consistency
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFields).length > 0
+            ? perObjectBoundFields
+            : undefined,
       },
     );
 
@@ -1739,117 +1664,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Merge upstream per-object batch overrides with this node's emitted overrides (this node wins on conflicts)
-    const upstreamPerObjectBatchOverrides = (() => {
-      const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      const mergeInto = (
-        src:
-          | Record<string, Record<string, Record<string, unknown>>>
-          | undefined,
-      ) => {
-        if (!src) return;
-        for (const [objectId, fields] of Object.entries(src)) {
-          const destFields = out[objectId] ?? {};
-          for (const [fieldPath, byKey] of Object.entries(fields)) {
-            const existing = destFields[fieldPath] ?? {};
-            destFields[fieldPath] = { ...existing, ...byKey };
-          }
-          out[objectId] = destFields;
-        }
-      };
-      for (const input of inputs) {
-        const meta = input.metadata as
-          | {
-              perObjectBatchOverrides?: Record<
-                string,
-                Record<string, Record<string, unknown>>
-              >;
-            }
-          | undefined;
-        mergeInto(meta?.perObjectBatchOverrides);
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    const mergedPerObjectBatchOverrides = (() => {
-      const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      const mergeInto = (
-        src:
-          | Record<string, Record<string, Record<string, unknown>>>
-          | undefined,
-      ) => {
-        if (!src) return;
-        for (const [objectId, fields] of Object.entries(src)) {
-          const destFields = out[objectId] ?? {};
-          for (const [fieldPath, byKey] of Object.entries(fields)) {
-            const existing = destFields[fieldPath] ?? {};
-            destFields[fieldPath] = { ...existing, ...byKey };
-          }
-          out[objectId] = destFields;
-        }
-      };
-      mergeInto(upstreamPerObjectBatchOverrides);
-      mergeInto(emittedPerObjectBatchOverrides);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    // Merge upstream bound fields with this node's bound fields (normalize Typography.* keys for current node)
-    const normalizedTypoBound: Record<string, string[]> = Object.fromEntries(
-      Object.entries(perObjectBoundFieldsTypo).map(([objId, keys]) => [
-        objId,
-        keys.map((k) =>
-          k.startsWith("Typography.")
-            ? k
-            : [
-                "content",
-                "fontFamily",
-                "fontSize",
-                "fontWeight",
-                "textAlign",
-                "lineHeight",
-                "letterSpacing",
-                "fontStyle",
-                "textBaseline",
-                "direction",
-                "fillColor",
-                "strokeColor",
-                "strokeWidth",
-              ].includes(k)
-              ? `Typography.${k}`
-              : k,
-        ),
-      ])
-    );
-
-    const upstreamPerObjectBoundFields = (() => {
-      const out: Record<string, string[]> = {};
-      for (const input of inputs) {
-        const meta = input.metadata as
-          | { perObjectBoundFields?: Record<string, string[]> }
-          | undefined;
-        if (!meta?.perObjectBoundFields) continue;
-        for (const [objId, list] of Object.entries(meta.perObjectBoundFields)) {
-          const existing = out[objId] ?? [];
-          out[objId] = Array.from(new Set([...existing, ...list.map(String)]));
-        }
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
-    const mergedPerObjectBoundFields = (() => {
-      const out: Record<string, string[]> = {};
-      const mergeInto = (src: Record<string, string[]> | undefined) => {
-        if (!src) return;
-        for (const [objId, list] of Object.entries(src)) {
-          const existing = out[objId] ?? [];
-          out[objId] = Array.from(new Set([...existing, ...list.map(String)]));
-        }
-      };
-      mergeInto(upstreamPerObjectBoundFields);
-      mergeInto(normalizedTypoBound);
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
-
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -1860,9 +1674,44 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
         perObjectAssignments: mergedAssignments,
-        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
-        // Provide bound field masks merged with upstream so resolver masks overrides correctly
-        perObjectBoundFields: mergedPerObjectBoundFields,
+        perObjectBatchOverrides:
+          Object.keys(emittedPerObjectBatchOverrides).length > 0
+            ? emittedPerObjectBatchOverrides
+            : undefined,
+        // Provide bound field masks for Typography so resolver masks overrides correctly
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFieldsTypo).length > 0
+            ? Object.fromEntries(
+                Object.entries(perObjectBoundFieldsTypo).map(
+                  ([objId, keys]) => [
+                    objId,
+                    keys
+                      // Normalize Typography keys into resolver field paths
+                      .map((k) =>
+                        k.startsWith("Typography.")
+                          ? k
+                          : [
+                              "content",
+                              "fontFamily",
+                              "fontSize",
+                              "fontWeight",
+                              "textAlign",
+                              "lineHeight",
+                              "letterSpacing",
+                              "fontStyle",
+                              "textBaseline",
+                              "direction",
+                              "fillColor",
+                              "strokeColor",
+                              "strokeWidth",
+                            ].includes(k)
+                            ? `Typography.${k}`
+                            : k,
+                      ),
+                  ],
+                ),
+              )
+            : undefined,
       },
     );
 
