@@ -66,15 +66,25 @@ export class TimingNodeExecutor extends BaseExecutor {
     // Merge perObjectAnimations from all inputs to prevent shared reference mutations
     const mergedAnimations: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
-      const sourceAnimations = input?.metadata?.perObjectAnimations;
+      const sourceAnimations = input?.metadata?.perObjectAnimations as
+        | Record<string, SceneAnimationTrack[]>
+        | undefined;
       if (sourceAnimations) {
-        for (const [objectId, animations] of Object.entries(sourceAnimations)) {
+        for (const [objectId, animations] of Object.entries(
+          sourceAnimations as Record<string, SceneAnimationTrack[]>,
+        )) {
           mergedAnimations[objectId] ??= [];
           mergedAnimations[objectId].push(
-            ...animations.map((anim) => ({
-              ...anim,
-              properties: { ...anim.properties },
-            })),
+            ...(
+              animations as SceneAnimationTrack[]
+            ).map((anim: SceneAnimationTrack) =>
+              ({
+                ...anim,
+                properties: {
+                  ...(anim.properties as Record<string, unknown>),
+                },
+              } as unknown as SceneAnimationTrack),
+            ),
           );
         }
       }
@@ -83,18 +93,33 @@ export class TimingNodeExecutor extends BaseExecutor {
       Object.keys(mergedAnimations).length > 0 ? mergedAnimations : undefined;
 
     // Merge batch overrides from ALL inputs, not just the first one
-    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+    const mergedPerObjectBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
       for (const input of inputs) {
-        const upstream = input?.metadata?.perObjectBatchOverrides;
+        const upstream = input?.metadata?.perObjectBatchOverrides as
+          | Record<string, Record<string, Record<string, unknown>>>
+          | undefined;
         if (upstream) {
           for (const [objectId, fields] of Object.entries(upstream)) {
-            const destFields = out[objectId] ?? {};
-            for (const [fieldPath, byKey] of Object.entries(fields)) {
-              const existingByKey = destFields[fieldPath] ?? {};
-              destFields[fieldPath] = { ...existingByKey, ...byKey };
+            const destFields = (out[objectId] ?? {}) as Record<
+              string,
+              Record<string, unknown>
+            >;
+            for (const [fieldPath, byKey] of Object.entries(
+              fields as Record<string, Record<string, unknown>>,
+            )) {
+              const existingByKey = (destFields[fieldPath] ?? {}) as Record<
+                string,
+                unknown
+              >;
+              destFields[fieldPath] = {
+                ...existingByKey,
+                ...(byKey as Record<string, unknown>),
+              } as Record<string, unknown>;
             }
-            out[objectId] = destFields;
+            out[objectId] = destFields as Record<string, Record<string, unknown>>;
           }
         }
       }
