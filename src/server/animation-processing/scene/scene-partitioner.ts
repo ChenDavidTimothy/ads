@@ -134,6 +134,39 @@ export function partitionObjectsByScenes(
       if (Object.keys(mergedBoundFields).length > 0) {
         // no-op placeholder; bound fields are re-collected below to maintain a single code path
       }
+
+      // Expand default-object batch overrides ("__default_object__") to all scene objects
+      // This allows per-key overrides configured without selecting a specific object
+      // to apply uniformly to every object that reaches this scene.
+      const DEFAULT_OBJECT_ID = "__default_object__";
+      if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
+        const defaultsForAll = mergedBatchOverrides[
+          DEFAULT_OBJECT_ID
+        ] as Record<string, Record<string, unknown>>;
+        for (const obj of sceneObjects) {
+          const objectId = obj.id;
+          const baseFields = (mergedBatchOverrides[objectId] ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          const mergedFields: Record<string, Record<string, unknown>> = {
+            ...baseFields,
+          };
+          for (const [fieldPath, byKeyDefault] of Object.entries(
+            defaultsForAll,
+          )) {
+            const current = mergedFields[fieldPath] ?? {};
+            // Default values provide a baseline; object-specific entries take precedence
+            mergedFields[fieldPath] = {
+              ...(byKeyDefault ?? {}),
+              ...current,
+            };
+          }
+          mergedBatchOverrides[objectId] = mergedFields;
+        }
+        // Remove synthetic default entry after expansion
+        delete mergedBatchOverrides[DEFAULT_OBJECT_ID];
+      }
     }
 
     // Fallback: If no animations found from metadata, try the global context method

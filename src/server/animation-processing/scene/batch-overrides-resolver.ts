@@ -209,6 +209,70 @@ export function applyOverridesToObject(
       stringCoerce,
     );
     (next.properties as { content?: string }).content = content;
+
+    // Apply Typography style fields to object.typography (non-destructive)
+    const currentTypography = (next.typography ?? {}) as Record<string, unknown>;
+    const withTypography: Record<string, unknown> = { ...currentTypography };
+
+    const fontFamily = resolveFieldValue(
+      obj.id,
+      "Typography.fontFamily",
+      (currentTypography.fontFamily as string | undefined) ?? undefined,
+      ctx,
+      stringCoerce,
+    );
+    if (fontFamily !== undefined) withTypography.fontFamily = fontFamily;
+
+    const fontWeight = resolveFieldValue(
+      obj.id,
+      "Typography.fontWeight",
+      (currentTypography.fontWeight as string | undefined) ?? undefined,
+      ctx,
+      stringCoerce,
+    );
+    if (fontWeight !== undefined) withTypography.fontWeight = fontWeight;
+
+    const fontStyle = resolveFieldValue(
+      obj.id,
+      "Typography.fontStyle",
+      (currentTypography.fontStyle as string | undefined) ?? undefined,
+      ctx,
+      stringCoerce,
+    );
+    if (fontStyle !== undefined) withTypography.fontStyle = fontStyle;
+
+    const fillColor = resolveFieldValue(
+      obj.id,
+      "Typography.fillColor",
+      (currentTypography.fillColor as string | undefined) ?? undefined,
+      ctx,
+      stringCoerce,
+    );
+    if (fillColor !== undefined) withTypography.fillColor = fillColor;
+
+    const strokeColor = resolveFieldValue(
+      obj.id,
+      "Typography.strokeColor",
+      (currentTypography.strokeColor as string | undefined) ?? undefined,
+      ctx,
+      stringCoerce,
+    );
+    if (strokeColor !== undefined) withTypography.strokeColor = strokeColor;
+
+    const strokeWidth = resolveFieldValue(
+      obj.id,
+      "Typography.strokeWidth",
+      (currentTypography.strokeWidth as number | undefined) ?? undefined,
+      ctx,
+      numberCoerce,
+    );
+    if (strokeWidth !== undefined) withTypography.strokeWidth = strokeWidth;
+
+    if (Object.keys(withTypography).length > 0) {
+      // Ensure typography block exists
+      (next as { typography?: Record<string, unknown> }).typography =
+        withTypography;
+    }
   }
 
   // Media.imageAssetId → image properties.assetId
@@ -225,6 +289,58 @@ export function applyOverridesToObject(
     if (typeof assetId === "string") {
       (next.properties as { assetId?: string }).assetId = assetId;
     }
+
+    // Apply remaining Media fields to image properties
+    const coerceNum = numberCoerce;
+    const props = next.properties as unknown as Record<string, unknown>;
+    const cropX = resolveFieldValue(
+      obj.id,
+      "Media.cropX",
+      (props.cropX as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.cropX = cropX;
+    const cropY = resolveFieldValue(
+      obj.id,
+      "Media.cropY",
+      (props.cropY as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.cropY = cropY;
+    const cropWidth = resolveFieldValue(
+      obj.id,
+      "Media.cropWidth",
+      (props.cropWidth as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.cropWidth = cropWidth;
+    const cropHeight = resolveFieldValue(
+      obj.id,
+      "Media.cropHeight",
+      (props.cropHeight as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.cropHeight = cropHeight;
+    const displayWidth = resolveFieldValue(
+      obj.id,
+      "Media.displayWidth",
+      (props.displayWidth as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.displayWidth = displayWidth;
+    const displayHeight = resolveFieldValue(
+      obj.id,
+      "Media.displayHeight",
+      (props.displayHeight as number | undefined) ?? 0,
+      ctx,
+      coerceNum,
+    );
+    props.displayHeight = displayHeight;
   }
 
   // Timeline animation tracks - these are handled differently
