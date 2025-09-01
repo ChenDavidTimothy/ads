@@ -129,15 +129,10 @@ export function partitionObjectsByScenes(
       // to apply uniformly to every object that reaches this scene.
       const DEFAULT_OBJECT_ID = "__default_object__";
       if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
-        const defaultsForAll = mergedBatchOverrides[
-          DEFAULT_OBJECT_ID
-        ] as Record<string, Record<string, unknown>>;
+        const defaultsForAll = mergedBatchOverrides[DEFAULT_OBJECT_ID];
         for (const obj of sceneObjects) {
           const objectId = obj.id;
-          const baseFields = (mergedBatchOverrides[objectId] ?? {}) as Record<
-            string,
-            Record<string, unknown>
-          >;
+          const baseFields = mergedBatchOverrides[objectId] ?? {};
           const mergedFields: Record<string, Record<string, unknown>> = {
             ...baseFields,
           };

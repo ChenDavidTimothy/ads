@@ -211,7 +211,10 @@ export function applyOverridesToObject(
     (next.properties as { content?: string }).content = content;
 
     // Apply Typography style fields to object.typography (non-destructive)
-    const currentTypography = (next.typography ?? {}) as Record<string, unknown>;
+    const currentTypography = (next.typography ?? {}) as Record<
+      string,
+      unknown
+    >;
     const withTypography: Record<string, unknown> = { ...currentTypography };
 
     const fontFamily = resolveFieldValue(

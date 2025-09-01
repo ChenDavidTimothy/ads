@@ -19,12 +19,7 @@ import { api } from "@/trpc/react";
 
 type ValueType = "number" | "string";
 
-type FieldKind =
-  | "media-asset"
-  | "color"
-  | "textarea"
-  | "number"
-  | "string";
+type FieldKind = "media-asset" | "color" | "textarea" | "number" | "string";
 
 function classifyField(fieldPath: string, fallback: ValueType): FieldKind {
   // Media asset id
@@ -154,9 +149,7 @@ export function BatchModal({
 
   // Media asset picker state
   const [assetPicker, setAssetPicker] = useState<
-    | { scope: "default" }
-    | { scope: "key"; key: string }
-    | null
+    { scope: "default" } | { scope: "key"; key: string } | null
   >(null);
 
   return (
@@ -183,7 +176,8 @@ export function BatchModal({
             {(() => {
               switch (kind) {
                 case "media-asset": {
-                  const assetId = (data.perObjectDefault as string | undefined) || "";
+                  const assetId =
+                    (data.perObjectDefault as string | undefined) ?? "";
                   return (
                     <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2">
                       <div className="flex items-center gap-[var(--space-2)]">
@@ -276,7 +270,7 @@ export function BatchModal({
                         label="Value"
                         value={
                           typeof data.perObjectDefault === "string"
-                            ? (data.perObjectDefault as string)
+                            ? data.perObjectDefault
                             : ""
                         }
                         onChange={(v) => setPerObjectDefault(v)}
@@ -316,28 +310,40 @@ export function BatchModal({
                       <div className="flex items-center gap-[var(--space-2)]">
                         {kind === "media-asset" ? (
                           <>
-                            <AssetThumb assetId={(current as string | undefined) || ""} />
+                            <AssetThumb
+                              assetId={(current as string | undefined) ?? ""}
+                            />
                             <Button
                               variant="secondary"
                               size="xs"
-                              onClick={() => setAssetPicker({ scope: "key", key: k })}
+                              onClick={() =>
+                                setAssetPicker({ scope: "key", key: k })
+                              }
                             >
-                              {(current as string | undefined) ? "Change" : "Select"}
+                              {(current as string | undefined)
+                                ? "Change"
+                                : "Select"}
                             </Button>
                           </>
                         ) : kind === "color" ? (
                           <input
                             type="color"
                             value={
-                              typeof current === "string" && current ? (current as string) : "#000000"
+                              typeof current === "string" && current
+                                ? current
+                                : "#000000"
                             }
-                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
+                            onChange={(e) =>
+                              setPerKeyOverride(k, e.target.value)
+                            }
                             className="h-8 w-10 cursor-pointer rounded border border-[var(--border-primary)] bg-[var(--surface-2)]"
                           />
                         ) : kind === "textarea" ? (
                           <textarea
-                            value={typeof current === "string" ? (current as string) : ""}
-                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
+                            value={typeof current === "string" ? current : ""}
+                            onChange={(e) =>
+                              setPerKeyOverride(k, e.target.value)
+                            }
                             rows={2}
                             className="min-w-[180px] resize-y rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs"
                           />
@@ -345,7 +351,8 @@ export function BatchModal({
                           <Input
                             type="number"
                             value={
-                              typeof current === "number" || typeof current === "string"
+                              typeof current === "number" ||
+                              typeof current === "string"
                                 ? String(current)
                                 : ""
                             }
@@ -357,8 +364,10 @@ export function BatchModal({
                           />
                         ) : (
                           <Input
-                            value={typeof current === "string" ? (current as string) : ""}
-                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
+                            value={typeof current === "string" ? current : ""}
+                            onChange={(e) =>
+                              setPerKeyOverride(k, e.target.value)
+                            }
                           />
                         )}
                         <Button
@@ -437,13 +446,15 @@ export function BatchModal({
             }}
             selectedAssetId={(() => {
               if (assetPicker.scope === "default") {
-                return (data.perObjectDefault as string | undefined) || undefined;
+                return (
+                  (data.perObjectDefault as string | undefined) ?? undefined
+                );
               }
               const cur = data.perKeyOverrides[assetPicker.key];
-              return (cur as string | undefined) || undefined;
+              return (cur as string | undefined) ?? undefined;
             })()}
-          />)
-        : null}
+          />
+        ) : null}
       </div>
     </Modal>
   );

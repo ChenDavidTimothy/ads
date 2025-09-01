@@ -283,14 +283,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
       k.startsWith("Media.")
         ? k
         : [
-            "imageAssetId",
-            "cropX",
-            "cropY",
-            "cropWidth",
-            "cropHeight",
-            "displayWidth",
-            "displayHeight",
-          ].includes(k)
+              "imageAssetId",
+              "cropX",
+              "cropY",
+              "cropWidth",
+              "cropHeight",
+              "displayWidth",
+              "displayHeight",
+            ].includes(k)
           ? `Media.${k}`
           : k;
     for (const input of inputs) {
@@ -310,14 +310,19 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     // Extract and merge upstream batch overrides from all inputs
-    const upstreamBatchOverrides = this.extractPerObjectBatchOverridesFromInputs(inputs);
+    const upstreamBatchOverrides =
+      this.extractPerObjectBatchOverridesFromInputs(inputs);
 
-    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+    const mergedPerObjectBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
 
       // Merge upstream batch overrides
       if (upstreamBatchOverrides) {
-        for (const [objectId, fields] of Object.entries(upstreamBatchOverrides)) {
+        for (const [objectId, fields] of Object.entries(
+          upstreamBatchOverrides,
+        )) {
           const destFields = out[objectId] ?? {};
           for (const [fieldPath, byKey] of Object.entries(fields)) {
             const existingByKey = destFields[fieldPath] ?? {};
@@ -341,25 +346,30 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return Object.keys(out).length > 0 ? out : undefined;
     })();
 
-    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
-      const out: Record<string, string[]> = {};
-      // Start with upstream from ALL inputs
-      for (const input of inputs) {
-        const upstreamMeta = input?.metadata?.perObjectBoundFields;
-        if (upstreamMeta) {
-          for (const [objId, keys] of Object.entries(upstreamMeta)) {
-            const existing = out[objId] ?? [];
-            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined =
+      (() => {
+        const out: Record<string, string[]> = {};
+        // Start with upstream from ALL inputs
+        for (const input of inputs) {
+          const upstreamMeta = input?.metadata?.perObjectBoundFields;
+          if (upstreamMeta && typeof upstreamMeta === "object") {
+            for (const [objId, keys] of Object.entries(upstreamMeta)) {
+              if (Array.isArray(keys)) {
+                const existing = out[objId] ?? [];
+                out[objId] = Array.from(
+                  new Set([...existing, ...keys.map(String)]),
+                );
+              }
+            }
           }
         }
-      }
-      // Merge this node's
-      for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
-        const existing = out[objId] ?? [];
-        out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
+        // Merge this node's
+        for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
+          const existing = out[objId] ?? [];
+          out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+      })();
 
     setNodeOutput(
       context,
@@ -1604,7 +1614,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     const processedObjects: unknown[] = [];
-    const passThroughObjects: unknown[] = [];
     const upstreamCursorMap = this.extractCursorsFromInputs(
       inputs as unknown as ExecutionValue[],
     );
@@ -1711,14 +1720,19 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     // Extract and merge upstream batch overrides from all inputs
-    const upstreamBatchOverrides = this.extractPerObjectBatchOverridesFromInputs(inputs);
+    const upstreamBatchOverrides =
+      this.extractPerObjectBatchOverridesFromInputs(inputs);
 
-    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+    const mergedPerObjectBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
 
       // Merge upstream batch overrides
       if (upstreamBatchOverrides) {
-        for (const [objectId, fields] of Object.entries(upstreamBatchOverrides)) {
+        for (const [objectId, fields] of Object.entries(
+          upstreamBatchOverrides,
+        )) {
           const destFields = out[objectId] ?? {};
           for (const [fieldPath, byKey] of Object.entries(fields)) {
             const existingByKey = destFields[fieldPath] ?? {};
@@ -1742,46 +1756,51 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return Object.keys(out).length > 0 ? out : undefined;
     })();
 
-    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
-      const out: Record<string, string[]> = {};
-      // Start with upstream from ALL inputs
-      for (const input of inputs) {
-        const upstreamMeta = input?.metadata?.perObjectBoundFields;
-        if (upstreamMeta) {
-          for (const [objId, keys] of Object.entries(upstreamMeta)) {
-            const existing = out[objId] ?? [];
-            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined =
+      (() => {
+        const out: Record<string, string[]> = {};
+        // Start with upstream from ALL inputs
+        for (const input of inputs) {
+          const upstreamMeta = input?.metadata?.perObjectBoundFields;
+          if (upstreamMeta && typeof upstreamMeta === "object") {
+            for (const [objId, keys] of Object.entries(upstreamMeta)) {
+              if (Array.isArray(keys)) {
+                const existing = out[objId] ?? [];
+                out[objId] = Array.from(
+                  new Set([...existing, ...keys.map(String)]),
+                );
+              }
+            }
           }
         }
-      }
-      // Merge this node's
-      const normalizeTypographyKey = (k: string): string =>
-        k.startsWith("Typography.")
-          ? k
-          : [
-              "content",
-              "fontFamily",
-              "fontSize",
-              "fontWeight",
-              "textAlign",
-              "lineHeight",
-              "letterSpacing",
-              "fontStyle",
-              "textBaseline",
-              "direction",
-              "fillColor",
-              "strokeColor",
-              "strokeWidth",
-            ].includes(k)
-            ? `Typography.${k}`
-            : k;
-      for (const [objId, keys] of Object.entries(perObjectBoundFieldsTypo)) {
-        const existing = out[objId] ?? [];
-        const normalized = keys.map((k) => normalizeTypographyKey(String(k)));
-        out[objId] = Array.from(new Set([...existing, ...normalized]));
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
+        // Merge this node's
+        const normalizeTypographyKey = (k: string): string =>
+          k.startsWith("Typography.")
+            ? k
+            : [
+                  "content",
+                  "fontFamily",
+                  "fontSize",
+                  "fontWeight",
+                  "textAlign",
+                  "lineHeight",
+                  "letterSpacing",
+                  "fontStyle",
+                  "textBaseline",
+                  "direction",
+                  "fillColor",
+                  "strokeColor",
+                  "strokeWidth",
+                ].includes(k)
+              ? `Typography.${k}`
+              : k;
+        for (const [objId, keys] of Object.entries(perObjectBoundFieldsTypo)) {
+          const existing = out[objId] ?? [];
+          const normalized = keys.map((k) => normalizeTypographyKey(String(k)));
+          out[objId] = Array.from(new Set([...existing, ...normalized]));
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+      })();
 
     setNodeOutput(
       context,

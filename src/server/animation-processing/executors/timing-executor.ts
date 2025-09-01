@@ -70,20 +70,17 @@ export class TimingNodeExecutor extends BaseExecutor {
         | Record<string, SceneAnimationTrack[]>
         | undefined;
       if (sourceAnimations) {
-        for (const [objectId, animations] of Object.entries(
-          sourceAnimations as Record<string, SceneAnimationTrack[]>,
-        )) {
+        for (const [objectId, animations] of Object.entries(sourceAnimations)) {
           mergedAnimations[objectId] ??= [];
           mergedAnimations[objectId].push(
-            ...(
-              animations as SceneAnimationTrack[]
-            ).map((anim: SceneAnimationTrack) =>
-              ({
-                ...anim,
-                properties: {
-                  ...(anim.properties as Record<string, unknown>),
-                },
-              } as unknown as SceneAnimationTrack),
+            ...animations.map(
+              (anim: SceneAnimationTrack) =>
+                ({
+                  ...anim,
+                  properties: {
+                    ...anim.properties,
+                  },
+                }) as SceneAnimationTrack,
             ),
           );
         }
@@ -98,47 +95,48 @@ export class TimingNodeExecutor extends BaseExecutor {
       | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
       for (const input of inputs) {
-        const upstream = input?.metadata?.perObjectBatchOverrides as
-          | Record<string, Record<string, Record<string, unknown>>>
-          | undefined;
-        if (upstream) {
+        const upstream = input?.metadata?.perObjectBatchOverrides;
+        if (upstream && typeof upstream === "object") {
           for (const [objectId, fields] of Object.entries(upstream)) {
-            const destFields = (out[objectId] ?? {}) as Record<
-              string,
-              Record<string, unknown>
-            >;
-            for (const [fieldPath, byKey] of Object.entries(
-              fields as Record<string, Record<string, unknown>>,
-            )) {
-              const existingByKey = (destFields[fieldPath] ?? {}) as Record<
-                string,
-                unknown
-              >;
-              destFields[fieldPath] = {
-                ...existingByKey,
-                ...(byKey as Record<string, unknown>),
-              } as Record<string, unknown>;
+            if (typeof fields === "object" && fields !== null) {
+              const destFields = out[objectId] ?? {};
+              for (const [fieldPath, byKey] of Object.entries(
+                fields as Record<string, unknown>,
+              )) {
+                if (typeof byKey === "object" && byKey !== null) {
+                  const existingByKey = destFields[fieldPath] ?? {};
+                  destFields[fieldPath] = {
+                    ...existingByKey,
+                    ...byKey,
+                  };
+                }
+              }
+              out[objectId] = destFields;
             }
-            out[objectId] = destFields as Record<string, Record<string, unknown>>;
           }
         }
       }
       return Object.keys(out).length > 0 ? out : undefined;
     })();
 
-    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
-      const out: Record<string, string[]> = {};
-      for (const input of inputs) {
-        const upstream = input?.metadata?.perObjectBoundFields;
-        if (upstream) {
-          for (const [objId, keys] of Object.entries(upstream)) {
-            const existing = out[objId] ?? [];
-            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined =
+      (() => {
+        const out: Record<string, string[]> = {};
+        for (const input of inputs) {
+          const upstream = input?.metadata?.perObjectBoundFields;
+          if (upstream && typeof upstream === "object") {
+            for (const [objId, keys] of Object.entries(upstream)) {
+              if (Array.isArray(keys)) {
+                const existing = out[objId] ?? [];
+                out[objId] = Array.from(
+                  new Set([...existing, ...keys.map(String)]),
+                );
+              }
+            }
           }
         }
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
+        return Object.keys(out).length > 0 ? out : undefined;
+      })();
 
     setNodeOutput(
       context,

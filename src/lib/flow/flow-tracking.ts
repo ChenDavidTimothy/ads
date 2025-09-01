@@ -139,7 +139,6 @@ export class FlowTracker {
     allNodes: Node<NodeData>[],
     allEdges: Edge[],
   ): ObjectDescriptor[] {
-
     // Build ID mapping
     const idMap = buildIdMap(
       allNodes as unknown as Array<{
@@ -184,7 +183,6 @@ export class FlowTracker {
       currentNodeId: string,
       objectsByPort: Map<string, ObjectDescriptor[]>,
     ): ObjectDescriptor[] => {
-
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) {
         console.warn(`Node not found for ID: ${currentNodeId}`);
@@ -314,7 +312,10 @@ export class FlowTracker {
         for (const edge of portEdges) {
           // Map edge source to canonical identifier ID
           const sourceCanonicalId = toCanonicalId(edge.source, idMap);
-          const upstreamObjs = traverseUpstream(sourceCanonicalId, nextPathVisited);
+          const upstreamObjs = traverseUpstream(
+            sourceCanonicalId,
+            nextPathVisited,
+          );
           portObjects.push(...upstreamObjs);
         }
 

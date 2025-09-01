@@ -223,8 +223,7 @@ export class SceneRenderer {
     _state: ObjectState,
   ): Promise<void> {
     // Prefer explicit URL, otherwise derive from assetId so per-key overrides work
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
     // Prefer assetId if present because per-key overrides update assetId at scene build time
     const url = props.assetId
       ? `${baseUrl}/api/download/${props.assetId}`
@@ -246,12 +245,12 @@ export class SceneRenderer {
       // Calculate crop and display parameters AFTER the image is available
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
-      const srcWidth = props.cropWidth && props.cropWidth !== 0
-        ? props.cropWidth
-        : img.width;
-      const srcHeight = props.cropHeight && props.cropHeight !== 0
-        ? props.cropHeight
-        : img.height;
+      const srcWidth =
+        props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
+      const srcHeight =
+        props.cropHeight && props.cropHeight !== 0
+          ? props.cropHeight
+          : img.height;
 
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;

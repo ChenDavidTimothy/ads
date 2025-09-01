@@ -49,12 +49,12 @@ export class VideoEncoder {
 
     return new Promise((resolve, reject) => {
       const testProcess = spawn(ffmpegPath, ["-version"], {
-        stdio: ['ignore', 'ignore', 'pipe'],
+        stdio: ["ignore", "ignore", "pipe"],
         windowsHide: true,
       });
 
       let stderr = "";
-      testProcess.stderr?.on("data", (chunk) => {
+      testProcess.stderr?.on("data", (chunk: Buffer | string) => {
         stderr += chunk.toString();
       });
 
@@ -62,7 +62,11 @@ export class VideoEncoder {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`FFmpeg validation failed with code ${code}: ${stderr.slice(-500)}`));
+          reject(
+            new Error(
+              `FFmpeg validation failed with code ${code}: ${stderr.slice(-500)}`,
+            ),
+          );
         }
       });
 
@@ -119,7 +123,7 @@ export class VideoEncoder {
 
       try {
         this.ffmpegProcess = spawn(ffmpegPath, args, {
-          stdio: ['pipe', 'pipe', 'pipe'],
+          stdio: ["pipe", "pipe", "pipe"],
           windowsHide: true, // Hide console window on Windows
         });
       } catch (err) {
@@ -131,7 +135,10 @@ export class VideoEncoder {
       proc.on("error", onError);
 
       // If the process exits before we're ready, treat as startup failure
-      const startupCloseHandler = (code: number | null, signal: NodeJS.Signals | null) => {
+      const startupCloseHandler = (
+        code: number | null,
+        signal: NodeJS.Signals | null,
+      ) => {
         if (settled) return;
         settled = true;
         const stderr = this.stderrBuffer.slice(-1000);

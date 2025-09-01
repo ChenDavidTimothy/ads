@@ -272,7 +272,6 @@ export class CanvasNodeExecutor extends BaseExecutor {
               continue;
             }
 
-
             if (key === "position.x" && typeof val === "number") {
               objectOverrides.position = {
                 x: val,
@@ -442,18 +441,21 @@ export class CanvasNodeExecutor extends BaseExecutor {
       perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
       perObjectAssignments?: PerObjectAssignments;
     }> = inputs
-      .map(input => input?.metadata)
+      .map((input) => input?.metadata)
       .filter((meta): meta is NonNullable<typeof meta> => meta != null)
-      .map(meta => meta as {
-        perObjectBatchOverrides?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
-        perObjectBoundFields?: Record<string, string[]>;
-        perObjectTimeCursor?: Record<string, number>;
-        perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
-        perObjectAssignments?: PerObjectAssignments;
-      });
+      .map(
+        (meta) =>
+          meta as {
+            perObjectBatchOverrides?: Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >;
+            perObjectBoundFields?: Record<string, string[]>;
+            perObjectTimeCursor?: Record<string, number>;
+            perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+            perObjectAssignments?: PerObjectAssignments;
+          },
+      );
 
     // Emit bound fields per object: merge per-object-specific and global bindings
     const perObjectBoundFields: Record<string, string[]> = {};
@@ -470,7 +472,9 @@ export class CanvasNodeExecutor extends BaseExecutor {
     }
 
     // Merge all metadata from upstream inputs
-    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+    const mergedPerObjectBatchOverrides:
+      | Record<string, Record<string, Record<string, unknown>>>
+      | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
 
       // Merge upstream batch overrides from ALL inputs
@@ -502,29 +506,38 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return Object.keys(out).length > 0 ? out : undefined;
     })();
 
-    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
-      const out: Record<string, string[]> = {};
-      // Start with upstream from ALL inputs
-      for (const upstreamMeta of upstreamMetas) {
-        if (upstreamMeta?.perObjectBoundFields) {
-          for (const [objId, keys] of Object.entries(upstreamMeta.perObjectBoundFields)) {
-            const existing = out[objId] ?? [];
-            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined =
+      (() => {
+        const out: Record<string, string[]> = {};
+        // Start with upstream from ALL inputs
+        for (const upstreamMeta of upstreamMetas) {
+          if (upstreamMeta?.perObjectBoundFields) {
+            for (const [objId, keys] of Object.entries(
+              upstreamMeta.perObjectBoundFields,
+            )) {
+              const existing = out[objId] ?? [];
+              out[objId] = Array.from(
+                new Set([...existing, ...keys.map(String)]),
+              );
+            }
           }
         }
-      }
-      // Merge this node's
-      for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
-        const existing = out[objId] ?? [];
-        out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
+        // Merge this node's
+        for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
+          const existing = out[objId] ?? [];
+          out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+      })();
 
     // Collect other metadata from first input (or any input with data)
-    const firstMetaWithData = upstreamMetas.find(meta =>
-      meta.perObjectTimeCursor || meta.perObjectAnimations || meta.perObjectAssignments
-    ) || upstreamMetas[0];
+    const firstMetaWithData =
+      upstreamMetas.find(
+        (meta) =>
+          meta.perObjectTimeCursor ??
+          meta.perObjectAnimations ??
+          meta.perObjectAssignments,
+      ) ?? upstreamMetas[0];
 
     setNodeOutput(
       context,

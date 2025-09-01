@@ -89,9 +89,7 @@ function namespaceBatchOverridesForBatch(
 
 // Helper: namespace bound fields map to match namespaced object IDs
 function namespaceBoundFieldsForBatch(
-  bound:
-    | Record<string, string[]>
-    | undefined,
+  bound: Record<string, string[]> | undefined,
   batchKey: string | null,
 ): Record<string, string[]> | undefined {
   if (!batchKey || !bound) return bound;
