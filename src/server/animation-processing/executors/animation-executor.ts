@@ -309,6 +309,51 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
+    // Merge upstream metadata with this node's emissions so multiple editors can contribute
+    const firstMeta = inputs[0]?.metadata as
+      | {
+          perObjectBatchOverrides?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+          perObjectBoundFields?: Record<string, string[]>;
+        }
+      | undefined;
+
+    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+      const upstream = firstMeta?.perObjectBatchOverrides;
+      const out: Record<string, Record<string, Record<string, unknown>>> = upstream
+        ? JSON.parse(JSON.stringify(upstream))
+        : {};
+      for (const [objectId, fields] of Object.entries(
+        emittedPerObjectBatchOverrides,
+      )) {
+        const destFields = out[objectId] ?? {};
+        for (const [fieldPath, byKey] of Object.entries(fields)) {
+          const existingByKey = destFields[fieldPath] ?? {};
+          destFields[fieldPath] = { ...existingByKey, ...byKey };
+        }
+        out[objectId] = destFields;
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
+      const out: Record<string, string[]> = {};
+      // Start with upstream
+      if (firstMeta?.perObjectBoundFields) {
+        for (const [objId, keys] of Object.entries(firstMeta.perObjectBoundFields)) {
+          out[objId] = Array.from(new Set(keys.map(String)));
+        }
+      }
+      // Merge this node's
+      for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
+        const existing = out[objId] ?? [];
+        out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -319,15 +364,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: this.extractCursorsFromInputs(inputs),
         perObjectAnimations: this.extractPerObjectAnimationsFromInputs(inputs),
         perObjectAssignments: mergedAssignments,
-        perObjectBatchOverrides:
-          Object.keys(emittedPerObjectBatchOverrides).length > 0
-            ? emittedPerObjectBatchOverrides
-            : undefined,
+        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
         // Ensure bound fields are passed even if empty to maintain consistency
-        perObjectBoundFields:
-          Object.keys(perObjectBoundFields).length > 0
-            ? perObjectBoundFields
-            : undefined,
+        perObjectBoundFields: mergedPerObjectBoundFields,
       },
     );
 
@@ -1664,6 +1703,72 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
+    // Merge upstream metadata with this node's emissions so multiple editors can contribute
+    const firstMeta = inputs[0]?.metadata as
+      | {
+          perObjectBatchOverrides?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+          perObjectBoundFields?: Record<string, string[]>;
+        }
+      | undefined;
+
+    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+      const upstream = firstMeta?.perObjectBatchOverrides;
+      const out: Record<string, Record<string, Record<string, unknown>>> = upstream
+        ? JSON.parse(JSON.stringify(upstream))
+        : {};
+      for (const [objectId, fields] of Object.entries(
+        emittedPerObjectBatchOverrides,
+      )) {
+        const destFields = out[objectId] ?? {};
+        for (const [fieldPath, byKey] of Object.entries(fields)) {
+          const existingByKey = destFields[fieldPath] ?? {};
+          destFields[fieldPath] = { ...existingByKey, ...byKey };
+        }
+        out[objectId] = destFields;
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
+      const out: Record<string, string[]> = {};
+      // Start with upstream
+      if (firstMeta?.perObjectBoundFields) {
+        for (const [objId, keys] of Object.entries(firstMeta.perObjectBoundFields)) {
+          out[objId] = Array.from(new Set(keys.map(String)));
+        }
+      }
+      // Merge this node's
+      const normalizeTypographyKey = (k: string): string =>
+        k.startsWith("Typography.")
+          ? k
+          : [
+              "content",
+              "fontFamily",
+              "fontSize",
+              "fontWeight",
+              "textAlign",
+              "lineHeight",
+              "letterSpacing",
+              "fontStyle",
+              "textBaseline",
+              "direction",
+              "fillColor",
+              "strokeColor",
+              "strokeWidth",
+            ].includes(k)
+            ? `Typography.${k}`
+            : k;
+      for (const [objId, keys] of Object.entries(perObjectBoundFieldsTypo)) {
+        const existing = out[objId] ?? [];
+        const normalized = keys.map((k) => normalizeTypographyKey(String(k)));
+        out[objId] = Array.from(new Set([...existing, ...normalized]));
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -1674,44 +1779,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
         perObjectAssignments: mergedAssignments,
-        perObjectBatchOverrides:
-          Object.keys(emittedPerObjectBatchOverrides).length > 0
-            ? emittedPerObjectBatchOverrides
-            : undefined,
+        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
         // Provide bound field masks for Typography so resolver masks overrides correctly
-        perObjectBoundFields:
-          Object.keys(perObjectBoundFieldsTypo).length > 0
-            ? Object.fromEntries(
-                Object.entries(perObjectBoundFieldsTypo).map(
-                  ([objId, keys]) => [
-                    objId,
-                    keys
-                      // Normalize Typography keys into resolver field paths
-                      .map((k) =>
-                        k.startsWith("Typography.")
-                          ? k
-                          : [
-                              "content",
-                              "fontFamily",
-                              "fontSize",
-                              "fontWeight",
-                              "textAlign",
-                              "lineHeight",
-                              "letterSpacing",
-                              "fontStyle",
-                              "textBaseline",
-                              "direction",
-                              "fillColor",
-                              "strokeColor",
-                              "strokeWidth",
-                            ].includes(k)
-                            ? `Typography.${k}`
-                            : k,
-                      ),
-                  ],
-                ),
-              )
-            : undefined,
+        perObjectBoundFields: mergedPerObjectBoundFields,
       },
     );
 
