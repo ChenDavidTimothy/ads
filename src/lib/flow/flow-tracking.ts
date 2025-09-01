@@ -139,7 +139,6 @@ export class FlowTracker {
     allNodes: Node<NodeData>[],
     allEdges: Edge[],
   ): ObjectDescriptor[] {
-    const visited = new Set<string>();
 
     // Build ID mapping
     const idMap = buildIdMap(
@@ -185,8 +184,6 @@ export class FlowTracker {
       currentNodeId: string,
       objectsByPort: Map<string, ObjectDescriptor[]>,
     ): ObjectDescriptor[] => {
-      if (visited.has(currentNodeId)) return [];
-      visited.add(currentNodeId);
 
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) {
@@ -283,9 +280,17 @@ export class FlowTracker {
     };
 
     // Recursive traversal with merge-aware port handling
-    const traverseUpstream = (currentNodeId: string): ObjectDescriptor[] => {
+    const traverseUpstream = (
+      currentNodeId: string,
+      pathVisited: Set<string>,
+    ): ObjectDescriptor[] => {
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) return [];
+
+      // Path-scoped cycle detection to avoid pruning distinct branches
+      if (pathVisited.has(currentNodeId)) return [];
+      const nextPathVisited = new Set(pathVisited);
+      nextPathVisited.add(currentNodeId);
 
       // Get input ports for this node type
       const inputPorts = getInputPortsForNode(currentNode);
@@ -309,7 +314,7 @@ export class FlowTracker {
         for (const edge of portEdges) {
           // Map edge source to canonical identifier ID
           const sourceCanonicalId = toCanonicalId(edge.source, idMap);
-          const upstreamObjs = traverseUpstream(sourceCanonicalId);
+          const upstreamObjs = traverseUpstream(sourceCanonicalId, nextPathVisited);
           portObjects.push(...upstreamObjs);
         }
 
@@ -333,7 +338,7 @@ export class FlowTracker {
     };
 
     // Start traversal from target node
-    const result = traverseUpstream(startCanonicalId);
+    const result = traverseUpstream(startCanonicalId, new Set<string>());
 
     // Remove duplicates and sort
     const uniqueObjects = new Map<string, ObjectDescriptor>();
