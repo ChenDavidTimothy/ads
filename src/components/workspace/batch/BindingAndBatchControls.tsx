@@ -19,12 +19,6 @@ export function BindingAndBatchControls({
 }) {
   const [open, setOpen] = React.useState(false);
 
-  // Debug logging
-  console.log("[BindingAndBatchControls] Rendering:", {
-    bindProps,
-    batchProps,
-  });
-
   return (
     <div className="flex items-center gap-[var(--space-1)]">
       <BindButton {...bindProps} />

@@ -209,6 +209,42 @@ export function applyOverridesToObject(
       stringCoerce,
     );
     (next.properties as { content?: string }).content = content;
+
+    // Typography colors → object.typography.* (used by SceneRenderer)
+    const currentTypography = (next.typography ?? {}) as {
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth?: number;
+    };
+    const resolvedFill = resolveFieldValue<string | undefined>(
+      obj.id,
+      "Typography.fillColor",
+      currentTypography.fillColor,
+      ctx,
+      (v) => (typeof v === "string" ? { ok: true, value: v } : { ok: false, warn: "expected string" }),
+    );
+    const resolvedStroke = resolveFieldValue<string | undefined>(
+      obj.id,
+      "Typography.strokeColor",
+      currentTypography.strokeColor,
+      ctx,
+      (v) => (typeof v === "string" ? { ok: true, value: v } : { ok: false, warn: "expected string" }),
+    );
+    const resolvedStrokeWidth = resolveFieldValue<number | undefined>(
+      obj.id,
+      "Typography.strokeWidth",
+      currentTypography.strokeWidth,
+      ctx,
+      (v) => (typeof v === "number" && Number.isFinite(v) ? { ok: true, value: v } : { ok: false, warn: "expected number" }),
+    );
+    next.typography = {
+      ...next.typography,
+      ...(resolvedFill !== undefined ? { fillColor: resolvedFill } : {}),
+      ...(resolvedStroke !== undefined ? { strokeColor: resolvedStroke } : {}),
+      ...(resolvedStrokeWidth !== undefined
+        ? { strokeWidth: resolvedStrokeWidth }
+        : {}),
+    };
   }
 
   // Media.imageAssetId → image properties.assetId

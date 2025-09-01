@@ -222,8 +222,15 @@ export class SceneRenderer {
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Skip rendering if no image URL
-    if (!props.imageUrl) return;
+    // Attempt to render by URL or by assetId (fallback to API route with absolute base)
+    const assetId = (props as { assetId?: string }).assetId;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const effectiveUrl = assetId
+      ? `${baseUrl}/api/download/${assetId}`
+      : props.imageUrl
+        ? props.imageUrl
+        : undefined;
+    if (!effectiveUrl) return;
 
     // Calculate final dimensions based on crop and display settings
     const cropWidth =
@@ -240,14 +247,14 @@ export class SceneRenderer {
 
     try {
       // ✅ CRITICAL FIX: Check cache first, load with timeout if not cached
-      let img = this.imageCache.get(props.imageUrl);
+      let img = this.imageCache.get(effectiveUrl);
       if (!img) {
         img = await withTimeout(
-          loadImage(props.imageUrl),
+          loadImage(effectiveUrl),
           30000, // 30 second timeout
-          `Image load timeout: ${props.imageUrl}`,
+          `Image load timeout: ${effectiveUrl}`,
         );
-        this.imageCache.set(props.imageUrl, img);
+        this.imageCache.set(effectiveUrl, img);
       }
 
       // Calculate crop and display parameters
