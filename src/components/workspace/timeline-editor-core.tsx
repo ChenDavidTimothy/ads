@@ -1259,7 +1259,7 @@ export function TrackProperties({
                     track.properties.from.x,
                   )}
                   onChange={(x) =>
-                    updateProperties({ from: { ...track.properties.from, x } })
+                    updateProperties({ from: { x } })
                   }
                   step={0.1}
                   defaultValue={1}
@@ -1283,7 +1283,7 @@ export function TrackProperties({
                     track.properties.from.y,
                   )}
                   onChange={(y) =>
-                    updateProperties({ from: { ...track.properties.from, y } })
+                    updateProperties({ from: { y } })
                   }
                   step={0.1}
                   defaultValue={1}
@@ -1313,7 +1313,7 @@ export function TrackProperties({
                     track.properties.to.x,
                   )}
                   onChange={(x) =>
-                    updateProperties({ to: { ...track.properties.to, x } })
+                    updateProperties({ to: { x } })
                   }
                   step={0.1}
                   defaultValue={1.5}
@@ -1337,7 +1337,7 @@ export function TrackProperties({
                     track.properties.to.y,
                   )}
                   onChange={(y) =>
-                    updateProperties({ to: { ...track.properties.to, y } })
+                    updateProperties({ to: { y } })
                   }
                   step={0.1}
                   defaultValue={1.5}
