@@ -93,13 +93,13 @@ class CleanupService {
     console.log("🚀 Starting background cleanup service...");
     this.isRunning = true;
 
-    // Start the cleanup interval
+    // Start the cleanup interval - less frequent to reduce resource usage
     this.cleanupInterval = setInterval(
       () => {
         void this.runCleanup();
       },
-      3 * 60 * 1000,
-    ); // Every 3 minutes
+      10 * 60 * 1000,
+    ); // Every 10 minutes
 
     console.log("✅ Background cleanup service started successfully");
   }

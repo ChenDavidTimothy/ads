@@ -54,13 +54,13 @@ export function WorkspaceProvider({
     { id: workspaceId },
     {
       enabled: Boolean(workspaceId),
-      // Always refetch on mount/navigation and never trust stale cache
-      refetchOnMount: "always",
-      refetchOnReconnect: "always",
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-      // Remove from cache immediately when unused to avoid back/forward stale views
-      gcTime: 0,
+      // More conservative refetch settings to prevent unnecessary API calls
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: false, // Don't refetch on window focus - causes random "unsaved changes"
+      staleTime: 5 * 60 * 1000, // 5 minutes - workspace data doesn't change often
+      // Keep in cache longer but allow garbage collection
+      gcTime: 10 * 60 * 1000, // 10 minutes
     },
   );
 

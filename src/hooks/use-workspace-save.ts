@@ -53,35 +53,50 @@ export function useWorkspaceSave({
   });
 
   const isSaveInFlightRef = useRef(false);
+  const lastSaveAttemptRef = useRef<number>(0);
 
   const hasUnsavedChanges = useCallback(
     (currentState: WorkspaceState) => {
       if (!lastSavedState) return false; // not initialized yet
 
-      const currentFlowSnapshot = createStableFlowSnapshot(currentState.flow);
-      const lastFlowSnapshot =
-        lastSavedFlowSnapshotRef.current ||
-        createStableFlowSnapshot(lastSavedState.flow);
+      try {
+        const currentFlowSnapshot = createStableFlowSnapshot(currentState.flow);
+        const lastFlowSnapshot =
+          lastSavedFlowSnapshotRef.current ||
+          createStableFlowSnapshot(lastSavedState.flow);
 
-      if (currentFlowSnapshot !== lastFlowSnapshot) return true;
+        if (currentFlowSnapshot !== lastFlowSnapshot) return true;
 
-      // Also compare editor-specific persistable data (timeline)
-      const currentEditorsSnapshot = JSON.stringify(
-        stableEditorsSnapshot(currentState),
-      );
-      const lastEditorsSnapshot = JSON.stringify(
-        stableEditorsSnapshot(lastSavedState),
-      );
-      return currentEditorsSnapshot !== lastEditorsSnapshot;
+        // Also compare editor-specific persistable data (timeline)
+        const currentEditorsSnapshot = JSON.stringify(
+          stableEditorsSnapshot(currentState),
+        );
+        const lastEditorsSnapshot = JSON.stringify(
+          stableEditorsSnapshot(lastSavedState),
+        );
+        return currentEditorsSnapshot !== lastEditorsSnapshot;
+      } catch (error) {
+        // If snapshot comparison fails, assume there are changes to be safe
+        console.warn("[WorkspaceSave] Error comparing snapshots:", error);
+        return true;
+      }
     },
     [lastSavedState],
   );
 
   const saveNow = useCallback(
     async (currentState: WorkspaceState) => {
+      const now = Date.now();
+
+      // Prevent saves more frequent than once per second to avoid spam
+      if (now - lastSaveAttemptRef.current < 1000) {
+        return;
+      }
+
       if (isSaveInFlightRef.current) {
         return; // drop overlapping manual save to avoid version conflicts
       }
+
       // Avoid duplicate enqueues, but allow explicit saves even if snapshot unchanged
       const currentFlowSnapshot = createStableFlowSnapshot(currentState.flow);
       if (
@@ -90,6 +105,8 @@ export function useWorkspaceSave({
       ) {
         return;
       }
+
+      lastSaveAttemptRef.current = now;
 
       const flowDataWithEditors = mergeEditorsIntoFlow(currentState);
 
