@@ -222,10 +222,14 @@ export class SceneRenderer {
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Attempt to render by URL or by assetId (fallback to API route)
-    const effectiveUrl = props.imageUrl || (props as { assetId?: string }).assetId
-      ? `/api/download/${(props as { assetId?: string }).assetId}`
-      : undefined;
+    // Attempt to render by URL or by assetId (fallback to API route with absolute base)
+    const assetId = (props as { assetId?: string }).assetId;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const effectiveUrl = props.imageUrl
+      ? props.imageUrl
+      : assetId
+        ? `${baseUrl}/api/download/${assetId}`
+        : undefined;
     if (!effectiveUrl) return;
 
     // Calculate final dimensions based on crop and display settings
