@@ -146,7 +146,7 @@ export function getDefaultTrackProperties(
     case "rotate":
       return { from: 0, to: 1 };
     case "scale":
-      return { from: 1, to: 1.5 };
+      return { from: { x: 1, y: 1 }, to: { x: 1.5, y: 1.5 } };
     case "fade":
       return { from: 1, to: 0.5 };
     case "color":

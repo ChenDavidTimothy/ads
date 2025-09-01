@@ -97,7 +97,7 @@ function isRotateDefaults(value: unknown): value is RotateTrackProperties {
 
 function isScaleDefaults(value: unknown): value is ScaleTrackProperties {
   const v = value as Partial<ScaleTrackProperties>;
-  return !!v && typeof v.from === "number" && typeof v.to === "number";
+  return !!v && isPoint2D(v.from) && isPoint2D(v.to);
 }
 
 function isFadeDefaults(value: unknown): value is FadeTrackProperties {
@@ -126,6 +126,34 @@ function getDefaultTrackProperties(
   return defaults;
 }
 
+// Normalize legacy track property shapes to current schema
+function normalizeTrack(t: AnimationTrack): AnimationTrack {
+  if (t.type === "scale") {
+    const props = t.properties as unknown as {
+      from?: number | { x?: number; y?: number };
+      to?: number | { x?: number; y?: number };
+    };
+    const fromObj =
+      typeof props.from === "number"
+        ? { x: props.from, y: props.from }
+        : (props.from ?? { x: 1, y: 1 });
+    const toObj =
+      typeof props.to === "number"
+        ? { x: props.to, y: props.to }
+        : (props.to ?? { x: 1, y: 1 });
+    const from = {
+      x: typeof fromObj.x === "number" ? fromObj.x : 1,
+      y: typeof fromObj.y === "number" ? fromObj.y : 1,
+    };
+    const to = {
+      x: typeof toObj.x === "number" ? toObj.x : 1,
+      y: typeof toObj.y === "number" ? toObj.y : 1,
+    };
+    return { ...t, properties: { from, to } as unknown } as AnimationTrack;
+  }
+  return t;
+}
+
 export function TimelineEditorCore({
   animationNodeId,
   duration: controlledDuration,
@@ -137,7 +165,9 @@ export function TimelineEditorCore({
   onSelectedTrackChange,
 }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(controlledDuration);
-  const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks);
+  const [tracks, setTracks] = useState<AnimationTrack[]>(
+    controlledTracks.map(normalizeTrack),
+  );
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [localDragTracks, setLocalDragTracks] = useState<AnimationTrack[]>([]); // Local state for smooth dragging
@@ -154,7 +184,7 @@ export function TimelineEditorCore({
   useEffect(() => {
     if (prevNodeIdRef.current !== animationNodeId) {
       setDuration(controlledDuration);
-      setTracks(controlledTracks);
+      setTracks(controlledTracks.map(normalizeTrack));
       setSelectedTrackId(null);
       setDragState(null);
       setLocalDragTracks([]);
@@ -205,7 +235,7 @@ export function TimelineEditorCore({
   useEffect(() => {
     if (typeof onSelectedTrackChange === "function") {
       setDuration(controlledDuration);
-      setTracks(controlledTracks);
+      setTracks(controlledTracks.map(normalizeTrack));
     }
   }, [controlledDuration, controlledTracks, onSelectedTrackChange]);
 
@@ -240,7 +270,7 @@ export function TimelineEditorCore({
         case "scale": {
           const props = isScaleDefaults(baseTrack.properties)
             ? baseTrack.properties
-            : { from: 1, to: 1.5 };
+            : { from: { x: 1, y: 1 }, to: { x: 1.5, y: 1.5 } };
           newTrack = { ...baseTrack, type: "scale", properties: props };
           break;
         }
@@ -310,7 +340,7 @@ export function TimelineEditorCore({
         startDuration: track.duration,
       });
       // Initialize local drag state for smooth updates
-      setLocalDragTracks(tracks);
+      setLocalDragTracks(tracks.map(normalizeTrack));
     },
     [tracks],
   );
@@ -834,10 +864,14 @@ export function TrackProperties({
         return (p?.from as number) !== undefined;
       case "rotate.to":
         return (p?.to as number) !== undefined;
-      case "scale.from":
-        return (p?.from as number) !== undefined;
-      case "scale.to":
-        return (p?.to as number) !== undefined;
+      case "scale.from.x":
+        return (p?.from as { x?: number })?.x !== undefined;
+      case "scale.from.y":
+        return (p?.from as { y?: number })?.y !== undefined;
+      case "scale.to.x":
+        return (p?.to as { x?: number })?.x !== undefined;
+      case "scale.to.y":
+        return (p?.to as { y?: number })?.y !== undefined;
       case "fade.from":
         return (p?.from as number) !== undefined;
       case "fade.to":
@@ -1211,51 +1245,113 @@ export function TrackProperties({
           <div className="border-b border-[var(--border-primary)] pb-[var(--space-2)] text-sm font-medium text-[var(--text-primary)]">
             Scale Properties
           </div>
-          <div className="grid grid-cols-2 gap-[var(--space-2)]">
-            <div>
-              <NumberField
-                label={labelWithOverride("From")}
-                value={getTrackFieldValue(
-                  "scale.from",
-                  getOverrideProperty<number>("from"),
-                  track.properties.from,
-                )}
-                onChange={(from) => updateProperties({ from })}
-                step={0.1}
-                defaultValue={1}
-                bindAdornment={bindButton(`scale.from`)}
-                disabled={isBound("scale.from")}
-                inputClassName={leftBorderClass("scale.from")}
-              />
-              {/* Badge - Only show when needed */}
-              {(isFieldOverridden("scale.from") ||
-                isFieldBound("scale.from")) && (
-                <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
-                  <FieldBadges keyName="scale.from" />
-                </div>
-              )}
+          <div className="space-y-[var(--space-2)]">
+            <div className="text-xs font-medium text-[var(--text-secondary)]">
+              From
             </div>
-            <div>
-              <NumberField
-                label={labelWithOverride("To")}
-                value={getTrackFieldValue(
-                  "scale.to",
-                  getOverrideProperty<number>("to"),
-                  track.properties.to,
+            <div className="grid grid-cols-2 gap-[var(--space-2)]">
+              <div>
+                <NumberField
+                  label={labelWithOverride("X")}
+                  value={getTrackFieldValue(
+                    "scale.from.x",
+                    getOverrideProperty<number>("from.x"),
+                    track.properties.from.x,
+                  )}
+                  onChange={(x) =>
+                    updateProperties({ from: { ...track.properties.from, x } })
+                  }
+                  step={0.1}
+                  defaultValue={1}
+                  bindAdornment={bindButton(`scale.from.x`)}
+                  disabled={isBound("scale.from.x")}
+                  inputClassName={leftBorderClass("scale.from.x")}
+                />
+                {(isFieldOverridden("scale.from.x") ||
+                  isFieldBound("scale.from.x")) && (
+                  <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                    <FieldBadges keyName="scale.from.x" />
+                  </div>
                 )}
-                onChange={(to) => updateProperties({ to })}
-                step={0.1}
-                defaultValue={2}
-                bindAdornment={bindButton(`scale.to`)}
-                disabled={isBound("scale.to")}
-                inputClassName={leftBorderClass("scale.to")}
-              />
-              {/* Badge - Only show when needed */}
-              {(isFieldOverridden("scale.to") || isFieldBound("scale.to")) && (
-                <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
-                  <FieldBadges keyName="scale.to" />
-                </div>
-              )}
+              </div>
+              <div>
+                <NumberField
+                  label={labelWithOverride("Y")}
+                  value={getTrackFieldValue(
+                    "scale.from.y",
+                    getOverrideProperty<number>("from.y"),
+                    track.properties.from.y,
+                  )}
+                  onChange={(y) =>
+                    updateProperties({ from: { ...track.properties.from, y } })
+                  }
+                  step={0.1}
+                  defaultValue={1}
+                  bindAdornment={bindButton(`scale.from.y`)}
+                  disabled={isBound("scale.from.y")}
+                  inputClassName={leftBorderClass("scale.from.y")}
+                />
+                {(isFieldOverridden("scale.from.y") ||
+                  isFieldBound("scale.from.y")) && (
+                  <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                    <FieldBadges keyName="scale.from.y" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs font-medium text-[var(--text-secondary)]">
+              To
+            </div>
+            <div className="grid grid-cols-2 gap-[var(--space-2)]">
+              <div>
+                <NumberField
+                  label={labelWithOverride("X")}
+                  value={getTrackFieldValue(
+                    "scale.to.x",
+                    getOverrideProperty<number>("to.x"),
+                    track.properties.to.x,
+                  )}
+                  onChange={(x) =>
+                    updateProperties({ to: { ...track.properties.to, x } })
+                  }
+                  step={0.1}
+                  defaultValue={1.5}
+                  bindAdornment={bindButton(`scale.to.x`)}
+                  disabled={isBound("scale.to.x")}
+                  inputClassName={leftBorderClass("scale.to.x")}
+                />
+                {(isFieldOverridden("scale.to.x") ||
+                  isFieldBound("scale.to.x")) && (
+                  <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                    <FieldBadges keyName="scale.to.x" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <NumberField
+                  label={labelWithOverride("Y")}
+                  value={getTrackFieldValue(
+                    "scale.to.y",
+                    getOverrideProperty<number>("to.y"),
+                    track.properties.to.y,
+                  )}
+                  onChange={(y) =>
+                    updateProperties({ to: { ...track.properties.to, y } })
+                  }
+                  step={0.1}
+                  defaultValue={1.5}
+                  bindAdornment={bindButton(`scale.to.y`)}
+                  disabled={isBound("scale.to.y")}
+                  inputClassName={leftBorderClass("scale.to.y")}
+                />
+                {(isFieldOverridden("scale.to.y") ||
+                  isFieldBound("scale.to.y")) && (
+                  <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                    <FieldBadges keyName="scale.to.y" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

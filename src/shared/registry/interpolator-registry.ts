@@ -84,7 +84,11 @@ const point2dInterpolator: InterpolatorEntry<Point2D> = {
   validate: (value: unknown): value is Point2D => {
     if (typeof value !== "object" || value === null) return false;
     const point = value as Record<string, unknown>;
-    return typeof point.x === "number" && typeof point.y === "number";
+    const isNum = (n: unknown) => typeof n === "number" && Number.isFinite(n);
+    return (
+      (isNum(point.x) || point.x === undefined) &&
+      (isNum(point.y) || point.y === undefined)
+    );
   },
   getEndValue: (from: Point2D, to: Point2D): Point2D => {
     return to;

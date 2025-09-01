@@ -28,7 +28,7 @@ Current state: Batch v1 backend is complete and production-ready. Objects can ho
   - Typography.content
   - Canvas.position.x/y, Canvas.scale.x/y, Canvas.rotation, Canvas.opacity, Canvas.fillColor, Canvas.strokeColor, Canvas.strokeWidth
   - Media.imageAssetId
-  - Timeline.move.from.x/y/to.x/y, Timeline.rotate.from/to, Timeline.scale.from/to, Timeline.fade.from/to, Timeline.color.from/to
+  - Timeline.move.from.x/y/to.x/y, Timeline.rotate.from/to, Timeline.scale.from.x/y & Timeline.scale.to.x/y, Timeline.fade.from/to, Timeline.color.from/to
 - Precedence: bound > per-key > per-object default > node default
 - Dataflow: node-level `batchOverridesByField` → executors emit `perObjectBatchOverrides` + `perObjectBoundFields` → logic/timing pass-through → Merge port 1 priority → Scene applies at build-time per sub-partition key.
 - Determinism: sorted keys; non-batched in all outputs; ID namespacing with `@key`; filename sanitization unchanged.

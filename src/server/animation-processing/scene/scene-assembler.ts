@@ -48,8 +48,8 @@ interface RotateTrackProperties {
 }
 
 interface ScaleTrackProperties {
-  from?: number;
-  to?: number;
+  from?: Point2D;
+  to?: Point2D;
 }
 
 interface FadeTrackProperties {
@@ -273,24 +273,52 @@ function applyTimelineBatchOverridesToTracks(
       }
 
       case "scale": {
-        const scaleProps = updatedProperties as { from?: number; to?: number };
-        if (typeof scaleProps.from === "number") {
-          scaleProps.from = resolveFieldValue(
+        const scaleProps = updatedProperties as {
+          from?: { x?: number; y?: number } | number;
+          to?: { x?: number; y?: number } | number;
+        };
+        // Normalize to object form then resolve per-axis
+        if (scaleProps.from !== undefined) {
+          const fromObj =
+            typeof scaleProps.from === "number"
+              ? { x: scaleProps.from, y: scaleProps.from }
+              : (scaleProps.from ?? {});
+          const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.from",
-            scaleProps.from,
+            "Timeline.scale.from.x",
+            (fromObj.x as number | undefined) ?? 1,
             ctx,
             numberCoerce,
           );
+          const y = resolveFieldValue(
+            objectId,
+            "Timeline.scale.from.y",
+            (fromObj.y as number | undefined) ?? 1,
+            ctx,
+            numberCoerce,
+          );
+          scaleProps.from = { x, y } as unknown as Point2D;
         }
-        if (typeof scaleProps.to === "number") {
-          scaleProps.to = resolveFieldValue(
+        if (scaleProps.to !== undefined) {
+          const toObj =
+            typeof scaleProps.to === "number"
+              ? { x: scaleProps.to, y: scaleProps.to }
+              : (scaleProps.to ?? {});
+          const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.to",
-            scaleProps.to,
+            "Timeline.scale.to.x",
+            (toObj.x as number | undefined) ?? 1,
             ctx,
             numberCoerce,
           );
+          const y = resolveFieldValue(
+            objectId,
+            "Timeline.scale.to.y",
+            (toObj.y as number | undefined) ?? 1,
+            ctx,
+            numberCoerce,
+          );
+          scaleProps.to = { x, y } as unknown as Point2D;
         }
         break;
       }
@@ -385,7 +413,19 @@ export function convertTracksToSceneAnimations(
         return false;
       }
       case "rotate":
-      case "scale":
+      case "scale": {
+        if (
+          typeof def === "object" &&
+          def !== null &&
+          "x" in def &&
+          "y" in def
+        ) {
+          const v = value as Point2D | undefined;
+          const d = def as { x: number; y: number };
+          return !!v && v.x === d.x && v.y === d.y;
+        }
+        return false;
+      }
       case "fade":
         return typeof def === "number" && value === def;
       case "color":

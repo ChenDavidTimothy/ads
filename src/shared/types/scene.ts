@@ -122,8 +122,8 @@ export interface SceneRotateTrack extends BaseSceneAnimationTrack {
 export interface SceneScaleTrack extends BaseSceneAnimationTrack {
   type: "scale";
   properties: {
-    from: number | Point2D;
-    to: number | Point2D;
+    from: Point2D;
+    to: Point2D;
   };
 }
 

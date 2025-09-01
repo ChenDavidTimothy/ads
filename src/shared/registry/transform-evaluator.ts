@@ -70,8 +70,18 @@ export class TransformEvaluator {
     }
 
     // Special safeguard for scale transforms to prevent zero values
-    if (transform.type === "scale" && typeof endValue === "number") {
-      endValue = Math.max(endValue, 0.001);
+    if (transform.type === "scale") {
+      if (typeof endValue === "number") {
+        endValue = Math.max(endValue, 0.001);
+      } else if (
+        typeof endValue === "object" &&
+        endValue !== null &&
+        "x" in (endValue as unknown as Record<string, unknown>) &&
+        "y" in (endValue as unknown as Record<string, unknown>)
+      ) {
+        const p = endValue as { x: number; y: number };
+        endValue = { x: Math.max(p.x, 0.001), y: Math.max(p.y, 0.001) } as unknown as AnimationValue;
+      }
     }
 
     return endValue;
@@ -115,8 +125,21 @@ export class TransformEvaluator {
       ) as AnimationValue;
 
       // Special safeguard for scale transforms to prevent zero values
-      if (transform.type === "scale" && typeof interpolatedValue === "number") {
-        interpolatedValue = Math.max(interpolatedValue, 0.001);
+      if (transform.type === "scale") {
+        if (typeof interpolatedValue === "number") {
+          interpolatedValue = Math.max(interpolatedValue, 0.001);
+        } else if (
+          typeof interpolatedValue === "object" &&
+          interpolatedValue !== null &&
+          "x" in (interpolatedValue as unknown as Record<string, unknown>) &&
+          "y" in (interpolatedValue as unknown as Record<string, unknown>)
+        ) {
+          const p = interpolatedValue as { x: number; y: number };
+          interpolatedValue = {
+            x: Math.max(p.x, 0.001),
+            y: Math.max(p.y, 0.001),
+          } as unknown as AnimationValue;
+        }
       }
 
       return interpolatedValue;

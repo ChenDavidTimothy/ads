@@ -201,7 +201,35 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     () => ({
       animationNodeId: nodeId,
       duration: data?.duration ?? 0,
-      tracks: data?.tracks ?? [],
+      tracks:
+        (data?.tracks ?? []).map((t) => {
+          if (t.type !== "scale") return t;
+          const props = t.properties as unknown as {
+            from?: number | { x?: number; y?: number };
+            to?: number | { x?: number; y?: number };
+          };
+          const fromObj =
+            typeof props.from === "number"
+              ? { x: props.from, y: props.from }
+              : (props.from ?? { x: 1, y: 1 });
+          const toObj =
+            typeof props.to === "number"
+              ? { x: props.to, y: props.to }
+              : (props.to ?? { x: 1, y: 1 });
+          return {
+            ...t,
+            properties: {
+              from: {
+                x: typeof fromObj.x === "number" ? fromObj.x : 1,
+                y: typeof fromObj.y === "number" ? fromObj.y : 1,
+              },
+              to: {
+                x: typeof toObj.x === "number" ? toObj.x : 1,
+                y: typeof toObj.y === "number" ? toObj.y : 1,
+              },
+            },
+          } as AnimationTrack;
+        }) ?? [],
     }),
     [nodeId, data?.duration, data?.tracks],
   );

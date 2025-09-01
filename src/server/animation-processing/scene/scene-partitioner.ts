@@ -401,8 +401,10 @@ export function buildAnimationSceneFromPartition(
         { test: (s) => s.includes("move.to.y"), map: "Timeline.move.to.y" },
         { test: (s) => s.includes("rotate.from"), map: "Timeline.rotate.from" },
         { test: (s) => s.includes("rotate.to"), map: "Timeline.rotate.to" },
-        { test: (s) => s.includes("scale.from"), map: "Timeline.scale.from" },
-        { test: (s) => s.includes("scale.to"), map: "Timeline.scale.to" },
+        { test: (s) => s.includes("scale.from.x"), map: "Timeline.scale.from.x" },
+        { test: (s) => s.includes("scale.from.y"), map: "Timeline.scale.from.y" },
+        { test: (s) => s.includes("scale.to.x"), map: "Timeline.scale.to.x" },
+        { test: (s) => s.includes("scale.to.y"), map: "Timeline.scale.to.y" },
         { test: (s) => s.includes("fade.from"), map: "Timeline.fade.from" },
         { test: (s) => s.includes("fade.to"), map: "Timeline.fade.to" },
         { test: (s) => s.includes("color.from"), map: "Timeline.color.from" },
@@ -506,29 +508,47 @@ export function buildAnimationSceneFromPartition(
           return { ...anim, properties: { from, to } } as typeof anim;
         }
         case "scale": {
-          const currentFrom = anim.properties.from;
-          const currentTo = anim.properties.to;
-          if (
-            typeof currentFrom === "number" &&
-            typeof currentTo === "number"
-          ) {
-            const from = resolveFieldValue(
+          const currentFrom = anim.properties.from as unknown as {
+            x: number;
+            y: number;
+          };
+          const currentTo = anim.properties.to as unknown as {
+            x: number;
+            y: number;
+          };
+          const from = {
+            x: resolveFieldValue(
               objId,
-              "Timeline.scale.from",
-              currentFrom,
+              "Timeline.scale.from.x",
+              currentFrom.x,
               ctx,
               numberCoerce,
-            );
-            const to = resolveFieldValue(
+            ),
+            y: resolveFieldValue(
               objId,
-              "Timeline.scale.to",
-              currentTo,
+              "Timeline.scale.from.y",
+              currentFrom.y,
               ctx,
               numberCoerce,
-            );
-            return { ...anim, properties: { from, to } } as typeof anim;
-          }
-          return anim;
+            ),
+          };
+          const to = {
+            x: resolveFieldValue(
+              objId,
+              "Timeline.scale.to.x",
+              currentTo.x,
+              ctx,
+              numberCoerce,
+            ),
+            y: resolveFieldValue(
+              objId,
+              "Timeline.scale.to.y",
+              currentTo.y,
+              ctx,
+              numberCoerce,
+            ),
+          };
+          return { ...anim, properties: { from, to } } as typeof anim;
         }
         case "fade": {
           const from = resolveFieldValue(
@@ -562,7 +582,14 @@ export function buildAnimationSceneFromPartition(
             ctx,
             stringCoerce,
           );
-          return { ...anim, properties: { from, to } } as typeof anim;
+          return {
+            ...anim,
+            properties: {
+              from,
+              to,
+              property: (anim.properties as { property?: string }).property,
+            },
+          } as typeof anim;
         }
         default:
           return anim;
