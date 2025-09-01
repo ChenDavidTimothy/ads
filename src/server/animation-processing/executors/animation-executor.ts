@@ -1658,6 +1658,40 @@ export class AnimationNodeExecutor extends BaseExecutor {
           Object.keys(emittedPerObjectBatchOverrides).length > 0
             ? emittedPerObjectBatchOverrides
             : undefined,
+        // Provide bound field masks for Typography so resolver masks overrides correctly
+        perObjectBoundFields:
+          Object.keys(perObjectBoundFieldsTypo).length > 0
+            ? Object.fromEntries(
+                Object.entries(perObjectBoundFieldsTypo).map(
+                  ([objId, keys]) => [
+                    objId,
+                    keys
+                      // Normalize Typography keys into resolver field paths
+                      .map((k) =>
+                        k.startsWith("Typography.")
+                          ? k
+                          : [
+                              "content",
+                              "fontFamily",
+                              "fontSize",
+                              "fontWeight",
+                              "textAlign",
+                              "lineHeight",
+                              "letterSpacing",
+                              "fontStyle",
+                              "textBaseline",
+                              "direction",
+                              "fillColor",
+                              "strokeColor",
+                              "strokeWidth",
+                            ].includes(k)
+                            ? `Typography.${k}`
+                            : k,
+                      ),
+                  ],
+                ),
+              )
+            : undefined,
       },
     );
 
