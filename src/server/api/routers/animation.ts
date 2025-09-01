@@ -87,6 +87,22 @@ function namespaceBatchOverridesForBatch(
   return namespaced;
 }
 
+// Helper: namespace bound fields map to match namespaced object IDs
+function namespaceBoundFieldsForBatch(
+  bound:
+    | Record<string, string[]>
+    | undefined,
+  batchKey: string | null,
+): Record<string, string[]> | undefined {
+  if (!batchKey || !bound) return bound;
+  const suffix = `@${batchKey}`;
+  const out: Record<string, string[]> = {};
+  for (const [objectId, keys] of Object.entries(bound)) {
+    out[`${objectId}${suffix}`] = keys;
+  }
+  return out;
+}
+
 // Helper: create a fully namespaced partition for batch key processing
 function namespacePartitionForBatch(
   partition: ScenePartition,
@@ -100,7 +116,10 @@ function namespacePartitionForBatch(
       partition.batchOverrides,
       batchKey,
     ),
-    boundFieldsByObject: partition.boundFieldsByObject,
+    boundFieldsByObject: namespaceBoundFieldsForBatch(
+      partition.boundFieldsByObject,
+      batchKey,
+    ),
     batchKey: batchKey,
   };
 }

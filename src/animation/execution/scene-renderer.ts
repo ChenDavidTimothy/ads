@@ -222,42 +222,50 @@ export class SceneRenderer {
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Skip rendering if no image URL
-    if (!props.imageUrl) return;
-
-    // Calculate final dimensions based on crop and display settings
-    const cropWidth =
-      props.cropWidth !== 0 ? props.cropWidth : (props.originalWidth ?? 100);
-    const cropHeight =
-      props.cropHeight !== 0 ? props.cropHeight : (props.originalHeight ?? 100);
-    const finalWidth =
-      props.displayWidth !== 0 ? props.displayWidth : cropWidth;
-    const finalHeight =
-      props.displayHeight !== 0 ? props.displayHeight : cropHeight;
-
-    const width = finalWidth ?? 100;
-    const height = finalHeight ?? 100;
+    // Prefer explicit URL, otherwise derive from assetId so per-key overrides work
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    // Prefer assetId if present because per-key overrides update assetId at scene build time
+    const url = props.assetId
+      ? `${baseUrl}/api/download/${props.assetId}`
+      : props.imageUrl;
+    if (!url) return;
 
     try {
       // ✅ CRITICAL FIX: Check cache first, load with timeout if not cached
-      let img = this.imageCache.get(props.imageUrl);
+      let img = this.imageCache.get(url);
       if (!img) {
         img = await withTimeout(
-          loadImage(props.imageUrl),
+          loadImage(url),
           30000, // 30 second timeout
-          `Image load timeout: ${props.imageUrl}`,
+          `Image load timeout: ${url}`,
         );
-        this.imageCache.set(props.imageUrl, img);
+        this.imageCache.set(url, img);
       }
 
-      // Calculate crop and display parameters
+      // Calculate crop and display parameters AFTER the image is available
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
-      const srcWidth = props.cropWidth !== 0 ? props.cropWidth : img.width;
-      const srcHeight = props.cropHeight !== 0 ? props.cropHeight : img.height;
+      const srcWidth = props.cropWidth && props.cropWidth !== 0
+        ? props.cropWidth
+        : img.width;
+      const srcHeight = props.cropHeight && props.cropHeight !== 0
+        ? props.cropHeight
+        : img.height;
 
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;
+
+      const naturalWidth = finalSrcWidth;
+      const naturalHeight = finalSrcHeight;
+      const destWidth =
+        props.displayWidth && props.displayWidth !== 0
+          ? props.displayWidth
+          : naturalWidth;
+      const destHeight =
+        props.displayHeight && props.displayHeight !== 0
+          ? props.displayHeight
+          : naturalHeight;
 
       // Draw the image at origin (transforms already applied)
       ctx.drawImage(
@@ -268,12 +276,20 @@ export class SceneRenderer {
         finalSrcHeight, // Source rectangle
         0,
         0,
-        width,
-        height, // Destination rectangle
+        destWidth,
+        destHeight, // Destination rectangle
       );
     } catch {
       // Fallback to placeholder if image loading fails
-      this.drawImagePlaceholder(ctx, width, height);
+      this.drawImagePlaceholder(
+        ctx,
+        props.displayWidth && props.displayWidth !== 0
+          ? props.displayWidth
+          : 100,
+        props.displayHeight && props.displayHeight !== 0
+          ? props.displayHeight
+          : 100,
+      );
     }
   }
 

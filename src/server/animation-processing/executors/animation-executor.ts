@@ -274,9 +274,25 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Bound fields mask for media
+    // Bound fields mask for media (normalize to Media.* like Typography does)
     const perObjectBoundFields: Record<string, string[]> = {};
-    const globalBoundKeys = Object.keys(bindings);
+    const globalBoundKeys = Object.entries(bindings)
+      .filter(([, v]) => !!v?.boundResultNodeId)
+      .map(([k]) => k);
+    const normalizeMediaKey = (k: string): string =>
+      k.startsWith("Media.")
+        ? k
+        : [
+            "imageAssetId",
+            "cropX",
+            "cropY",
+            "cropWidth",
+            "cropHeight",
+            "displayWidth",
+            "displayHeight",
+          ].includes(k)
+          ? `Media.${k}`
+          : k;
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {
@@ -284,9 +300,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const imageObj = obj as { id: string };
           const objectId = imageObj.id;
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
-          const combined = Array.from(
+          const combinedRaw = Array.from(
             new Set([...globalBoundKeys, ...objectKeys].map(String)),
           );
+          const combined = combinedRaw.map(normalizeMediaKey);
           if (combined.length > 0) perObjectBoundFields[objectId] = combined;
         }
       }
@@ -306,6 +323,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
           Object.keys(emittedPerObjectBatchOverrides).length > 0
             ? emittedPerObjectBatchOverrides
             : undefined,
+        // Ensure bound fields are passed even if empty to maintain consistency
         perObjectBoundFields:
           Object.keys(perObjectBoundFields).length > 0
             ? perObjectBoundFields
@@ -1627,7 +1645,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // Bound fields mask for typography
     const perObjectBoundFieldsTypo: Record<string, string[]> = {};
-    const globalBoundKeysTypo = Object.keys(bindings);
+    const globalBoundKeysTypo = Object.entries(bindings)
+      .filter(([, v]) => !!v?.boundResultNodeId)
+      .map(([k]) => k);
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const obj of inputData) {

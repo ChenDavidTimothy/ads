@@ -431,6 +431,9 @@ export function buildAnimationSceneFromPartition(
     for (const [objId, list] of Object.entries(perObjectBoundFields)) {
       for (const key of list) {
         if (key.startsWith("Timeline.")) add(objId, key);
+        if (key.startsWith("Canvas.")) add(objId, key);
+        if (key.startsWith("Typography.")) add(objId, key);
+        if (key.startsWith("Media.")) add(objId, key);
         const mapped = maybeMapTrackKey(key);
         for (const mk of mapped) add(objId, mk);
       }
