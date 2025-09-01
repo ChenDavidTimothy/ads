@@ -1668,15 +1668,10 @@ export class LogicNodeExecutor extends BaseExecutor {
             emptyKeyObjectIds.push(objectId);
           }
 
-          // Check for re-tagging (support both legacy batchKey and batchKeys)
+          // Check for re-tagging (only supports batchKeys array format)
           const prevKeys = (() => {
             const arr = (objWithBatch as { batchKeys?: unknown }).batchKeys;
-            if (Array.isArray(arr)) return arr as string[];
-            const legacy = (objWithBatch as { batchKey?: unknown }).batchKey;
-            if (typeof legacy === "string" && legacy.trim()) {
-              return [legacy.trim()];
-            }
-            return [] as string[];
+            return Array.isArray(arr) ? arr as string[] : [];
           })();
           const alreadyTagged =
             objWithBatch.batch === true && prevKeys.length > 0;
