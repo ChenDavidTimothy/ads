@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useBatchOverrides } from "@/hooks/use-batch-overrides";
 import { useBatchKeysForField } from "@/hooks/use-batch-keys";
+import { ColorField, TextareaField } from "@/components/ui/form-fields";
+import { AssetSelectionModal } from "@/components/workspace/media/asset-selection-modal";
 
 type ValueType = "number" | "string";
 
@@ -29,6 +31,8 @@ export function BatchModal({
   const { keys } = useBatchKeysForField(nodeId, fieldPath, objectId);
 
   const [query, setQuery] = useState("");
+  const [assetModalDefaultOpen, setAssetModalDefaultOpen] = useState(false);
+  const [assetModalKey, setAssetModalKey] = useState<string | null>(null);
   const filteredKeys = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return keys;
@@ -64,6 +68,25 @@ export function BatchModal({
     }
   };
 
+  // Decide control type by fieldPath
+  const controlKind: "mediaAsset" | "color" | "textarea" | "number" | "string" = useMemo(() => {
+    if (fieldPath === "Media.imageAssetId") return "mediaAsset";
+    if (fieldPath === "Typography.content") return "textarea";
+    if (
+      fieldPath.endsWith("fillColor") ||
+      fieldPath.endsWith("strokeColor") ||
+      fieldPath === "Canvas.fillColor" ||
+      fieldPath === "Canvas.strokeColor" ||
+      fieldPath === "Typography.fillColor" ||
+      fieldPath === "Typography.strokeColor" ||
+      fieldPath === "Timeline.color.from" ||
+      fieldPath === "Timeline.color.to"
+    )
+      return "color";
+    if (valueType === "number") return "number";
+    return "string";
+  }, [fieldPath, valueType]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Batch Overrides" size="lg">
       <div className="p-[var(--space-4)]">
@@ -85,27 +108,77 @@ export function BatchModal({
             <div className="text-xs font-semibold text-[var(--text-secondary)]">
               Default (all keys)
             </div>
-            <div className="flex items-center gap-[var(--space-2)]">
-              <Input
-                value={(() => {
-                  if (data.perObjectDefault == null) return "";
-                  if (
-                    typeof data.perObjectDefault === "object" &&
-                    data.perObjectDefault !== null
-                  ) {
-                    return JSON.stringify(data.perObjectDefault);
+            {controlKind === "mediaAsset" ? (
+              <div className="flex items-center gap-[var(--space-2)]">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAssetModalDefaultOpen(true)}
+                >
+                  {typeof data.perObjectDefault === "string" && data.perObjectDefault
+                    ? "Change Image"
+                    : "Select Image"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
+                  Clear
+                </Button>
+              </div>
+            ) : controlKind === "color" ? (
+              <div className="flex items-center gap-[var(--space-2)]">
+                <ColorField
+                  label=""
+                  value={
+                    typeof data.perObjectDefault === "string"
+                      ? (data.perObjectDefault as string)
+                      : "#000000"
                   }
-                  // At this point, data.perObjectDefault is not an object, so String() is safe
-                  return String(
-                    data.perObjectDefault as string | number | boolean,
-                  );
-                })()}
-                onChange={(e) => handleSetDefault(e.target.value)}
-              />
-              <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
-                Clear
-              </Button>
-            </div>
+                  onChange={(v) => handleSetDefault(v)}
+                />
+                <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
+                  Clear
+                </Button>
+              </div>
+            ) : controlKind === "textarea" ? (
+              <div className="flex items-center gap-[var(--space-2)]">
+                <TextareaField
+                  label=""
+                  value={
+                    data.perObjectDefault == null
+                      ? ""
+                      : String(
+                          (data.perObjectDefault as string | number | boolean) ??
+                            "",
+                        )
+                  }
+                  onChange={(v) => handleSetDefault(v)}
+                  rows={4}
+                />
+                <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
+                  Clear
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-[var(--space-2)]">
+                <Input
+                  value={(() => {
+                    if (data.perObjectDefault == null) return "";
+                    if (
+                      typeof data.perObjectDefault === "object" &&
+                      data.perObjectDefault !== null
+                    ) {
+                      return JSON.stringify(data.perObjectDefault);
+                    }
+                    return String(
+                      data.perObjectDefault as string | number | boolean,
+                    );
+                  })()}
+                  onChange={(e) => handleSetDefault(e.target.value)}
+                />
+                <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
+                  Clear
+                </Button>
+              </div>
+            )}
 
             <div className="mt-[var(--space-3)] text-xs font-semibold text-[var(--text-secondary)]">
               Keys ({filteredKeys.length})
@@ -127,20 +200,51 @@ export function BatchModal({
                         {k}
                       </div>
                       <div className="flex items-center gap-[var(--space-2)]">
-                        <Input
-                          value={(() => {
-                            if (current == null) return "";
-                            if (
-                              typeof current === "object" &&
-                              current !== null
-                            ) {
-                              return JSON.stringify(current);
+                        {controlKind === "mediaAsset" ? (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="xs"
+                              onClick={() => setAssetModalKey(k)}
+                            >
+                              {typeof current === "string" && current
+                                ? "Change Image"
+                                : "Select Image"}
+                            </Button>
+                          </>
+                        ) : controlKind === "color" ? (
+                          <input
+                            type="color"
+                            value={
+                              typeof current === "string"
+                                ? (current as string)
+                                : "#000000"
                             }
-                            // At this point, current is not an object, so String() is safe
-                            return String(current as string | number | boolean);
-                          })()}
-                          onChange={(e) => handleSet(k, e.target.value)}
-                        />
+                            onChange={(e) => handleSet(k, e.target.value)}
+                            className="h-7 w-10 cursor-pointer rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-0"
+                          />
+                        ) : controlKind === "textarea" ? (
+                          <textarea
+                            value={current == null ? "" : String(current)}
+                            onChange={(e) => handleSet(k, e.target.value)}
+                            rows={2}
+                            className="min-h-[40px] w-56 resize-y rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs"
+                          />
+                        ) : (
+                          <Input
+                            value={(() => {
+                              if (current == null) return "";
+                              if (
+                                typeof current === "object" &&
+                                current !== null
+                              ) {
+                                return JSON.stringify(current);
+                              }
+                              return String(current as string | number | boolean);
+                            })()}
+                            onChange={(e) => handleSet(k, e.target.value)}
+                          />
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -202,6 +306,25 @@ export function BatchModal({
           </Button>
         </div>
       </div>
+      {/* Asset selection modals */}
+      {controlKind === "mediaAsset" && assetModalDefaultOpen && (
+        <AssetSelectionModal
+          isOpen={assetModalDefaultOpen}
+          onClose={() => setAssetModalDefaultOpen(false)}
+          onSelect={(asset) => setPerObjectDefault(asset.id)}
+        />
+      )}
+      {controlKind === "mediaAsset" && assetModalKey && (
+        <AssetSelectionModal
+          isOpen={!!assetModalKey}
+          onClose={() => setAssetModalKey(null)}
+          onSelect={(asset) => {
+            const key = assetModalKey;
+            setAssetModalKey(null);
+            if (key) setPerKeyOverride(key, asset.id);
+          }}
+        />
+      )}
     </Modal>
   );
 }
