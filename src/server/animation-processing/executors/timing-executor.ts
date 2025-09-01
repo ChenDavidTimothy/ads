@@ -63,23 +63,24 @@ export class TimingNodeExecutor extends BaseExecutor {
       context.currentTime,
       data.appearanceTime as number,
     );
-    // Clone perObjectAnimations to prevent shared reference mutations
-    const sourceAnimations = (
-      inputs[0]?.metadata as
-        | { perObjectAnimations?: Record<string, SceneAnimationTrack[]> }
-        | undefined
-    )?.perObjectAnimations;
-    const clonedAnimations = sourceAnimations
-      ? Object.fromEntries(
-          Object.entries(sourceAnimations).map(([objectId, animations]) => [
-            objectId,
-            animations.map((anim) => ({
+    // Merge perObjectAnimations from all inputs to prevent shared reference mutations
+    const mergedAnimations: Record<string, SceneAnimationTrack[]> = {};
+    for (const input of inputs) {
+      const sourceAnimations = input?.metadata?.perObjectAnimations;
+      if (sourceAnimations) {
+        for (const [objectId, animations] of Object.entries(sourceAnimations)) {
+          mergedAnimations[objectId] ??= [];
+          mergedAnimations[objectId].push(
+            ...animations.map((anim) => ({
               ...anim,
               properties: { ...anim.properties },
             })),
-          ]),
-        )
-      : undefined;
+          );
+        }
+      }
+    }
+    const clonedAnimations =
+      Object.keys(mergedAnimations).length > 0 ? mergedAnimations : undefined;
 
     // Merge batch overrides from ALL inputs, not just the first one
     const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {

@@ -234,7 +234,6 @@ export class CanvasNodeExecutor extends BaseExecutor {
           const original = obj;
           const objectId = original.id;
 
-          // NEW: Add type-aware color property filtering
           const isTextObject = original.type === "text";
 
           // Unified binding lookup id across object types
@@ -248,7 +247,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
             JSON.stringify(nodeOverrides),
           ) as CanvasOverrides;
 
-          // NEW: Remove color properties for text objects
+          // Remove color properties for text objects (handled by typography)
           if (isTextObject) {
             delete objectOverrides.fillColor;
             delete objectOverrides.strokeColor;
@@ -263,7 +262,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
             const val = reader(key);
             if (val === undefined) continue;
 
-            // NEW: Skip color binding keys for text objects
+            // Skip color binding keys for text objects (handled by typography)
             if (
               isTextObject &&
               (key === "fillColor" ||
@@ -273,7 +272,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
               continue;
             }
 
-            // EXISTING: Keep all existing property binding logic unchanged
+
             if (key === "position.x" && typeof val === "number") {
               objectOverrides.position = {
                 x: val,
@@ -355,7 +354,7 @@ export class CanvasNodeExecutor extends BaseExecutor {
               }
             }
 
-            // NEW: Also remove color assignments for text objects (even if not bound)
+            // Remove color assignments for text objects (handled by typography)
             if (isTextObject) {
               delete initial.fillColor;
               delete initial.strokeColor;

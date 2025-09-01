@@ -50,27 +50,16 @@ export function partitionObjectsByScenes(
   for (const sceneNode of sceneNodes) {
     const sceneId = sceneNode.data.identifier.id;
 
-    // CRITICAL FIX: Get path-specific objects directly from per-scene storage
-    // OLD: context.sceneObjects.filter(...) // Global array filtering - WRONG
-    // NEW: Direct retrieval of scene-specific objects with correct properties
+    // Get path-specific objects directly from per-scene storage
     const sceneObjects = context.sceneObjectsByScene.get(sceneId) ?? [];
 
-    // Object IDs are available directly from sceneObjects if needed
-
-    // FIXED: Get animations for this scene with hybrid approach
     let sceneAnimations: SceneAnimationTrack[] = [];
-    // NEW: Collect per-object batch overrides from upstream inputs
+    // Collect per-object batch overrides from upstream inputs
     const mergedBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
     > = {};
-
-    // CRITICAL FIX: Prioritize metadata over global context for animation retrieval
-    // Problem: Global context animations were being modified by merge nodes, affecting direct connections
-    // Solution: Check input metadata first, fallback to global context only for merge node outputs
     if (edges) {
-      // Fallback: For scenes with no assigned animations, try to get them from input metadata
-      // This handles direct animation->scene connections that bypass merge nodes
       const incomingEdges = edges.filter((edge) => edge.target === sceneId);
       const mergedBoundFields: Record<string, string[]> = {};
 

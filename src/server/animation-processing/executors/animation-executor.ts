@@ -309,40 +309,21 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Merge upstream metadata with this node's emissions so multiple editors can contribute
-    // Collect metadata from ALL inputs, not just the first one
-    const upstreamMetas: Array<{
-      perObjectBatchOverrides?: Record<
-        string,
-        Record<string, Record<string, unknown>>
-      >;
-      perObjectBoundFields?: Record<string, string[]>;
-    }> = inputs
-      .map(input => input?.metadata)
-      .filter((meta): meta is NonNullable<typeof meta> => meta != null)
-      .map(meta => meta as {
-        perObjectBatchOverrides?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
-        perObjectBoundFields?: Record<string, string[]>;
-      });
+    // Extract and merge upstream batch overrides from all inputs
+    const upstreamBatchOverrides = this.extractPerObjectBatchOverridesFromInputs(inputs);
 
     const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
 
-      // Merge upstream batch overrides from ALL inputs
-      for (const upstreamMeta of upstreamMetas) {
-        const upstream = upstreamMeta?.perObjectBatchOverrides;
-        if (upstream) {
-          for (const [objectId, fields] of Object.entries(upstream)) {
-            const destFields = out[objectId] ?? {};
-            for (const [fieldPath, byKey] of Object.entries(fields)) {
-              const existingByKey = destFields[fieldPath] ?? {};
-              destFields[fieldPath] = { ...existingByKey, ...byKey };
-            }
-            out[objectId] = destFields;
+      // Merge upstream batch overrides
+      if (upstreamBatchOverrides) {
+        for (const [objectId, fields] of Object.entries(upstreamBatchOverrides)) {
+          const destFields = out[objectId] ?? {};
+          for (const [fieldPath, byKey] of Object.entries(fields)) {
+            const existingByKey = destFields[fieldPath] ?? {};
+            destFields[fieldPath] = { ...existingByKey, ...byKey };
           }
+          out[objectId] = destFields;
         }
       }
 
@@ -363,9 +344,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
       const out: Record<string, string[]> = {};
       // Start with upstream from ALL inputs
-      for (const upstreamMeta of upstreamMetas) {
-        if (upstreamMeta?.perObjectBoundFields) {
-          for (const [objId, keys] of Object.entries(upstreamMeta.perObjectBoundFields)) {
+      for (const input of inputs) {
+        const upstreamMeta = input?.metadata?.perObjectBoundFields;
+        if (upstreamMeta) {
+          for (const [objId, keys] of Object.entries(upstreamMeta)) {
             const existing = out[objId] ?? [];
             out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
           }
@@ -882,7 +864,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return Object.keys(result).length > 0 ? result : undefined;
     })();
 
-    // Get fallback metadata from first input (like canvas executor does)
+    // Get fallback metadata from first input for non-batch-override fields
     const firstInputMeta = inputs[0]?.metadata as
       | {
           perObjectBatchOverrides?: Record<
@@ -1728,40 +1710,21 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Merge upstream metadata with this node's emissions so multiple editors can contribute
-    // Collect metadata from ALL inputs, not just the first one
-    const upstreamMetas: Array<{
-      perObjectBatchOverrides?: Record<
-        string,
-        Record<string, Record<string, unknown>>
-      >;
-      perObjectBoundFields?: Record<string, string[]>;
-    }> = inputs
-      .map(input => input?.metadata)
-      .filter((meta): meta is NonNullable<typeof meta> => meta != null)
-      .map(meta => meta as {
-        perObjectBatchOverrides?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
-        perObjectBoundFields?: Record<string, string[]>;
-      });
+    // Extract and merge upstream batch overrides from all inputs
+    const upstreamBatchOverrides = this.extractPerObjectBatchOverridesFromInputs(inputs);
 
     const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
 
-      // Merge upstream batch overrides from ALL inputs
-      for (const upstreamMeta of upstreamMetas) {
-        const upstream = upstreamMeta?.perObjectBatchOverrides;
-        if (upstream) {
-          for (const [objectId, fields] of Object.entries(upstream)) {
-            const destFields = out[objectId] ?? {};
-            for (const [fieldPath, byKey] of Object.entries(fields)) {
-              const existingByKey = destFields[fieldPath] ?? {};
-              destFields[fieldPath] = { ...existingByKey, ...byKey };
-            }
-            out[objectId] = destFields;
+      // Merge upstream batch overrides
+      if (upstreamBatchOverrides) {
+        for (const [objectId, fields] of Object.entries(upstreamBatchOverrides)) {
+          const destFields = out[objectId] ?? {};
+          for (const [fieldPath, byKey] of Object.entries(fields)) {
+            const existingByKey = destFields[fieldPath] ?? {};
+            destFields[fieldPath] = { ...existingByKey, ...byKey };
           }
+          out[objectId] = destFields;
         }
       }
 
@@ -1782,9 +1745,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
       const out: Record<string, string[]> = {};
       // Start with upstream from ALL inputs
-      for (const upstreamMeta of upstreamMetas) {
-        if (upstreamMeta?.perObjectBoundFields) {
-          for (const [objId, keys] of Object.entries(upstreamMeta.perObjectBoundFields)) {
+      for (const input of inputs) {
+        const upstreamMeta = input?.metadata?.perObjectBoundFields;
+        if (upstreamMeta) {
+          for (const [objId, keys] of Object.entries(upstreamMeta)) {
             const existing = out[objId] ?? [];
             out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
           }
