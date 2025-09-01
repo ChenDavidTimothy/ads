@@ -54,22 +54,27 @@ export class TransformEvaluator {
   // Get the end value of a transform
   public getEndValue(transform: SceneTransform): AnimationValue {
     // Prefer explicit 'to' if present
+    let endValue = null;
     if (Object.prototype.hasOwnProperty.call(transform.properties, "to")) {
-      return transform.properties.to as AnimationValue;
+      endValue = transform.properties.to as AnimationValue;
+    } else {
+      // Fallback: try property schema from definition
+      const definition = transformFactory.getTransformDefinition(transform.type);
+      if (!definition) {
+        return null;
+      }
+      const toDef = definition.properties.find((p) => p.key === "to");
+      if (toDef) {
+        endValue = transform.properties[toDef.key] as AnimationValue;
+      }
     }
 
-    // Fallback: try property schema from definition
-    const definition = transformFactory.getTransformDefinition(transform.type);
-    if (!definition) {
-      return null;
-    }
-    const toDef = definition.properties.find((p) => p.key === "to");
-    if (toDef) {
-      return transform.properties[toDef.key] as AnimationValue;
+    // Special safeguard for scale transforms to prevent zero values
+    if (transform.type === "scale" && typeof endValue === "number") {
+      endValue = Math.max(endValue, 0.001);
     }
 
-    // Last resort: return null if cannot determine end value
-    return null;
+    return endValue;
   }
 
   // Interpolate a transform at a specific progress
@@ -103,11 +108,18 @@ export class TransformEvaluator {
 
     if (typeFromDef) {
       const interpolator = getInterpolator(typeFromDef);
-      return interpolator.interpolate(
+      let interpolatedValue = interpolator.interpolate(
         from as never,
         to as never,
         progress,
       ) as AnimationValue;
+
+      // Special safeguard for scale transforms to prevent zero values
+      if (transform.type === "scale" && typeof interpolatedValue === "number") {
+        interpolatedValue = Math.max(interpolatedValue, 0.001);
+      }
+
+      return interpolatedValue;
     }
 
     // Fallback: detect interpolator by runtime value type

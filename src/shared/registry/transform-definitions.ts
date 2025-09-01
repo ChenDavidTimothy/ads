@@ -99,7 +99,7 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
         defaultValue: 1,
         required: true,
         constraints: {
-          min: 0.1,
+          min: 0,
           max: 10,
           step: 0.1,
         },
@@ -112,7 +112,7 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
         defaultValue: 1.5,
         required: true,
         constraints: {
-          min: 0.1,
+          min: 0,
           max: 10,
           step: 0.1,
         },
