@@ -41,7 +41,41 @@ export class VideoEncoder {
     } as EncoderTimeouts;
   }
 
-  start(): Promise<void> {
+  private async validateFFmpeg(): Promise<void> {
+    const ffmpegPath =
+      process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
+        ? process.env.FFMPEG_PATH
+        : "ffmpeg";
+
+    return new Promise((resolve, reject) => {
+      const testProcess = spawn(ffmpegPath, ["-version"], {
+        stdio: ['ignore', 'ignore', 'pipe'],
+        windowsHide: true,
+      });
+
+      let stderr = "";
+      testProcess.stderr?.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      testProcess.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`FFmpeg validation failed with code ${code}: ${stderr.slice(-500)}`));
+        }
+      });
+
+      testProcess.on("error", (error) => {
+        reject(new Error(`FFmpeg not found or executable: ${error.message}`));
+      });
+    });
+  }
+
+  async start(): Promise<void> {
+    // First validate FFmpeg is available
+    await this.validateFFmpeg();
+
     return new Promise((resolve, reject) => {
       const outputDir = path.dirname(this.outputPath);
       if (!fs.existsSync(outputDir)) {
@@ -84,7 +118,10 @@ export class VideoEncoder {
       };
 
       try {
-        this.ffmpegProcess = spawn(ffmpegPath, args);
+        this.ffmpegProcess = spawn(ffmpegPath, args, {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true, // Hide console window on Windows
+        });
       } catch (err) {
         return reject(err instanceof Error ? err : new Error(String(err)));
       }
@@ -94,14 +131,13 @@ export class VideoEncoder {
       proc.on("error", onError);
 
       // If the process exits before we're ready, treat as startup failure
-      const startupCloseHandler = (code: number | null) => {
+      const startupCloseHandler = (code: number | null, signal: NodeJS.Signals | null) => {
         if (settled) return;
         settled = true;
-        reject(
-          new Error(
-            `FFmpeg exited during startup with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
-        );
+        const stderr = this.stderrBuffer.slice(-1000);
+        const errorMsg = `FFmpeg exited during startup with code ${code}, signal ${signal}. Stderr: ${stderr}`;
+        console.error(`FFmpeg startup failure: ${errorMsg}`);
+        reject(new Error(errorMsg));
       };
       proc.once("close", startupCloseHandler);
 
@@ -146,6 +182,11 @@ export class VideoEncoder {
 
     const stdin = this.ffmpegProcess.stdin;
 
+    // Additional validation for Windows compatibility
+    if (stdin.destroyed || stdin.writable === false) {
+      throw new Error("FFmpeg stdin stream is not writable");
+    }
+
     return new Promise((resolve, reject) => {
       let finished = false;
 
@@ -177,6 +218,8 @@ export class VideoEncoder {
         if (finished) return;
         finished = true;
         cleanup();
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`FFmpeg write error: ${errorMsg}`);
         reject(error instanceof Error ? error : new Error(String(error)));
       };
 
