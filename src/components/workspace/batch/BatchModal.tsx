@@ -25,12 +25,14 @@ function classifyField(fieldPath: string, fallback: ValueType): FieldKind {
   // Media asset id
   if (fieldPath === "Media.imageAssetId") return "media-asset";
 
-  // Colors (Canvas and Typography)
+  // Colors (Canvas, Typography, and Timeline)
   const colorFields = new Set([
     "Canvas.fillColor",
     "Canvas.strokeColor",
     "Typography.fillColor",
     "Typography.strokeColor",
+    "Timeline.color.from",
+    "Timeline.color.to",
   ]);
   if (colorFields.has(fieldPath)) return "color";
 
