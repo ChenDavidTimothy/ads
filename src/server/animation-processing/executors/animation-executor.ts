@@ -1649,7 +1649,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       node.data.identifier.id,
       "output",
       "object_stream",
-      passThroughObjects,
+      processedObjects,
       {
         perObjectTimeCursor: outputCursorMap,
         perObjectAnimations: this.clonePerObjectAnimations(perObjectAnimations),
