@@ -81,6 +81,39 @@ export class TimingNodeExecutor extends BaseExecutor {
         )
       : undefined;
 
+    // Merge batch overrides from ALL inputs, not just the first one
+    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+      const out: Record<string, Record<string, Record<string, unknown>>> = {};
+      for (const input of inputs) {
+        const upstream = input?.metadata?.perObjectBatchOverrides;
+        if (upstream) {
+          for (const [objectId, fields] of Object.entries(upstream)) {
+            const destFields = out[objectId] ?? {};
+            for (const [fieldPath, byKey] of Object.entries(fields)) {
+              const existingByKey = destFields[fieldPath] ?? {};
+              destFields[fieldPath] = { ...existingByKey, ...byKey };
+            }
+            out[objectId] = destFields;
+          }
+        }
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
+      const out: Record<string, string[]> = {};
+      for (const input of inputs) {
+        const upstream = input?.metadata?.perObjectBoundFields;
+        if (upstream) {
+          for (const [objId, keys] of Object.entries(upstream)) {
+            const existing = out[objId] ?? [];
+            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+          }
+        }
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -90,21 +123,12 @@ export class TimingNodeExecutor extends BaseExecutor {
       {
         perObjectTimeCursor: upstreamCursorMap,
         perObjectAnimations: clonedAnimations,
-        // Pass through any upstream batch overrides / bound fields if present on first input
-        ...(inputs[0]?.metadata && {
-          perObjectBatchOverrides: (
-            inputs[0]?.metadata as {
-              perObjectBatchOverrides?: Record<
-                string,
-                Record<string, Record<string, unknown>>
-              >;
-            }
-          ).perObjectBatchOverrides,
-          perObjectBoundFields: (
-            inputs[0]?.metadata as {
-              perObjectBoundFields?: Record<string, string[]>;
-            }
-          ).perObjectBoundFields,
+        // Pass through merged batch overrides / bound fields from ALL inputs
+        ...(mergedPerObjectBatchOverrides && {
+          perObjectBatchOverrides: mergedPerObjectBatchOverrides,
+        }),
+        ...(mergedPerObjectBoundFields && {
+          perObjectBoundFields: mergedPerObjectBoundFields,
         }),
       },
     );

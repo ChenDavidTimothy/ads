@@ -431,16 +431,30 @@ export class CanvasNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Pass through existing per-object animations/cursors and the merged assignments
-    const firstMeta = inputs[0]?.metadata as
-      | (InputWithMetadata["metadata"] & {
-          perObjectBatchOverrides?: Record<
-            string,
-            Record<string, Record<string, unknown>>
-          >;
-          perObjectBoundFields?: Record<string, string[]>;
-        })
-      | undefined;
+    // Merge upstream metadata with this node's emissions so multiple editors can contribute
+    // Collect metadata from ALL inputs, not just the first one
+    const upstreamMetas: Array<{
+      perObjectBatchOverrides?: Record<
+        string,
+        Record<string, Record<string, unknown>>
+      >;
+      perObjectBoundFields?: Record<string, string[]>;
+      perObjectTimeCursor?: Record<string, number>;
+      perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+      perObjectAssignments?: PerObjectAssignments;
+    }> = inputs
+      .map(input => input?.metadata)
+      .filter((meta): meta is NonNullable<typeof meta> => meta != null)
+      .map(meta => meta as {
+        perObjectBatchOverrides?: Record<
+          string,
+          Record<string, Record<string, unknown>>
+        >;
+        perObjectBoundFields?: Record<string, string[]>;
+        perObjectTimeCursor?: Record<string, number>;
+        perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
+        perObjectAssignments?: PerObjectAssignments;
+      });
 
     // Emit bound fields per object: merge per-object-specific and global bindings
     const perObjectBoundFields: Record<string, string[]> = {};
@@ -456,6 +470,63 @@ export class CanvasNodeExecutor extends BaseExecutor {
       if (combined.length > 0) perObjectBoundFields[objectId] = combined;
     }
 
+    // Merge all metadata from upstream inputs
+    const mergedPerObjectBatchOverrides: | Record<string, Record<string, Record<string, unknown>>> | undefined = (() => {
+      const out: Record<string, Record<string, Record<string, unknown>>> = {};
+
+      // Merge upstream batch overrides from ALL inputs
+      for (const upstreamMeta of upstreamMetas) {
+        const upstream = upstreamMeta?.perObjectBatchOverrides;
+        if (upstream) {
+          for (const [objectId, fields] of Object.entries(upstream)) {
+            const destFields = out[objectId] ?? {};
+            for (const [fieldPath, byKey] of Object.entries(fields)) {
+              const existingByKey = destFields[fieldPath] ?? {};
+              destFields[fieldPath] = { ...existingByKey, ...byKey };
+            }
+            out[objectId] = destFields;
+          }
+        }
+      }
+
+      // Merge this node's emissions
+      for (const [objectId, fields] of Object.entries(
+        emittedPerObjectBatchOverrides,
+      )) {
+        const destFields = out[objectId] ?? {};
+        for (const [fieldPath, byKey] of Object.entries(fields)) {
+          const existingByKey = destFields[fieldPath] ?? {};
+          destFields[fieldPath] = { ...existingByKey, ...byKey };
+        }
+        out[objectId] = destFields;
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
+    const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
+      const out: Record<string, string[]> = {};
+      // Start with upstream from ALL inputs
+      for (const upstreamMeta of upstreamMetas) {
+        if (upstreamMeta?.perObjectBoundFields) {
+          for (const [objId, keys] of Object.entries(upstreamMeta.perObjectBoundFields)) {
+            const existing = out[objId] ?? [];
+            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+          }
+        }
+      }
+      // Merge this node's
+      for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
+        const existing = out[objId] ?? [];
+        out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
+
+    // Collect other metadata from first input (or any input with data)
+    const firstMetaWithData = upstreamMetas.find(meta =>
+      meta.perObjectTimeCursor || meta.perObjectAnimations || meta.perObjectAssignments
+    ) || upstreamMetas[0];
+
     setNodeOutput(
       context,
       node.data.identifier.id,
@@ -463,18 +534,12 @@ export class CanvasNodeExecutor extends BaseExecutor {
       "object_stream",
       passThrough,
       {
-        perObjectTimeCursor: firstMeta?.perObjectTimeCursor,
-        perObjectAnimations: firstMeta?.perObjectAnimations,
+        perObjectTimeCursor: firstMetaWithData?.perObjectTimeCursor,
+        perObjectAnimations: firstMetaWithData?.perObjectAnimations,
         perObjectAssignments:
-          mergedAssignments ?? firstMeta?.perObjectAssignments,
-        perObjectBatchOverrides:
-          Object.keys(emittedPerObjectBatchOverrides).length > 0
-            ? emittedPerObjectBatchOverrides
-            : firstMeta?.perObjectBatchOverrides,
-        perObjectBoundFields:
-          Object.keys(perObjectBoundFields).length > 0
-            ? perObjectBoundFields
-            : firstMeta?.perObjectBoundFields,
+          mergedAssignments ?? firstMetaWithData?.perObjectAssignments,
+        perObjectBatchOverrides: mergedPerObjectBatchOverrides,
+        perObjectBoundFields: mergedPerObjectBoundFields,
       },
     );
   }
