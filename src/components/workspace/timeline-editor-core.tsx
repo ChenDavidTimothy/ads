@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   NumberField,
   SelectField,
@@ -36,89 +37,15 @@ import type {
   TrackOverride,
 } from "@/shared/properties/assignments";
 import { useWorkspace } from "./workspace-context";
+import { BindButton } from "@/components/workspace/binding/bindings";
 import {
-  BindButton,
-  useVariableBinding,
-} from "@/components/workspace/binding/bindings";
-import { Badge } from "@/components/ui/badge";
+  BindingBadge as UnifiedBindingBadge,
+  OverrideBadge as UnifiedOverrideBadge,
+} from "@/components/workspace/binding/badges";
 import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
 import { getResolverFieldPath } from "@/shared/properties/field-paths";
 
-function BindingBadge({
-  nodeId,
-  keyName,
-  objectId,
-}: {
-  nodeId: string;
-  keyName: string;
-  objectId?: string;
-}) {
-  const { state } = useWorkspace();
-  const { resetToDefault } = useVariableBinding(nodeId, objectId);
-
-  const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId);
-  if (!node) return null;
-
-  const animationData = node.data as AnimationNodeData;
-  const vb = objectId
-    ? (animationData.variableBindingsByObject?.[objectId] ?? {})
-    : (animationData.variableBindings ?? {});
-  let bound = vb?.[keyName]?.boundResultNodeId;
-  if (!bound && objectId === undefined) {
-    // already reading global
-  }
-  if (!bound && objectId !== undefined) {
-    // Fallback to global default binding for inherited badge
-    const node = state.flow.nodes.find(
-      (n) => n.data?.identifier?.id === nodeId,
-    );
-    if (node) {
-      const animationData = node.data as AnimationNodeData;
-      const globalVb = (animationData.variableBindings ?? {}) as Record<
-        string,
-        { boundResultNodeId?: string }
-      >;
-      bound = globalVb?.[keyName]?.boundResultNodeId;
-    }
-  }
-  if (!bound) return null;
-  const boundNode = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === bound,
-  );
-  const name = boundNode?.data?.identifier?.displayName;
-
-  return (
-    <Badge variant="bound" onRemove={() => resetToDefault(keyName)}>
-      {name ? `Bound: ${name}` : "Bound"}
-    </Badge>
-  );
-}
-
-function OverrideBadge({
-  animationNodeId,
-  trackId,
-  keyName,
-  selectedObjectId,
-}: {
-  animationNodeId: string;
-  trackId: string;
-  keyName: string;
-  selectedObjectId?: string;
-}) {
-  const { resetToDefault } = useVariableBinding(
-    animationNodeId,
-    selectedObjectId,
-  );
-
-  return (
-    <Badge
-      variant="manual"
-      onRemove={() => resetToDefault(`track.${trackId}.${keyName}`)}
-    >
-      Manual
-    </Badge>
-  );
-}
+// Use unified badges consistent with Canvas editor
 
 interface TimelineEditorCoreProps {
   animationNodeId: string;
@@ -730,7 +657,7 @@ export function TrackProperties({
     ) => {
       switch (track.type) {
         case "move": {
-          if (override) {
+          if (selectedObjectId) {
             onChange({ properties: updates as MoveTrackProperties });
           } else {
             const mergedProps = deepMerge(
@@ -742,7 +669,7 @@ export function TrackProperties({
           break;
         }
         case "rotate": {
-          if (override) {
+          if (selectedObjectId) {
             onChange({ properties: updates as RotateTrackProperties });
           } else {
             const mergedProps = deepMerge(
@@ -754,7 +681,7 @@ export function TrackProperties({
           break;
         }
         case "scale": {
-          if (override) {
+          if (selectedObjectId) {
             onChange({ properties: updates as ScaleTrackProperties });
           } else {
             const mergedProps = deepMerge(
@@ -766,7 +693,7 @@ export function TrackProperties({
           break;
         }
         case "fade": {
-          if (override) {
+          if (selectedObjectId) {
             onChange({ properties: updates as FadeTrackProperties });
           } else {
             const mergedProps = deepMerge(
@@ -778,7 +705,7 @@ export function TrackProperties({
           break;
         }
         case "color": {
-          if (override) {
+          if (selectedObjectId) {
             onChange({ properties: updates as ColorTrackProperties });
           } else {
             const mergedProps = deepMerge(
@@ -793,7 +720,7 @@ export function TrackProperties({
           break;
       }
     },
-    [track.type, track.properties, onChange, override],
+    [track.type, track.properties, onChange, selectedObjectId],
   );
 
   // Variable discovery uses animationNodeId to mirror object discovery behavior
@@ -960,17 +887,16 @@ export function TrackProperties({
   const FieldBadges = ({ keyName }: { keyName: string }) => (
     <div className="flex items-center gap-[var(--space-1)]">
       {isFieldOverridden(keyName) && (
-        <OverrideBadge
-          animationNodeId={animationNodeId}
-          trackId={track.identifier.id}
-          keyName={keyName}
-          selectedObjectId={selectedObjectId}
+        <UnifiedOverrideBadge
+          nodeId={animationNodeId}
+          bindingKey={`track.${track.identifier.id}.${keyName}`}
+          objectId={selectedObjectId}
         />
       )}
       {!isFieldOverridden(keyName) && (
-        <BindingBadge
+        <UnifiedBindingBadge
           nodeId={animationNodeId}
-          keyName={`track.${track.identifier.id}.${keyName}`}
+          bindingKey={`track.${track.identifier.id}.${keyName}`}
           objectId={selectedObjectId}
         />
       )}
