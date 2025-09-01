@@ -1215,26 +1215,51 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
         case "scale": {
           const scaleProps = updatedProperties as {
-            from?: number;
-            to?: number;
+            from?: { x?: number; y?: number } | number;
+            to?: { x?: number; y?: number } | number;
           };
-          if (typeof scaleProps.from === "number") {
-            scaleProps.from = resolveFieldValue(
+          // Normalize to object form then resolve per-axis
+          if (scaleProps.from !== undefined) {
+            const fromObj =
+              typeof scaleProps.from === "number"
+                ? { x: scaleProps.from, y: scaleProps.from }
+                : (scaleProps.from ?? {});
+            const x = resolveFieldValue(
               objectId,
-              "Timeline.scale.from",
-              scaleProps.from,
+              "Timeline.scale.from.x",
+              (fromObj.x as number | undefined) ?? 1,
               ctx,
               numberCoerce,
             );
+            const y = resolveFieldValue(
+              objectId,
+              "Timeline.scale.from.y",
+              (fromObj.y as number | undefined) ?? 1,
+              ctx,
+              numberCoerce,
+            );
+            scaleProps.from = { x, y } as unknown as Record<string, unknown>;
           }
-          if (typeof scaleProps.to === "number") {
-            scaleProps.to = resolveFieldValue(
+          if (scaleProps.to !== undefined) {
+            const toObj =
+              typeof scaleProps.to === "number"
+                ? { x: scaleProps.to, y: scaleProps.to }
+                : (scaleProps.to ?? {});
+            const x = resolveFieldValue(
               objectId,
-              "Timeline.scale.to",
-              scaleProps.to,
+              "Timeline.scale.to.x",
+              (toObj.x as number | undefined) ?? 1,
               ctx,
               numberCoerce,
             );
+            const y = resolveFieldValue(
+              objectId,
+              "Timeline.scale.to.y",
+              (toObj.y as number | undefined) ?? 1,
+              ctx,
+              numberCoerce,
+            );
+            scaleProps.to = { x, y } as unknown as Record<string, unknown>;
           }
           break;
         }
@@ -1266,6 +1291,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
           const colorProps = updatedProperties as {
             from?: string;
             to?: string;
+            property?: string;
           };
           if (typeof colorProps.from === "string") {
             colorProps.from = resolveFieldValue(

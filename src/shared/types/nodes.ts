@@ -138,8 +138,8 @@ export interface RotateTrackProperties {
 }
 
 export interface ScaleTrackProperties {
-  from: number;
-  to: number;
+  from: Point2D;
+  to: Point2D;
 }
 
 export interface FadeTrackProperties {

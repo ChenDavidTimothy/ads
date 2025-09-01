@@ -93,34 +93,24 @@ export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
     properties: [
       {
         key: "from",
-        type: "number",
+        type: "point2d",
         label: "From Scale",
-        description: "Starting scale value (1 = 100%)",
-        defaultValue: 1,
+        description: "Starting scale value per axis (1 = 100%)",
+        defaultValue: { x: 1, y: 1 },
         required: true,
-        constraints: {
-          min: 0,
-          max: 10,
-          step: 0.1,
-        },
       },
       {
         key: "to",
-        type: "number",
+        type: "point2d",
         label: "To Scale",
-        description: "Ending scale value (1 = 100%)",
-        defaultValue: 1.5,
+        description: "Ending scale value per axis (1 = 100%)",
+        defaultValue: { x: 1.5, y: 1.5 },
         required: true,
-        constraints: {
-          min: 0,
-          max: 10,
-          step: 0.1,
-        },
       },
     ],
     defaults: {
-      from: 1,
-      to: 1.5,
+      from: { x: 1, y: 1 },
+      to: { x: 1.5, y: 1.5 },
     },
     metadata: {
       supportsEasing: true,

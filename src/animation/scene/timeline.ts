@@ -156,12 +156,8 @@ function updateAccumulatedState(
       accumulatedState.rotation = endValue as number;
       break;
     case "scale": {
-      const v = endValue as number | Point2D;
-      if (typeof v === "number") {
-        accumulatedState.scale = { x: v, y: v };
-      } else {
-        accumulatedState.scale = clonePoint(v);
-      }
+      const v = endValue as Point2D;
+      accumulatedState.scale = clonePoint(v);
       break;
     }
     case "opacity":
@@ -246,12 +242,8 @@ function updateStateFromAnimation(
         state.rotation = value as number;
         break;
       case "scale": {
-        const v = value as number | Point2D;
-        if (typeof v === "number") {
-          state.scale = { x: v, y: v };
-        } else {
-          state.scale = clonePoint(v);
-        }
+        const v = value as Point2D;
+        state.scale = clonePoint(v);
         break;
       }
       case "opacity":
@@ -409,8 +401,8 @@ export function createRotateAnimation(
 
 export function createScaleAnimation(
   objectId: string,
-  from: number,
-  to: number,
+  from: Point2D,
+  to: Point2D,
   startTime: number,
   duration: number,
   easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "easeInOut",
