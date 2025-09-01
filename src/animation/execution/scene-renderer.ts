@@ -225,10 +225,10 @@ export class SceneRenderer {
     // Attempt to render by URL or by assetId (fallback to API route with absolute base)
     const assetId = (props as { assetId?: string }).assetId;
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const effectiveUrl = props.imageUrl
-      ? props.imageUrl
-      : assetId
-        ? `${baseUrl}/api/download/${assetId}`
+    const effectiveUrl = assetId
+      ? `${baseUrl}/api/download/${assetId}`
+      : props.imageUrl
+        ? props.imageUrl
         : undefined;
     if (!effectiveUrl) return;
 

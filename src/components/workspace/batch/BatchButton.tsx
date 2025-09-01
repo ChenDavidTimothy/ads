@@ -19,23 +19,8 @@ export function BatchButton({
 }) {
   const { hasBatchKeys } = useBatchKeysForField(nodeId, fieldPath, objectId);
 
-  // Debug logging
-  console.log("[BatchButton] Debug:", {
-    nodeId,
-    fieldPath,
-    featuresEnabled: features.batchOverridesUI,
-    hasBatchKeys,
-    willRender: features.batchOverridesUI && hasBatchKeys,
-  });
-
-  if (!features.batchOverridesUI) {
-    console.log("[BatchButton] Not rendering: feature flag disabled");
-    return null;
-  }
-  if (!hasBatchKeys) {
-    console.log("[BatchButton] Not rendering: no batch keys");
-    return null;
-  }
+  if (!features.batchOverridesUI) return null;
+  if (!hasBatchKeys) return null;
 
   return (
     <button
