@@ -104,7 +104,7 @@ export class SceneRenderer {
       const state = sceneState.get(object.id);
       if (!state) continue;
 
-      await this.renderObject(ctx, object, state);
+      await this.renderObject(ctx, object, state, time);
     }
   }
 
@@ -112,6 +112,7 @@ export class SceneRenderer {
     ctx: NodeCanvasContext,
     object: SceneObject,
     state: ObjectState,
+    time: number,
   ): Promise<void> {
     const transform = {
       translate: state.position,
@@ -149,7 +150,7 @@ export class SceneRenderer {
             state,
           );
         case "text":
-          this.renderText(ctx, object, state);
+          this.renderText(ctx, object, state, time);
           break;
       }
     });
@@ -161,6 +162,36 @@ export class SceneRenderer {
 
     // Restore opacity
     ctx.globalAlpha = originalAlpha;
+  }
+
+  // Determine if a color animation exists for a specific property on an object
+  private hasColorAnimationFor(
+    objectId: string,
+    property: "fill" | "stroke",
+  ): boolean {
+    return this.scene.animations.some(
+      (a) =>
+        a.objectId === objectId &&
+        a.type === "color" &&
+        (a as unknown as { properties?: { property?: string } }).properties
+          ?.property === property,
+    );
+  }
+
+  // Get the earliest start time for a color animation on a property
+  private getEarliestColorAnimationStart(
+    objectId: string,
+    property: "fill" | "stroke",
+  ): number | null {
+    let earliest: number | null = null;
+    for (const a of this.scene.animations) {
+      if (a.objectId !== objectId || a.type !== "color") continue;
+      const prop = (a as unknown as { properties?: { property?: string } })
+        .properties?.property;
+      if (prop !== property) continue;
+      if (earliest == null || a.startTime < earliest) earliest = a.startTime;
+    }
+    return earliest;
   }
 
   private renderTriangle(
@@ -316,9 +347,34 @@ export class SceneRenderer {
     ctx: NodeCanvasContext,
     object: SceneObject,
     state: ObjectState,
+    time: number,
   ): void {
     const props = object.properties as TextProperties;
     const typography = object.typography; // Applied by Typography node
+
+    // Determine per-property precedence for colors:
+    // - Before first color animation starts: use Typography color if provided
+    // - From the first color animation start onward: use animated state color (persists after end)
+    const hasFillAnim = this.hasColorAnimationFor(object.id, "fill");
+    const hasStrokeAnim = this.hasColorAnimationFor(object.id, "stroke");
+    const earliestFillStart = hasFillAnim
+      ? this.getEarliestColorAnimationStart(object.id, "fill")
+      : null;
+    const earliestStrokeStart = hasStrokeAnim
+      ? this.getEarliestColorAnimationStart(object.id, "stroke")
+      : null;
+
+    const useAnimatedFill =
+      earliestFillStart != null ? time >= earliestFillStart : false;
+    const useAnimatedStroke =
+      earliestStrokeStart != null ? time >= earliestStrokeStart : false;
+
+    const resolvedFillColor = useAnimatedFill
+      ? state.colors.fill
+      : typography?.fillColor ?? state.colors.fill;
+    const resolvedStrokeColor = useAnimatedStroke
+      ? state.colors.stroke
+      : typography?.strokeColor ?? state.colors.stroke ?? "#ffffff";
 
     const style: Typography = {
       // Typography Core (FROM TYPOGRAPHY) - Keep unchanged
@@ -326,10 +382,9 @@ export class SceneRenderer {
       fontSize: props.fontSize, // Always use Text node fontSize
       fontWeight: typography?.fontWeight ?? "normal",
       fontStyle: typography?.fontStyle ?? "normal",
-
-      // Colors (FROM TYPOGRAPHY) - Prioritize Typography colors over ObjectState
-      fillColor: typography?.fillColor ?? state.colors.fill,
-      strokeColor: typography?.strokeColor ?? state.colors.stroke ?? "#ffffff",
+      // Colors with animation-aware precedence
+      fillColor: resolvedFillColor,
+      strokeColor: resolvedStrokeColor,
       strokeWidth: typography?.strokeWidth ?? state.strokeWidth ?? 0,
     };
 
