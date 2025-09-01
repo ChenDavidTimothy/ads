@@ -59,7 +59,9 @@ export class TransformEvaluator {
       endValue = transform.properties.to as AnimationValue;
     } else {
       // Fallback: try property schema from definition
-      const definition = transformFactory.getTransformDefinition(transform.type);
+      const definition = transformFactory.getTransformDefinition(
+        transform.type,
+      );
       if (!definition) {
         return null;
       }
@@ -80,7 +82,10 @@ export class TransformEvaluator {
         "y" in (endValue as unknown as Record<string, unknown>)
       ) {
         const p = endValue as { x: number; y: number };
-        endValue = { x: Math.max(p.x, 0.001), y: Math.max(p.y, 0.001) } as unknown as AnimationValue;
+        endValue = {
+          x: Math.max(p.x, 0.001),
+          y: Math.max(p.y, 0.001),
+        } as unknown as AnimationValue;
       }
     }
 

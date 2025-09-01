@@ -371,10 +371,10 @@ export class SceneRenderer {
 
     const resolvedFillColor = useAnimatedFill
       ? state.colors.fill
-      : typography?.fillColor ?? state.colors.fill;
+      : (typography?.fillColor ?? state.colors.fill);
     const resolvedStrokeColor = useAnimatedStroke
       ? state.colors.stroke
-      : typography?.strokeColor ?? state.colors.stroke ?? "#ffffff";
+      : (typography?.strokeColor ?? state.colors.stroke ?? "#ffffff");
 
     const style: Typography = {
       // Typography Core (FROM TYPOGRAPHY) - Keep unchanged

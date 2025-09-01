@@ -1227,14 +1227,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
             const x = resolveFieldValue(
               objectId,
               "Timeline.scale.from.x",
-              (fromObj.x as number | undefined) ?? 1,
+              fromObj.x ?? 1,
               ctx,
               numberCoerce,
             );
             const y = resolveFieldValue(
               objectId,
               "Timeline.scale.from.y",
-              (fromObj.y as number | undefined) ?? 1,
+              fromObj.y ?? 1,
               ctx,
               numberCoerce,
             );
@@ -1248,14 +1248,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
             const x = resolveFieldValue(
               objectId,
               "Timeline.scale.to.x",
-              (toObj.x as number | undefined) ?? 1,
+              toObj.x ?? 1,
               ctx,
               numberCoerce,
             );
             const y = resolveFieldValue(
               objectId,
               "Timeline.scale.to.y",
-              (toObj.y as number | undefined) ?? 1,
+              toObj.y ?? 1,
               ctx,
               numberCoerce,
             );

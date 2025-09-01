@@ -401,8 +401,14 @@ export function buildAnimationSceneFromPartition(
         { test: (s) => s.includes("move.to.y"), map: "Timeline.move.to.y" },
         { test: (s) => s.includes("rotate.from"), map: "Timeline.rotate.from" },
         { test: (s) => s.includes("rotate.to"), map: "Timeline.rotate.to" },
-        { test: (s) => s.includes("scale.from.x"), map: "Timeline.scale.from.x" },
-        { test: (s) => s.includes("scale.from.y"), map: "Timeline.scale.from.y" },
+        {
+          test: (s) => s.includes("scale.from.x"),
+          map: "Timeline.scale.from.x",
+        },
+        {
+          test: (s) => s.includes("scale.from.y"),
+          map: "Timeline.scale.from.y",
+        },
         { test: (s) => s.includes("scale.to.x"), map: "Timeline.scale.to.x" },
         { test: (s) => s.includes("scale.to.y"), map: "Timeline.scale.to.y" },
         { test: (s) => s.includes("fade.from"), map: "Timeline.fade.from" },
