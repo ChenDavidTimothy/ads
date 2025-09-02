@@ -109,6 +109,8 @@ async function main() {
           format: "png" | "jpeg";
           quality?: number;
           time?: number;
+          outputBasename?: string;
+          outputSubdir?: string;
         };
       };
 
@@ -156,7 +158,7 @@ async function main() {
           gwJobId: job.id,
           userId,
           outputSubdir: config?.outputSubdir,
-          outputBasename: (config as any)?.outputBasename,
+          outputBasename: config?.outputBasename,
         });
         await createServiceClient()
           .from("render_jobs")

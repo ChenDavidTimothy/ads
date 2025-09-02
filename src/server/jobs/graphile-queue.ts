@@ -32,8 +32,7 @@ function isValidQueueStatsRow(row: unknown): row is QueueStatsRow {
 export class GraphileQueue<
   TJob extends { jobId: string; jobKey?: string },
   TResult,
->
-  implements JobQueue<TJob, TResult>
+> implements JobQueue<TJob, TResult>
 {
   private readonly taskIdentifier: string;
 

@@ -391,7 +391,10 @@ export class SmartStorageProvider implements StorageProvider {
         lastError = error instanceof Error ? error : new Error(String(error));
 
         // If resource already exists and upsert is disabled, short-circuit as success
-        if (/resource already exists/i.test(lastError.message) && !allowUpsert) {
+        if (
+          /resource already exists/i.test(lastError.message) &&
+          !allowUpsert
+        ) {
           this.logger.info(
             `Upload skipped (already exists, no upsert): ${remoteKey}`,
           );
