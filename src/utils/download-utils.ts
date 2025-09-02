@@ -330,13 +330,7 @@ export async function downloadFile(
   file: DownloadableFile,
   options: DownloadOptions = {},
 ): Promise<void> {
-  const {
-    onProgress,
-    onComplete,
-    onError,
-    timeout = 120000,
-    perRequestTimeout = 60000,
-  } = options;
+  const { onProgress, onComplete, onError, timeout = 120000 } = options;
 
   // Special handling for Supabase signed URLs
   const isSupabaseUrl =
@@ -487,7 +481,7 @@ export async function downloadFilesAsZip(
       // Adaptive per-request timeout based on file size (20s per 10MB, clamped 45-180s)
       const perReq = Math.min(
         Math.max(
-          Math.floor(((file.size ?? 10 * 1024 * 1024) / (10 * 1024 * 1024))) *
+          Math.floor((file.size ?? 10 * 1024 * 1024) / (10 * 1024 * 1024)) *
             20000 +
             45000,
           45000,

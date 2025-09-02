@@ -221,8 +221,8 @@ export default function TermsPage() {
                   10. Indemnification
                 </h2>
                 <p>
-                  You agree to defend, indemnify, and hold harmless Variota
-                  from and against any claims, liabilities, damages, losses, and
+                  You agree to defend, indemnify, and hold harmless Variota from
+                  and against any claims, liabilities, damages, losses, and
                   expenses arising out of or in any way connected with your use
                   of the Service or violation of these Terms.
                 </p>
