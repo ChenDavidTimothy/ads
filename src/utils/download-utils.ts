@@ -17,7 +17,8 @@ export interface DownloadOptions {
   onProgress?: (progress: number, file?: string) => void;
   onComplete?: () => void;
   onError?: (error: string, file?: string) => void;
-  timeout?: number;
+  timeout?: number; // overall timeout
+  perRequestTimeout?: number; // per-fetch attempt timeout
 }
 
 export interface BatchDownloadOptions extends DownloadOptions {
@@ -77,19 +78,31 @@ function ensureUniqueZipPath(
 /**
  * Fetch a file as Blob with resilient options and tiny retry
  */
-async function fetchFileBlob(url: string, mimeType?: string): Promise<Blob> {
+async function fetchFileBlob(
+  url: string,
+  mimeType?: string,
+  perRequestTimeoutMs = 45000,
+): Promise<Blob> {
   const attempt = async (): Promise<Response> => {
     const isSupabase = isSupabaseSignedUrl(url);
-    return fetch(url, {
-      headers: {
-        Accept: mimeType ?? "*/*",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-      mode: isSupabase ? "cors" : "cors",
-      cache: "no-store",
-      credentials: "omit",
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), perRequestTimeoutMs);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: mimeType ?? "*/*",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        mode: isSupabase ? "cors" : "cors",
+        cache: "no-store",
+        credentials: "omit",
+      });
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
   };
 
   // Basic retry: 1 retry for transient network TypeError or opaque failure
@@ -317,7 +330,13 @@ export async function downloadFile(
   file: DownloadableFile,
   options: DownloadOptions = {},
 ): Promise<void> {
-  const { onProgress, onComplete, onError, timeout = 60000 } = options; // ✅ CRITICAL FIX: Increased to 60s
+  const {
+    onProgress,
+    onComplete,
+    onError,
+    timeout = 120000,
+    perRequestTimeout = 60000,
+  } = options;
 
   // Special handling for Supabase signed URLs
   const isSupabaseUrl =
@@ -434,7 +453,7 @@ export async function downloadFilesAsZip(
     onProgress,
     onComplete,
     onError,
-    timeout = 60000,
+    timeout = 180000,
   } = options;
 
   if (files.length === 0) {
@@ -465,7 +484,17 @@ export async function downloadFilesAsZip(
         ? `/api/download/${file.assetId}`
         : file.url;
 
-      const blob = await fetchFileBlob(downloadUrl, file.mimeType);
+      // Adaptive per-request timeout based on file size (20s per 10MB, clamped 45-180s)
+      const perReq = Math.min(
+        Math.max(
+          Math.floor(((file.size ?? 10 * 1024 * 1024) / (10 * 1024 * 1024))) *
+            20000 +
+            45000,
+          45000,
+        ),
+        180000,
+      );
+      const blob = await fetchFileBlob(downloadUrl, file.mimeType, perReq);
 
       // Add file to ZIP with collision-safe path
       const uniquePath = ensureUniqueZipPath(seenZipPaths, file.filename);
