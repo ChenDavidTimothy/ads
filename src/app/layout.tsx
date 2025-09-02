@@ -84,8 +84,8 @@ export const metadata: Metadata = {
     "theme-color": "#7c3aed",
   },
   icons: [
-    { rel: "icon", url: "/favicon.ico" },
-    { rel: "icon", url: "/icon.png", type: "image/png" },
+    { rel: "icon", url: "/icon.png", type: "image/png", sizes: "any" },
+    { rel: "icon", url: "/favicon.ico", sizes: "16x16 32x32" },
     { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
     { rel: "manifest", url: "/manifest.json" },
   ],
