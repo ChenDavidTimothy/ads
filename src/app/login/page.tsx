@@ -122,7 +122,7 @@ function LoginForm() {
           <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 shadow-[var(--glass-shadow-lg)] backdrop-blur-sm">
             <div className="mb-8 text-center">
               <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
-                Welcome to Batchion
+                Welcome to Variota
               </h1>
               <p className="text-[var(--text-secondary)]">
                 Sign in with your Google account to get started

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = {
   title: "Privacy Policy",
-  description: "Batchion Privacy Policy and Data Protection Information",
+  description: "Variota Privacy Policy and Data Protection Information",
 };
 
 export default function PrivacyPage() {
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
                   1. Introduction
                 </h2>
                 <p>
-                  Batchion (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or
+                  Variota (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or
                   &ldquo;us&rdquo;) is committed to protecting your privacy.
                   This Privacy Policy explains how we collect, use, disclose,
                   and safeguard your information when you use our no-code
@@ -391,13 +391,13 @@ export default function PrivacyPage() {
                 </p>
                 <div className="mt-2">
                   <p>
-                    <strong>Email:</strong> privacy@batchion.com
+                    <strong>Email:</strong> privacy@variota.com
                   </p>
                   <p>
                     <strong>Address:</strong> [Company Address]
                   </p>
                   <p>
-                    <strong>Data Protection Officer:</strong> dpo@batchion.com
+                    <strong>Data Protection Officer:</strong> dpo@variota.com
                   </p>
                 </div>
 
@@ -426,7 +426,7 @@ export default function PrivacyPage() {
               <p className="text-sm text-[var(--text-tertiary)]">
                 This Privacy Policy is effective as of the last updated date.
                 For questions or concerns about your privacy, please contact our
-                privacy team at privacy@batchion.com.
+                privacy team at privacy@variota.com.
               </p>
             </div>
           </div>

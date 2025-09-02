@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = {
   title: "Terms of Service",
-  description: "Batchion Terms of Service and User Agreement",
+  description: "Variota Terms of Service and User Agreement",
 };
 
 export default function TermsPage() {
@@ -49,7 +49,7 @@ export default function TermsPage() {
                   1. Acceptance of Terms
                 </h2>
                 <p>
-                  By accessing and using Batchion (&ldquo;Service&rdquo;), you
+                  By accessing and using Variota (&ldquo;Service&rdquo;), you
                   accept and agree to be bound by the terms and provision of
                   this agreement. If you do not agree to abide by the above,
                   please do not use this service.
@@ -61,7 +61,7 @@ export default function TermsPage() {
                   2. Description of Service
                 </h2>
                 <p>
-                  Batchion is a no-code animation platform that enables users to
+                  Variota is a no-code animation platform that enables users to
                   create dynamic, data-driven video content through a visual
                   programming interface. The &ldquo;Service&rdquo; includes:
                 </p>
@@ -148,7 +148,7 @@ export default function TermsPage() {
                 </h3>
                 <p>
                   The Service, including its software, design, text, graphics,
-                  and other content, is owned by Batchion and is protected by
+                  and other content, is owned by Variota and is protected by
                   intellectual property laws. You may not copy, modify,
                   distribute, or create derivative works without our express
                   written permission.
@@ -175,7 +175,7 @@ export default function TermsPage() {
                   7.1 Free and Paid Plans
                 </h3>
                 <p>
-                  Batchion offers both free and paid subscription plans. Free
+                  Variota offers both free and paid subscription plans. Free
                   plans have limitations on features and usage. Paid plans
                   provide additional features and higher usage limits.
                 </p>
@@ -208,7 +208,7 @@ export default function TermsPage() {
                   9. Limitation of Liability
                 </h2>
                 <p>
-                  To the maximum extent permitted by law, Batchion shall not be
+                  To the maximum extent permitted by law, Variota shall not be
                   liable for any indirect, incidental, special, consequential,
                   or punitive damages, including without limitation, loss of
                   profits, data, use, goodwill, or other intangible losses
@@ -221,7 +221,7 @@ export default function TermsPage() {
                   10. Indemnification
                 </h2>
                 <p>
-                  You agree to defend, indemnify, and hold harmless Batchion
+                  You agree to defend, indemnify, and hold harmless Variota
                   from and against any claims, liabilities, damages, losses, and
                   expenses arising out of or in any way connected with your use
                   of the Service or violation of these Terms.
@@ -274,7 +274,7 @@ export default function TermsPage() {
                 </p>
                 <div className="mt-2">
                   <p>
-                    <strong>Email:</strong> legal@batchion.com
+                    <strong>Email:</strong> legal@variota.com
                   </p>
                   <p>
                     <strong>Address:</strong> [Company Address]
@@ -299,7 +299,7 @@ export default function TermsPage() {
               <p className="text-sm text-[var(--text-tertiary)]">
                 These Terms of Service are effective as of the last updated date
                 and replace any prior agreements. For questions or concerns,
-                please contact our legal team at legal@batchion.com.
+                please contact our legal team at legal@variota.com.
               </p>
             </div>
           </div>

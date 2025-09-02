@@ -243,7 +243,7 @@ const SVGComponent = (props: React.SVGProps<SVGSVGElement>) => (
             strokeWidth: 0.421966,
           }}
         >
-          Batchion
+          Variota
         </text>
         <circle
           cx={74.482109}

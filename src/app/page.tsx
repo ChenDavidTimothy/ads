@@ -26,7 +26,7 @@ export default async function LandingPage() {
     redirect("/dashboard");
   }
 
-  const hello = await api.post.hello({ text: "from Batchion" });
+  const hello = await api.post.hello({ text: "from Variota" });
 
   const features = [
     {
@@ -114,7 +114,7 @@ export default async function LandingPage() {
             </h1>
 
             <p className="mx-auto mb-12 max-w-3xl text-xl leading-relaxed text-[var(--text-secondary)]">
-              Batchion empowers business professionals to build sophisticated,
+              Variota empowers business professionals to build sophisticated,
               data-driven video advertisements using an intuitive visual
               programming interface. No coding experience required.
             </p>
@@ -328,7 +328,7 @@ export default async function LandingPage() {
             </h2>
             <p className="mb-12 text-xl text-[var(--text-secondary)]">
               Join hundreds of businesses already creating stunning video
-              content with Batchion.
+              content with Variota.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
@@ -448,7 +448,7 @@ export default async function LandingPage() {
             </div>
 
             <div className="mt-8 border-t border-[var(--border-primary)] pt-8 text-center text-sm text-[var(--text-tertiary)]">
-              <p>&copy; 2024 Batchion. All rights reserved.</p>
+              <p>&copy; 2024 Variota. All rights reserved.</p>
             </div>
           </div>
         </footer>

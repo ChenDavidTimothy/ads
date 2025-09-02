@@ -11,11 +11,11 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 
 export const metadata: Metadata = {
   title: {
-    default: "Batchion - No-Code Video Animation Platform",
-    template: "%s | Batchion",
+    default: "Variota - No-Code Video Animation Platform",
+    template: "%s | Variota",
   },
   description:
-    "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface for animation creation.",
+    "Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface for animation creation.",
   keywords: [
     "video animation",
     "no-code animation",
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     "data-driven videos",
     "node-based editor",
   ],
-  authors: [{ name: "Batchion Team" }],
-  creator: "Batchion",
-  publisher: "Batchion",
+  authors: [{ name: "Variota Team" }],
+  creator: "Variota",
+  publisher: "Variota",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
@@ -36,26 +36,26 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Batchion - No-Code Video Animation Platform",
+    title: "Variota - No-Code Video Animation Platform",
     description:
-      "Create stunning, data-driven video advertisements without coding. Batchion empowers business professionals with an intuitive visual programming interface.",
-    siteName: "Batchion",
+      "Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface.",
+    siteName: "Variota",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Batchion - No-Code Video Animation Platform",
+        alt: "Variota - No-Code Video Animation Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Batchion - No-Code Video Animation Platform",
+    title: "Variota - No-Code Video Animation Platform",
     description:
       "Create stunning, data-driven video advertisements without coding.",
     images: ["/og-image.png"],
-    creator: "@batchion",
+    creator: "@variota",
   },
   robots: {
     index: true,
@@ -75,11 +75,11 @@ export const metadata: Metadata = {
   category: "technology",
   classification: "Business Software",
   other: {
-    "application-name": "Batchion",
+    "application-name": "Variota",
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "Batchion",
+    "apple-mobile-web-app-title": "Variota",
     "msapplication-TileColor": "#7c3aed",
     "theme-color": "#7c3aed",
   },
@@ -135,14 +135,14 @@ export default function RootLayout({
         />
 
         {/* Progressive Web App */}
-        <meta name="application-name" content="Batchion" />
+        <meta name="application-name" content="Variota" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <meta name="application-name" content="Batchion" />
+        <meta name="application-name" content="Variota" />
         <meta name="msapplication-TileColor" content="#7c3aed" />
         <meta name="theme-color" content="#7c3aed" />
       </head>
