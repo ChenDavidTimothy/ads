@@ -131,19 +131,19 @@ function AssetCard({
     setIsDownloading(true);
 
     try {
-      // Use the enhanced download utility for better reliability
+      // Prefer signed URL direct download if available; fallback to API redirect route
+      const preferredUrl = asset.public_url ?? `/api/download/${asset.id}`;
+
       await downloadFile(
         {
-          url: `/api/download/${asset.id}`,
+          url: preferredUrl,
           filename: asset.original_name,
           mimeType: asset.mime_type,
           size: asset.file_size,
           assetId: asset.id,
         },
         {
-          onProgress: (_progress) => {
-            // Progress tracking can be added here if needed
-          },
+          onProgress: (_progress) => {},
           onComplete: () => {
             toast.success(
               "Download Complete",
@@ -153,7 +153,7 @@ function AssetCard({
           onError: (_, filename) => {
             toast.error("Download Failed", `Failed to download ${filename}`);
           },
-          timeout: 120000, // 2 minutes for assets
+          timeout: 180000, // 3 minutes for robustness
         },
       );
     } catch {
