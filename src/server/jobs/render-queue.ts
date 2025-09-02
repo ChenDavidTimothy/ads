@@ -8,6 +8,7 @@ export interface RenderJobInput {
   config: RendererSceneAnimationConfig;
   userId: string;
   jobId: string;
+  jobKey?: string;
 }
 
 export interface RenderJobResult {

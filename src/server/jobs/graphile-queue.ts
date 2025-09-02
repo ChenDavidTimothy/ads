@@ -29,7 +29,10 @@ function isValidQueueStatsRow(row: unknown): row is QueueStatsRow {
   return typeof row === "object" && row !== null;
 }
 
-export class GraphileQueue<TJob extends { jobId: string }, TResult>
+export class GraphileQueue<
+  TJob extends { jobId: string; jobKey?: string },
+  TResult,
+>
   implements JobQueue<TJob, TResult>
 {
   private readonly taskIdentifier: string;
@@ -40,13 +43,14 @@ export class GraphileQueue<TJob extends { jobId: string }, TResult>
 
   async enqueueOnly(job: TJob): Promise<{ jobId: string }> {
     const maxAttempts = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? "5");
+    const dedupeKey = job.jobKey ?? job.jobId;
 
     await withTransientPgRetry(async () => {
       await pgPool.query("select graphile_worker.add_job($1, $2, $3)", [
         this.taskIdentifier,
         job,
         {
-          job_key: job.jobId,
+          job_key: dedupeKey,
           max_attempts: maxAttempts,
         },
       ]);

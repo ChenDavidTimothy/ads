@@ -243,7 +243,9 @@ export class SmartStorageProvider implements StorageProvider {
         config.mimeTypes[extension] ??
         "application/octet-stream";
 
-      // Upload with retry logic (using stream created per attempt)
+      // Upload with retry logic (using stream created per attempt). If the
+      // remote resource already exists and upsert is disabled, treat as
+      // idempotent success and reuse the existing file.
       await this.uploadStreamWithRetry(
         bucket,
         prepared.remoteKey,
@@ -272,9 +274,31 @@ export class SmartStorageProvider implements StorageProvider {
       this.healthMonitor.recordUploadFailure();
 
       this.logger.error("Failed to finalize upload:", error);
-      throw new Error(
-        `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      const errMsg = error instanceof Error ? error.message : String(error);
+
+      // If upload failed because the resource already exists, treat as success
+      // and return a signed URL for the existing object. This makes the
+      // operation idempotent when duplicate jobs or retries produce the same key.
+      if (/resource already exists/i.test(errMsg)) {
+        try {
+          const extension = path.extname(prepared.remoteKey).slice(1);
+          const { bucket } = this.getBucketForExtension(extension);
+          const signedUrl = await this.createSignedUrlWithRetry(
+            bucket,
+            prepared.remoteKey,
+          );
+          this.logger.info(
+            `Object already exists; treated as success for ${prepared.remoteKey}`,
+          );
+          return { publicUrl: signedUrl };
+        } catch (urlErr) {
+          throw new Error(
+            `Upload failed (existing object) and failed to create signed URL: ${urlErr instanceof Error ? urlErr.message : String(urlErr)}`,
+          );
+        }
+      }
+
+      throw new Error(`Upload failed: ${errMsg}`);
     } finally {
       // Always attempt to cleanup the temp file
       await this.cleanupTempFile(prepared.filePath);
@@ -365,6 +389,14 @@ export class SmartStorageProvider implements StorageProvider {
         return; // success
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+
+        // If resource already exists and upsert is disabled, short-circuit as success
+        if (/resource already exists/i.test(lastError.message) && !allowUpsert) {
+          this.logger.info(
+            `Upload skipped (already exists, no upsert): ${remoteKey}`,
+          );
+          return;
+        }
 
         if (attempt === STORAGE_CONFIG.MAX_RETRIES) break;
 

@@ -92,6 +92,9 @@ export class VideoEncoder {
           : "ffmpeg";
 
       const args = [
+        "-hide_banner",
+        "-loglevel",
+        "warning",
         "-f",
         "rawvideo",
         "-pix_fmt",
@@ -102,6 +105,11 @@ export class VideoEncoder {
         this.config.fps.toString(),
         "-i",
         "pipe:0",
+        // Ensure even dimensions for yuv420p/libx264 to avoid early exit (EPIPE/EOF)
+        "-vf",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        // No audio
+        "-an",
         "-pix_fmt",
         "yuv420p",
         "-c:v",
@@ -110,6 +118,9 @@ export class VideoEncoder {
         this.config.preset,
         "-crf",
         this.config.crf.toString(),
+        // Optimize MP4 for streaming
+        "-movflags",
+        "+faststart",
         "-y",
         this.outputPath,
       ];
@@ -133,6 +144,9 @@ export class VideoEncoder {
       const proc = this.ffmpegProcess;
 
       proc.on("error", onError);
+
+      // Prevent stdout pipe from filling up and blocking the child process
+      proc.stdout?.resume();
 
       // If the process exits before we're ready, treat as startup failure
       const startupCloseHandler = (
@@ -196,6 +210,16 @@ export class VideoEncoder {
 
     return new Promise((resolve, reject) => {
       let finished = false;
+      const proc = this.ffmpegProcess!;
+
+      // If process already exited, fail fast with stderr context
+      if (proc.exitCode !== null) {
+        return reject(
+          new Error(
+            `FFmpeg has already exited (code ${proc.exitCode}). Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
+      }
 
       const timeout = setTimeout(() => {
         if (finished) return;
@@ -212,6 +236,7 @@ export class VideoEncoder {
         clearTimeout(timeout);
         stdin.removeListener("drain", onDrain);
         stdin.removeListener("error", onError);
+        stdin.removeListener("close", onStdinClose);
       };
 
       const onDrain = () => {
@@ -226,8 +251,21 @@ export class VideoEncoder {
         finished = true;
         cleanup();
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`FFmpeg write error: ${errorMsg}`);
+        console.error(
+          `FFmpeg write error: ${errorMsg}\nStderr: ${this.stderrBuffer.slice(-1000)}`,
+        );
         reject(error instanceof Error ? error : new Error(String(error)));
+      };
+
+      const onStdinClose = () => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        reject(
+          new Error(
+            `FFmpeg stdin closed unexpectedly. Stderr: ${this.stderrBuffer.slice(-1000)}`,
+          ),
+        );
       };
 
       const wrote = stdin.write(frameData);
@@ -238,6 +276,7 @@ export class VideoEncoder {
       } else {
         stdin.once("drain", onDrain);
         stdin.once("error", onError);
+        stdin.once("close", onStdinClose);
       }
     });
   }
