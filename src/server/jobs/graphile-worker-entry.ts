@@ -34,6 +34,13 @@ async function main() {
       const { jobId, userId, scene, config } = payload as RenderJobPayload;
 
       try {
+        logger.info("Render job started", {
+          jobId,
+          gwJobId: job.id,
+          userId,
+          outputSubdir: config?.outputSubdir,
+          outputBasename: config?.outputBasename,
+        });
         await supabase
           .from("render_jobs")
           .update({
@@ -70,6 +77,8 @@ async function main() {
           jobId,
           gwJobId: job.id,
           userId,
+          outputSubdir: config?.outputSubdir,
+          outputBasename: config?.outputBasename,
         });
 
         // Update DB status and rethrow to let Graphile handle retries
@@ -146,6 +155,8 @@ async function main() {
           jobId,
           gwJobId: job.id,
           userId,
+          outputSubdir: config?.outputSubdir,
+          outputBasename: (config as any)?.outputBasename,
         });
         await createServiceClient()
           .from("render_jobs")

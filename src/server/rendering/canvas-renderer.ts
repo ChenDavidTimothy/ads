@@ -55,7 +55,8 @@ export class CanvasRenderer implements Renderer {
     const prepared = await this.storageProvider.prepareTarget("mp4", {
       basename: config.outputBasename,
       subdir: config.outputSubdir,
-      allowUpsert: false,
+      // Enable upsert to make uploads idempotent under retries or duplicate attempts
+      allowUpsert: true,
     });
 
     try {

@@ -902,12 +902,25 @@ export const animationRouter = createTRPCRouter({
                 .eq("id", jobRow.id)
                 .eq("user_id", ctx.user!.id);
 
-              // Enqueue the render job
+              // Compute a stable dedupe key based on storage path to avoid duplicate
+              // concurrent renders for the same output (user/dir/base.mp4)
+              // Use the pre-unique config to compute a stable key so
+              // duplicates across requests coalesce to one job
+              const stableJobKey = [
+                ctx.user!.id,
+                config.outputSubdir ?? "",
+                `${config.outputBasename}.mp4`,
+              ]
+                .filter(Boolean)
+                .join(":");
+
+              // Enqueue the render job with a stable dedupe key
               await renderQueue.enqueueOnly({
                 scene,
                 config: uniqueConfig,
                 userId: ctx.user!.id,
                 jobId: jobRow.id as string,
+                jobKey: stableJobKey,
               });
 
               jobIds.push(jobRow.id as string);
