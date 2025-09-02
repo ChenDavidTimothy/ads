@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Save,
@@ -14,6 +13,7 @@ import {
 import { api } from "@/trpc/react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { usePreviewDownloads } from "@/hooks/use-preview-downloads";
+import { RobustImage } from "@/components/ui/robust-image";
 
 interface VideoJob {
   jobId: string;
@@ -222,11 +222,10 @@ export function PreviewPanel({
             {/* In single-image mode, no job object exists; hide Save (no renderJobId) */}
             {/* The multi-image path below exposes Save with proper renderJobId */}
           </div>
-          <Image
+          <RobustImage
             src={imageUrl!}
             alt="Generated"
-            width={800}
-            height={600}
+            variant="preview"
             className="w-full rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-0)]"
           />
         </div>
@@ -257,11 +256,10 @@ export function PreviewPanel({
           </div>
 
           {activeImage ? (
-            <Image
+            <RobustImage
               src={activeImage.imageUrl!}
               alt={activeImage.frameName}
-              width={800}
-              height={600}
+              variant="preview"
               className="w-full rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--surface-0)]"
             />
           ) : (

@@ -506,8 +506,10 @@ export function convertTracksToSceneAnimations(
     const override = pickOverridesForTrack(overrides, track);
     const baseTrack = override ? applyTrackOverride(track, override) : track;
 
-    // Time calculations
-    const effectiveStart = baselineTime + baseTrack.startTime;
+    // Time calculations - startTime is relative to previous animation end, not baseline
+    const effectiveStart = priorAnimations.length > 0
+      ? Math.max(...priorAnimations.map(a => a.startTime + a.duration)) + baseTrack.startTime
+      : baselineTime + baseTrack.startTime;
     const properties = {
       ...(baseTrack.properties as unknown as Record<string, unknown>),
     };

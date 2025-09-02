@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Image,
@@ -18,6 +18,7 @@ import type { AssetResponse } from "@/shared/types/assets";
 import { formatFileSize, isImage, isVideo } from "@/shared/types/assets";
 import { downloadFile } from "@/utils/download-utils";
 import { useNotifications } from "@/hooks/use-notifications";
+import { RobustImage } from "@/components/ui/robust-image";
 
 interface AssetGridProps {
   assets: AssetResponse[];
@@ -204,14 +205,12 @@ function AssetCard({
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-[var(--surface-2)]">
         {isImage(asset) && asset.public_url ? (
-          <NextImage
+          <RobustImage
             src={asset.public_url}
             alt={asset.original_name}
+            variant="asset"
             fill
             className="object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
           />
         ) : isVideo(asset) ? (
           <div className="flex h-full w-full items-center justify-center">

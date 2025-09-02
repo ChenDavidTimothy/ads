@@ -25,7 +25,7 @@ import { Image, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 import type { AssetResponse } from "@/shared/types/assets";
-import NextImage from "next/image";
+import { RobustImage } from "@/components/ui/robust-image";
 
 // Badge Components (following typography pattern)
 // Replace bespoke badges with unified badges
@@ -168,12 +168,11 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
                   {assetDetails.public_url && (
-                    <NextImage
+                    <RobustImage
                       key={`asset-img-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
-                      width={48}
-                      height={48}
+                      variant="asset"
                       className="h-full w-full object-cover"
                     />
                   )}
@@ -670,12 +669,11 @@ function MediaPerObjectProperties({
               <div className="flex items-center gap-[var(--space-3)]">
                 <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
                   {assetDetails.public_url && (
-                    <NextImage
+                    <RobustImage
                       key={`asset-img-per-object-${assetDetails.id}`}
                       src={assetDetails.public_url}
                       alt={assetDetails.original_name}
-                      width={48}
-                      height={48}
+                      variant="asset"
                       className="h-full w-full object-cover"
                     />
                   )}

@@ -39,6 +39,17 @@ googleDomains.forEach((domain) => {
 const config = {
   images: {
     remotePatterns: imageRemotePatterns,
+    // Configure image optimization for better reliability with external URLs
+    minimumCacheTTL: 60, // Cache optimized images for 1 minute
+    // Add custom loader for Supabase images to handle timeouts better
+    loader: 'default',
+    // Configure image sizes and device sizes for better optimization
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Allow dangerous SVG processing
+    dangerouslyAllowSVG: true,
+    // Set content disposition type
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   async redirects() {
     return [

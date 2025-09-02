@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { createBrowserClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
+import { RobustImage } from "@/components/ui/robust-image";
 
 type AuthState = "loading" | "authenticated" | "unauthenticated";
 
@@ -202,16 +202,12 @@ export function UserProfile({
       }
     >
       {userData?.avatarUrl ? (
-        <Image
+        <RobustImage
           src={userData.avatarUrl}
           alt={`${displayName}'s profile picture`}
-          width={40}
-          height={40}
+          variant="avatar"
+          initials={initials}
           className="h-full w-full object-cover"
-          onError={() => {
-            // This will cause the Image to unmount and show fallback
-            setUserData((prev) => (prev ? { ...prev, avatarUrl: null } : null));
-          }}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-[var(--accent-primary)] text-xs font-medium text-[var(--text-on-accent)]">

@@ -13,9 +13,8 @@ import {
   TextField,
 } from "@/components/ui/form-fields";
 import { AssetSelectionModal } from "@/components/workspace/media/asset-selection-modal";
-import NextImage from "next/image";
-import { ImageOff } from "lucide-react";
 import { api } from "@/trpc/react";
+import { RobustImage } from "@/components/ui/robust-image";
 
 type ValueType = "number" | "string";
 
@@ -83,7 +82,7 @@ function AssetThumb({ assetId }: { assetId?: string }) {
   if (!assetId) {
     return (
       <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
-        <ImageOff size={16} className="text-[var(--text-tertiary)]" />
+        {/* No asset ID provided */}
       </div>
     );
   }
@@ -97,18 +96,17 @@ function AssetThumb({ assetId }: { assetId?: string }) {
   if (!assetDetails) {
     return (
       <div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-1)]">
-        <ImageOff size={16} className="text-[var(--text-tertiary)]" />
+        {/* Asset details not found */}
       </div>
     );
   }
   return (
     <div className="h-12 w-12 overflow-hidden rounded bg-[var(--surface-1)]">
       {assetDetails.public_url && (
-        <NextImage
+        <RobustImage
           src={assetDetails.public_url}
           alt={assetDetails.original_name}
-          width={48}
-          height={48}
+          variant="asset"
           className="h-full w-full object-cover"
         />
       )}

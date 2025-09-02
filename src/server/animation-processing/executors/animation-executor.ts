@@ -914,14 +914,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Removed unused objectIdNoPrefix variable
         const appearanceTime = (timedObject as { appearanceTime?: unknown })
           .appearanceTime as number | undefined;
-        let baseline: number;
+        // Appearance time is ALWAYS the foundation baseline for all animations
+        let baseline: number = appearanceTime ?? 0;
+
+        // Cursor map should only extend timing for continuing animations within the same path
+        // but NEVER override the appearance time - animations can never start before object appears
         if (
           typeof objectId === "string" &&
           upstreamCursorMap[objectId] !== undefined
         ) {
-          baseline = upstreamCursorMap[objectId];
-        } else {
-          baseline = appearanceTime ?? 0;
+          // Only use cursor position if it's LATER than appearance time (continuing animations)
+          baseline = Math.max(baseline, upstreamCursorMap[objectId]);
         }
         // Only include prior animations from the current execution path
         const priorForObject = objectId
