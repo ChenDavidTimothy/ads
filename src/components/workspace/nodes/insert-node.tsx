@@ -5,16 +5,20 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { getNodeDefinition } from "@/shared/registry/registry-utils";
 import type { InsertNodeData } from "@/shared/types/nodes";
+import React from "react";
+import { InsertModal } from "./InsertModal";
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const nodeDefinition = getNodeDefinition("insert");
+  const [open, setOpen] = React.useState(false);
 
   const handleClass = "bg-[var(--node-data)]";
 
   return (
     <Card
       selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
+      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
+      onDoubleClick={() => setOpen(true)}
     >
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
@@ -41,11 +45,9 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
 
       <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div>Appears at: {data.appearanceTime}s</div>
-        {data.appearanceTime === 0 ? (
-          <div className="text-[var(--success-500)]">Instant presence</div>
-        ) : (
-          <div className="text-[var(--accent-primary)]">Delayed presence</div>
-        )}
+        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
+          Double-click to edit per-object times
+        </div>
       </CardContent>
 
       {/* Single output port */}
@@ -59,6 +61,13 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           style={{ top: `50%` }}
         />
       ))}
+      {open ? (
+        <InsertModal
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          nodeId={data.identifier.id}
+        />
+      ) : null}
     </Card>
   );
 }

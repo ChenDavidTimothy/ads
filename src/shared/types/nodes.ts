@@ -98,6 +98,26 @@ export interface TypographyNodeData extends BaseNodeData {
 // Insert node data
 export interface InsertNodeData extends BaseNodeData {
   appearanceTime: number;
+  // Optional per-object appearance times overriding the default
+  appearanceTimeByObject?: Record<string, number>;
+  // Variable binding support (bind appearanceTime from Result nodes)
+  variableBindings?: Record<
+    string,
+    {
+      target?: string;
+      boundResultNodeId?: string;
+    }
+  >;
+  variableBindingsByObject?: Record<
+    string,
+    Record<
+      string,
+      {
+        target?: string;
+        boundResultNodeId?: string;
+      }
+    >
+  >;
 }
 
 // Filter node data
