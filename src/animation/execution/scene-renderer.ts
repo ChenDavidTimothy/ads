@@ -253,17 +253,15 @@ export class SceneRenderer {
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Prefer explicit URL, otherwise derive from assetId so per-key overrides work
+    // Prefer explicit signed URL first to avoid hitting the internal download proxy.
+    // Fall back to the API route only if we do not have a usable direct URL.
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    // Prefer assetId if present because per-key overrides update assetId at scene build time
-    const url = props.assetId
-      ? `${baseUrl}/api/download/${props.assetId}`
-      : props.imageUrl;
+    const url = props.imageUrl ?? (props.assetId ? `${baseUrl}/api/download/${props.assetId}` : undefined);
     if (!url) return;
 
     try {
-      // ✅ CRITICAL FIX: Check cache first, load with timeout if not cached
-      let img = this.imageCache.get(url);
+      // ✅ CRITICAL FIX: Check caches first, load with timeout if not cached
+      let img = this.imageCache.get(url) ?? getFromGlobalImageCache(url);
       if (!img) {
         img = await withTimeout(
           loadImage(url),
@@ -271,6 +269,7 @@ export class SceneRenderer {
           `Image load timeout: ${url}`,
         );
         this.imageCache.set(url, img);
+        addToGlobalImageCache(url, img);
       }
 
       // Calculate crop and display parameters AFTER the image is available
@@ -401,6 +400,37 @@ export class SceneRenderer {
   dispose(): void {
     this.imageCache.clear();
   }
+}
+
+// ------------------------------------------------------------
+// Lightweight process-wide LRU cache for images to avoid re-fetching
+// across render jobs within the same worker process.
+// ------------------------------------------------------------
+const MAX_GLOBAL_IMAGE_CACHE_ENTRIES = Number(
+  process.env.RENDER_GLOBAL_IMAGE_CACHE_MAX ?? 64,
+);
+const globalImageCache = new Map<string, Image>();
+
+function getFromGlobalImageCache(url: string): Image | undefined {
+  const cached = globalImageCache.get(url);
+  if (cached) {
+    // Touch for LRU behavior
+    globalImageCache.delete(url);
+    globalImageCache.set(url, cached);
+  }
+  return cached;
+}
+
+function addToGlobalImageCache(url: string, image: Image): void {
+  if (globalImageCache.has(url)) {
+    globalImageCache.set(url, image);
+    return;
+  }
+  if (globalImageCache.size >= MAX_GLOBAL_IMAGE_CACHE_ENTRIES) {
+    const oldestKey = globalImageCache.keys().next().value as string | undefined;
+    if (oldestKey) globalImageCache.delete(oldestKey);
+  }
+  globalImageCache.set(url, image);
 }
 
 // Factory function to create common scene patterns

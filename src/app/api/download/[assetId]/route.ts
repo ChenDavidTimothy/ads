@@ -82,9 +82,14 @@ export async function GET(
       `attachment; filename="${asset.original_name}"`,
     );
     headers.set("Content-Length", buffer.byteLength.toString());
-    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
-    headers.set("Pragma", "no-cache");
-    headers.set("Expires", "0");
+
+    // Cache policy: assets are immutable once uploaded, so allow long-lived caching.
+    // Clients can bust cache by changing assetId; also safe for CDNs.
+    const oneYear = 60 * 60 * 24 * 365;
+    headers.set(
+      "Cache-Control",
+      `public, immutable, max-age=${oneYear}, s-maxage=${oneYear}`,
+    );
 
     // Return the file with proper headers
     return new Response(stream, {
