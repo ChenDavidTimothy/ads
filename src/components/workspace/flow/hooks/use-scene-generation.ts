@@ -520,7 +520,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           // Poll all pending jobs
           const jobPromises = Array.from(pendingJobs).map(async (jobId) => {
             try {
-              await utils.animation.getRenderJobStatus.invalidate({ jobId });
+              // Avoid redundant invalidation; directly fetch current status
               const res = await utils.animation.getRenderJobStatus.fetch({
                 jobId,
               });
@@ -674,7 +674,6 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           const res = await Promise.all(
             Array.from(pending).map(async (jobId) => {
               try {
-                await utils.animation.getRenderJobStatus.invalidate({ jobId });
                 const status = await utils.animation.getRenderJobStatus.fetch({
                   jobId,
                 });
