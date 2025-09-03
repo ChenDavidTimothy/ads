@@ -22,14 +22,7 @@ export function InsertModal({
   const node = state.flow.nodes.find(
     (n) => n.data?.identifier?.id === nodeId,
   );
-  const data = (node?.data ?? {}) as unknown as InsertNodeData & {
-    appearanceTimeByObject?: Record<string, number>;
-    variableBindings?: Record<string, { boundResultNodeId?: string }>;
-    variableBindingsByObject?: Record<
-      string,
-      Record<string, { boundResultNodeId?: string }>
-    >;
-  };
+  const data = (node?.data ?? {}) as InsertNodeData;
 
   const defaultTime = Number(data.appearanceTime ?? 0);
   const isDefaultBound = !!data.variableBindings?.appearanceTime?.boundResultNodeId;
@@ -43,6 +36,20 @@ export function InsertModal({
     );
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
+  const emitInsertUpdate = (detail: {
+    defaultTime?: number;
+    objectId?: string;
+    time?: number;
+    clear?: boolean;
+  }) => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("insert-appearance-time-updated", {
+        detail: { nodeIdentifierId: nodeId, ...detail },
+      }),
+    );
+  };
+
   const setDefaultTime = (value: number) => {
     updateFlow({
       nodes: state.flow.nodes.map((n) =>
@@ -55,19 +62,7 @@ export function InsertModal({
       ),
     });
     // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent(
-          "insert-appearance-time-updated",
-          {
-            detail: {
-              nodeIdentifierId: nodeId,
-              defaultTime: value,
-            },
-          },
-        ),
-      );
-    }
+    emitInsertUpdate({ defaultTime: value });
   };
 
   const resetDefaultTime = () => setDefaultTime(0);
@@ -87,20 +82,7 @@ export function InsertModal({
       }),
     });
     // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent(
-          "insert-appearance-time-updated",
-          {
-            detail: {
-              nodeIdentifierId: nodeId,
-              objectId,
-              time: value,
-            },
-          },
-        ),
-      );
-    }
+    emitInsertUpdate({ objectId, time: value });
   };
 
   const clearPerObjectTime = (objectId: string) => {
@@ -126,20 +108,7 @@ export function InsertModal({
       }),
     });
     // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent(
-          "insert-appearance-time-updated",
-          {
-            detail: {
-              nodeIdentifierId: nodeId,
-              objectId,
-              clear: true,
-            },
-          },
-        ),
-      );
-    }
+    emitInsertUpdate({ objectId, clear: true });
   };
 
   return (

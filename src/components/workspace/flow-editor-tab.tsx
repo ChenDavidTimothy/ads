@@ -240,6 +240,7 @@ export function FlowEditorTab() {
         return prev.map((n) => {
           const nid = n.data.identifier?.id;
           if (nid !== detail.nodeIdentifierId) return n;
+          if (n.type !== "insert") return n;
 
           // Default time update
           if (typeof detail.defaultTime === "number") {
@@ -250,10 +251,10 @@ export function FlowEditorTab() {
           }
 
           // Per-object updates
-          const currentMap = (
+          const currentMap: Record<string, number> = (
             (n.data as unknown as { appearanceTimeByObject?: Record<string, number> })
               .appearanceTimeByObject ?? {}
-          ) as Record<string, number>;
+          );
 
           if (detail.objectId) {
             if (detail.clear) {
@@ -263,9 +264,9 @@ export function FlowEditorTab() {
                 appearanceTimeByObject?: Record<string, number>;
               };
               if (Object.keys(next).length > 0) {
-                (nextData as any).appearanceTimeByObject = next;
+                nextData.appearanceTimeByObject = next;
               } else {
-                delete (nextData as any).appearanceTimeByObject;
+                delete nextData.appearanceTimeByObject;
               }
               return { ...n, data: nextData } as typeof n;
             }
@@ -274,7 +275,7 @@ export function FlowEditorTab() {
               const next = { ...currentMap, [detail.objectId]: detail.time };
               return {
                 ...n,
-                data: { ...n.data, appearanceTimeByObject: next } as any,
+                data: { ...n.data, appearanceTimeByObject: next },
               } as typeof n;
             }
           }
