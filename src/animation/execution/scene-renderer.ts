@@ -256,7 +256,9 @@ export class SceneRenderer {
     // Prefer explicit signed URL first to avoid hitting the internal download proxy.
     // Fall back to the API route only if we do not have a usable direct URL.
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const url = props.imageUrl ?? (props.assetId ? `${baseUrl}/api/download/${props.assetId}` : undefined);
+    const url =
+      props.imageUrl ??
+      (props.assetId ? `${baseUrl}/api/download/${props.assetId}` : undefined);
     if (!url) return;
 
     try {
@@ -427,7 +429,7 @@ function addToGlobalImageCache(url: string, image: Image): void {
     return;
   }
   if (globalImageCache.size >= MAX_GLOBAL_IMAGE_CACHE_ENTRIES) {
-    const oldestKey = globalImageCache.keys().next().value as string | undefined;
+    const oldestKey = globalImageCache.keys().next().value;
     if (oldestKey) globalImageCache.delete(oldestKey);
   }
   globalImageCache.set(url, image);

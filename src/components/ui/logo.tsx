@@ -93,7 +93,7 @@ const SVGComponent = (props: React.SVGProps<SVGSVGElement>) => (
     />
     <path
       style={{
-        fontVariationSettings: "\"wght\" 600",
+        fontVariationSettings: '"wght" 600',
         fill: "url(#a)",
         stroke: "none",
         strokeWidth: 0.469398,
@@ -104,7 +104,7 @@ const SVGComponent = (props: React.SVGProps<SVGSVGElement>) => (
     />
     <path
       style={{
-        fontVariationSettings: "\"wght\" 600",
+        fontVariationSettings: '"wght" 600',
         fill: "url(#b)",
         stroke: "none",
         strokeWidth: 0.469398,
@@ -115,7 +115,7 @@ const SVGComponent = (props: React.SVGProps<SVGSVGElement>) => (
     />
     <path
       style={{
-        fontVariationSettings: "\"wght\" 600",
+        fontVariationSettings: '"wght" 600',
         fill: "#e2e8f0",
         stroke: "none",
         strokeWidth: 0.469398,

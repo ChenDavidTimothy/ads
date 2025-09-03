@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Image,
@@ -12,7 +12,7 @@ import {
   Calendar,
   HardDrive,
 } from "lucide-react";
-import NextImage from "next/image";
+
 import { cn } from "@/lib/utils";
 import type { AssetResponse } from "@/shared/types/assets";
 import { formatFileSize, isImage, isVideo } from "@/shared/types/assets";

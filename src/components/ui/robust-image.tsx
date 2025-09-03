@@ -7,7 +7,8 @@ import { ImageOff } from "lucide-react";
 
 export type RobustImageVariant = "thumbnail" | "avatar" | "preview" | "asset";
 
-export interface RobustImageProps {
+export interface RobustImageProps
+  extends Omit<React.ComponentProps<typeof Image>, "src" | "alt" | "className"> {
   src: string;
   alt: string;
   className?: string;
@@ -21,17 +22,23 @@ export interface RobustImageProps {
   onLoadingComplete?: (img: HTMLImageElement) => void;
   priority?: boolean;
   fill?: boolean;
-  [key: string]: any;
 }
 
 const BLUR_DATA_URLS = {
-  thumbnail: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
-  avatar: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI0YzQzRDNEiLz48L3N2Zz4=",
-  preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
-  asset: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+  thumbnail:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+  avatar:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI0YzQzRDNEiLz48L3N2Zz4=",
+  preview:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+  asset:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
 } as const;
 
-function getDefaultDimensions(variant: RobustImageVariant): { width: number; height: number } {
+function getDefaultDimensions(variant: RobustImageVariant): {
+  width: number;
+  height: number;
+} {
   switch (variant) {
     case "thumbnail":
       return { width: 200, height: 200 };
@@ -46,14 +53,25 @@ function getDefaultDimensions(variant: RobustImageVariant): { width: number; hei
   }
 }
 
-function renderFallback(variant: RobustImageVariant, fallbackText?: string, initials?: string, className?: string) {
+function renderFallback(
+  variant: RobustImageVariant,
+  fallbackText?: string,
+  initials?: string,
+  className?: string,
+) {
   const baseClasses = "flex items-center justify-center bg-[var(--surface-2)]";
 
   switch (variant) {
     case "avatar":
       if (initials) {
         return (
-          <div className={cn(baseClasses, "bg-[var(--accent-primary)] text-[var(--text-on-accent)] text-xs font-medium", className)}>
+          <div
+            className={cn(
+              baseClasses,
+              "bg-[var(--accent-primary)] text-xs font-medium text-[var(--text-on-accent)]",
+              className,
+            )}
+          >
             {initials}
           </div>
         );
@@ -66,10 +84,16 @@ function renderFallback(variant: RobustImageVariant, fallbackText?: string, init
 
     case "preview":
       return (
-        <div className={cn(baseClasses, "flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--border-primary)]", className)}>
+        <div
+          className={cn(
+            baseClasses,
+            "flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--border-primary)]",
+            className,
+          )}
+        >
           <ImageOff size={24} className="text-[var(--text-tertiary)]" />
           <span className="text-xs text-[var(--text-tertiary)]">
-            {fallbackText || "Failed to load image"}
+            {fallbackText ?? "Failed to load image"}
           </span>
         </div>
       );
@@ -102,21 +126,28 @@ export function RobustImage({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    setHasError(true);
-    setIsLoading(false);
-    console.warn(`[RobustImage] Failed to load ${variant}: ${src}`);
-    onError?.(e);
-  }, [src, variant, onError]);
+  const handleError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      setHasError(true);
+      setIsLoading(false);
+      console.warn(`[RobustImage] Failed to load ${variant}: ${src}`);
+      onError?.(e);
+    },
+    [src, variant, onError],
+  );
 
-  const handleLoadingComplete = useCallback((img: HTMLImageElement) => {
-    setIsLoading(false);
-    setHasError(false);
-    onLoadingComplete?.(img);
-  }, [onLoadingComplete]);
+  const handleLoadingComplete = useCallback(
+    (img: HTMLImageElement) => {
+      setIsLoading(false);
+      setHasError(false);
+      onLoadingComplete?.(img);
+    },
+    [onLoadingComplete],
+  );
 
   // Use provided dimensions or defaults
-  const dimensions = width && height ? { width, height } : getDefaultDimensions(variant);
+  const dimensions =
+    width && height ? { width, height } : getDefaultDimensions(variant);
 
   if (hasError) {
     return renderFallback(variant, fallbackText, initials, className);
@@ -132,7 +163,7 @@ export function RobustImage({
       className={cn(
         className,
         showLoadingState && isLoading ? "opacity-0" : "opacity-100",
-        "transition-opacity duration-200"
+        "transition-opacity duration-200",
       )}
       onError={handleError}
       onLoadingComplete={handleLoadingComplete}
@@ -147,11 +178,21 @@ export function RobustImage({
     return (
       <div className="relative">
         {variant === "avatar" ? (
-          <div className={cn("absolute inset-0 flex items-center justify-center bg-[var(--surface-2)] rounded-full", className)}>
+          <div
+            className={cn(
+              "absolute inset-0 flex items-center justify-center rounded-full bg-[var(--surface-2)]",
+              className,
+            )}
+          >
             <div className="h-4 w-4 animate-pulse rounded-full bg-[var(--text-tertiary)]" />
           </div>
         ) : (
-          <div className={cn("absolute inset-0 flex items-center justify-center bg-[var(--surface-2)]", className)}>
+          <div
+            className={cn(
+              "absolute inset-0 flex items-center justify-center bg-[var(--surface-2)]",
+              className,
+            )}
+          >
             <div className="h-4 w-4 animate-pulse rounded-full bg-[var(--text-tertiary)]" />
           </div>
         )}
