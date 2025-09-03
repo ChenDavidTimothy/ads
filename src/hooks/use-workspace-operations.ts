@@ -38,7 +38,7 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
       await utils.workspace.list.invalidate();
       toast.success(
         "Workspace duplicated successfully!",
-        `Created "${ws.name}"`
+        `Created "${ws.name}"`,
       );
       router.push(`/workspace?workspace=${ws.id}`);
     },
@@ -46,7 +46,7 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
       console.error("Failed to duplicate workspace:", error);
       toast.error(
         "Failed to duplicate workspace",
-        "Please try again or contact support if the problem persists."
+        "Please try again or contact support if the problem persists.",
       );
     },
   });
@@ -56,14 +56,14 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
       await utils.workspace.list.invalidate();
       toast.success(
         "Workspace deleted successfully",
-        "The workspace has been permanently removed."
+        "The workspace has been permanently removed.",
       );
     },
     onError: (error) => {
       console.error("Failed to delete workspace:", error);
       toast.error(
         "Failed to delete workspace",
-        "Please try again or contact support if the problem persists."
+        "Please try again or contact support if the problem persists.",
       );
     },
   });
@@ -71,43 +71,48 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
   const renameWorkspace = api.workspace.rename.useMutation({
     onSuccess: async (result) => {
       await utils.workspace.list.invalidate();
-      const finalName = (result as { workspace: { name: string }; originalName: string }).workspace.name;
-      const originalName = (result as { workspace: { name: string }; originalName: string }).originalName;
-      const message = finalName !== originalName
-        ? `Renamed to "${finalName}"`
-        : "Workspace renamed successfully";
+      const finalName = (
+        result as { workspace: { name: string }; originalName: string }
+      ).workspace.name;
+      const originalName = (
+        result as { workspace: { name: string }; originalName: string }
+      ).originalName;
+      const message =
+        finalName !== originalName
+          ? `Renamed to "${finalName}"`
+          : "Workspace renamed successfully";
 
-      toast.success(
-        "Workspace renamed successfully",
-        message
-      );
+      toast.success("Workspace renamed successfully", message);
     },
     onError: (error) => {
       console.error("Failed to rename workspace:", error);
       toast.error(
         "Failed to rename workspace",
-        "Please try again or contact support if the problem persists."
+        "Please try again or contact support if the problem persists.",
       );
     },
   });
 
   return {
     duplicate: {
-      mutate: (workspaceId: string) => duplicateWorkspace.mutate({ id: workspaceId }),
+      mutate: (workspaceId: string) =>
+        duplicateWorkspace.mutate({ id: workspaceId }),
       result: {
         isLoading: duplicateWorkspace.isPending,
         error: duplicateWorkspace.error,
       },
     },
     delete: {
-      mutate: (workspaceId: string) => deleteWorkspace.mutate({ id: workspaceId }),
+      mutate: (workspaceId: string) =>
+        deleteWorkspace.mutate({ id: workspaceId }),
       result: {
         isLoading: deleteWorkspace.isPending,
         error: deleteWorkspace.error,
       },
     },
     rename: {
-      mutate: (workspaceId: string, newName: string) => renameWorkspace.mutate({ id: workspaceId, newName }),
+      mutate: (workspaceId: string, newName: string) =>
+        renameWorkspace.mutate({ id: workspaceId, newName }),
       result: {
         isLoading: renameWorkspace.isPending,
         error: renameWorkspace.error,

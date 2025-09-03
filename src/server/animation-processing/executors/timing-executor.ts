@@ -30,8 +30,14 @@ export class TimingNodeExecutor extends BaseExecutor {
     const data = node.data as unknown as Record<string, unknown> & {
       appearanceTime?: number;
       appearanceTimeByObject?: Record<string, number>;
-      variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
-      variableBindingsByObject?: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>;
+      variableBindings?: Record<
+        string,
+        { target?: string; boundResultNodeId?: string }
+      >;
+      variableBindingsByObject?: Record<
+        string,
+        Record<string, { target?: string; boundResultNodeId?: string }>
+      >;
     };
     const inputs = getConnectedInputs(
       context,
@@ -69,7 +75,8 @@ export class TimingNodeExecutor extends BaseExecutor {
       )?.data;
     };
 
-    const readVarForObject = (objectId: string | undefined) =>
+    const readVarForObject =
+      (objectId: string | undefined) =>
       (key: string): unknown => {
         if (!objectId) return readVarGlobal(key);
         const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
@@ -110,7 +117,10 @@ export class TimingNodeExecutor extends BaseExecutor {
 
           const appearanceTime = Math.max(
             0,
-            perObjectBoundVal ?? perObjectOverride ?? globalBoundVal ?? nodeDefault,
+            perObjectBoundVal ??
+              perObjectOverride ??
+              globalBoundVal ??
+              nodeDefault,
           );
 
           const timedObject: Record<string, unknown> = {
@@ -125,7 +135,10 @@ export class TimingNodeExecutor extends BaseExecutor {
       }
     }
 
-    context.currentTime = Math.max(context.currentTime, maxAppearanceTimeForNode);
+    context.currentTime = Math.max(
+      context.currentTime,
+      maxAppearanceTimeForNode,
+    );
     // Merge perObjectAnimations from all inputs to prevent shared reference mutations
     const mergedAnimations: Record<string, SceneAnimationTrack[]> = {};
     for (const input of inputs) {
@@ -203,7 +216,7 @@ export class TimingNodeExecutor extends BaseExecutor {
         }
 
         // Mark appearanceTime as bound when either global or per-object binding exists
-        const globalBound = !!bindings["appearanceTime"]?.boundResultNodeId;
+        const globalBound = !!bindings.appearanceTime?.boundResultNodeId;
 
         // To avoid re-traversing inputs, derive object ids from timedObjects
         for (const obj of timedObjects) {
@@ -212,7 +225,8 @@ export class TimingNodeExecutor extends BaseExecutor {
             | string
             | undefined;
           if (!objectId) continue;
-          const perObjBound = !!bindingsByObject[objectId]?.appearanceTime?.boundResultNodeId;
+          const perObjBound =
+            !!bindingsByObject[objectId]?.appearanceTime?.boundResultNodeId;
           if (globalBound || perObjBound) {
             const existing = out[objectId] ?? [];
             out[objectId] = Array.from(

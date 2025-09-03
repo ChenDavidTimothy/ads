@@ -8,7 +8,10 @@ import { ImageOff } from "lucide-react";
 export type RobustImageVariant = "thumbnail" | "avatar" | "preview" | "asset";
 
 export interface RobustImageProps
-  extends Omit<React.ComponentProps<typeof Image>, "src" | "alt" | "className"> {
+  extends Omit<
+    React.ComponentProps<typeof Image>,
+    "src" | "alt" | "className"
+  > {
   src: string;
   alt: string;
   className?: string;

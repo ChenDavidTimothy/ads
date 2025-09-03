@@ -77,8 +77,6 @@ export default function DashboardPage() {
     },
   });
 
-
-
   // State management
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -95,7 +93,9 @@ export default function DashboardPage() {
 
   // Rename modal state
   const [showRenameModal, setShowRenameModal] = useState(false);
-  const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null);
+  const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(
+    null,
+  );
   const [renameWorkspaceName, setRenameWorkspaceName] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -323,12 +323,14 @@ export default function DashboardPage() {
 
       case "delete":
         // Get workspace name for confirmation
-        const workspace = workspaces?.find(ws => ws.id === workspaceId);
+        const workspace = workspaces?.find((ws) => ws.id === workspaceId);
         const workspaceName = workspace?.name ?? "this workspace";
 
-        if (window.confirm(
-          `Are you sure you want to delete "${workspaceName}"?\n\nThis action cannot be undone and all data will be permanently lost.`
-        )) {
+        if (
+          window.confirm(
+            `Are you sure you want to delete "${workspaceName}"?\n\nThis action cannot be undone and all data will be permanently lost.`,
+          )
+        ) {
           deleteOp.mutate(workspaceId);
         }
         break;
@@ -350,7 +352,7 @@ export default function DashboardPage() {
 
   // Rename modal handlers
   const openRenameModal = (workspaceId: string) => {
-    const workspace = workspaces?.find(ws => ws.id === workspaceId);
+    const workspace = workspaces?.find((ws) => ws.id === workspaceId);
     if (workspace) {
       setRenameWorkspaceId(workspaceId);
       setRenameWorkspaceName(workspace.name);
@@ -881,7 +883,9 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!renameWorkspaceName.trim() || rename.result.isLoading}
+                  disabled={
+                    !renameWorkspaceName.trim() || rename.result.isLoading
+                  }
                   className="flex-1"
                 >
                   {rename.result.isLoading ? (
@@ -922,7 +926,7 @@ export default function DashboardPage() {
                 handleWorkspaceAction("duplicate", selectedWorkspace)
               }
               disabled={duplicate.result.isLoading}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {duplicate.result.isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -934,7 +938,7 @@ export default function DashboardPage() {
             <button
               onClick={() => handleWorkspaceAction("rename", selectedWorkspace)}
               disabled={rename.result.isLoading}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {rename.result.isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -972,7 +976,7 @@ export default function DashboardPage() {
             <button
               onClick={() => handleWorkspaceAction("delete", selectedWorkspace)}
               disabled={deleteOp.result.isLoading}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {deleteOp.result.isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

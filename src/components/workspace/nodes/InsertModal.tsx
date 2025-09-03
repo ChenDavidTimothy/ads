@@ -19,13 +19,12 @@ export function InsertModal({
   nodeId: string;
 }) {
   const { state, updateFlow } = useWorkspace();
-  const node = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === nodeId,
-  );
+  const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId);
   const data = (node?.data ?? {}) as InsertNodeData;
 
   const defaultTime = Number(data.appearanceTime ?? 0);
-  const isDefaultBound = !!data.variableBindings?.appearanceTime?.boundResultNodeId;
+  const isDefaultBound =
+    !!data.variableBindings?.appearanceTime?.boundResultNodeId;
 
   const objects = useMemo(() => {
     const tracker = new FlowTracker();
@@ -89,17 +88,16 @@ export function InsertModal({
     updateFlow({
       nodes: state.flow.nodes.map((n) => {
         if (n.data?.identifier?.id !== nodeId) return n;
-        const prev =
-          ((n.data as InsertNodeData).appearanceTimeByObject ?? {}) as Record<
-            string,
-            number
-          >;
+        // Type guard to ensure this is an InsertNode
+        if (n.data.identifier.type !== "insert") return n;
+        const insertData = n.data as InsertNodeData;
+        const prev = insertData.appearanceTimeByObject ?? {};
         const next = { ...prev };
         delete next[objectId];
         return {
           ...n,
           data: {
-            ...n.data,
+            ...insertData,
             ...(Object.keys(next).length > 0
               ? { appearanceTimeByObject: next }
               : { appearanceTimeByObject: undefined }),
@@ -112,7 +110,12 @@ export function InsertModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Insert: Appearance Time" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Insert: Appearance Time"
+      size="lg"
+    >
       <div className="p-[var(--space-4)]">
         <div className="mb-[var(--space-4)] grid grid-cols-2 gap-[var(--space-4)]">
           <div>
@@ -122,7 +125,9 @@ export function InsertModal({
               onChange={(v) => setDefaultTime(v)}
               min={0}
               step={0.1}
-              bindAdornment={<BindButton nodeId={nodeId} bindingKey="appearanceTime" />}
+              bindAdornment={
+                <BindButton nodeId={nodeId} bindingKey="appearanceTime" />
+              }
               disabled={isDefaultBound}
             />
             <div className="mt-[var(--space-2)] text-right">
@@ -132,7 +137,9 @@ export function InsertModal({
             </div>
           </div>
           <div className="text-xs text-[var(--text-secondary)]">
-            Set when objects become visible. Default applies to all objects unless a per-object value or binding is set. Bound values come from Result nodes.
+            Set when objects become visible. Default applies to all objects
+            unless a per-object value or binding is set. Bound values come from
+            Result nodes.
           </div>
         </div>
 
@@ -152,7 +159,9 @@ export function InsertModal({
             </div>
           ) : (
             objects.map((obj) => {
-              const perObjectBindingId = data.variableBindingsByObject?.[obj.id]?.appearanceTime?.boundResultNodeId;
+              const perObjectBindingId =
+                data.variableBindingsByObject?.[obj.id]?.appearanceTime
+                  ?.boundResultNodeId;
               const isBound = !!perObjectBindingId;
               const value = data.appearanceTimeByObject?.[obj.id];
               return (
@@ -160,7 +169,10 @@ export function InsertModal({
                   key={obj.id}
                   className="grid grid-cols-2 items-center gap-[var(--space-4)] rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-2)] py-[var(--space-1)]"
                 >
-                  <div className="truncate text-sm text-[var(--text-primary)]" title={obj.displayName}>
+                  <div
+                    className="truncate text-sm text-[var(--text-primary)]"
+                    title={obj.displayName}
+                  >
                     {obj.displayName}
                   </div>
                   <div className="flex items-center gap-[var(--space-2)]">
@@ -171,12 +183,22 @@ export function InsertModal({
                         onChange={(v) => setPerObjectTime(obj.id, v)}
                         min={0}
                         step={0.1}
-                        bindAdornment={<BindButton nodeId={nodeId} bindingKey="appearanceTime" objectId={obj.id} />}
+                        bindAdornment={
+                          <BindButton
+                            nodeId={nodeId}
+                            bindingKey="appearanceTime"
+                            objectId={obj.id}
+                          />
+                        }
                         disabled={isBound}
                       />
                     </div>
                     {value !== undefined && (
-                      <Button variant="ghost" size="xs" onClick={() => clearPerObjectTime(obj.id)}>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => clearPerObjectTime(obj.id)}
+                      >
                         Clear
                       </Button>
                     )}
@@ -194,4 +216,3 @@ export function InsertModal({
     </Modal>
   );
 }
-

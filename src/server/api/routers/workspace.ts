@@ -8,7 +8,7 @@ const generateUniqueWorkspaceName = async (
   supabase: SupabaseClient,
   userId: string,
   baseName: string,
-  copyPrefix = "Copy of "
+  copyPrefix = "Copy of ",
 ): Promise<string> => {
   // If it's already a copy, don't add another prefix
   const newName = baseName.startsWith(copyPrefix)
@@ -22,11 +22,16 @@ const generateUniqueWorkspaceName = async (
     .eq("user_id", userId);
 
   if (error) {
-    console.warn("[WorkspaceRouter] Could not check for name conflicts:", error);
+    console.warn(
+      "[WorkspaceRouter] Could not check for name conflicts:",
+      error,
+    );
     return newName; // Fall back to generated name
   }
 
-  const existingNames = new Set(existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? []);
+  const existingNames = new Set(
+    existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? [],
+  );
 
   // If the generated name doesn't conflict, use it
   if (!existingNames.has(newName)) {
@@ -53,7 +58,7 @@ const generateUniqueWorkspaceName = async (
 const validateWorkspaceAccess = async (
   supabase: SupabaseClient,
   workspaceId: string,
-  userId: string
+  userId: string,
 ) => {
   const { data, error } = await supabase
     .from("workspaces")
@@ -166,7 +171,7 @@ export const workspaceRouter = createTRPCRouter({
         const originalWorkspace = await validateWorkspaceAccess(
           supabase,
           input.id,
-          user.id
+          user.id,
         );
 
         // Fetch the full workspace data for duplication
@@ -189,12 +194,18 @@ export const workspaceRouter = createTRPCRouter({
         const newName = await generateUniqueWorkspaceName(
           supabase,
           user.id,
-          (originalWorkspace as { name: string }).name
+          (originalWorkspace as { name: string }).name,
         );
 
         // Deep clone the flow data to ensure complete isolation
-        const clonedFlowData: Record<string, unknown> = (fullWorkspace as { flow_data: unknown }).flow_data
-          ? JSON.parse(JSON.stringify((fullWorkspace as { flow_data: unknown }).flow_data)) as Record<string, unknown>
+        const clonedFlowData: Record<string, unknown> = (
+          fullWorkspace as { flow_data: unknown }
+        ).flow_data
+          ? (JSON.parse(
+              JSON.stringify(
+                (fullWorkspace as { flow_data: unknown }).flow_data,
+              ),
+            ) as Record<string, unknown>)
           : { nodes: [], edges: [] };
 
         // Create the duplicate workspace
@@ -209,7 +220,10 @@ export const workspaceRouter = createTRPCRouter({
           .single();
 
         if (createError || !newWorkspace) {
-          console.error("[WorkspaceRouter] Failed to create duplicate workspace:", createError);
+          console.error(
+            "[WorkspaceRouter] Failed to create duplicate workspace:",
+            createError,
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to create duplicate workspace. Please try again.",
@@ -217,15 +231,19 @@ export const workspaceRouter = createTRPCRouter({
           });
         }
 
-        console.log(`[WorkspaceRouter] Successfully duplicated workspace "${originalWorkspace.name}" to "${newName}"`);
+        console.log(
+          `[WorkspaceRouter] Successfully duplicated workspace "${originalWorkspace.name}" to "${newName}"`,
+        );
         return workspaceRowSchema.parse(newWorkspace);
-
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
 
-        console.error("[WorkspaceRouter] Unexpected error during duplication:", error);
+        console.error(
+          "[WorkspaceRouter] Unexpected error during duplication:",
+          error,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "An unexpected error occurred during workspace duplication.",
@@ -244,7 +262,7 @@ export const workspaceRouter = createTRPCRouter({
         const workspace = await validateWorkspaceAccess(
           supabase,
           input.id,
-          user.id
+          user.id,
         );
 
         // Perform the deletion
@@ -255,7 +273,10 @@ export const workspaceRouter = createTRPCRouter({
           .eq("user_id", user.id);
 
         if (deleteError) {
-          console.error("[WorkspaceRouter] Failed to delete workspace:", deleteError);
+          console.error(
+            "[WorkspaceRouter] Failed to delete workspace:",
+            deleteError,
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to delete workspace. Please try again.",
@@ -263,15 +284,19 @@ export const workspaceRouter = createTRPCRouter({
           });
         }
 
-        console.log(`[WorkspaceRouter] Successfully deleted workspace "${workspace.name}"`);
+        console.log(
+          `[WorkspaceRouter] Successfully deleted workspace "${workspace.name}"`,
+        );
         return { success: true, deletedWorkspaceId: input.id };
-
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
 
-        console.error("[WorkspaceRouter] Unexpected error during deletion:", error);
+        console.error(
+          "[WorkspaceRouter] Unexpected error during deletion:",
+          error,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "An unexpected error occurred during workspace deletion.",
@@ -285,7 +310,7 @@ export const workspaceRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         newName: z.string().min(1).max(100).trim(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
@@ -295,7 +320,7 @@ export const workspaceRouter = createTRPCRouter({
         const workspace = await validateWorkspaceAccess(
           supabase,
           input.id,
-          user.id
+          user.id,
         );
 
         // Don't allow renaming to the same name
@@ -314,11 +339,14 @@ export const workspaceRouter = createTRPCRouter({
           .neq("id", input.id); // Exclude current workspace
 
         if (checkError) {
-          console.warn("[WorkspaceRouter] Could not check for name conflicts during rename:", checkError);
+          console.warn(
+            "[WorkspaceRouter] Could not check for name conflicts during rename:",
+            checkError,
+          );
         }
 
         const existingNames = new Set(
-          existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? []
+          existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? [],
         );
 
         let finalName = input.newName;
@@ -336,7 +364,8 @@ export const workspaceRouter = createTRPCRouter({
             if (counter > 100) {
               throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
-                message: "Unable to generate a unique name. Please try a different name.",
+                message:
+                  "Unable to generate a unique name. Please try a different name.",
               });
             }
           }
@@ -353,7 +382,10 @@ export const workspaceRouter = createTRPCRouter({
           .single();
 
         if (renameError || !renamedWorkspace) {
-          console.error("[WorkspaceRouter] Failed to rename workspace:", renameError);
+          console.error(
+            "[WorkspaceRouter] Failed to rename workspace:",
+            renameError,
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to rename workspace. Please try again.",
@@ -361,19 +393,23 @@ export const workspaceRouter = createTRPCRouter({
           });
         }
 
-        console.log(`[WorkspaceRouter] Successfully renamed workspace from "${(workspace as { name: string }).name}" to "${finalName}"`);
+        console.log(
+          `[WorkspaceRouter] Successfully renamed workspace from "${(workspace as { name: string }).name}" to "${finalName}"`,
+        );
         return {
           success: true,
           workspace: renamedWorkspace,
           originalName: (workspace as { name: string }).name,
         };
-
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
 
-        console.error("[WorkspaceRouter] Unexpected error during rename:", error);
+        console.error(
+          "[WorkspaceRouter] Unexpected error during rename:",
+          error,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "An unexpected error occurred during workspace rename.",

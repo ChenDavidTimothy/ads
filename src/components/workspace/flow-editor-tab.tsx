@@ -251,10 +251,12 @@ export function FlowEditorTab() {
           }
 
           // Per-object updates
-          const currentMap: Record<string, number> = (
-            (n.data as unknown as { appearanceTimeByObject?: Record<string, number> })
-              .appearanceTimeByObject ?? {}
-          );
+          const currentMap: Record<string, number> =
+            (
+              n.data as unknown as {
+                appearanceTimeByObject?: Record<string, number>;
+              }
+            ).appearanceTimeByObject ?? {};
 
           if (detail.objectId) {
             if (detail.clear) {
