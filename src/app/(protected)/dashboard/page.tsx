@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/form-fields";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useWorkspaceOperations } from "@/hooks/use-workspace-operations";
 import type { RouterOutputs } from "@/trpc/react";
 import {
   Plus,
@@ -55,6 +57,8 @@ interface WorkspaceCategory {
 export default function DashboardPage() {
   const router = useRouter();
   const utils = api.useUtils();
+  const { toast } = useNotifications();
+  const { duplicate, delete: deleteOp, rename } = useWorkspaceOperations();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -73,6 +77,8 @@ export default function DashboardPage() {
     },
   });
 
+
+
   // State management
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -86,6 +92,12 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+
+  // Rename modal state
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null);
+  const [renameWorkspaceName, setRenameWorkspaceName] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const [sortBy, setSortBy] = useState<"name" | "updated" | "created">(
     "updated",
@@ -299,30 +311,71 @@ export default function DashboardPage() {
     });
   };
 
-  const handleWorkspaceAction = (action: string, workspaceId: string) => {
+  const handleWorkspaceAction = async (action: string, workspaceId: string) => {
     switch (action) {
       case "open":
         router.push(`/workspace?workspace=${workspaceId}`);
         break;
+
       case "duplicate":
-        // Implement duplicate functionality
-        console.log("Duplicate workspace:", workspaceId);
+        duplicate.mutate(workspaceId);
         break;
-      case "rename":
-        // Implement rename functionality
-        console.log("Rename workspace:", workspaceId);
-        break;
-      case "archive":
-        // Implement archive functionality
-        console.log("Archive workspace:", workspaceId);
-        break;
+
       case "delete":
-        // Implement delete functionality
-        console.log("Delete workspace:", workspaceId);
+        // Get workspace name for confirmation
+        const workspace = workspaces?.find(ws => ws.id === workspaceId);
+        const workspaceName = workspace?.name ?? "this workspace";
+
+        if (window.confirm(
+          `Are you sure you want to delete "${workspaceName}"?\n\nThis action cannot be undone and all data will be permanently lost.`
+        )) {
+          deleteOp.mutate(workspaceId);
+        }
+        break;
+
+      case "rename":
+        openRenameModal(workspaceId);
+        break;
+
+      case "archive":
+        // TODO: Implement archive functionality
+        console.log("Archive workspace:", workspaceId);
+        toast.info("Archive functionality coming soon");
         break;
     }
+
     setShowWorkspaceMenu(false);
     setSelectedWorkspace(null);
+  };
+
+  // Rename modal handlers
+  const openRenameModal = (workspaceId: string) => {
+    const workspace = workspaces?.find(ws => ws.id === workspaceId);
+    if (workspace) {
+      setRenameWorkspaceId(workspaceId);
+      setRenameWorkspaceName(workspace.name);
+      setShowRenameModal(true);
+
+      // Focus the input when modal opens
+      setTimeout(() => {
+        renameInputRef.current?.focus();
+        renameInputRef.current?.select();
+      }, 100);
+    }
+  };
+
+  const closeRenameModal = () => {
+    setShowRenameModal(false);
+    setRenameWorkspaceId(null);
+    setRenameWorkspaceName("");
+  };
+
+  const handleRenameWorkspace = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameWorkspaceId || !renameWorkspaceName.trim()) return;
+
+    rename.mutate(renameWorkspaceId, renameWorkspaceName.trim());
+    closeRenameModal();
   };
 
   const openWorkspaceMenu = (e: React.MouseEvent, workspaceId: string) => {
@@ -780,6 +833,72 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Rename Workspace Modal */}
+      {showRenameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                Rename Workspace
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeRenameModal}
+                className="h-8 w-8 p-0"
+              >
+                ×
+              </Button>
+            </div>
+
+            <form onSubmit={handleRenameWorkspace} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+                  New workspace name
+                </label>
+                <Input
+                  ref={renameInputRef}
+                  type="text"
+                  value={renameWorkspaceName}
+                  onChange={(e) => setRenameWorkspaceName(e.target.value)}
+                  placeholder="Enter workspace name..."
+                  maxLength={100}
+                  className="w-full"
+                />
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  {renameWorkspaceName.length}/100 characters
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={closeRenameModal}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!renameWorkspaceName.trim() || rename.result.isLoading}
+                  className="flex-1"
+                >
+                  {rename.result.isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Renaming...
+                    </>
+                  ) : (
+                    "Rename"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Workspace Actions Menu */}
       {showWorkspaceMenu && selectedWorkspace && (
         <div
@@ -802,17 +921,27 @@ export default function DashboardPage() {
               onClick={() =>
                 handleWorkspaceAction("duplicate", selectedWorkspace)
               }
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
+              disabled={duplicate.result.isLoading}
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Copy className="h-4 w-4" />
-              Duplicate
+              {duplicate.result.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+              {duplicate.result.isLoading ? "Duplicating..." : "Duplicate"}
             </button>
             <button
               onClick={() => handleWorkspaceAction("rename", selectedWorkspace)}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
+              disabled={rename.result.isLoading}
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Edit3 className="h-4 w-4" />
-              Rename
+              {rename.result.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Edit3 className="h-4 w-4" />
+              )}
+              {rename.result.isLoading ? "Renaming..." : "Rename"}
             </button>
             <button
               onClick={() => handleWorkspaceAction("share", selectedWorkspace)}
@@ -842,10 +971,15 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => handleWorkspaceAction("delete", selectedWorkspace)}
-              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
+              disabled={deleteOp.result.isLoading}
+              className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 className="h-4 w-4" />
-              Delete
+              {deleteOp.result.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              {deleteOp.result.isLoading ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>
