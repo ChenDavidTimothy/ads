@@ -10,6 +10,7 @@ import type {
   CanvasNodeData,
   TypographyNodeData,
   MediaNodeData,
+  InsertNodeData,
 } from "@/shared/types/nodes";
 import type {
   PerObjectAssignments,
@@ -45,6 +46,11 @@ function isMediaNodeData(data: NodeData): data is MediaNodeData {
   return data.identifier.type === "media";
 }
 
+// NEW: Add Insert support
+function isInsertNodeData(data: NodeData): data is InsertNodeData {
+  return data.identifier.type === "insert";
+}
+
 // Helper type for variable binding structure
 interface VariableBinding {
   target?: string;
@@ -77,7 +83,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
         isAnimationNodeData(node.data) ||
         isCanvasNodeData(node.data) ||
         isTypographyNodeData(node.data) ||
-        isMediaNodeData(node.data)
+        isMediaNodeData(node.data) ||
+        isInsertNodeData(node.data)
       ) {
         const prevAll = node.data.variableBindingsByObject ?? {};
         return prevAll[objectId]?.[key]?.boundResultNodeId;
@@ -89,7 +96,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
       isAnimationNodeData(node.data) ||
       isCanvasNodeData(node.data) ||
       isTypographyNodeData(node.data) ||
-      isMediaNodeData(node.data)
+      isMediaNodeData(node.data) ||
+      isInsertNodeData(node.data)
     ) {
       const vb = node.data.variableBindings ?? {};
       return vb[key]?.boundResultNodeId;
@@ -175,7 +183,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
           (!isAnimationNodeData(nodeData) &&
             !isCanvasNodeData(nodeData) &&
             !isTypographyNodeData(nodeData) &&
-            !isMediaNodeData(nodeData))
+            !isMediaNodeData(nodeData) &&
+            !isInsertNodeData(nodeData))
         ) {
           return n;
         }
@@ -225,7 +234,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
           !isAnimationNodeData(data) &&
           !isCanvasNodeData(data) &&
           !isTypographyNodeData(data) &&
-          !isMediaNodeData(data)
+          !isMediaNodeData(data) &&
+          !isInsertNodeData(data)
         ) {
           return n;
         }
@@ -363,6 +373,8 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
           } else {
             // Node-level Media value is the node's default; do not change it here
           }
+        } else if (isInsertNodeData(nextData)) {
+          // For Insert, resetting binding only clears the binding; manual times remain
         }
 
         return { ...n, data: nextData };
