@@ -54,6 +54,20 @@ export function InsertModal({
             } as typeof n),
       ),
     });
+    // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(
+          "insert-appearance-time-updated",
+          {
+            detail: {
+              nodeIdentifierId: nodeId,
+              defaultTime: value,
+            },
+          },
+        ),
+      );
+    }
   };
 
   const resetDefaultTime = () => setDefaultTime(0);
@@ -72,6 +86,21 @@ export function InsertModal({
         };
       }),
     });
+    // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(
+          "insert-appearance-time-updated",
+          {
+            detail: {
+              nodeIdentifierId: nodeId,
+              objectId,
+              time: value,
+            },
+          },
+        ),
+      );
+    }
   };
 
   const clearPerObjectTime = (objectId: string) => {
@@ -96,6 +125,21 @@ export function InsertModal({
         };
       }),
     });
+    // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(
+          "insert-appearance-time-updated",
+          {
+            detail: {
+              nodeIdentifierId: nodeId,
+              objectId,
+              clear: true,
+            },
+          },
+        ),
+      );
+    }
   };
 
   return (

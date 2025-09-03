@@ -213,6 +213,90 @@ export function FlowEditorTab() {
     };
   }, [setNodes]);
 
+  // Listen for insert appearance-time updates to sync local nodes and avoid snap-back overwrite
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handler = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{
+          nodeIdentifierId: string;
+          defaultTime?: number;
+          objectId?: string;
+          time?: number;
+          clear?: boolean;
+        }>
+      ).detail;
+      if (!detail) return;
+
+      // Suspend context sync briefly to prevent overwriting the external change
+      suspendContextSyncRef.current = true;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        suspendContextSyncRef.current = false;
+        timer = null;
+      }, 150);
+
+      setNodes((prev) => {
+        return prev.map((n) => {
+          const nid = n.data.identifier?.id;
+          if (nid !== detail.nodeIdentifierId) return n;
+
+          // Default time update
+          if (typeof detail.defaultTime === "number") {
+            return {
+              ...n,
+              data: { ...n.data, appearanceTime: detail.defaultTime },
+            } as typeof n;
+          }
+
+          // Per-object updates
+          const currentMap = (
+            (n.data as unknown as { appearanceTimeByObject?: Record<string, number> })
+              .appearanceTimeByObject ?? {}
+          ) as Record<string, number>;
+
+          if (detail.objectId) {
+            if (detail.clear) {
+              const next = { ...currentMap };
+              delete next[detail.objectId];
+              const nextData = { ...n.data } as unknown as {
+                appearanceTimeByObject?: Record<string, number>;
+              };
+              if (Object.keys(next).length > 0) {
+                (nextData as any).appearanceTimeByObject = next;
+              } else {
+                delete (nextData as any).appearanceTimeByObject;
+              }
+              return { ...n, data: nextData } as typeof n;
+            }
+
+            if (typeof detail.time === "number") {
+              const next = { ...currentMap, [detail.objectId]: detail.time };
+              return {
+                ...n,
+                data: { ...n.data, appearanceTimeByObject: next } as any,
+              } as typeof n;
+            }
+          }
+
+          return n;
+        });
+      });
+    };
+
+    window.addEventListener(
+      "insert-appearance-time-updated",
+      handler as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "insert-appearance-time-updated",
+        handler as EventListener,
+      );
+      if (timer) clearTimeout(timer);
+    };
+  }, [setNodes]);
+
   const {
     resultLogModalState,
     handleOpenResultLogViewer,
