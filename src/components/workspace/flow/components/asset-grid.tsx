@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Image,
@@ -12,6 +12,7 @@ import {
   Calendar,
   HardDrive,
 } from "lucide-react";
+import NextImage from "next/image";
 import { cn } from "@/lib/utils";
 import type { AssetResponse } from "@/shared/types/assets";
 import { formatFileSize, isImage, isVideo } from "@/shared/types/assets";
@@ -130,18 +131,19 @@ function AssetCard({
     setIsDownloading(true);
 
     try {
-      // Prefer signed URL direct download if available; fallback to API redirect route
-      const preferredUrl = asset.public_url ?? `/api/download/${asset.id}`;
-
+      // Use the enhanced download utility for better reliability
       await downloadFile(
         {
-          url: preferredUrl,
+          url: `/api/download/${asset.id}`,
           filename: asset.original_name,
           mimeType: asset.mime_type,
           size: asset.file_size,
           assetId: asset.id,
         },
         {
+          onProgress: (_progress) => {
+            // Progress tracking can be added here if needed
+          },
           onComplete: () => {
             toast.success(
               "Download Complete",
@@ -151,7 +153,7 @@ function AssetCard({
           onError: (_, filename) => {
             toast.error("Download Failed", `Failed to download ${filename}`);
           },
-          timeout: 180000, // 3 minutes for robustness
+          timeout: 120000, // 2 minutes for assets
         },
       );
     } catch {

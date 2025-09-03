@@ -72,7 +72,7 @@ export function usePreviewDownloads({
             onError: (error) => {
               toast.error("Download Failed", error);
             },
-            timeout: 240000, // 4 minutes for videos
+            timeout: 120000, // 2 minutes for videos
           },
         );
       } catch {
@@ -118,7 +118,7 @@ export function usePreviewDownloads({
             onError: (error) => {
               toast.error("Download Failed", error);
             },
-            timeout: 90000, // 90 seconds for images
+            timeout: 30000, // 30 seconds for images
           },
         );
       } catch {
@@ -168,7 +168,7 @@ export function usePreviewDownloads({
         onError: (error, file) => {
           toast.error("Download Failed", file ? `${file}: ${error}` : error);
         },
-        timeout: 420000, // 7 minutes for batch video downloads
+        timeout: 300000, // 5 minutes for batch video downloads
       });
     } catch {
       // Error handling is done in callbacks
@@ -215,7 +215,7 @@ export function usePreviewDownloads({
         onError: (error, file) => {
           toast.error("Download Failed", file ? `${file}: ${error}` : error);
         },
-        timeout: 180000, // 3 minutes for batch image downloads
+        timeout: 120000, // 2 minutes for batch image downloads
       });
     } catch {
       // Error handling is done in callbacks
@@ -272,7 +272,7 @@ export function usePreviewDownloads({
         onError: (error, file) => {
           toast.error("Download Failed", file ? `${file}: ${error}` : error);
         },
-        timeout: 480000, // 8 minutes for all content
+        timeout: 300000, // 5 minutes for all content
       });
     } catch {
       // Error handling is done in callbacks

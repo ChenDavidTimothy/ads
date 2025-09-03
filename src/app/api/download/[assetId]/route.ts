@@ -13,7 +13,7 @@ interface Asset {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ assetId: string }> },
 ) {
   try {
@@ -40,8 +40,10 @@ export async function GET(
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
+    // Type assertion to ensure asset has expected structure
     const asset = result.data as Asset;
 
+    // Type guard to ensure asset has required properties
     if (!asset.bucket_name || !asset.storage_path) {
       return NextResponse.json(
         { error: "Invalid asset data" },
@@ -49,25 +51,46 @@ export async function GET(
       );
     }
 
-    // Create a fresh signed URL and redirect the browser to download directly from Supabase
-    const { data: signed, error: signError } = await supabaseClient.storage
-      .from(asset.bucket_name)
-      .createSignedUrl(asset.storage_path, 60 * 30, {
-        // Ensure browser receives attachment with the original filename
-        download: asset.original_name,
-      });
+    // Get the file from Supabase storage
+    const { data: fileData, error: downloadError } =
+      await supabaseClient.storage
+        .from(asset.bucket_name)
+        .download(asset.storage_path);
 
-    if (signError || !signed?.signedUrl) {
-      console.error("Signed URL error:", signError);
+    if (downloadError || !fileData) {
+      console.error("Download error:", downloadError);
       return NextResponse.json(
-        { error: "Failed to create signed URL" },
+        { error: "Failed to download file from storage" },
         { status: 500 },
       );
     }
 
-    const redirectResponse = NextResponse.redirect(signed.signedUrl, 302);
-    redirectResponse.headers.set("Cache-Control", "no-store");
-    return redirectResponse;
+    // Convert blob to readable stream
+    const buffer = await fileData.arrayBuffer();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array(buffer));
+        controller.close();
+      },
+    });
+
+    // Set proper download headers
+    const headers = new Headers();
+    headers.set("Content-Type", asset.mime_type ?? "application/octet-stream");
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename="${asset.original_name}"`,
+    );
+    headers.set("Content-Length", buffer.byteLength.toString());
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+
+    // Return the file with proper headers
+    return new Response(stream, {
+      status: 200,
+      headers,
+    });
   } catch (error) {
     console.error("Download API error:", error);
     return NextResponse.json(
