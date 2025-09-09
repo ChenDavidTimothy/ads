@@ -22,7 +22,6 @@ import { drawText, type Typography } from "../geometry/text";
 import { loadImage, type Image } from "canvas";
 // ADD this import after the existing canvas import
 import { withTimeout } from "@/server/utils/timeout-utils";
-import { createServiceClient } from "@/utils/supabase/service";
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -248,50 +247,27 @@ export class SceneRenderer {
     );
   }
 
-  // ✅ SINGLE SOURCE OF TRUTH: Scene renderer handles ALL image loading
+  // ✅ CRITICAL FIX: Optimized image rendering with caching
   private async renderImage(
     ctx: NodeCanvasContext,
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Media node provides ONLY assetId - Scene renderer generates signed URL
-    if (!props.assetId) return;
-
-    let url: string | undefined;
-
-    try {
-      const supabase = createServiceClient();
-
-      // Generate signed URL directly from assetId
-      const { data: asset, error } = await supabase
-        .from("user_assets")
-        .select("bucket_name, storage_path")
-        .eq("id", props.assetId)
-        .single();
-
-      if (!error && asset) {
-        const { data: signedUrl, error: urlError } = await supabase.storage
-          .from(asset.bucket_name as string)
-          .createSignedUrl(asset.storage_path as string, 60 * 60); // 1 hour
-
-        if (!urlError && signedUrl) {
-          url = signedUrl.signedUrl;
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to generate signed URL for asset ${props.assetId}:`, error);
-      return;
-    }
-
+    // Prefer explicit signed URL first to avoid hitting the internal download proxy.
+    // Fall back to the API route only if we do not have a usable direct URL.
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const url =
+      props.imageUrl ??
+      (props.assetId ? `${baseUrl}/api/download/${props.assetId}` : undefined);
     if (!url) return;
 
     try {
-      // Check caches first, load with timeout if not cached
+      // ✅ CRITICAL FIX: Check caches first, load with timeout if not cached
       let img = this.imageCache.get(url) ?? getFromGlobalImageCache(url);
       if (!img) {
         img = await withTimeout(
           loadImage(url),
-          30000,
+          30000, // 30 second timeout
           `Image load timeout: ${url}`,
         );
         this.imageCache.set(url, img);
@@ -301,16 +277,26 @@ export class SceneRenderer {
       // Calculate crop and display parameters AFTER the image is available
       const srcX = props.cropX ?? 0;
       const srcY = props.cropY ?? 0;
-      const srcWidth = props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
-      const srcHeight = props.cropHeight && props.cropHeight !== 0 ? props.cropHeight : img.height;
+      const srcWidth =
+        props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
+      const srcHeight =
+        props.cropHeight && props.cropHeight !== 0
+          ? props.cropHeight
+          : img.height;
 
       const finalSrcWidth = srcWidth ?? img.width;
       const finalSrcHeight = srcHeight ?? img.height;
 
       const naturalWidth = finalSrcWidth;
       const naturalHeight = finalSrcHeight;
-      const destWidth = props.displayWidth && props.displayWidth !== 0 ? props.displayWidth : naturalWidth;
-      const destHeight = props.displayHeight && props.displayHeight !== 0 ? props.displayHeight : naturalHeight;
+      const destWidth =
+        props.displayWidth && props.displayWidth !== 0
+          ? props.displayWidth
+          : naturalWidth;
+      const destHeight =
+        props.displayHeight && props.displayHeight !== 0
+          ? props.displayHeight
+          : naturalHeight;
 
       // Draw the image at origin (transforms already applied)
       ctx.drawImage(
@@ -328,8 +314,12 @@ export class SceneRenderer {
       // Fallback to placeholder if image loading fails
       this.drawImagePlaceholder(
         ctx,
-        props.displayWidth && props.displayWidth !== 0 ? props.displayWidth : 100,
-        props.displayHeight && props.displayHeight !== 0 ? props.displayHeight : 100,
+        props.displayWidth && props.displayWidth !== 0
+          ? props.displayWidth
+          : 100,
+        props.displayHeight && props.displayHeight !== 0
+          ? props.displayHeight
+          : 100,
       );
     }
   }

@@ -25,6 +25,8 @@ import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
 import { logger } from "@/lib/logger";
 import type { SceneObject, TextProperties } from "@/shared/types/scene";
+import { createServiceClient } from "@/utils/supabase/service";
+import { loadImage } from "canvas";
 import { resolveInitialObject } from "@/shared/properties/resolver";
 import {
   resolveBindingLookupId,
@@ -518,8 +520,62 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Merge media-specific overrides for properties not handled by resolveInitialObject
     const finalOverrides = { ...objectOverrides, ...initial };
 
-    // PURE METADATA MANIPULATION - NO PROCESSING
-    // Media node only manipulates metadata, Scene renderer handles image loading
+    // Load asset if specified
+    let imageData: { url: string; width: number; height: number } | undefined;
+
+    if (finalOverrides.imageAssetId) {
+      try {
+        // Fetch asset from database (reuse logic from current image executor)
+        const supabase = createServiceClient();
+        const result = await supabase
+          .from("user_assets")
+          .select("*")
+          .eq("id", finalOverrides.imageAssetId)
+          .single();
+
+        const { data: asset, error } = result as {
+          data: unknown;
+          error: unknown;
+        };
+
+        if (!error && asset && typeof asset === "object" && asset !== null) {
+          const assetRecord = asset as Record<string, unknown>;
+          const bucketName = assetRecord.bucket_name as string | undefined;
+          const storagePath = assetRecord.storage_path as string | undefined;
+
+          if (bucketName && storagePath) {
+            // Get signed URL
+            const { data: signedUrl, error: urlError } = await supabase.storage
+              .from(bucketName)
+              .createSignedUrl(storagePath, 60 * 60);
+
+            if (!urlError && signedUrl) {
+              // Load image to get dimensions
+              try {
+                const image = await loadImage(signedUrl.signedUrl);
+                imageData = {
+                  url: signedUrl.signedUrl,
+                  width: image.width,
+                  height: image.height,
+                };
+              } catch (imageError) {
+                console.warn(
+                  `Failed to load image: ${finalOverrides.imageAssetId}`,
+                  imageError,
+                );
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `Failed to process asset: ${finalOverrides.imageAssetId}`,
+          error,
+        );
+      }
+    }
+
+    // Apply media processing to the image object using resolved properties
     const processed = {
       ...obj,
       // Use properly resolved transform properties with correct precedence
@@ -529,20 +585,21 @@ export class AnimationNodeExecutor extends BaseExecutor {
       initialOpacity,
       properties: {
         ...resolvedProperties,
-        // ONLY METADATA - Scene renderer generates signed URL from assetId
+        // Override with media-specific properties
+        imageUrl: imageData?.url,
+        originalWidth: imageData?.width ?? 100,
+        originalHeight: imageData?.height ?? 100,
         assetId: finalOverrides.imageAssetId,
 
-        // Crop properties (metadata only)
+        // Crop properties
         cropX: finalOverrides.cropX ?? 0,
         cropY: finalOverrides.cropY ?? 0,
         cropWidth: finalOverrides.cropWidth ?? 0,
         cropHeight: finalOverrides.cropHeight ?? 0,
 
-        // Display properties (metadata only)
+        // Display properties
         displayWidth: finalOverrides.displayWidth ?? 0,
         displayHeight: finalOverrides.displayHeight ?? 0,
-
-        // REMOVED: imageUrl, originalWidth, originalHeight - handled by Scene renderer
       },
     };
 
