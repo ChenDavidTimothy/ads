@@ -518,8 +518,8 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Merge media-specific overrides for properties not handled by resolveInitialObject
     const finalOverrides = { ...objectOverrides, ...initial };
 
-    // Apply media processing to the image object using resolved properties
-    // PURE METADATA MANIPULATION - No expensive database/storage/image loading operations
+    // PURE METADATA MANIPULATION - NO PROCESSING
+    // Media node only manipulates metadata, Scene renderer handles image loading
     const processed = {
       ...obj,
       // Use properly resolved transform properties with correct precedence
@@ -529,7 +529,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       initialOpacity,
       properties: {
         ...resolvedProperties,
-        // Store ONLY metadata - Scene Renderer will handle loading via assetId
+        // ONLY METADATA - Scene renderer generates signed URL from assetId
         assetId: finalOverrides.imageAssetId,
 
         // Crop properties (metadata only)
@@ -542,7 +542,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
         displayWidth: finalOverrides.displayWidth ?? 0,
         displayHeight: finalOverrides.displayHeight ?? 0,
 
-        // REMOVE: imageUrl, originalWidth, originalHeight - Scene Renderer handles these
+        // REMOVED: imageUrl, originalWidth, originalHeight - handled by Scene renderer
       },
     };
 
