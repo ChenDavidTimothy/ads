@@ -28,6 +28,7 @@ import type { SceneObject, TextProperties } from "@/shared/types/scene";
 import { createServiceClient } from "@/utils/supabase/service";
 import { loadImage } from "canvas";
 import { resolveInitialObject } from "@/shared/properties/resolver";
+import { STORAGE_CONFIG } from "@/server/storage/config";
 import {
   resolveBindingLookupId,
   getObjectBindingKeys,
@@ -525,53 +526,33 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     if (finalOverrides.imageAssetId) {
       try {
-        // Fetch asset from database (reuse logic from current image executor)
         const supabase = createServiceClient();
         const result = await supabase
           .from("user_assets")
-          .select("*")
+          .select("bucket_name, storage_path, image_width, image_height")
           .eq("id", finalOverrides.imageAssetId)
           .single();
 
-        const { data: asset, error } = result as {
-          data: unknown;
-          error: unknown;
-        };
+        const { data: asset, error } = result;
+        if (!error && asset?.bucket_name && asset?.storage_path) {
+          // ✅ CRITICAL FIX: Use STORAGE_CONFIG constant and stored dimensions
+          const { data: signedUrl, error: urlError } = await supabase.storage
+            .from(asset.bucket_name)
+            .createSignedUrl(asset.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
 
-        if (!error && asset && typeof asset === "object" && asset !== null) {
-          const assetRecord = asset as Record<string, unknown>;
-          const bucketName = assetRecord.bucket_name as string | undefined;
-          const storagePath = assetRecord.storage_path as string | undefined;
+          if (!urlError && signedUrl) {
+            // ✅ CRITICAL: NO await loadImage() - use stored dimensions from database
+            imageData = {
+              url: signedUrl.signedUrl,
+              width: asset.image_width || 100,   // From database, no loading required
+              height: asset.image_height || 100, // From database, no loading required
+            };
 
-          if (bucketName && storagePath) {
-            // Get signed URL
-            const { data: signedUrl, error: urlError } = await supabase.storage
-              .from(bucketName)
-              .createSignedUrl(storagePath, 60 * 60);
-
-            if (!urlError && signedUrl) {
-              // Load image to get dimensions
-              try {
-                const image = await loadImage(signedUrl.signedUrl);
-                imageData = {
-                  url: signedUrl.signedUrl,
-                  width: image.width,
-                  height: image.height,
-                };
-              } catch (imageError) {
-                console.warn(
-                  `Failed to load image: ${finalOverrides.imageAssetId}`,
-                  imageError,
-                );
-              }
-            }
+            logger.debug(`Generated signed URL for ${finalOverrides.imageAssetId} with stored dimensions: ${asset.image_width}x${asset.image_height}`);
           }
         }
       } catch (error) {
-        console.warn(
-          `Failed to process asset: ${finalOverrides.imageAssetId}`,
-          error,
-        );
+        logger.warn(`Failed to generate signed URL for asset ${finalOverrides.imageAssetId}:`, error);
       }
     }
 

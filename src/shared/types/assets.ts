@@ -14,6 +14,9 @@ export interface UserAsset {
   metadata: Record<string, unknown>;
   created_at: string;
   // removed: updated_at: string;
+  // Image dimension fields for optimization
+  image_width?: number;
+  image_height?: number;
 }
 
 export interface UserStorageQuota {
@@ -76,6 +79,9 @@ export const assetResponseSchema = z.object({
   // removed: updated_at: string;
   public_url: z.string().optional(), // Added by backend
   thumbnail_url: z.string().optional(), // For future image optimization
+  // Image dimension fields for optimization
+  image_width: z.number().optional(),
+  image_height: z.number().optional(),
 });
 
 export const listAssetsResponseSchema = z.object({

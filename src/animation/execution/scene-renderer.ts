@@ -81,16 +81,36 @@ export class SceneRenderer {
   private scene: AnimationScene;
   private config: SceneRenderConfig;
   private timeline: Timeline;
-  // ✅ CRITICAL FIX: Add image cache
-  private imageCache = new Map<string, Image>();
+  // ✅ REPLACE CACHE: Simple Map for preloaded images
+  private loadedImages = new Map<string, Image>();
+  private preloadPromise: Promise<void> | null = null;
 
   constructor(scene: AnimationScene, config: SceneRenderConfig) {
     this.scene = scene;
     this.config = config;
     this.timeline = new Timeline(scene);
+
+    // ✅ PRELOAD: Load all images upfront (with error handling)
+    try {
+      this.preloadPromise = this.preloadImages();
+    } catch (error) {
+      console.error('[SCENE RENDERER] Preload initialization failed:', error);
+      // Create a resolved promise so renderFrame doesn't hang
+      this.preloadPromise = Promise.resolve();
+    }
   }
 
   async renderFrame(ctx: NodeCanvasContext, time: number): Promise<void> {
+    // ✅ ENSURE PRELOAD: Wait for images to be loaded before first render
+    if (this.preloadPromise) {
+      try {
+        await this.preloadPromise;
+      } catch (error) {
+        console.error('[SCENE RENDERER] Preload failed during render:', error);
+      }
+      this.preloadPromise = null;
+    }
+
     // Clear canvas with background
     const bgColor = this.scene.background?.color ?? this.config.backgroundColor;
     ctx.fillStyle = bgColor;
@@ -247,81 +267,96 @@ export class SceneRenderer {
     );
   }
 
-  // ✅ CRITICAL FIX: Optimized image rendering with caching
+  // ✅ PRELOAD IMAGES: Load all images upfront to eliminate per-frame checks
+  private async preloadImages(): Promise<void> {
+    const imageUrls = new Set<string>();
+
+    // Collect all unique image URLs from scene objects
+    for (const object of this.scene.objects) {
+      if (object.type === "image") {
+        const props = object.properties as ImageProperties;
+        if (props.imageUrl) {
+          imageUrls.add(props.imageUrl);
+        }
+      }
+    }
+
+    console.debug(`[PRELOAD] Starting preload of ${imageUrls.size} images`);
+
+    // Load all images in parallel with individual error handling
+    const loadPromises = Array.from(imageUrls).map(async (imageUrl) => {
+      try {
+        console.debug(`[PRELOAD] Loading image: ${imageUrl}`);
+        const img = await withTimeout(
+          loadImage(imageUrl),
+          30000,
+          `Image preload timeout for: ${imageUrl}`,
+        );
+        this.loadedImages.set(imageUrl, img);
+        console.debug(`[PRELOAD] ✓ Loaded: ${imageUrl}`);
+        return { success: true, url: imageUrl };
+      } catch (error) {
+        console.warn(`[PRELOAD] ✗ Failed to load ${imageUrl}:`, error);
+        return { success: false, url: imageUrl, error };
+      }
+    });
+
+    // ✅ KEY FIX: Use Promise.allSettled so failures don't break scene creation
+    const results = await Promise.allSettled(loadPromises);
+
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+    const failed = results.filter(r => r.status === 'fulfilled' && !r.value?.success).length;
+
+    console.debug(`[PRELOAD] Completed - ${successful} successful, ${failed} failed, total loaded: ${this.loadedImages.size}`);
+
+    // Scene can proceed even if some images failed to preload
+    if (failed > 0) {
+      console.warn(`[PRELOAD] ${failed} images failed to preload, but scene will continue`);
+    }
+  }
+
+  // ✅ NO MORE CACHE CHECKS: Just draw preloaded images
   private async renderImage(
     ctx: NodeCanvasContext,
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // Prefer explicit signed URL first to avoid hitting the internal download proxy.
-    // Fall back to the API route only if we do not have a usable direct URL.
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const url =
-      props.imageUrl ??
-      (props.assetId ? `${baseUrl}/api/download/${props.assetId}` : undefined);
-    if (!url) return;
-
-    try {
-      // ✅ CRITICAL FIX: Check caches first, load with timeout if not cached
-      let img = this.imageCache.get(url) ?? getFromGlobalImageCache(url);
-      if (!img) {
-        img = await withTimeout(
-          loadImage(url),
-          30000, // 30 second timeout
-          `Image load timeout: ${url}`,
-        );
-        this.imageCache.set(url, img);
-        addToGlobalImageCache(url, img);
-      }
-
-      // Calculate crop and display parameters AFTER the image is available
-      const srcX = props.cropX ?? 0;
-      const srcY = props.cropY ?? 0;
-      const srcWidth =
-        props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
-      const srcHeight =
-        props.cropHeight && props.cropHeight !== 0
-          ? props.cropHeight
-          : img.height;
-
-      const finalSrcWidth = srcWidth ?? img.width;
-      const finalSrcHeight = srcHeight ?? img.height;
-
-      const naturalWidth = finalSrcWidth;
-      const naturalHeight = finalSrcHeight;
-      const destWidth =
-        props.displayWidth && props.displayWidth !== 0
-          ? props.displayWidth
-          : naturalWidth;
-      const destHeight =
-        props.displayHeight && props.displayHeight !== 0
-          ? props.displayHeight
-          : naturalHeight;
-
-      // Draw the image at origin (transforms already applied)
-      ctx.drawImage(
-        img,
-        srcX,
-        srcY,
-        finalSrcWidth,
-        finalSrcHeight, // Source rectangle
-        0,
-        0,
-        destWidth,
-        destHeight, // Destination rectangle
-      );
-    } catch {
-      // Fallback to placeholder if image loading fails
+    // ✅ STRICT POLICY: Only use provided imageUrl, no download API fallback
+    if (!props.imageUrl) {
+      console.warn(`Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
       this.drawImagePlaceholder(
         ctx,
-        props.displayWidth && props.displayWidth !== 0
-          ? props.displayWidth
-          : 100,
-        props.displayHeight && props.displayHeight !== 0
-          ? props.displayHeight
-          : 100,
+        props.displayWidth || 100,
+        props.displayHeight || 100,
       );
+      return;
     }
+
+    // ✅ SIMPLE: Just get preloaded image - no cache checks, no async loading
+    const img = this.loadedImages.get(props.imageUrl);
+
+    if (!img) {
+      console.warn(`[RENDER] Image not preloaded: ${props.imageUrl} - rendering placeholder`);
+      this.drawImagePlaceholder(
+        ctx,
+        props.displayWidth || 100,
+        props.displayHeight || 100,
+      );
+      return;
+    }
+
+    // 🔍 DEBUG: Log successful render (much simpler now!)
+    console.debug(`[RENDER] Drawing preloaded image: ${props.imageUrl}`);
+
+    // Existing crop/display logic (unchanged)
+    const srcX = props.cropX ?? 0;
+    const srcY = props.cropY ?? 0;
+    const srcWidth = props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
+    const srcHeight = props.cropHeight && props.cropHeight !== 0 ? props.cropHeight : img.height;
+    const destWidth = props.displayWidth && props.displayWidth !== 0 ? props.displayWidth : srcWidth;
+    const destHeight = props.displayHeight && props.displayHeight !== 0 ? props.displayHeight : srcHeight;
+
+    ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
   }
 
   private drawImagePlaceholder(
@@ -398,42 +433,15 @@ export class SceneRenderer {
     );
   }
 
-  // ✅ CRITICAL FIX: Dispose cache to prevent memory leaks
+  // ✅ CLEANUP: Clear preloaded images
   dispose(): void {
-    this.imageCache.clear();
+    this.loadedImages.clear();
   }
 }
 
 // ------------------------------------------------------------
-// Lightweight process-wide LRU cache for images to avoid re-fetching
-// across render jobs within the same worker process.
+// ✅ REMOVED: Global caching no longer needed with preloading strategy
 // ------------------------------------------------------------
-const MAX_GLOBAL_IMAGE_CACHE_ENTRIES = Number(
-  process.env.RENDER_GLOBAL_IMAGE_CACHE_MAX ?? 64,
-);
-const globalImageCache = new Map<string, Image>();
-
-function getFromGlobalImageCache(url: string): Image | undefined {
-  const cached = globalImageCache.get(url);
-  if (cached) {
-    // Touch for LRU behavior
-    globalImageCache.delete(url);
-    globalImageCache.set(url, cached);
-  }
-  return cached;
-}
-
-function addToGlobalImageCache(url: string, image: Image): void {
-  if (globalImageCache.has(url)) {
-    globalImageCache.set(url, image);
-    return;
-  }
-  if (globalImageCache.size >= MAX_GLOBAL_IMAGE_CACHE_ENTRIES) {
-    const oldestKey = globalImageCache.keys().next().value;
-    if (oldestKey) globalImageCache.delete(oldestKey);
-  }
-  globalImageCache.set(url, image);
-}
 
 // Factory function to create common scene patterns
 export function createSimpleScene(duration: number): AnimationScene {
