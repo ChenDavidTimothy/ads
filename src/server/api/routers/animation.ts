@@ -833,7 +833,7 @@ export const animationRouter = createTRPCRouter({
                 sub.batchKey,
               );
 
-              const scene: AnimationScene = buildAnimationSceneFromPartition(
+              const scene: AnimationScene = await buildAnimationSceneFromPartition(
                 namespacedSubPartition,
               );
               const sceneData = sub.sceneNode.data as SceneNodeData;
@@ -1145,7 +1145,7 @@ export const animationRouter = createTRPCRouter({
               if (!sub?.sceneNode) continue;
 
               const scene: AnimationScene =
-                buildAnimationSceneFromPartition(sub);
+                await buildAnimationSceneFromPartition(sub);
               const frameData = sub.sceneNode.data as unknown as {
                 width: number;
                 height: number;

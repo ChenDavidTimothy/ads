@@ -124,13 +124,22 @@ export function partitionObjectsByScenes(
         // no-op placeholder; bound fields are re-collected below to maintain a single code path
       }
 
-      // Expand default-object batch overrides ("__default_object__") to all scene objects
+      // Expand default-object batch overrides ("__default_object__") to batched objects only
       // This allows per-key overrides configured without selecting a specific object
-      // to apply uniformly to every object that reaches this scene.
+      // to apply uniformly to objects that are actually part of batch operations.
       const DEFAULT_OBJECT_ID = "__default_object__";
       if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
         const defaultsForAll = mergedBatchOverrides[DEFAULT_OBJECT_ID];
         for (const obj of sceneObjects) {
+          // Only apply defaults to objects that are actually batched
+          // Match the same logic used in partitionByBatchKey
+          if (!obj.batch) continue;
+          const hasValidBatchKeys = Array.isArray((obj as { batchKeys?: unknown }).batchKeys) &&
+            (obj as { batchKeys?: unknown[] }).batchKeys!.some(
+              (k) => typeof k === "string" && k.trim() !== ""
+            );
+          if (!hasValidBatchKeys) continue;
+
           const objectId = obj.id;
           const baseFields = mergedBatchOverrides[objectId] ?? {};
           const mergedFields: Record<string, Record<string, unknown>> = {
@@ -363,9 +372,9 @@ export function calculateSceneDuration(
 /**
  * Builds an AnimationScene from a scene partition
  */
-export function buildAnimationSceneFromPartition(
+export async function buildAnimationSceneFromPartition(
   partition: ScenePartition,
-): AnimationScene {
+): Promise<AnimationScene> {
   const sceneData = partition.sceneNode.data as unknown as Record<
     string,
     unknown
@@ -612,8 +621,56 @@ export function buildAnimationSceneFromPartition(
     }),
   );
 
+  // ✅ UNIFIED: Resolve image URLs for all images that need it
+  const resolvedObjects: SceneObject[] = await Promise.all(
+    overriddenObjects.map(async (obj) => {
+      if (obj.type === "image") {
+        const props = obj.properties as ImageProperties;
+        if (!props.imageUrl && props.assetId) {
+          // Need to resolve URL for this image
+          try {
+            const { createServiceClient } = await import("@/utils/supabase/service");
+            const { STORAGE_CONFIG } = await import("@/server/storage/config");
 
-  let sortedObjects = overriddenObjects;
+            const supabase = createServiceClient();
+            const result = await supabase
+              .from("user_assets")
+              .select("bucket_name, storage_path, image_width, image_height")
+              .eq("id", props.assetId)
+              .single();
+
+            if (!result.error && result.data?.bucket_name && result.data?.storage_path) {
+              const { data: signedUrl, error: urlError } = await supabase.storage
+                .from(result.data.bucket_name)
+                .createSignedUrl(result.data.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
+
+              if (!urlError && signedUrl) {
+                return {
+                  ...obj,
+                  properties: {
+                    ...props,
+                    imageUrl: signedUrl.signedUrl,
+                    originalWidth: result.data.image_width || 100,
+                    originalHeight: result.data.image_height || 100,
+                  },
+                };
+              } else {
+                console.warn(`[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`, urlError);
+              }
+            } else {
+              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} not found in database or missing storage info:`, result.error);
+            }
+          } catch (error) {
+            console.warn(`[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`, error);
+          }
+        }
+      }
+      return obj;
+    }),
+  );
+
+
+  let sortedObjects = resolvedObjects;
   if (layerOrder && layerOrder.length > 0) {
     // Normalize IDs to be batch-agnostic: strip trailing @<batchKey> suffix if present
     const normalizeId = (id: string): string => id.replace(/@[^@]+$/, "");
@@ -624,7 +681,7 @@ export function buildAnimationSceneFromPartition(
       if (id) indexById.set(normalizeId(id), i);
     }
     // Stable sort: objects with known index ordered by index, others stay behind by original order
-    sortedObjects = [...overriddenObjects]
+    sortedObjects = [...resolvedObjects]
       .map((obj, originalIndex) => ({ obj, originalIndex }))
       .sort((a, b) => {
         const aId = normalizeId(a.obj.id);

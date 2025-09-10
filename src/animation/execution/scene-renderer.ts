@@ -267,101 +267,41 @@ export class SceneRenderer {
     );
   }
 
-  // ✅ PRELOAD IMAGES: Load all images upfront to eliminate per-frame checks
+  // ✅ CLEAN PRELOAD: All images have URLs resolved during scene construction
   private async preloadImages(): Promise<void> {
     const imageUrls = new Set<string>();
-    const assetsToLoad = new Map<string, SceneObject>();
 
-    // Collect image URLs and assets that need loading
+    // Collect all image URLs (should all be resolved now)
     for (const object of this.scene.objects) {
       if (object.type === "image") {
         const props = object.properties as ImageProperties;
-
-        // Case 1: Direct imageUrl (already loaded by Media node in non-batch scenarios)
         if (props.imageUrl) {
           imageUrls.add(props.imageUrl);
-        }
-        // Case 2: assetId that needs loading (batch scenarios)
-        else if (props.assetId) {
-          assetsToLoad.set(props.assetId, object);
+        } else {
+          console.warn(`[PRELOAD] Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
         }
       }
     }
 
-    // Load assets and convert to imageUrls
-    if (assetsToLoad.size > 0) {
-      console.debug(`[PRELOAD] Loading ${assetsToLoad.size} assets from assetId`);
-
-      try {
-        // Dynamic imports to avoid circular dependencies
-        const { createServiceClient } = await import("@/utils/supabase/service");
-        const { STORAGE_CONFIG } = await import("@/server/storage/config");
-
-        const supabase = createServiceClient();
-
-        // Load all assets in parallel
-        const assetLoadPromises = Array.from(assetsToLoad.entries()).map(async ([assetId, object]) => {
-          try {
-            const result = await supabase
-              .from("user_assets")
-              .select("bucket_name, storage_path, image_width, image_height")
-              .eq("id", assetId)
-              .single();
-
-            const { data: asset, error } = result;
-            if (!error && asset?.bucket_name && asset?.storage_path) {
-              const { data: signedUrl, error: urlError } = await supabase.storage
-                .from(asset.bucket_name)
-                .createSignedUrl(asset.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
-
-              if (!urlError && signedUrl) {
-                // Update object properties with loaded URL
-                const props = object.properties as ImageProperties;
-                props.imageUrl = signedUrl.signedUrl;
-                props.originalWidth = asset.image_width || 100;
-                props.originalHeight = asset.image_height || 100;
-
-                // Add to imageUrls for preloading
-                imageUrls.add(signedUrl.signedUrl);
-
-                console.debug(`[PRELOAD] ✓ Loaded asset ${assetId} -> URL`);
-                return { success: true, assetId };
-              }
-            }
-            console.warn(`[PRELOAD] ✗ Failed to get signed URL for asset ${assetId}`);
-            return { success: false, assetId, error: "No signed URL" };
-          } catch (error) {
-            console.warn(`[PRELOAD] ✗ Failed to load asset ${assetId}:`, error);
-            return { success: false, assetId, error };
-          }
-        });
-
-        const assetResults = await Promise.allSettled(assetLoadPromises);
-        const assetSuccessful = assetResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
-        const assetFailed = assetResults.filter(r => r.status === 'fulfilled' && !r.value?.success).length;
-
-        console.debug(`[PRELOAD] Asset loading: ${assetSuccessful} successful, ${assetFailed} failed`);
-      } catch (error) {
-        console.error(`[PRELOAD] Asset loading system failed:`, error);
-      }
+    if (imageUrls.size === 0) {
+      console.debug(`[PRELOAD] No images to preload`);
+      return;
     }
 
-    console.debug(`[PRELOAD] Starting image preload of ${imageUrls.size} URLs`);
+    console.debug(`[PRELOAD] Preloading ${imageUrls.size} images`);
 
     // Load all images in parallel with individual error handling
     const loadPromises = Array.from(imageUrls).map(async (imageUrl) => {
       try {
-        console.debug(`[PRELOAD] Loading image: ${imageUrl}`);
         const img = await withTimeout(
           loadImage(imageUrl),
           30000,
           `Image preload timeout for: ${imageUrl}`,
         );
         this.loadedImages.set(imageUrl, img);
-        console.debug(`[PRELOAD] ✓ Loaded: ${imageUrl}`);
         return { success: true, url: imageUrl };
       } catch (error) {
-        console.warn(`[PRELOAD] ✗ Failed to load ${imageUrl}:`, error);
+        console.warn(`[PRELOAD] Failed to load ${imageUrl}:`, error);
         return { success: false, url: imageUrl, error };
       }
     });
@@ -372,7 +312,7 @@ export class SceneRenderer {
     const successful = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
     const failed = results.filter(r => r.status === 'fulfilled' && !r.value?.success).length;
 
-    console.debug(`[PRELOAD] Completed - ${successful} successful, ${failed} failed, total loaded: ${this.loadedImages.size}`);
+    console.debug(`[PRELOAD] Completed - ${successful} successful, ${failed} failed`);
 
     // Scene can proceed even if some images failed to preload
     if (failed > 0) {
