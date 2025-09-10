@@ -19,7 +19,6 @@ import {
 } from "@/shared/types/assets";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
-import { createServiceClient } from "@/server/db/pool";
 import { logger } from "@/lib/logger";
 
 type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -218,7 +217,10 @@ export const assetsRouter = createTRPCRouter({
       }
 
       // ✅ PROCESS IMAGE DIMENSIONS: Extract and store image dimensions for performance optimization
-      if (asset.mime_type.startsWith('image/') && asset.mime_type !== 'image/svg+xml') {
+      if (
+        asset.mime_type.startsWith("image/") &&
+        asset.mime_type !== "image/svg+xml"
+      ) {
         try {
           // Create a temporary signed URL to download the uploaded file
           const { data: signedUrl, error: urlError } = await supabase.storage
@@ -248,19 +250,31 @@ export const assetsRouter = createTRPCRouter({
                 .eq("id", input.assetId);
 
               if (updateError) {
-                logger.warn(`Failed to update image dimensions for ${input.assetId}:`, updateError);
+                logger.warn(
+                  `Failed to update image dimensions for ${input.assetId}: ${updateError.message}`,
+                  { error: updateError },
+                );
               } else {
-                logger.info(`Stored image dimensions for ${input.assetId}: ${metadata.width}x${metadata.height}`);
+                logger.info(
+                  `Stored image dimensions for ${input.assetId}: ${metadata.width}x${metadata.height}`,
+                );
               }
             } else {
-              logger.warn(`Could not extract dimensions from ${input.assetId} - invalid image metadata`);
+              logger.warn(
+                `Could not extract dimensions from ${input.assetId} - invalid image metadata`,
+              );
             }
           } else {
-            logger.warn(`Could not create signed URL for dimension processing: ${asset.storage_path}`);
+            logger.warn(
+              `Could not create signed URL for dimension processing: ${asset.storage_path}`,
+            );
           }
         } catch (error) {
           // Non-blocking - continue without metadata if processing fails
-          logger.warn(`Failed to process image metadata for ${input.assetId}:`, error);
+          logger.warn(
+            `Failed to process image metadata for ${input.assetId}: ${error instanceof Error ? error.message : String(error)}`,
+            { error },
+          );
         }
       }
 

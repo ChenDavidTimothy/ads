@@ -25,10 +25,7 @@ import { setByPath } from "@/shared/utils/object-path";
 import { deleteByPath } from "@/shared/utils/object-path";
 import { logger } from "@/lib/logger";
 import type { SceneObject, TextProperties } from "@/shared/types/scene";
-import { createServiceClient } from "@/utils/supabase/service";
-import { loadImage } from "canvas";
 import { resolveInitialObject } from "@/shared/properties/resolver";
-import { STORAGE_CONFIG } from "@/server/storage/config";
 import {
   resolveBindingLookupId,
   getObjectBindingKeys,
@@ -435,7 +432,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
   ): Promise<SceneObject> {
     const objectId = obj.id;
 
-
     // Normalize binding lookup ID to support assignments keyed by base node id
     const bindingLookupId = resolveBindingLookupId(
       bindingsByObject as Record<string, unknown>,
@@ -485,14 +481,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const assignment = pickAssignmentsForObject(assignments, String(objectId));
     const initial = assignment?.initial ?? {};
 
-
     // Extract batch-resolved imageAssetId from properties
-    const batchResolvedAssetId = obj.type === "image" &&
+    const batchResolvedAssetId =
+      obj.type === "image" &&
       obj.properties &&
       typeof (obj.properties as { assetId?: string }).assetId === "string"
-      ? (obj.properties as { assetId?: string }).assetId
-      : undefined;
-
+        ? (obj.properties as { assetId?: string }).assetId
+        : undefined;
 
     // Use the standard resolveInitialObject function like canvas executor
     const mediaCanvasOverrides = {
@@ -523,7 +518,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       ...initial,
     };
 
-
     // Apply media processing to the image object using resolved properties
     const processed = {
       ...obj,
@@ -534,7 +528,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       properties: {
         ...resolvedProperties,
         // Just store assetId - no asset loading here
-        assetId: finalOverrides.imageAssetId || "",
+        assetId: finalOverrides.imageAssetId ?? "",
 
         // Crop properties
         cropX: finalOverrides.cropX ?? 0,

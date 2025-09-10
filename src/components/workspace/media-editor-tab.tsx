@@ -184,9 +184,9 @@ function MediaDefaultProperties({ nodeId }: { nodeId: string }) {
                   <div className="text-xs text-[var(--text-tertiary)]">
                     {Math.round(assetDetails.file_size / 1024)} KB
                     {/* ✅ PRESERVE: Show stored dimensions without changing thumbnail behavior */}
-                    {assetDetails.image_width && assetDetails.image_height &&
-                      ` • ${assetDetails.image_width}×${assetDetails.image_height}`
-                    }
+                    {assetDetails.image_width &&
+                      assetDetails.image_height &&
+                      ` • ${assetDetails.image_width}×${assetDetails.image_height}`}
                   </div>
                 </div>
                 <Button variant="secondary" size="xs" onClick={clearAsset}>
@@ -689,9 +689,9 @@ function MediaPerObjectProperties({
                   <div className="text-xs text-[var(--text-tertiary)]">
                     {Math.round(assetDetails.file_size / 1024)} KB
                     {/* ✅ PRESERVE: Show stored dimensions without changing thumbnail behavior */}
-                    {assetDetails.image_width && assetDetails.image_height &&
-                      ` • ${assetDetails.image_width}×${assetDetails.image_height}`
-                    }
+                    {assetDetails.image_width &&
+                      assetDetails.image_height &&
+                      ` • ${assetDetails.image_width}×${assetDetails.image_height}`}
                   </div>
                 </div>
                 <Button variant="secondary" size="xs" onClick={clearAsset}>

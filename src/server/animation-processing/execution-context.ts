@@ -60,13 +60,17 @@ export interface ExecutionContext {
     string,
     Array<{
       id: string;
-      type: "triangle" | "circle" | "rectangle" | "text";
+      type: "triangle" | "circle" | "rectangle" | "text" | "image";
       properties: GeometryProperties;
       initialPosition: { x: number; y: number };
       initialRotation?: number;
       initialScale?: { x: number; y: number };
       initialOpacity?: number;
       appearanceTime?: number;
+      // Batch metadata (propagates through object_stream unmodified)
+      batch?: boolean;
+      // New: support multiple keys per object (backward compatible with batchKey)
+      batchKeys?: string[];
     }>
   >;
   sceneAnimations: SceneAnimationTrack[];

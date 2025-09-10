@@ -27,25 +27,28 @@ export async function GET(
     }
 
     // ✅ MONITOR: Detect backend usage (should be zero after fix)
-    const userAgent = request.headers.get("user-agent") || "";
-    const referer = request.headers.get("referer") || "";
-    const acceptHeader = request.headers.get("accept") || "";
+    const userAgent = request.headers.get("user-agent") ?? "";
+    const referer = request.headers.get("referer") ?? "";
+    const acceptHeader = request.headers.get("accept") ?? "";
 
     // Detect backend requests (node-canvas, server-side)
     const isBackendRequest =
       userAgent.includes("canvas") ||
       userAgent.includes("node") ||
       !referer ||
-      acceptHeader.includes("image/*") && !acceptHeader.includes("text/html");
+      (acceptHeader.includes("image/*") && !acceptHeader.includes("text/html"));
 
     if (isBackendRequest) {
-      console.warn(`⚠️ DOWNLOAD API BACKEND USAGE DETECTED - Asset: ${assetId}`, {
-        userAgent: userAgent.slice(0, 100),
-        referer,
-        acceptHeader,
-        timestamp: new Date().toISOString(),
-        shouldUseSignedUrl: true,
-      });
+      console.warn(
+        `⚠️ DOWNLOAD API BACKEND USAGE DETECTED - Asset: ${assetId}`,
+        {
+          userAgent: userAgent.slice(0, 100),
+          referer,
+          acceptHeader,
+          timestamp: new Date().toISOString(),
+          shouldUseSignedUrl: true,
+        },
+      );
     }
 
     // Use service client for admin access

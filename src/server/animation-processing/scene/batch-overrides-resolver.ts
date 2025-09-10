@@ -34,7 +34,6 @@ export function resolveFieldValue<T = unknown>(
     warn?: string;
   },
 ): T {
-
   const boundSet = new Set(
     (ctx.perObjectBoundFields?.[objectId] ?? []).map(String),
   );
@@ -100,7 +99,6 @@ export function applyOverridesToObject(
   obj: SceneObject,
   ctx: BatchResolveContext,
 ): SceneObject {
-
   // Clone shallowly to avoid mutation
   const next = JSON.parse(JSON.stringify(obj)) as SceneObject;
 

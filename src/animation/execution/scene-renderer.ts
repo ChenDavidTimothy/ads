@@ -94,7 +94,7 @@ export class SceneRenderer {
     try {
       this.preloadPromise = this.preloadImages();
     } catch (error) {
-      console.error('[SCENE RENDERER] Preload initialization failed:', error);
+      console.error("[SCENE RENDERER] Preload initialization failed:", error);
       // Create a resolved promise so renderFrame doesn't hang
       this.preloadPromise = Promise.resolve();
     }
@@ -106,7 +106,7 @@ export class SceneRenderer {
       try {
         await this.preloadPromise;
       } catch (error) {
-        console.error('[SCENE RENDERER] Preload failed during render:', error);
+        console.error("[SCENE RENDERER] Preload failed during render:", error);
       }
       this.preloadPromise = null;
     }
@@ -278,7 +278,9 @@ export class SceneRenderer {
         if (props.imageUrl) {
           imageUrls.add(props.imageUrl);
         } else {
-          console.warn(`[PRELOAD] Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
+          console.warn(
+            `[PRELOAD] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
+          );
         }
       }
     }
@@ -309,14 +311,22 @@ export class SceneRenderer {
     // Use Promise.allSettled so failures don't break scene creation
     const results = await Promise.allSettled(loadPromises);
 
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
-    const failed = results.filter(r => r.status === 'fulfilled' && !r.value?.success).length;
+    const successful = results.filter(
+      (r) => r.status === "fulfilled" && r.value?.success,
+    ).length;
+    const failed = results.filter(
+      (r) => r.status === "fulfilled" && !r.value?.success,
+    ).length;
 
-    console.debug(`[PRELOAD] Completed - ${successful} successful, ${failed} failed`);
+    console.debug(
+      `[PRELOAD] Completed - ${successful} successful, ${failed} failed`,
+    );
 
     // Scene can proceed even if some images failed to preload
     if (failed > 0) {
-      console.warn(`[PRELOAD] ${failed} images failed to preload, but scene will continue`);
+      console.warn(
+        `[PRELOAD] ${failed} images failed to preload, but scene will continue`,
+      );
     }
   }
 
@@ -326,11 +336,13 @@ export class SceneRenderer {
     _state: ObjectState,
   ): Promise<void> {
     if (!props.imageUrl) {
-      console.warn(`[RENDER] Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
+      console.warn(
+        `[RENDER] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
+      );
       this.drawImagePlaceholder(
         ctx,
-        props.displayWidth || 100,
-        props.displayHeight || 100,
+        props.displayWidth ?? 100,
+        props.displayHeight ?? 100,
       );
       return;
     }
@@ -338,11 +350,13 @@ export class SceneRenderer {
     const img = this.loadedImages.get(props.imageUrl);
 
     if (!img) {
-      console.warn(`[RENDER] Image not preloaded: ${props.imageUrl} - rendering placeholder`);
+      console.warn(
+        `[RENDER] Image not preloaded: ${props.imageUrl} - rendering placeholder`,
+      );
       this.drawImagePlaceholder(
         ctx,
-        props.displayWidth || 100,
-        props.displayHeight || 100,
+        props.displayWidth ?? 100,
+        props.displayHeight ?? 100,
       );
       return;
     }
@@ -352,12 +366,32 @@ export class SceneRenderer {
     // Existing crop/display logic (unchanged)
     const srcX = props.cropX ?? 0;
     const srcY = props.cropY ?? 0;
-    const srcWidth = props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
-    const srcHeight = props.cropHeight && props.cropHeight !== 0 ? props.cropHeight : img.height;
-    const destWidth = props.displayWidth && props.displayWidth !== 0 ? props.displayWidth : srcWidth;
-    const destHeight = props.displayHeight && props.displayHeight !== 0 ? props.displayHeight : srcHeight;
+    const srcWidth =
+      props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
+    const srcHeight =
+      props.cropHeight && props.cropHeight !== 0
+        ? props.cropHeight
+        : img.height;
+    const destWidth =
+      props.displayWidth && props.displayWidth !== 0
+        ? props.displayWidth
+        : srcWidth;
+    const destHeight =
+      props.displayHeight && props.displayHeight !== 0
+        ? props.displayHeight
+        : srcHeight;
 
-    ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
+    ctx.drawImage(
+      img,
+      srcX,
+      srcY,
+      srcWidth,
+      srcHeight,
+      0,
+      0,
+      destWidth,
+      destHeight,
+    );
   }
 
   private drawImagePlaceholder(

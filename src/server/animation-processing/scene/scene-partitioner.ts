@@ -1,6 +1,10 @@
 // src/server/animation-processing/scene/scene-partitioner.ts - Multi-scene partitioning logic
 import type { NodeData, SceneAnimationTrack } from "@/shared/types";
-import type { AnimationScene, SceneObject, ImageProperties } from "@/shared/types/scene";
+import type {
+  AnimationScene,
+  SceneObject,
+  ImageProperties,
+} from "@/shared/types/scene";
 import { applyOverridesToObject } from "./batch-overrides-resolver";
 import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
@@ -132,9 +136,10 @@ export function partitionObjectsByScenes(
           // Only apply defaults to objects that are actually batched
           // Match the same logic used in partitionByBatchKey
           if (!obj.batch) continue;
-          const hasValidBatchKeys = Array.isArray((obj as { batchKeys?: unknown }).batchKeys) &&
+          const hasValidBatchKeys =
+            Array.isArray((obj as { batchKeys?: unknown }).batchKeys) &&
             (obj as { batchKeys?: unknown[] }).batchKeys!.some(
-              (k) => typeof k === "string" && k.trim() !== ""
+              (k) => typeof k === "string" && k.trim() !== "",
             );
           if (!hasValidBatchKeys) continue;
 
@@ -610,7 +615,6 @@ export async function buildAnimationSceneFromPartition(
     });
   })();
 
-
   const overriddenObjects: SceneObject[] = partition.objects.map((obj) =>
     applyOverridesToObject(obj, {
       batchKey,
@@ -626,7 +630,9 @@ export async function buildAnimationSceneFromPartition(
         const props = obj.properties as ImageProperties;
         if (!props.imageUrl && props.assetId) {
           try {
-            const { createServiceClient } = await import("@/utils/supabase/service");
+            const { createServiceClient } = await import(
+              "@/utils/supabase/service"
+            );
             const { STORAGE_CONFIG } = await import("@/server/storage/config");
 
             const supabase = createServiceClient();
@@ -637,21 +643,32 @@ export async function buildAnimationSceneFromPartition(
               .single();
 
             if (error) {
-              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} not found:`, error.message);
+              console.warn(
+                `[SCENE CONSTRUCTION] Asset ${props.assetId} not found:`,
+                error.message,
+              );
               return obj;
             }
 
             if (!asset?.bucket_name || !asset?.storage_path) {
-              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} missing storage info`);
+              console.warn(
+                `[SCENE CONSTRUCTION] Asset ${props.assetId} missing storage info`,
+              );
               return obj;
             }
 
             const { data: signedUrl, error: urlError } = await supabase.storage
-              .from(asset.bucket_name)
-              .createSignedUrl(asset.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
+              .from(asset.bucket_name as string)
+              .createSignedUrl(
+                asset.storage_path as string,
+                STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS,
+              );
 
             if (urlError || !signedUrl) {
-              console.warn(`[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`, urlError?.message);
+              console.warn(
+                `[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`,
+                urlError?.message,
+              );
               return obj;
             }
 
@@ -660,12 +677,15 @@ export async function buildAnimationSceneFromPartition(
               properties: {
                 ...props,
                 imageUrl: signedUrl.signedUrl,
-                originalWidth: asset.image_width || 100,
-                originalHeight: asset.image_height || 100,
+                originalWidth: (asset.image_width as number) ?? 100,
+                originalHeight: (asset.image_height as number) ?? 100,
               },
             };
           } catch (error) {
-            console.warn(`[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`, error instanceof Error ? error.message : error);
+            console.warn(
+              `[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`,
+              error instanceof Error ? error.message : error,
+            );
             return obj;
           }
         }
@@ -673,7 +693,6 @@ export async function buildAnimationSceneFromPartition(
       return obj;
     }),
   );
-
 
   let sortedObjects = resolvedObjects;
   if (layerOrder && layerOrder.length > 0) {
