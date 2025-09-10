@@ -31,16 +31,19 @@ import { logger } from "@/lib/logger";
 function getImageIdentifier(url: string): string {
   try {
     // Try to extract filename from URL path
-    const urlPath = url?.split('?')[0]; // Remove query params
+    const urlPath = url?.split("?")[0]; // Remove query params
     if (!urlPath) return "unknown";
 
-    const filename = urlPath.split('/').pop();
-    if (filename && filename.includes('.')) {
+    const filename = urlPath.split("/").pop();
+    if (filename?.includes(".")) {
       return filename;
     }
 
     // Fallback: extract UUID from path if present
-    const uuidMatch = urlPath.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/);
+    const uuidMatch =
+      /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/.exec(
+        urlPath,
+      );
     if (uuidMatch) {
       return uuidMatch[0].substring(0, 8); // First 8 chars of UUID
     }
@@ -49,7 +52,7 @@ function getImageIdentifier(url: string): string {
     let hash = 0;
     for (let i = 0; i < url.length; i++) {
       const char = url.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(16);
@@ -340,7 +343,9 @@ export class SceneRenderer {
         this.loadedImages.set(imageUrl, img);
         return { success: true, url: imageUrl };
       } catch (error) {
-        logger.warn(`[PRELOAD] Failed to load ${getImageIdentifier(imageUrl)}: ${String(error)}`);
+        logger.warn(
+          `[PRELOAD] Failed to load ${getImageIdentifier(imageUrl)}: ${String(error)}`,
+        );
         return { success: false, url: imageUrl, error };
       }
     });
