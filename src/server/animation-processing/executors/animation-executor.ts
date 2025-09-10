@@ -434,16 +434,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
     _context: ExecutionContext,
   ): Promise<SceneObject> {
     const objectId = obj.id;
-    // Removed unused objectIdNoPrefix variable
 
-    // Debug logging to check object structure
-    logger.debug(`Processing image object ${objectId}:`, {
-      hasInitialPosition: !!obj.initialPosition,
-      hasInitialRotation: !!obj.initialRotation,
-      hasInitialScale: !!obj.initialScale,
-      hasInitialOpacity: !!obj.initialOpacity,
-      initialPosition: obj.initialPosition,
-      type: obj.type,
+    // 🔍 DEBUG: Log incoming object structure
+    logger.debug(`[BATCH DEBUG] Processing image object ${objectId}:`, {
+      objectType: obj.type,
+      hasProperties: !!obj.properties,
+      propertiesKeys: obj.properties ? Object.keys(obj.properties) : [],
+      propertiesAssetId: obj.properties ? (obj.properties as any).assetId : 'undefined',
+      nodeOverridesImageAssetId: nodeOverrides.imageAssetId,
     });
 
     // Normalize binding lookup ID to support assignments keyed by base node id
@@ -492,19 +490,31 @@ export class AnimationNodeExecutor extends BaseExecutor {
     }
 
     // Apply per-object assignments (manual overrides)
-    // Handle object ID prefix mismatch - try both prefixed and non-prefixed versions
     const assignment = pickAssignmentsForObject(assignments, String(objectId));
     const initial = assignment?.initial ?? {};
 
+    // 🔍 DEBUG: Log overrides before finalOverrides
+    logger.debug(`[BATCH DEBUG] Before finalOverrides - objectId ${objectId}:`, {
+      objectOverridesImageAssetId: objectOverrides.imageAssetId,
+      initialImageAssetId: initial.imageAssetId,
+    });
+
+    // ✅ CRITICAL FIX: Extract batch-resolved imageAssetId from properties
+    const batchResolvedAssetId = obj.type === "image" &&
+      obj.properties &&
+      typeof (obj.properties as { assetId?: string }).assetId === "string"
+      ? (obj.properties as { assetId?: string }).assetId
+      : undefined;
+
+    // 🔍 DEBUG: Log batch-resolved value
+    logger.debug(`[BATCH DEBUG] Batch-resolved assetId: ${batchResolvedAssetId}`);
+
     // Use the standard resolveInitialObject function like canvas executor
-    // Create canvas-style overrides for media-specific properties
     const mediaCanvasOverrides = {
-      // Transform properties are handled by resolveInitialObject
       position: objectOverrides.position,
       rotation: objectOverrides.rotation,
       scale: objectOverrides.scale,
       opacity: objectOverrides.opacity,
-      // Media doesn't use canvas color properties
       fillColor: "#4444ff",
       strokeColor: "#ffffff",
       strokeWidth: 2,
@@ -518,59 +528,33 @@ export class AnimationNodeExecutor extends BaseExecutor {
       properties: resolvedProperties,
     } = resolveInitialObject(obj, mediaCanvasOverrides, assignment);
 
-    // Merge media-specific overrides for properties not handled by resolveInitialObject
-    const finalOverrides = { ...objectOverrides, ...initial };
+    // ✅ CRITICAL FIX: Build finalOverrides with correct precedence
+    const finalOverrides = {
+      // Batch-resolved as base (lowest priority)
+      ...(batchResolvedAssetId && { imageAssetId: batchResolvedAssetId }),
+      // Variable bindings (medium priority)
+      ...objectOverrides,
+      // Manual assignments (highest priority)
+      ...initial,
+    };
 
-    // Load asset if specified
-    let imageData: { url: string; width: number; height: number } | undefined;
-
-    if (finalOverrides.imageAssetId) {
-      try {
-        const supabase = createServiceClient();
-        const result = await supabase
-          .from("user_assets")
-          .select("bucket_name, storage_path, image_width, image_height")
-          .eq("id", finalOverrides.imageAssetId)
-          .single();
-
-        const { data: asset, error } = result;
-        if (!error && asset?.bucket_name && asset?.storage_path) {
-          // ✅ CRITICAL FIX: Use STORAGE_CONFIG constant and stored dimensions
-          const { data: signedUrl, error: urlError } = await supabase.storage
-            .from(asset.bucket_name)
-            .createSignedUrl(asset.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
-
-          if (!urlError && signedUrl) {
-            // ✅ CRITICAL: NO await loadImage() - use stored dimensions from database
-            imageData = {
-              url: signedUrl.signedUrl,
-              width: asset.image_width || 100,   // From database, no loading required
-              height: asset.image_height || 100, // From database, no loading required
-            };
-
-            logger.debug(`Generated signed URL for ${finalOverrides.imageAssetId} with stored dimensions: ${asset.image_width}x${asset.image_height}`);
-          }
-        }
-      } catch (error) {
-        logger.warn(`Failed to generate signed URL for asset ${finalOverrides.imageAssetId}:`, error);
-      }
-    }
+    // 🔍 DEBUG: Log final result
+    logger.debug(`[BATCH DEBUG] Final overrides - objectId ${objectId}:`, {
+      finalOverridesImageAssetId: finalOverrides.imageAssetId,
+      hasFinalAssetId: !!finalOverrides.imageAssetId,
+    });
 
     // Apply media processing to the image object using resolved properties
     const processed = {
       ...obj,
-      // Use properly resolved transform properties with correct precedence
       initialPosition,
       initialRotation,
       initialScale,
       initialOpacity,
       properties: {
         ...resolvedProperties,
-        // Override with media-specific properties
-        imageUrl: imageData?.url,
-        originalWidth: imageData?.width ?? 100,
-        originalHeight: imageData?.height ?? 100,
-        assetId: finalOverrides.imageAssetId,
+        // Just store assetId - no asset loading here
+        assetId: finalOverrides.imageAssetId || "",
 
         // Crop properties
         cropX: finalOverrides.cropX ?? 0,
@@ -581,19 +565,23 @@ export class AnimationNodeExecutor extends BaseExecutor {
         // Display properties
         displayWidth: finalOverrides.displayWidth ?? 0,
         displayHeight: finalOverrides.displayHeight ?? 0,
+
+        // imageUrl will be set by renderer after batch overrides
       },
     };
 
-    // Debug logging to verify processed object structure
-    logger.debug(`Processed image object ${objectId}:`, {
+    // 🔍 DEBUG: Log final processed object
+    logger.debug(`[BATCH DEBUG] Final processed object ${objectId}:`, {
+      hasImageUrl: !!(processed.properties as any).imageUrl,
+      imageUrl: (processed.properties as any).imageUrl ? 'URL_SET' : 'NO_URL',
+      assetId: (processed.properties as any).assetId,
       hasInitialPosition: !!processed.initialPosition,
       hasInitialRotation: !!processed.initialRotation,
       hasInitialScale: !!processed.initialScale,
       hasInitialOpacity: !!processed.initialOpacity,
-      initialPosition: processed.initialPosition,
-      type: processed.type,
     });
 
+    logger.debug(`Media node processed ${objectId} - asset loading deferred to renderer`);
     return processed;
   }
 
