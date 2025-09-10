@@ -22,6 +22,41 @@ import { drawText, type Typography } from "../geometry/text";
 import { loadImage, type Image } from "canvas";
 // ADD this import after the existing canvas import
 import { withTimeout } from "@/server/utils/timeout-utils";
+import { logger } from "@/lib/logger";
+
+/**
+ * Extract a concise identifier from an image URL for logging purposes
+ * Returns the filename or a short hash if filename can't be extracted
+ */
+function getImageIdentifier(url: string): string {
+  try {
+    // Try to extract filename from URL path
+    const urlPath = url?.split('?')[0]; // Remove query params
+    if (!urlPath) return "unknown";
+
+    const filename = urlPath.split('/').pop();
+    if (filename && filename.includes('.')) {
+      return filename;
+    }
+
+    // Fallback: extract UUID from path if present
+    const uuidMatch = urlPath.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/);
+    if (uuidMatch) {
+      return uuidMatch[0].substring(0, 8); // First 8 chars of UUID
+    }
+
+    // Final fallback: hash the URL
+    let hash = 0;
+    for (let i = 0; i < url.length; i++) {
+      const char = url.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+  } catch {
+    return "unknown";
+  }
+}
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
@@ -84,6 +119,8 @@ export class SceneRenderer {
   // ✅ REPLACE CACHE: Simple Map for preloaded images
   private loadedImages = new Map<string, Image>();
   private preloadPromise: Promise<void> | null = null;
+  // ✅ DEDUPLICATION: Track images we've already logged for this scene
+  private loggedImages = new Set<string>();
 
   constructor(scene: AnimationScene, config: SceneRenderConfig) {
     this.scene = scene;
@@ -278,7 +315,7 @@ export class SceneRenderer {
         if (props.imageUrl) {
           imageUrls.add(props.imageUrl);
         } else {
-          console.warn(
+          logger.warn(
             `[PRELOAD] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
           );
         }
@@ -286,11 +323,11 @@ export class SceneRenderer {
     }
 
     if (imageUrls.size === 0) {
-      console.debug(`[PRELOAD] No images to preload`);
+      logger.info(`[PRELOAD] No images to preload for this scene`);
       return;
     }
 
-    console.debug(`[PRELOAD] Preloading ${imageUrls.size} images`);
+    logger.info(`[PRELOAD] Starting preload of ${imageUrls.size} images`);
 
     // Load all images in parallel with individual error handling
     const loadPromises = Array.from(imageUrls).map(async (imageUrl) => {
@@ -303,7 +340,7 @@ export class SceneRenderer {
         this.loadedImages.set(imageUrl, img);
         return { success: true, url: imageUrl };
       } catch (error) {
-        console.warn(`[PRELOAD] Failed to load ${imageUrl}:`, error);
+        logger.warn(`[PRELOAD] Failed to load ${getImageIdentifier(imageUrl)}: ${String(error)}`);
         return { success: false, url: imageUrl, error };
       }
     });
@@ -318,13 +355,13 @@ export class SceneRenderer {
       (r) => r.status === "fulfilled" && !r.value?.success,
     ).length;
 
-    console.debug(
-      `[PRELOAD] Completed - ${successful} successful, ${failed} failed`,
+    logger.info(
+      `[PRELOAD] Image preload completed - ${successful} successful, ${failed} failed`,
     );
 
     // Scene can proceed even if some images failed to preload
     if (failed > 0) {
-      console.warn(
+      logger.warn(
         `[PRELOAD] ${failed} images failed to preload, but scene will continue`,
       );
     }
@@ -336,7 +373,7 @@ export class SceneRenderer {
     _state: ObjectState,
   ): Promise<void> {
     if (!props.imageUrl) {
-      console.warn(
+      logger.warn(
         `[RENDER] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
       );
       this.drawImagePlaceholder(
@@ -350,8 +387,8 @@ export class SceneRenderer {
     const img = this.loadedImages.get(props.imageUrl);
 
     if (!img) {
-      console.warn(
-        `[RENDER] Image not preloaded: ${props.imageUrl} - rendering placeholder`,
+      logger.warn(
+        `[RENDER] Image not preloaded: ${getImageIdentifier(props.imageUrl)} - rendering placeholder`,
       );
       this.drawImagePlaceholder(
         ctx,
@@ -361,7 +398,12 @@ export class SceneRenderer {
       return;
     }
 
-    console.debug(`[RENDER] Drawing preloaded image: ${props.imageUrl}`);
+    // ✅ DEDUPLICATION: Only log each unique image once per scene
+    const imageId = getImageIdentifier(props.imageUrl);
+    if (!this.loggedImages.has(imageId)) {
+      this.loggedImages.add(imageId);
+      logger.info(`[RENDER] Using preloaded image: ${imageId}`);
+    }
 
     // Existing crop/display logic (unchanged)
     const srcX = props.cropX ?? 0;
