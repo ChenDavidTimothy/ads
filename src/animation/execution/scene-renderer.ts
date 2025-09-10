@@ -267,11 +267,11 @@ export class SceneRenderer {
     );
   }
 
-  // ✅ CLEAN PRELOAD: All images have URLs resolved during scene construction
+  // Preload all images that have URLs
   private async preloadImages(): Promise<void> {
     const imageUrls = new Set<string>();
 
-    // Collect all image URLs (should all be resolved now)
+    // Collect all image URLs
     for (const object of this.scene.objects) {
       if (object.type === "image") {
         const props = object.properties as ImageProperties;
@@ -320,15 +320,13 @@ export class SceneRenderer {
     }
   }
 
-  // ✅ NO MORE CACHE CHECKS: Just draw preloaded images
   private async renderImage(
     ctx: NodeCanvasContext,
     props: ImageProperties,
     _state: ObjectState,
   ): Promise<void> {
-    // ✅ STRICT POLICY: Only use provided imageUrl, no download API fallback
     if (!props.imageUrl) {
-      console.warn(`Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
+      console.warn(`[RENDER] Missing imageUrl for asset ${props.assetId || 'unknown'} - rendering placeholder`);
       this.drawImagePlaceholder(
         ctx,
         props.displayWidth || 100,
@@ -337,7 +335,6 @@ export class SceneRenderer {
       return;
     }
 
-    // ✅ SIMPLE: Just get preloaded image - no cache checks, no async loading
     const img = this.loadedImages.get(props.imageUrl);
 
     if (!img) {

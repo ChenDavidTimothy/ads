@@ -280,7 +280,7 @@ export function applyOverridesToObject(
     }
   }
 
-  // Media.imageAssetId → image properties.assetId (batch overrides only)
+  // Apply Media.imageAssetId batch overrides
   if (obj.type === "image") {
     const currentAssetId =
       (next.properties as { assetId?: string })?.assetId ?? undefined;

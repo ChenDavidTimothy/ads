@@ -1,6 +1,6 @@
 // src/server/animation-processing/scene/scene-partitioner.ts - Multi-scene partitioning logic
 import type { NodeData, SceneAnimationTrack } from "@/shared/types";
-import type { AnimationScene, SceneObject } from "@/shared/types/scene";
+import type { AnimationScene, SceneObject, ImageProperties } from "@/shared/types/scene";
 import { applyOverridesToObject } from "./batch-overrides-resolver";
 import type { ReactFlowNode } from "../types/graph";
 import type { ExecutionContext } from "../execution-context";
@@ -124,9 +124,7 @@ export function partitionObjectsByScenes(
         // no-op placeholder; bound fields are re-collected below to maintain a single code path
       }
 
-      // Expand default-object batch overrides ("__default_object__") to batched objects only
-      // This allows per-key overrides configured without selecting a specific object
-      // to apply uniformly to objects that are actually part of batch operations.
+      // Apply default batch overrides to batched objects only
       const DEFAULT_OBJECT_ID = "__default_object__";
       if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
         const defaultsForAll = mergedBatchOverrides[DEFAULT_OBJECT_ID];
@@ -621,47 +619,54 @@ export async function buildAnimationSceneFromPartition(
     }),
   );
 
-  // ✅ UNIFIED: Resolve image URLs for all images that need it
+  // Resolve image URLs for images that need them
   const resolvedObjects: SceneObject[] = await Promise.all(
     overriddenObjects.map(async (obj) => {
       if (obj.type === "image") {
         const props = obj.properties as ImageProperties;
         if (!props.imageUrl && props.assetId) {
-          // Need to resolve URL for this image
           try {
             const { createServiceClient } = await import("@/utils/supabase/service");
             const { STORAGE_CONFIG } = await import("@/server/storage/config");
 
             const supabase = createServiceClient();
-            const result = await supabase
+            const { data: asset, error } = await supabase
               .from("user_assets")
               .select("bucket_name, storage_path, image_width, image_height")
               .eq("id", props.assetId)
               .single();
 
-            if (!result.error && result.data?.bucket_name && result.data?.storage_path) {
-              const { data: signedUrl, error: urlError } = await supabase.storage
-                .from(result.data.bucket_name)
-                .createSignedUrl(result.data.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
-
-              if (!urlError && signedUrl) {
-                return {
-                  ...obj,
-                  properties: {
-                    ...props,
-                    imageUrl: signedUrl.signedUrl,
-                    originalWidth: result.data.image_width || 100,
-                    originalHeight: result.data.image_height || 100,
-                  },
-                };
-              } else {
-                console.warn(`[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`, urlError);
-              }
-            } else {
-              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} not found in database or missing storage info:`, result.error);
+            if (error) {
+              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} not found:`, error.message);
+              return obj;
             }
+
+            if (!asset?.bucket_name || !asset?.storage_path) {
+              console.warn(`[SCENE CONSTRUCTION] Asset ${props.assetId} missing storage info`);
+              return obj;
+            }
+
+            const { data: signedUrl, error: urlError } = await supabase.storage
+              .from(asset.bucket_name)
+              .createSignedUrl(asset.storage_path, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
+
+            if (urlError || !signedUrl) {
+              console.warn(`[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`, urlError?.message);
+              return obj;
+            }
+
+            return {
+              ...obj,
+              properties: {
+                ...props,
+                imageUrl: signedUrl.signedUrl,
+                originalWidth: asset.image_width || 100,
+                originalHeight: asset.image_height || 100,
+              },
+            };
           } catch (error) {
-            console.warn(`[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`, error);
+            console.warn(`[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`, error instanceof Error ? error.message : error);
+            return obj;
           }
         }
       }
