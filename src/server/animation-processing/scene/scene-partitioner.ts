@@ -603,26 +603,6 @@ export function buildAnimationSceneFromPartition(
     });
   })();
 
-  // 🔍 DEBUG: Log batch context before applying overrides
-  logger.debug(`[BATCH RESOLVER DEBUG] Scene partitioner - applying overrides:`, {
-    partitionObjectsCount: partition.objects.length,
-    batchKey,
-    hasBatchOverrides: !!perObjectBatchOverrides,
-    batchOverridesKeys: perObjectBatchOverrides ? Object.keys(perObjectBatchOverrides) : [],
-    hasBoundFields: !!perObjectBoundFields,
-    boundFieldsKeys: perObjectBoundFields ? Object.keys(perObjectBoundFields) : [],
-  });
-
-  // Log each object being processed
-  partition.objects.forEach((obj, index) => {
-    const objBatchOverrides = perObjectBatchOverrides?.[obj.id];
-    logger.debug(`[BATCH RESOLVER DEBUG] Object ${index} - ${obj.id}:`, {
-      objectType: obj.type,
-      hasObjectBatchOverrides: !!objBatchOverrides,
-      objectBatchOverrideFields: objBatchOverrides ? Object.keys(objBatchOverrides) : [],
-      mediaImageAssetIdOverrides: objBatchOverrides?.['Media.imageAssetId'],
-    });
-  });
 
   const overriddenObjects: SceneObject[] = partition.objects.map((obj) =>
     applyOverridesToObject(obj, {
@@ -632,15 +612,6 @@ export function buildAnimationSceneFromPartition(
     }),
   );
 
-  // 🔍 DEBUG: Log results after applying overrides
-  overriddenObjects.forEach((obj, index) => {
-    logger.debug(`[BATCH RESOLVER DEBUG] After override ${index} - ${obj.id}:`, {
-      objectType: obj.type,
-      hasProperties: !!obj.properties,
-      propertiesKeys: obj.properties ? Object.keys(obj.properties) : [],
-      propertiesAssetId: obj.properties ? (obj.properties as any).assetId : 'undefined',
-    });
-  });
 
   let sortedObjects = overriddenObjects;
   if (layerOrder && layerOrder.length > 0) {

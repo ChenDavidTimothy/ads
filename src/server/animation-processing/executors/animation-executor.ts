@@ -435,14 +435,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
   ): Promise<SceneObject> {
     const objectId = obj.id;
 
-    // 🔍 DEBUG: Log incoming object structure
-    logger.debug(`[BATCH DEBUG] Processing image object ${objectId}:`, {
-      objectType: obj.type,
-      hasProperties: !!obj.properties,
-      propertiesKeys: obj.properties ? Object.keys(obj.properties) : [],
-      propertiesAssetId: obj.properties ? (obj.properties as any).assetId : 'undefined',
-      nodeOverridesImageAssetId: nodeOverrides.imageAssetId,
-    });
 
     // Normalize binding lookup ID to support assignments keyed by base node id
     const bindingLookupId = resolveBindingLookupId(
@@ -493,21 +485,14 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const assignment = pickAssignmentsForObject(assignments, String(objectId));
     const initial = assignment?.initial ?? {};
 
-    // 🔍 DEBUG: Log overrides before finalOverrides
-    logger.debug(`[BATCH DEBUG] Before finalOverrides - objectId ${objectId}:`, {
-      objectOverridesImageAssetId: objectOverrides.imageAssetId,
-      initialImageAssetId: initial.imageAssetId,
-    });
 
-    // ✅ CRITICAL FIX: Extract batch-resolved imageAssetId from properties
+    // Extract batch-resolved imageAssetId from properties
     const batchResolvedAssetId = obj.type === "image" &&
       obj.properties &&
       typeof (obj.properties as { assetId?: string }).assetId === "string"
       ? (obj.properties as { assetId?: string }).assetId
       : undefined;
 
-    // 🔍 DEBUG: Log batch-resolved value
-    logger.debug(`[BATCH DEBUG] Batch-resolved assetId: ${batchResolvedAssetId}`);
 
     // Use the standard resolveInitialObject function like canvas executor
     const mediaCanvasOverrides = {
@@ -528,7 +513,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       properties: resolvedProperties,
     } = resolveInitialObject(obj, mediaCanvasOverrides, assignment);
 
-    // ✅ CRITICAL FIX: Build finalOverrides with correct precedence
+    // Build finalOverrides with correct precedence
     const finalOverrides = {
       // Batch-resolved as base (lowest priority)
       ...(batchResolvedAssetId && { imageAssetId: batchResolvedAssetId }),
@@ -538,11 +523,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       ...initial,
     };
 
-    // 🔍 DEBUG: Log final result
-    logger.debug(`[BATCH DEBUG] Final overrides - objectId ${objectId}:`, {
-      finalOverridesImageAssetId: finalOverrides.imageAssetId,
-      hasFinalAssetId: !!finalOverrides.imageAssetId,
-    });
 
     // Apply media processing to the image object using resolved properties
     const processed = {
@@ -570,18 +550,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
       },
     };
 
-    // 🔍 DEBUG: Log final processed object
-    logger.debug(`[BATCH DEBUG] Final processed object ${objectId}:`, {
-      hasImageUrl: !!(processed.properties as any).imageUrl,
-      imageUrl: (processed.properties as any).imageUrl ? 'URL_SET' : 'NO_URL',
-      assetId: (processed.properties as any).assetId,
-      hasInitialPosition: !!processed.initialPosition,
-      hasInitialRotation: !!processed.initialRotation,
-      hasInitialScale: !!processed.initialScale,
-      hasInitialOpacity: !!processed.initialOpacity,
-    });
-
-    logger.debug(`Media node processed ${objectId} - asset loading deferred to renderer`);
     return processed;
   }
 

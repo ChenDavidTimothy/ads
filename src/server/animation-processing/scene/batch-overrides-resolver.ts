@@ -34,24 +34,11 @@ export function resolveFieldValue<T = unknown>(
     warn?: string;
   },
 ): T {
-  // 🔍 DEBUG: Log all parameters
-  logger.debug(`[BATCH RESOLVER DEBUG] resolveFieldValue - ${objectId}:`, {
-    fieldPath,
-    currentValue,
-    batchKey: ctx.batchKey,
-    hasPerObjectBatchOverrides: !!ctx.perObjectBatchOverrides,
-    objectHasBatchOverrides: !!ctx.perObjectBatchOverrides?.[objectId],
-    fieldBatchOverrides: ctx.perObjectBatchOverrides?.[objectId]?.[fieldPath],
-    hasPerObjectBoundFields: !!ctx.perObjectBoundFields,
-    objectBoundFields: ctx.perObjectBoundFields?.[objectId],
-    isFieldBound: ctx.perObjectBoundFields?.[objectId]?.includes(fieldPath),
-  });
 
   const boundSet = new Set(
     (ctx.perObjectBoundFields?.[objectId] ?? []).map(String),
   );
   if (boundSet.has(fieldPath)) {
-    logger.debug(`[BATCH RESOLVER DEBUG] Field is bound - ${objectId}:${fieldPath} - returning currentValue`);
     return currentValue;
   }
 
@@ -91,38 +78,17 @@ export function resolveFieldValue<T = unknown>(
     byField &&
     Object.prototype.hasOwnProperty.call(byField, ctx.batchKey)
   ) {
-    // 🔍 DEBUG: Log per-key override lookup
-    logger.debug(`[BATCH RESOLVER DEBUG] Looking for per-key override - ${objectId}:${fieldPath}:`, {
-      batchKey: ctx.batchKey,
-      availableKeys: Object.keys(byField),
-      hasKeyOverride: ctx.batchKey in byField,
-      keyOverrideValue: byField[ctx.batchKey],
-    });
-
     const v = tryValue(byField[ctx.batchKey], "perKey");
-    if (v !== undefined) {
-      logger.debug(`[BATCH RESOLVER DEBUG] Using per-key override - ${objectId}:${fieldPath}:${ctx.batchKey} = ${v}`);
-      return v;
-    }
+    if (v !== undefined) return v;
   }
 
   // 2) per-object default
   if (byField && Object.prototype.hasOwnProperty.call(byField, "__default__")) {
-    // 🔍 DEBUG: Log default override lookup
-    logger.debug(`[BATCH RESOLVER DEBUG] Looking for default override - ${objectId}:${fieldPath}:`, {
-      hasDefaultOverride: "__default__" in byField,
-      defaultOverrideValue: byField.__default__,
-    });
-
     const v = tryValue(byField.__default__, "perObjectDefault");
-    if (v !== undefined) {
-      logger.debug(`[BATCH RESOLVER DEBUG] Using default override - ${objectId}:${fieldPath}:__default__ = ${v}`);
-      return v;
-    }
+    if (v !== undefined) return v;
   }
 
   // 3) currentValue (node default or previously resolved)
-  logger.debug(`[BATCH RESOLVER DEBUG] No override found - ${objectId}:${fieldPath} - returning currentValue: ${currentValue}`);
   return currentValue;
 }
 
@@ -134,16 +100,6 @@ export function applyOverridesToObject(
   obj: SceneObject,
   ctx: BatchResolveContext,
 ): SceneObject {
-  // 🔍 DEBUG: Log incoming parameters
-  logger.debug(`[BATCH RESOLVER DEBUG] applyOverridesToObject - ${obj.id}:`, {
-    objectType: obj.type,
-    objectId: obj.id,
-    batchKey: ctx.batchKey,
-    hasPerObjectBatchOverrides: !!ctx.perObjectBatchOverrides,
-    objectBatchOverrides: ctx.perObjectBatchOverrides?.[obj.id],
-    hasPerObjectBoundFields: !!ctx.perObjectBoundFields,
-    objectBoundFields: ctx.perObjectBoundFields?.[obj.id],
-  });
 
   // Clone shallowly to avoid mutation
   const next = JSON.parse(JSON.stringify(obj)) as SceneObject;
@@ -329,12 +285,6 @@ export function applyOverridesToObject(
     const currentAssetId =
       (next.properties as { assetId?: string })?.assetId ?? undefined;
 
-    // 🔍 DEBUG: Log before resolveFieldValue
-    logger.debug(`[BATCH RESOLVER DEBUG] Before resolveFieldValue - ${obj.id}:`, {
-      currentAssetId,
-      willCallResolveFieldValue: true,
-    });
-
     const assetId = resolveFieldValue(
       obj.id,
       "Media.imageAssetId",
@@ -342,21 +292,8 @@ export function applyOverridesToObject(
       ctx,
       stringCoerce,
     );
-
-    // 🔍 DEBUG: Log after resolveFieldValue
-    logger.debug(`[BATCH RESOLVER DEBUG] After resolveFieldValue - ${obj.id}:`, {
-      resolvedAssetId: assetId,
-      assetIdType: typeof assetId,
-      willSetProperty: typeof assetId === "string",
-    });
-
     if (typeof assetId === "string") {
       (next.properties as { assetId?: string }).assetId = assetId;
-      // 🔍 DEBUG: Confirm property was set
-      logger.debug(`[BATCH RESOLVER DEBUG] Property set - ${obj.id}:`, {
-        setAssetId: assetId,
-        finalPropertiesAssetId: (next.properties as { assetId?: string }).assetId,
-      });
     }
 
     // Apply remaining Media fields to image properties

@@ -410,7 +410,6 @@ export class SceneRenderer {
       return;
     }
 
-    // 🔍 DEBUG: Log successful render (much simpler now!)
     console.debug(`[RENDER] Drawing preloaded image: ${props.imageUrl}`);
 
     // Existing crop/display logic (unchanged)
