@@ -1055,7 +1055,6 @@ export const animationRouter = createTRPCRouter({
             } as const;
           } finally {
             // Always cleanup job cache
-            await assetCache.cleanup();
           }
         } catch (error) {
           // Log server-side error
