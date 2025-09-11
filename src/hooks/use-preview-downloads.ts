@@ -1,11 +1,73 @@
 import { useState, useCallback } from "react";
 import { useNotifications } from "@/hooks/use-notifications";
-import {
-  downloadFile,
-  downloadFilesAsZip,
-  type DownloadableFile,
-  generateSafeFilename,
-} from "@/utils/download-utils";
+import JSZip from "jszip";
+
+/**
+ * Simple download function using native browser APIs
+ */
+async function downloadFile(url: string, filename: string): Promise<void> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(blobUrl);
+}
+
+/**
+ * Generate a safe filename with timestamp
+ */
+function generateSafeFilename(baseName: string, extension = ""): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const safeName = baseName
+    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${safeName}_${timestamp}${extension}`;
+}
+
+/**
+ * Download multiple files as ZIP
+ */
+async function downloadFilesAsZip(
+  files: Array<{ url: string; filename: string }>,
+  zipFilename: string
+): Promise<void> {
+  const zip = new JSZip();
+
+  // Download all files and add to ZIP
+  const downloadPromises = files.map(async (file) => {
+    const response = await fetch(file.url);
+    const blob = await response.blob();
+    zip.file(file.filename, blob);
+  });
+
+  await Promise.all(downloadPromises);
+
+  // Generate and download ZIP
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const zipUrl = URL.createObjectURL(zipBlob);
+
+  const link = document.createElement("a");
+  link.href = zipUrl;
+  link.download = zipFilename;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(zipUrl);
+}
 
 interface VideoJob {
   jobId: string;
@@ -52,31 +114,13 @@ export function usePreviewDownloads({
       setCurrentFile(video.sceneName);
 
       try {
-        await downloadFile(
-          {
-            url: video.videoUrl,
-            // sceneName already includes batch key when applicable (server standardized)
-            filename: `${video.sceneName}.mp4`,
-            mimeType: "video/mp4",
-          },
-          {
-            onProgress: (progress) => setDownloadProgress(progress),
-            onComplete: () => {
-              toast.success(
-                "Download Complete",
-                `${video.sceneName} has been downloaded`,
-              );
-              setDownloadProgress(0);
-              setCurrentFile("");
-            },
-            onError: (error) => {
-              toast.error("Download Failed", error);
-            },
-            timeout: 120000, // 2 minutes for videos
-          },
+        await downloadFile(video.videoUrl, `${video.sceneName}.mp4`);
+        toast.success(
+          "Download Complete",
+          `${video.sceneName} has been downloaded`,
         );
-      } catch {
-        // Error handling is done in callbacks
+      } catch (error) {
+        toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
       } finally {
         setIsDownloading(false);
       }
@@ -98,31 +142,13 @@ export function usePreviewDownloads({
       setCurrentFile(image.frameName);
 
       try {
-        await downloadFile(
-          {
-            url: image.imageUrl,
-            // frameName already includes batch key when applicable (server standardized)
-            filename: `${image.frameName}.png`,
-            mimeType: "image/png",
-          },
-          {
-            onProgress: (progress) => setDownloadProgress(progress),
-            onComplete: () => {
-              toast.success(
-                "Download Complete",
-                `${image.frameName} has been downloaded`,
-              );
-              setDownloadProgress(0);
-              setCurrentFile("");
-            },
-            onError: (error) => {
-              toast.error("Download Failed", error);
-            },
-            timeout: 30000, // 30 seconds for images
-          },
+        await downloadFile(image.imageUrl, `${image.frameName}.png`);
+        toast.success(
+          "Download Complete",
+          `${image.frameName} has been downloaded`,
         );
-      } catch {
-        // Error handling is done in callbacks
+      } catch (error) {
+        toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
       } finally {
         setIsDownloading(false);
       }
@@ -142,36 +168,19 @@ export function usePreviewDownloads({
     setIsDownloading(true);
     setDownloadProgress(0);
 
-    const files: DownloadableFile[] = completedVideos.map((video) => ({
+    const files = completedVideos.map((video) => ({
       url: video.videoUrl!,
-      // sceneName standardized to include batch key when present
       filename: `${video.sceneName}.mp4`,
-      mimeType: "video/mp4",
     }));
 
     try {
-      await downloadFilesAsZip(files, {
-        zipFilename: generateSafeFilename("videos", ".zip"),
-        compress: true,
-        onProgress: (progress, file) => {
-          setDownloadProgress(progress);
-          if (file) setCurrentFile(file);
-        },
-        onComplete: () => {
-          toast.success(
-            "Download Complete",
-            `All ${completedVideos.length} videos have been downloaded as ZIP`,
-          );
-          setDownloadProgress(0);
-          setCurrentFile("");
-        },
-        onError: (error, file) => {
-          toast.error("Download Failed", file ? `${file}: ${error}` : error);
-        },
-        timeout: 300000, // 5 minutes for batch video downloads
-      });
-    } catch {
-      // Error handling is done in callbacks
+      await downloadFilesAsZip(files, generateSafeFilename("videos", ".zip"));
+      toast.success(
+        "Download Complete",
+        `All ${completedVideos.length} videos have been downloaded as ZIP`,
+      );
+    } catch (error) {
+      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsDownloading(false);
     }
@@ -189,36 +198,19 @@ export function usePreviewDownloads({
     setIsDownloading(true);
     setDownloadProgress(0);
 
-    const files: DownloadableFile[] = completedImages.map((image) => ({
+    const files = completedImages.map((image) => ({
       url: image.imageUrl!,
-      // frameName standardized to include batch key when present
       filename: `${image.frameName}.png`,
-      mimeType: "image/png",
     }));
 
     try {
-      await downloadFilesAsZip(files, {
-        zipFilename: generateSafeFilename("images", ".zip"),
-        compress: false, // Don't compress images as they're already compressed
-        onProgress: (progress, file) => {
-          setDownloadProgress(progress);
-          if (file) setCurrentFile(file);
-        },
-        onComplete: () => {
-          toast.success(
-            "Download Complete",
-            `All ${completedImages.length} images have been downloaded as ZIP`,
-          );
-          setDownloadProgress(0);
-          setCurrentFile("");
-        },
-        onError: (error, file) => {
-          toast.error("Download Failed", file ? `${file}: ${error}` : error);
-        },
-        timeout: 120000, // 2 minutes for batch image downloads
-      });
-    } catch {
-      // Error handling is done in callbacks
+      await downloadFilesAsZip(files, generateSafeFilename("images", ".zip"));
+      toast.success(
+        "Download Complete",
+        `All ${completedImages.length} images have been downloaded as ZIP`,
+      );
+    } catch (error) {
+      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsDownloading(false);
     }
@@ -240,42 +232,25 @@ export function usePreviewDownloads({
     setIsDownloading(true);
     setDownloadProgress(0);
 
-    const allFiles: DownloadableFile[] = [
+    const allFiles = [
       ...completedVideos.map((video) => ({
         url: video.videoUrl!,
         filename: `videos/${video.sceneName}.mp4`,
-        mimeType: "video/mp4",
       })),
       ...completedImages.map((image) => ({
         url: image.imageUrl!,
         filename: `images/${image.frameName}.png`,
-        mimeType: "image/png",
       })),
     ];
 
     try {
-      await downloadFilesAsZip(allFiles, {
-        zipFilename: generateSafeFilename("all_content", ".zip"),
-        compress: true,
-        onProgress: (progress, file) => {
-          setDownloadProgress(progress);
-          if (file) setCurrentFile(file);
-        },
-        onComplete: () => {
-          toast.success(
-            "Download Complete",
-            `All content (${allFiles.length} files) has been downloaded as ZIP`,
-          );
-          setDownloadProgress(0);
-          setCurrentFile("");
-        },
-        onError: (error, file) => {
-          toast.error("Download Failed", file ? `${file}: ${error}` : error);
-        },
-        timeout: 300000, // 5 minutes for all content
-      });
-    } catch {
-      // Error handling is done in callbacks
+      await downloadFilesAsZip(allFiles, generateSafeFilename("all_content", ".zip"));
+      toast.success(
+        "Download Complete",
+        `All content (${allFiles.length} files) has been downloaded as ZIP`,
+      );
+    } catch (error) {
+      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsDownloading(false);
     }

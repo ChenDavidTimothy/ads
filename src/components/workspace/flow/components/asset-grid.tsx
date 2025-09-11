@@ -16,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import type { AssetResponse } from "@/shared/types/assets";
 import { formatFileSize, isImage, isVideo } from "@/shared/types/assets";
-import { downloadFile } from "@/utils/download-utils";
 import { useNotifications } from "@/hooks/use-notifications";
 import { RobustImage } from "@/components/ui/robust-image";
 
@@ -131,50 +130,29 @@ function AssetCard({
     setIsDownloading(true);
 
     try {
-      // Use the enhanced download utility for better reliability
-      await downloadFile(
-        {
-          url: `/api/download/${asset.id}`,
-          filename: asset.original_name,
-          mimeType: asset.mime_type,
-          size: asset.file_size,
-          assetId: asset.id,
-        },
-        {
-          onProgress: (_progress) => {
-            // Progress tracking can be added here if needed
-          },
-          onComplete: () => {
-            toast.success(
-              "Download Complete",
-              `${asset.original_name} has been downloaded`,
-            );
-          },
-          onError: (_, filename) => {
-            toast.error("Download Failed", `Failed to download ${filename}`);
-          },
-          timeout: 120000, // 2 minutes for assets
-        },
+      // Download directly using the public URL
+      const response = await fetch(asset.public_url);
+      const blob = await response.blob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = asset.original_name;
+      link.style.display = "none";
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+
+      toast.success(
+        "Download Complete",
+        `${asset.original_name} has been downloaded`,
       );
-    } catch {
-      // Fallback to simple download method
-      try {
-        const link = document.createElement("a");
-        link.href = `/api/download/${asset.id}`;
-        link.download = asset.original_name;
-        link.target = "_blank";
-        link.style.display = "none";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success(
-          "Download Started",
-          `${asset.original_name} is being downloaded`,
-        );
-      } catch (fallbackError) {
-        console.error("Fallback download failed:", fallbackError);
-        toast.error("Download Failed", "Unable to download file");
-      }
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Download Failed", "Unable to download file");
     } finally {
       setIsDownloading(false);
     }
