@@ -20,18 +20,21 @@ export async function ensureDir(p: string): Promise<void> {
 /**
  * Gets platform-appropriate default cache directories
  */
-export function getDefaultCacheDirs(): { sharedCacheDir: string; jobCacheDir: string } {
-  const isWindows = process.platform === 'win32';
+export function getDefaultCacheDirs(): {
+  sharedCacheDir: string;
+  jobCacheDir: string;
+} {
+  const isWindows = process.platform === "win32";
 
   if (isWindows) {
     return {
-      sharedCacheDir: 'C:\\render\\shared',
-      jobCacheDir: 'C:\\render\\jobs'
+      sharedCacheDir: "C:\\render\\shared",
+      jobCacheDir: "C:\\render\\jobs",
     };
   } else {
     return {
-      sharedCacheDir: '/var/cache/render/shared',
-      jobCacheDir: '/var/cache/render/jobs'
+      sharedCacheDir: "/var/cache/render/shared",
+      jobCacheDir: "/var/cache/render/jobs",
     };
   }
 }

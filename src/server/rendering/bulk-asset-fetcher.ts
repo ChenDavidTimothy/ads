@@ -2,6 +2,19 @@
 import { createServiceClient } from "@/utils/supabase/service";
 import { logger } from "@/lib/logger";
 
+interface RawAssetData {
+  id: string;
+  user_id: string;
+  bucket_name: string;
+  storage_path: string;
+  file_size: number;
+  mime_type: string;
+  content_hash?: string;
+  image_width?: number;
+  image_height?: number;
+  created_at: string;
+}
+
 export interface AssetMetadata {
   id: string;
   userId: string;
@@ -29,18 +42,25 @@ export class BulkAssetFetcher {
     this.supabase = createServiceClient();
   }
 
-  async bulkFetchAssetMetadata(assetIds: string[], userId: string): Promise<AssetMetadata[]> {
+  async bulkFetchAssetMetadata(
+    assetIds: string[],
+    userId: string,
+  ): Promise<AssetMetadata[]> {
     if (assetIds.length === 0) return [];
 
-    logger.info(`Bulk fetching metadata for ${assetIds.length} assets`, { userId });
+    logger.info(`Bulk fetching metadata for ${assetIds.length} assets`, {
+      userId,
+    });
 
     const { data: assets, error } = await this.supabase
       .from("user_assets")
-      .select(`
+      .select(
+        `
         id, user_id, bucket_name, storage_path,
         file_size, mime_type, content_hash,
         image_width, image_height, created_at
-      `)
+      `,
+      )
       .in("id", assetIds)
       .eq("user_id", userId); // Enforce ownership
 
@@ -52,51 +72,66 @@ export class BulkAssetFetcher {
       throw new Error("OWNERSHIP_DENIED: No assets found or access denied");
     }
 
-    const foundIds = new Set(assets.map(a => a.id));
-    const missingIds = assetIds.filter(id => !foundIds.has(id));
+    // Type assert the raw data from Supabase
+    const typedAssets = assets as RawAssetData[];
+    const foundIds = new Set(typedAssets.map((a) => a.id));
+    const missingIds = assetIds.filter((id) => !foundIds.has(id));
 
     if (missingIds.length > 0) {
-      throw new Error(`ASSET_NOT_FOUND: Assets not found or access denied: ${missingIds.join(", ")}`);
+      throw new Error(
+        `ASSET_NOT_FOUND: Assets not found or access denied: ${missingIds.join(", ")}`,
+      );
     }
 
-    return assets.map(asset => ({
+    return typedAssets.map((asset) => ({
       id: asset.id,
       userId: asset.user_id,
       bucketName: asset.bucket_name,
       storagePath: asset.storage_path,
-      fileSize: asset.file_size || 0,
+      fileSize: asset.file_size ?? 0,
       mimeType: asset.mime_type,
-      contentHash: asset.content_hash || undefined,
-      imageWidth: asset.image_width || undefined,
-      imageHeight: asset.image_height || undefined,
+      contentHash: asset.content_hash ?? undefined,
+      imageWidth: asset.image_width ?? undefined,
+      imageHeight: asset.image_height ?? undefined,
       createdAt: asset.created_at,
     }));
   }
 
-  validateJobAssets(assets: AssetMetadata[], maxJobSizeBytes: number = 2 * 1024 * 1024 * 1024): ValidationResult {
+  validateJobAssets(
+    assets: AssetMetadata[],
+    maxJobSizeBytes: number = 2 * 1024 * 1024 * 1024,
+  ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
     const totalBytes = assets.reduce((sum, asset) => sum + asset.fileSize, 0);
 
     if (totalBytes > maxJobSizeBytes) {
-      errors.push(`SIZE_CAP_EXCEEDED: Job assets exceed size limit: ${this.formatBytes(totalBytes)} > ${this.formatBytes(maxJobSizeBytes)}`);
+      errors.push(
+        `SIZE_CAP_EXCEEDED: Job assets exceed size limit: ${this.formatBytes(totalBytes)} > ${this.formatBytes(maxJobSizeBytes)}`,
+      );
     }
 
-    const invalidAssets = assets.filter(asset => !asset.bucketName || !asset.storagePath);
+    const invalidAssets = assets.filter(
+      (asset) => !asset.bucketName || !asset.storagePath,
+    );
     if (invalidAssets.length > 0) {
-      errors.push(`INVALID_ASSET_DATA: Invalid asset data for: ${invalidAssets.map(a => a.id).join(", ")}`);
+      errors.push(
+        `INVALID_ASSET_DATA: Invalid asset data for: ${invalidAssets.map((a) => a.id).join(", ")}`,
+      );
     }
 
-    const assetsWithoutHash = assets.filter(asset => !asset.contentHash);
+    const assetsWithoutHash = assets.filter((asset) => !asset.contentHash);
     if (assetsWithoutHash.length > 0) {
-      warnings.push(`${assetsWithoutHash.length} assets lack content hash - using metadata hash fallback`);
+      warnings.push(
+        `${assetsWithoutHash.length} assets lack content hash - using metadata hash fallback`,
+      );
     }
 
     return { valid: errors.length === 0, totalBytes, errors, warnings };
   }
 
   private formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
+    const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
 

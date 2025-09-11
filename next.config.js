@@ -37,18 +37,6 @@ googleDomains.forEach((domain) => {
 
 /** @type {import("next").NextConfig} */
 const config = {
-  // Mark keyv and adapters as external to prevent bundling dynamic imports
-  serverExternalPackages: [
-    'keyv',
-    '@keyv/redis',
-    '@keyv/mongo',
-    '@keyv/sqlite',
-    '@keyv/postgres',
-    '@keyv/mysql',
-    '@keyv/etcd',
-    '@keyv/offline',
-    '@keyv/tiered'
-  ],
   images: {
     remotePatterns: imageRemotePatterns,
     // Configure image optimization for better reliability with external URLs

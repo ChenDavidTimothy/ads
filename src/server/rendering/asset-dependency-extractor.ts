@@ -8,7 +8,9 @@ export interface AssetDependency {
   requiredInScenes: string[];
 }
 
-export function extractAssetDependencies(partitions: ScenePartition[]): AssetDependency[] {
+export function extractAssetDependencies(
+  partitions: ScenePartition[],
+): AssetDependency[] {
   const dependencies = new Map<string, AssetDependency>();
 
   for (const partition of partitions) {
@@ -39,5 +41,5 @@ export function extractAssetDependencies(partitions: ScenePartition[]): AssetDep
 }
 
 export function getUniqueAssetIds(dependencies: AssetDependency[]): string[] {
-  return dependencies.map(dep => dep.assetId);
+  return dependencies.map((dep) => dep.assetId);
 }

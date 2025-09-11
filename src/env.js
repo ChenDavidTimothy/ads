@@ -32,12 +32,36 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1).url(), // Ensure it's a valid URL
 
     // Asset cache configuration - platform-appropriate defaults
-    JOB_CACHE_DIR: z.string().default(process.platform === 'win32' ? 'C:\\render\\jobs' : '/var/cache/render/jobs'),
-    SHARED_CACHE_DIR: z.string().default(process.platform === 'win32' ? 'C:\\render\\shared' : '/var/cache/render/shared'),
-    SHARED_CACHE_MAX_BYTES: z.coerce.number().int().positive().default(10737418240), // 10GB
+    JOB_CACHE_DIR: z
+      .string()
+      .default(
+        process.platform === "win32"
+          ? "C:\\render\\jobs"
+          : "/var/cache/render/jobs",
+      ),
+    SHARED_CACHE_DIR: z
+      .string()
+      .default(
+        process.platform === "win32"
+          ? "C:\\render\\shared"
+          : "/var/cache/render/shared",
+      ),
+    SHARED_CACHE_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(10737418240), // 10GB
     MAX_JOB_SIZE_BYTES: z.coerce.number().int().positive().default(2147483648), // 2GB
-    DOWNLOAD_CONCURRENCY_PER_JOB: z.coerce.number().int().positive().max(50).default(8),
-    ENABLE_SHARED_CACHE_JANITOR: z.string().transform((val) => val === "true").default("true"),
+    DOWNLOAD_CONCURRENCY_PER_JOB: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(50)
+      .default(8),
+    ENABLE_SHARED_CACHE_JANITOR: z
+      .string()
+      .transform((val) => val === "true")
+      .default("true"),
 
     // Production-specific requirements
     ...(process.env.NODE_ENV === "production" && {

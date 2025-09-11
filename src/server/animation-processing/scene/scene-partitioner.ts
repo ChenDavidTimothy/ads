@@ -378,7 +378,7 @@ export function calculateSceneDuration(
  */
 export async function buildAnimationSceneFromPartition(
   partition: ScenePartition,
-  assetCache?: AssetCacheManager
+  assetCache?: AssetCacheManager,
 ): Promise<AnimationScene> {
   const sceneData = partition.sceneNode.data as unknown as Record<
     string,
@@ -634,7 +634,7 @@ export async function buildAnimationSceneFromPartition(
         if (!assetCache) {
           throw new Error(
             `CACHE_REQUIRED: Asset cache required for resolving asset ${props.assetId} in scene construction. ` +
-            `Ensure asset preparation completed before scene construction.`
+              `Ensure asset preparation completed before scene construction.`,
           );
         }
 
@@ -642,8 +642,8 @@ export async function buildAnimationSceneFromPartition(
         if (!cachedAsset) {
           throw new Error(
             `ASSET_NOT_CACHED: Asset ${props.assetId} not found in cache. ` +
-            `Ensure all assets were prepared successfully. ` +
-            `Required assets: ${props.assetId}`
+              `Ensure all assets were prepared successfully. ` +
+              `Required assets: ${props.assetId}`,
           );
         }
 

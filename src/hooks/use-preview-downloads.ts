@@ -40,7 +40,7 @@ function generateSafeFilename(baseName: string, extension = ""): string {
  */
 async function downloadFilesAsZip(
   files: Array<{ url: string; filename: string }>,
-  zipFilename: string
+  zipFilename: string,
 ): Promise<void> {
   const zip = new JSZip();
 
@@ -120,7 +120,10 @@ export function usePreviewDownloads({
           `${video.sceneName} has been downloaded`,
         );
       } catch (error) {
-        toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
+        toast.error(
+          "Download Failed",
+          error instanceof Error ? error.message : "Unknown error",
+        );
       } finally {
         setIsDownloading(false);
       }
@@ -148,7 +151,10 @@ export function usePreviewDownloads({
           `${image.frameName} has been downloaded`,
         );
       } catch (error) {
-        toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
+        toast.error(
+          "Download Failed",
+          error instanceof Error ? error.message : "Unknown error",
+        );
       } finally {
         setIsDownloading(false);
       }
@@ -180,7 +186,10 @@ export function usePreviewDownloads({
         `All ${completedVideos.length} videos have been downloaded as ZIP`,
       );
     } catch (error) {
-      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Download Failed",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -210,7 +219,10 @@ export function usePreviewDownloads({
         `All ${completedImages.length} images have been downloaded as ZIP`,
       );
     } catch (error) {
-      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Download Failed",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -244,13 +256,19 @@ export function usePreviewDownloads({
     ];
 
     try {
-      await downloadFilesAsZip(allFiles, generateSafeFilename("all_content", ".zip"));
+      await downloadFilesAsZip(
+        allFiles,
+        generateSafeFilename("all_content", ".zip"),
+      );
       toast.success(
         "Download Complete",
         `All content (${allFiles.length} files) has been downloaded as ZIP`,
       );
     } catch (error) {
-      toast.error("Download Failed", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Download Failed",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     } finally {
       setIsDownloading(false);
     }

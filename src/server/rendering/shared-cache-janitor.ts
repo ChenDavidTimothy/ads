@@ -40,8 +40,10 @@ export class SharedCacheJanitor {
     }
 
     this.cleanupTimer = setInterval(() => {
-      this.cleanup().catch(error =>
-        logger.error("Cache janitor cleanup failed", { error: error.message })
+      this.cleanup().catch((error) =>
+        logger.error("Cache janitor cleanup failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
       );
     }, this.config.cleanupIntervalMs);
 
@@ -70,10 +72,16 @@ export class SharedCacheJanitor {
           // Nothing to clean yet
           return;
         } catch (createError) {
-          logger.error("Cache janitor cleanup error - failed to create directory", {
-            dir: this.sharedCacheDir,
-            error: createError instanceof Error ? createError.message : String(createError),
-          });
+          logger.error(
+            "Cache janitor cleanup error - failed to create directory",
+            {
+              dir: this.sharedCacheDir,
+              error:
+                createError instanceof Error
+                  ? createError.message
+                  : String(createError),
+            },
+          );
           return;
         }
       }
@@ -88,7 +96,7 @@ export class SharedCacheJanitor {
           } catch {
             return null;
           }
-        })
+        }),
       );
 
       const validFiles = fileStats.filter(Boolean) as Array<{
@@ -108,7 +116,9 @@ export class SharedCacheJanitor {
       }
 
       // Sort by mtime (oldest first) and remove until under limit
-      validFiles.sort((a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime());
+      validFiles.sort(
+        (a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime(),
+      );
 
       let bytesToRemove = totalBytes - this.config.maxTotalBytes;
       let removedCount = 0;
@@ -125,7 +135,7 @@ export class SharedCacheJanitor {
         } catch (error) {
           logger.warn(`Failed to remove cache file`, {
             filePath,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
@@ -137,16 +147,15 @@ export class SharedCacheJanitor {
           remainingFiles: validFiles.length - removedCount,
         });
       }
-
     } catch (error) {
       logger.error("Cache janitor cleanup error", {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
   private formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
+    const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
 

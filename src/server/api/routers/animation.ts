@@ -34,7 +34,10 @@ import {
   buildAnimationSceneFromPartition,
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
-import { extractAssetDependencies, getUniqueAssetIds } from "@/server/rendering/asset-dependency-extractor";
+import {
+  extractAssetDependencies,
+  getUniqueAssetIds,
+} from "@/server/rendering/asset-dependency-extractor";
 import { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
 import type {
   ScenePartition,
@@ -787,11 +790,17 @@ export const animationRouter = createTRPCRouter({
 
           // Prepare asset cache (single bulk operation)
           const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
-            downloadConcurrency: parseInt(process.env.DOWNLOAD_CONCURRENCY_PER_JOB || "8"),
-            maxJobSizeBytes: parseInt(process.env.MAX_JOB_SIZE_BYTES || "2147483648"),
+            downloadConcurrency: parseInt(
+              process.env.DOWNLOAD_CONCURRENCY_PER_JOB ?? "8",
+            ),
+            maxJobSizeBytes: parseInt(
+              process.env.MAX_JOB_SIZE_BYTES ?? "2147483648",
+            ),
             enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
             janitorConfig: {
-              maxTotalBytes: parseInt(process.env.SHARED_CACHE_MAX_BYTES || "10737418240"),
+              maxTotalBytes: parseInt(
+                process.env.SHARED_CACHE_MAX_BYTES ?? "10737418240",
+              ),
             },
           });
 
@@ -817,225 +826,232 @@ export const animationRouter = createTRPCRouter({
             }> = [];
             await ensureWorkerReady();
 
-          for (const partition of scenePartitions) {
-            const subPartitions = partitionByBatchKey(partition);
+            for (const partition of scenePartitions) {
+              const subPartitions = partitionByBatchKey(partition);
 
-            logger.debug("Processing subPartitions", {
-              sceneId: partition.sceneNode?.data?.identifier?.id,
-              subPartitionsCount: subPartitions.length,
-              subPartitionsValid: subPartitions.filter((sub) => sub?.sceneNode)
-                .length,
-              subPartitionsInvalid: subPartitions.filter(
-                (sub) => !sub?.sceneNode,
-              ).length,
-            });
-
-            // Deterministic filename and collision detection per scene
-            const filenameMap = new Map<string, string[]>(); // filename -> original keys
-            for (const sp of subPartitions) {
-              const base = sp.batchKey ? sanitizeForFilename(sp.batchKey) : "";
-              const name = `${base || "scene"}.mp4`;
-              const list = filenameMap.get(name) ?? [];
-              list.push(sp.batchKey ?? "<single>");
-              filenameMap.set(name, list);
-            }
-            const collisions = Array.from(filenameMap.entries()).filter(
-              ([, keys]) => keys.length > 1,
-            );
-            if (collisions.length > 0) {
-              const detail = collisions
-                .map(([fn, keys]) => `${fn} <= [${keys.join(", ")} ]`)
-                .join("; ");
-              throw new Error(
-                `Filename collision after sanitization: ${detail}. Please choose distinct batch keys.`,
-              );
-            }
-            for (const sub of subPartitions) {
-              // Defensive check for undefined sub
-              if (!sub?.sceneNode) {
-                logger.error("Invalid subPartition detected", {
-                  sub: sub,
-                  hasSceneNode: sub?.sceneNode ? true : false,
-                  partitionIndex: subPartitions.indexOf(sub),
-                  totalPartitions: subPartitions.length,
-                });
-                continue; // Skip invalid partitions
-              }
-
-              // Create a properly namespaced sub-partition for the batch key
-              const namespacedSubPartition = namespacePartitionForBatch(
-                sub,
-                sub.batchKey,
-              );
-
-              // Pass asset cache to scene construction
-              const scene: AnimationScene = await buildAnimationSceneFromPartition(
-                namespacedSubPartition,
-                assetCache // Provides local asset resolution
-              );
-              const sceneData = sub.sceneNode.data as SceneNodeData;
-              const displayName = sub.sceneNode.data.identifier.displayName;
-
-              // Prepare scene config using registry defaults
-              const config: SceneAnimationConfig = {
-                ...DEFAULT_SCENE_CONFIG,
-                width: sceneData.width,
-                height: sceneData.height,
-                fps: sceneData.fps,
-                backgroundColor: sceneData.backgroundColor,
-                videoPreset: sceneData.videoPreset,
-                videoCrf: sceneData.videoCrf,
-                ...input.config,
-                // Use standardized naming: <displayName>-<batchKey?>
-                outputBasename: buildContentBasename(
-                  displayName,
-                  sub.batchKey ?? undefined,
-                ),
-                // Group by node id
-                outputSubdir: sub.sceneNode.data.identifier.id,
-              };
-
-              // Enforce frame cap per scene
-              if (config.fps * scene.duration > 1800) {
-                logger.warn(
-                  `Scene ${sub.sceneNode.data.identifier.displayName} exceeds frame limit`,
-                  {
-                    frames: config.fps * scene.duration,
-                    duration: scene.duration,
-                    fps: config.fps,
-                  },
-                );
-                continue; // Skip this scene but continue with others
-              }
-
-              // Create job row for this scene
-              const payload = { scene, config } as const;
-              const { data: jobRow, error: insErr } = await supabase
-                .from("render_jobs")
-                .insert({ user_id: ctx.user!.id, status: "queued", payload })
-                .select("id")
-                .single();
-
-              if (insErr || !jobRow) {
-                logger.error("Failed to create job row for scene", {
-                  sceneId: sub.sceneNode.data.identifier.id,
-                  error: insErr,
-                });
-                continue; // Skip this scene but continue with others
-              }
-
-              // Compute unique basename with job short id (first 8 hex chars, no dashes)
-              const jobShort = String(jobRow.id).replace(/-/g, "").slice(0, 8);
-              const uniqueBasename = `${config.outputBasename}-${jobShort}`;
-              const uniqueConfig: SceneAnimationConfig = {
-                ...config,
-                outputBasename: uniqueBasename,
-              };
-
-              // Update the job payload to persist subdir for traceability
-              await supabase
-                .from("render_jobs")
-                .update({ payload: { scene, config: uniqueConfig } })
-                .eq("id", jobRow.id)
-                .eq("user_id", ctx.user!.id);
-
-              // Compute a stable dedupe key based on storage path to avoid duplicate
-              // concurrent renders for the same output (user/dir/base.mp4)
-              // Use the pre-unique config to compute a stable key so
-              // duplicates across requests coalesce to one job
-              const stableJobKey = [
-                ctx.user!.id,
-                config.outputSubdir ?? "",
-                `${config.outputBasename}.mp4`,
-              ]
-                .filter(Boolean)
-                .join(":");
-
-              // Enqueue the render job with a stable dedupe key
-              await renderQueue.enqueueOnly({
-                scene,
-                config: uniqueConfig,
-                userId: ctx.user!.id,
-                jobId: jobRow.id as string,
-                jobKey: stableJobKey,
+              logger.debug("Processing subPartitions", {
+                sceneId: partition.sceneNode?.data?.identifier?.id,
+                subPartitionsCount: subPartitions.length,
+                subPartitionsValid: subPartitions.filter(
+                  (sub) => sub?.sceneNode,
+                ).length,
+                subPartitionsInvalid: subPartitions.filter(
+                  (sub) => !sub?.sceneNode,
+                ).length,
               });
 
-              jobIds.push(jobRow.id as string);
-              jobsOut.push({
-                jobId: jobRow.id as string,
-                nodeId: sub.sceneNode.data.identifier.id,
-                nodeName: sub.sceneNode.data.identifier.displayName,
-                nodeType: "scene" as const,
-                batchKey: sub.batchKey ?? null,
-              });
-            }
-          }
-
-          if (jobIds.length === 0) {
-            return {
-              success: false,
-              errors: [
-                {
-                  type: "error" as const,
-                  code: "ERR_NO_VALID_SCENES",
-                  message: "No scenes could be processed",
-                  suggestions: [
-                    "Check that scenes have valid objects",
-                    "Ensure scene durations are within limits",
-                    "Verify scene configurations",
-                  ],
-                },
-              ],
-              canRetry: true,
-            };
-          }
-
-          // For single scene, maintain backward compatibility with immediate polling
-          if (jobIds.length === 1) {
-            const inlineWaitMsRaw =
-              process.env.RENDER_JOB_INLINE_WAIT_MS ?? "500";
-            const parsed = Number(inlineWaitMsRaw);
-            const inlineWaitMs = Number.isFinite(parsed)
-              ? Math.min(Math.max(parsed, 0), 5000)
-              : 500;
-            const notify = await waitForRenderJobEvent({
-              jobId: jobIds[0]!,
-              timeoutMs: inlineWaitMs,
-            });
-
-            if (notify && notify.status === "completed" && notify.publicUrl) {
-              const firstPartition = scenePartitions[0];
-              if (!firstPartition?.sceneNode?.data?.identifier) {
-                logger.error("Invalid scene partition for immediate result", {
-                  partitionIndex: 0,
-                  hasPartition: !!firstPartition,
-                  hasSceneNode: !!firstPartition?.sceneNode,
-                  hasIdentifier: !!firstPartition?.sceneNode?.data?.identifier,
-                });
+              // Deterministic filename and collision detection per scene
+              const filenameMap = new Map<string, string[]>(); // filename -> original keys
+              for (const sp of subPartitions) {
+                const base = sp.batchKey
+                  ? sanitizeForFilename(sp.batchKey)
+                  : "";
+                const name = `${base || "scene"}.mp4`;
+                const list = filenameMap.get(name) ?? [];
+                list.push(sp.batchKey ?? "<single>");
+                filenameMap.set(name, list);
+              }
+              const collisions = Array.from(filenameMap.entries()).filter(
+                ([, keys]) => keys.length > 1,
+              );
+              if (collisions.length > 0) {
+                const detail = collisions
+                  .map(([fn, keys]) => `${fn} <= [${keys.join(", ")} ]`)
+                  .join("; ");
                 throw new Error(
-                  "Invalid scene partition structure for immediate result",
+                  `Filename collision after sanitization: ${detail}. Please choose distinct batch keys.`,
                 );
               }
+              for (const sub of subPartitions) {
+                // Defensive check for undefined sub
+                if (!sub?.sceneNode) {
+                  logger.error("Invalid subPartition detected", {
+                    sub: sub,
+                    hasSceneNode: sub?.sceneNode ? true : false,
+                    partitionIndex: subPartitions.indexOf(sub),
+                    totalPartitions: subPartitions.length,
+                  });
+                  continue; // Skip invalid partitions
+                }
 
-              return {
-                success: true,
-                immediateResult: {
-                  jobId: jobIds[0]!,
-                  contentUrl: notify.publicUrl,
-                  nodeId: firstPartition.sceneNode.data.identifier.id,
-                  nodeName:
-                    firstPartition.sceneNode.data.identifier.displayName,
+                // Create a properly namespaced sub-partition for the batch key
+                const namespacedSubPartition = namespacePartitionForBatch(
+                  sub,
+                  sub.batchKey,
+                );
+
+                // Pass asset cache to scene construction
+                const scene: AnimationScene =
+                  await buildAnimationSceneFromPartition(
+                    namespacedSubPartition,
+                    assetCache, // Provides local asset resolution
+                  );
+                const sceneData = sub.sceneNode.data as SceneNodeData;
+                const displayName = sub.sceneNode.data.identifier.displayName;
+
+                // Prepare scene config using registry defaults
+                const config: SceneAnimationConfig = {
+                  ...DEFAULT_SCENE_CONFIG,
+                  width: sceneData.width,
+                  height: sceneData.height,
+                  fps: sceneData.fps,
+                  backgroundColor: sceneData.backgroundColor,
+                  videoPreset: sceneData.videoPreset,
+                  videoCrf: sceneData.videoCrf,
+                  ...input.config,
+                  // Use standardized naming: <displayName>-<batchKey?>
+                  outputBasename: buildContentBasename(
+                    displayName,
+                    sub.batchKey ?? undefined,
+                  ),
+                  // Group by node id
+                  outputSubdir: sub.sceneNode.data.identifier.id,
+                };
+
+                // Enforce frame cap per scene
+                if (config.fps * scene.duration > 1800) {
+                  logger.warn(
+                    `Scene ${sub.sceneNode.data.identifier.displayName} exceeds frame limit`,
+                    {
+                      frames: config.fps * scene.duration,
+                      duration: scene.duration,
+                      fps: config.fps,
+                    },
+                  );
+                  continue; // Skip this scene but continue with others
+                }
+
+                // Create job row for this scene
+                const payload = { scene, config } as const;
+                const { data: jobRow, error: insErr } = await supabase
+                  .from("render_jobs")
+                  .insert({ user_id: ctx.user!.id, status: "queued", payload })
+                  .select("id")
+                  .single();
+
+                if (insErr || !jobRow) {
+                  logger.error("Failed to create job row for scene", {
+                    sceneId: sub.sceneNode.data.identifier.id,
+                    error: insErr,
+                  });
+                  continue; // Skip this scene but continue with others
+                }
+
+                // Compute unique basename with job short id (first 8 hex chars, no dashes)
+                const jobShort = String(jobRow.id)
+                  .replace(/-/g, "")
+                  .slice(0, 8);
+                const uniqueBasename = `${config.outputBasename}-${jobShort}`;
+                const uniqueConfig: SceneAnimationConfig = {
+                  ...config,
+                  outputBasename: uniqueBasename,
+                };
+
+                // Update the job payload to persist subdir for traceability
+                await supabase
+                  .from("render_jobs")
+                  .update({ payload: { scene, config: uniqueConfig } })
+                  .eq("id", jobRow.id)
+                  .eq("user_id", ctx.user!.id);
+
+                // Compute a stable dedupe key based on storage path to avoid duplicate
+                // concurrent renders for the same output (user/dir/base.mp4)
+                // Use the pre-unique config to compute a stable key so
+                // duplicates across requests coalesce to one job
+                const stableJobKey = [
+                  ctx.user!.id,
+                  config.outputSubdir ?? "",
+                  `${config.outputBasename}.mp4`,
+                ]
+                  .filter(Boolean)
+                  .join(":");
+
+                // Enqueue the render job with a stable dedupe key
+                await renderQueue.enqueueOnly({
+                  scene,
+                  config: uniqueConfig,
+                  userId: ctx.user!.id,
+                  jobId: jobRow.id as string,
+                  jobKey: stableJobKey,
+                });
+
+                jobIds.push(jobRow.id as string);
+                jobsOut.push({
+                  jobId: jobRow.id as string,
+                  nodeId: sub.sceneNode.data.identifier.id,
+                  nodeName: sub.sceneNode.data.identifier.displayName,
                   nodeType: "scene" as const,
-                },
-              } as const;
+                  batchKey: sub.batchKey ?? null,
+                });
+              }
             }
-          }
 
-          return {
-            success: true,
-            jobs: jobsOut,
-            totalNodes: jobsOut.length,
-            generationType: "batch" as const,
+            if (jobIds.length === 0) {
+              return {
+                success: false,
+                errors: [
+                  {
+                    type: "error" as const,
+                    code: "ERR_NO_VALID_SCENES",
+                    message: "No scenes could be processed",
+                    suggestions: [
+                      "Check that scenes have valid objects",
+                      "Ensure scene durations are within limits",
+                      "Verify scene configurations",
+                    ],
+                  },
+                ],
+                canRetry: true,
+              };
+            }
+
+            // For single scene, maintain backward compatibility with immediate polling
+            if (jobIds.length === 1) {
+              const inlineWaitMsRaw =
+                process.env.RENDER_JOB_INLINE_WAIT_MS ?? "500";
+              const parsed = Number(inlineWaitMsRaw);
+              const inlineWaitMs = Number.isFinite(parsed)
+                ? Math.min(Math.max(parsed, 0), 5000)
+                : 500;
+              const notify = await waitForRenderJobEvent({
+                jobId: jobIds[0]!,
+                timeoutMs: inlineWaitMs,
+              });
+
+              if (notify && notify.status === "completed" && notify.publicUrl) {
+                const firstPartition = scenePartitions[0];
+                if (!firstPartition?.sceneNode?.data?.identifier) {
+                  logger.error("Invalid scene partition for immediate result", {
+                    partitionIndex: 0,
+                    hasPartition: !!firstPartition,
+                    hasSceneNode: !!firstPartition?.sceneNode,
+                    hasIdentifier:
+                      !!firstPartition?.sceneNode?.data?.identifier,
+                  });
+                  throw new Error(
+                    "Invalid scene partition structure for immediate result",
+                  );
+                }
+
+                return {
+                  success: true,
+                  immediateResult: {
+                    jobId: jobIds[0]!,
+                    contentUrl: notify.publicUrl,
+                    nodeId: firstPartition.sceneNode.data.identifier.id,
+                    nodeName:
+                      firstPartition.sceneNode.data.identifier.displayName,
+                    nodeType: "scene" as const,
+                  },
+                } as const;
+              }
+            }
+
+            return {
+              success: true,
+              jobs: jobsOut,
+              totalNodes: jobsOut.length,
+              generationType: "batch" as const,
             } as const;
           } finally {
             // Always cleanup job cache
@@ -1188,145 +1204,143 @@ export const animationRouter = createTRPCRouter({
               batchKey: string | null;
             }> = [];
             await ensureWorkerReady();
-          const { imageQueue } = await import("@/server/jobs/image-queue");
+            const { imageQueue } = await import("@/server/jobs/image-queue");
 
-          for (const partition of scenePartitions) {
-            const subPartitions = partitionByBatchKey(partition);
-            for (const sub of subPartitions) {
-              if (!sub?.sceneNode) continue;
+            for (const partition of scenePartitions) {
+              const subPartitions = partitionByBatchKey(partition);
+              for (const sub of subPartitions) {
+                if (!sub?.sceneNode) continue;
 
-              const scene: AnimationScene = await buildAnimationSceneFromPartition(
-                sub,
-                assetCache
-              );
-              const frameData = sub.sceneNode.data as unknown as {
-                width: number;
-                height: number;
-                backgroundColor: string;
-                format: "png" | "jpeg";
-                quality: number;
-              };
-              const config = {
-                width: Number(frameData.width),
-                height: Number(frameData.height),
-                backgroundColor: String(frameData.backgroundColor),
-                format: frameData.format === "jpeg" ? "jpeg" : "png",
-                quality: Number(frameData.quality ?? 90),
-                // Standardized naming: <displayName>-<batchKey?>
-                outputBasename: buildContentBasename(
-                  sub.sceneNode.data.identifier.displayName,
-                  sub.batchKey ?? undefined,
-                ),
-                // Group by node id
-                outputSubdir: sub.sceneNode.data.identifier.id,
-              } as const;
+                const scene: AnimationScene =
+                  await buildAnimationSceneFromPartition(sub, assetCache);
+                const frameData = sub.sceneNode.data as unknown as {
+                  width: number;
+                  height: number;
+                  backgroundColor: string;
+                  format: "png" | "jpeg";
+                  quality: number;
+                };
+                const config = {
+                  width: Number(frameData.width),
+                  height: Number(frameData.height),
+                  backgroundColor: String(frameData.backgroundColor),
+                  format: frameData.format === "jpeg" ? "jpeg" : "png",
+                  quality: Number(frameData.quality ?? 90),
+                  // Standardized naming: <displayName>-<batchKey?>
+                  outputBasename: buildContentBasename(
+                    sub.sceneNode.data.identifier.displayName,
+                    sub.batchKey ?? undefined,
+                  ),
+                  // Group by node id
+                  outputSubdir: sub.sceneNode.data.identifier.id,
+                } as const;
 
-              const payload = { scene, config } as const;
-              const { data: jobRow, error: insErr } = await supabase
-                .from("render_jobs")
-                .insert({ user_id: ctx.user!.id, status: "queued", payload })
-                .select("id")
-                .single();
-              if (insErr || !jobRow) continue;
+                const payload = { scene, config } as const;
+                const { data: jobRow, error: insErr } = await supabase
+                  .from("render_jobs")
+                  .insert({ user_id: ctx.user!.id, status: "queued", payload })
+                  .select("id")
+                  .single();
+                if (insErr || !jobRow) continue;
 
-              // Compute unique basename for image job
-              const jobShortImg = String(jobRow.id)
-                .replace(/-/g, "")
-                .slice(0, 8);
-              const uniqueImgBasename = `${config.outputBasename}-${jobShortImg}`;
-              const uniqueImgConfig = {
-                ...config,
-                outputBasename: uniqueImgBasename,
-              } as const;
+                // Compute unique basename for image job
+                const jobShortImg = String(jobRow.id)
+                  .replace(/-/g, "")
+                  .slice(0, 8);
+                const uniqueImgBasename = `${config.outputBasename}-${jobShortImg}`;
+                const uniqueImgConfig = {
+                  ...config,
+                  outputBasename: uniqueImgBasename,
+                } as const;
 
-              // Persist updated payload
-              await supabase
-                .from("render_jobs")
-                .update({ payload: { scene, config: uniqueImgConfig } })
-                .eq("id", jobRow.id)
-                .eq("user_id", ctx.user!.id);
+                // Persist updated payload
+                await supabase
+                  .from("render_jobs")
+                  .update({ payload: { scene, config: uniqueImgConfig } })
+                  .eq("id", jobRow.id)
+                  .eq("user_id", ctx.user!.id);
 
-              await imageQueue.enqueueOnly({
-                scene,
-                config: { ...uniqueImgConfig },
-                userId: ctx.user!.id,
-                jobId: jobRow.id as string,
-              });
+                await imageQueue.enqueueOnly({
+                  scene,
+                  config: { ...uniqueImgConfig },
+                  userId: ctx.user!.id,
+                  jobId: jobRow.id as string,
+                });
 
-              jobIds.push(jobRow.id as string);
-              jobsOut.push({
-                jobId: jobRow.id as string,
-                nodeId: sub.sceneNode.data.identifier.id,
-                nodeName: sub.sceneNode.data.identifier.displayName,
-                nodeType: "frame" as const,
-                batchKey: sub.batchKey ?? null,
-              });
-            }
-          }
-
-          if (jobIds.length === 0) {
-            return {
-              success: false,
-              errors: [
-                {
-                  type: "error" as const,
-                  code: "ERR_NO_VALID_FRAMES",
-                  message: "No frames could be processed",
-                },
-              ],
-              canRetry: true,
-            };
-          }
-
-          // Optionally short-wait for single job
-          if (jobIds.length === 1) {
-            const inlineWaitMsRaw =
-              process.env.RENDER_JOB_INLINE_WAIT_MS ?? "500";
-            const parsed = Number(inlineWaitMsRaw);
-            const inlineWaitMs = Number.isFinite(parsed)
-              ? Math.min(Math.max(parsed, 0), 5000)
-              : 500;
-            const notify = await waitForRenderJobEvent({
-              jobId: jobIds[0]!,
-              timeoutMs: inlineWaitMs,
-            });
-            if (notify && notify.status === "completed" && notify.publicUrl) {
-              const firstPartition = scenePartitions[0];
-              if (!firstPartition?.sceneNode?.data?.identifier) {
-                logger.error(
-                  "Invalid scene partition for frame immediate result",
-                  {
-                    partitionIndex: 0,
-                    hasPartition: !!firstPartition,
-                    hasSceneNode: !!firstPartition?.sceneNode,
-                    hasIdentifier:
-                      !!firstPartition?.sceneNode?.data?.identifier,
-                  },
-                );
-                throw new Error(
-                  "Invalid scene partition structure for frame immediate result",
-                );
-              }
-
-              return {
-                success: true,
-                immediateResult: {
-                  jobId: jobIds[0]!,
-                  contentUrl: notify.publicUrl,
-                  nodeId: firstPartition.sceneNode.data.identifier.id,
-                  nodeName:
-                    firstPartition.sceneNode.data.identifier.displayName,
+                jobIds.push(jobRow.id as string);
+                jobsOut.push({
+                  jobId: jobRow.id as string,
+                  nodeId: sub.sceneNode.data.identifier.id,
+                  nodeName: sub.sceneNode.data.identifier.displayName,
                   nodeType: "frame" as const,
-                },
-              } as const;
+                  batchKey: sub.batchKey ?? null,
+                });
+              }
             }
-          }
 
-          return {
-            success: true,
-            jobs: jobsOut,
-            totalNodes: jobsOut.length,
-            generationType: "batch" as const,
+            if (jobIds.length === 0) {
+              return {
+                success: false,
+                errors: [
+                  {
+                    type: "error" as const,
+                    code: "ERR_NO_VALID_FRAMES",
+                    message: "No frames could be processed",
+                  },
+                ],
+                canRetry: true,
+              };
+            }
+
+            // Optionally short-wait for single job
+            if (jobIds.length === 1) {
+              const inlineWaitMsRaw =
+                process.env.RENDER_JOB_INLINE_WAIT_MS ?? "500";
+              const parsed = Number(inlineWaitMsRaw);
+              const inlineWaitMs = Number.isFinite(parsed)
+                ? Math.min(Math.max(parsed, 0), 5000)
+                : 500;
+              const notify = await waitForRenderJobEvent({
+                jobId: jobIds[0]!,
+                timeoutMs: inlineWaitMs,
+              });
+              if (notify && notify.status === "completed" && notify.publicUrl) {
+                const firstPartition = scenePartitions[0];
+                if (!firstPartition?.sceneNode?.data?.identifier) {
+                  logger.error(
+                    "Invalid scene partition for frame immediate result",
+                    {
+                      partitionIndex: 0,
+                      hasPartition: !!firstPartition,
+                      hasSceneNode: !!firstPartition?.sceneNode,
+                      hasIdentifier:
+                        !!firstPartition?.sceneNode?.data?.identifier,
+                    },
+                  );
+                  throw new Error(
+                    "Invalid scene partition structure for frame immediate result",
+                  );
+                }
+
+                return {
+                  success: true,
+                  immediateResult: {
+                    jobId: jobIds[0]!,
+                    contentUrl: notify.publicUrl,
+                    nodeId: firstPartition.sceneNode.data.identifier.id,
+                    nodeName:
+                      firstPartition.sceneNode.data.identifier.displayName,
+                    nodeType: "frame" as const,
+                  },
+                } as const;
+              }
+            }
+
+            return {
+              success: true,
+              jobs: jobsOut,
+              totalNodes: jobsOut.length,
+              generationType: "batch" as const,
             } as const;
           } finally {
             await assetCache.cleanup();
