@@ -1,5 +1,6 @@
 // src/server/api/routers/animation.ts - Graceful error handling with comprehensive validation + debug execution
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import type { createTRPCContext } from "@/server/api/trpc";
 import {
   createTRPCRouter,
@@ -33,6 +34,8 @@ import {
   buildAnimationSceneFromPartition,
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
+import { extractAssetDependencies, getUniqueAssetIds } from "@/server/rendering/asset-dependency-extractor";
+import { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
 import type {
   ScenePartition,
   BatchedScenePartition,
@@ -771,16 +774,48 @@ export const animationRouter = createTRPCRouter({
             throw new NoValidScenesError();
           }
 
-          // Create render jobs for each valid scene, partitioning by batchKey
-          const jobIds: string[] = [];
-          const jobsOut: Array<{
-            jobId: string;
-            nodeId: string;
-            nodeName: string;
-            nodeType: "scene";
-            batchKey: string | null;
-          }> = [];
-          await ensureWorkerReady();
+          // Extract asset dependencies (replaces per-scene resolution)
+          const dependencies = extractAssetDependencies(scenePartitions);
+          const uniqueAssetIds = getUniqueAssetIds(dependencies);
+
+          logger.info("Asset dependencies extracted", {
+            totalDependencies: dependencies.length,
+            uniqueAssets: uniqueAssetIds.length,
+            totalScenePartitions: scenePartitions.length,
+            userId: ctx.user!.id,
+          });
+
+          // Prepare asset cache (single bulk operation)
+          const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
+            downloadConcurrency: parseInt(process.env.DOWNLOAD_CONCURRENCY_PER_JOB || "8"),
+            maxJobSizeBytes: parseInt(process.env.MAX_JOB_SIZE_BYTES || "2147483648"),
+            enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
+            janitorConfig: {
+              maxTotalBytes: parseInt(process.env.SHARED_CACHE_MAX_BYTES || "10737418240"),
+            },
+          });
+
+          let manifest;
+          try {
+            manifest = await assetCache.prepare(uniqueAssetIds);
+
+            logger.info("Asset cache prepared successfully", {
+              jobId: manifest.jobId,
+              assetsCount: Object.keys(manifest.assets).length,
+              totalBytes: manifest.totalBytes,
+              metrics: assetCache.getMetrics(),
+            });
+
+            // Create render jobs for each valid scene, partitioning by batchKey
+            const jobIds: string[] = [];
+            const jobsOut: Array<{
+              jobId: string;
+              nodeId: string;
+              nodeName: string;
+              nodeType: "scene";
+              batchKey: string | null;
+            }> = [];
+            await ensureWorkerReady();
 
           for (const partition of scenePartitions) {
             const subPartitions = partitionByBatchKey(partition);
@@ -833,8 +868,11 @@ export const animationRouter = createTRPCRouter({
                 sub.batchKey,
               );
 
-              const scene: AnimationScene =
-                await buildAnimationSceneFromPartition(namespacedSubPartition);
+              // Pass asset cache to scene construction
+              const scene: AnimationScene = await buildAnimationSceneFromPartition(
+                namespacedSubPartition,
+                assetCache // Provides local asset resolution
+              );
               const sceneData = sub.sceneNode.data as SceneNodeData;
               const displayName = sub.sceneNode.data.identifier.displayName;
 
@@ -998,7 +1036,11 @@ export const animationRouter = createTRPCRouter({
             jobs: jobsOut,
             totalNodes: jobsOut.length,
             generationType: "batch" as const,
-          } as const;
+            } as const;
+          } finally {
+            // Always cleanup job cache
+            await assetCache.cleanup();
+          }
         } catch (error) {
           // Log server-side error
           logger.domain("Scene generation failed", error, {
@@ -1125,17 +1167,27 @@ export const animationRouter = createTRPCRouter({
             throw new NoValidScenesError();
           }
 
-          // Enqueue image jobs
-          const supabase = createServiceClient();
-          const jobIds: string[] = [];
-          const jobsOut: Array<{
-            jobId: string;
-            nodeId: string;
-            nodeName: string;
-            nodeType: "frame";
-            batchKey: string | null;
-          }> = [];
-          await ensureWorkerReady();
+          const dependencies = extractAssetDependencies(scenePartitions);
+          const uniqueAssetIds = getUniqueAssetIds(dependencies);
+
+          const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
+            enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
+          });
+
+          try {
+            await assetCache.prepare(uniqueAssetIds);
+
+            // Enqueue image jobs
+            const supabase = createServiceClient();
+            const jobIds: string[] = [];
+            const jobsOut: Array<{
+              jobId: string;
+              nodeId: string;
+              nodeName: string;
+              nodeType: "frame";
+              batchKey: string | null;
+            }> = [];
+            await ensureWorkerReady();
           const { imageQueue } = await import("@/server/jobs/image-queue");
 
           for (const partition of scenePartitions) {
@@ -1143,8 +1195,10 @@ export const animationRouter = createTRPCRouter({
             for (const sub of subPartitions) {
               if (!sub?.sceneNode) continue;
 
-              const scene: AnimationScene =
-                await buildAnimationSceneFromPartition(sub);
+              const scene: AnimationScene = await buildAnimationSceneFromPartition(
+                sub,
+                assetCache
+              );
               const frameData = sub.sceneNode.data as unknown as {
                 width: number;
                 height: number;
@@ -1273,7 +1327,10 @@ export const animationRouter = createTRPCRouter({
             jobs: jobsOut,
             totalNodes: jobsOut.length,
             generationType: "batch" as const,
-          } as const;
+            } as const;
+          } finally {
+            await assetCache.cleanup();
+          }
         } catch (error) {
           logger.domain("Image generation failed", error, {
             path: "animation.generateImage",

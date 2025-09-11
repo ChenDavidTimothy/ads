@@ -14,6 +14,7 @@ import {
   resolveFieldValue,
   type BatchResolveContext,
 } from "./batch-overrides-resolver";
+import type { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
 
 export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
@@ -377,6 +378,7 @@ export function calculateSceneDuration(
  */
 export async function buildAnimationSceneFromPartition(
   partition: ScenePartition,
+  assetCache?: AssetCacheManager
 ): Promise<AnimationScene> {
   const sceneData = partition.sceneNode.data as unknown as Record<
     string,
@@ -623,76 +625,42 @@ export async function buildAnimationSceneFromPartition(
     }),
   );
 
-  // Resolve image URLs for images that need them
-  const resolvedObjects: SceneObject[] = await Promise.all(
-    overriddenObjects.map(async (obj) => {
-      if (obj.type === "image") {
-        const props = obj.properties as ImageProperties;
-        if (!props.imageUrl && props.assetId) {
-          try {
-            const { createServiceClient } = await import(
-              "@/utils/supabase/service"
-            );
-            const { STORAGE_CONFIG } = await import("@/server/storage/config");
+  // Resolve image URLs for images that need them using asset cache
+  const resolvedObjects: SceneObject[] = overriddenObjects.map((obj) => {
+    if (obj.type === "image") {
+      const props = obj.properties as ImageProperties;
 
-            const supabase = createServiceClient();
-            const { data: asset, error } = await supabase
-              .from("user_assets")
-              .select("bucket_name, storage_path, image_width, image_height")
-              .eq("id", props.assetId)
-              .single();
-
-            if (error) {
-              console.warn(
-                `[SCENE CONSTRUCTION] Asset ${props.assetId} not found:`,
-                error.message,
-              );
-              return obj;
-            }
-
-            if (!asset?.bucket_name || !asset?.storage_path) {
-              console.warn(
-                `[SCENE CONSTRUCTION] Asset ${props.assetId} missing storage info`,
-              );
-              return obj;
-            }
-
-            const { data: signedUrl, error: urlError } = await supabase.storage
-              .from(asset.bucket_name as string)
-              .createSignedUrl(
-                asset.storage_path as string,
-                STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS,
-              );
-
-            if (urlError || !signedUrl) {
-              console.warn(
-                `[SCENE CONSTRUCTION] Failed to create signed URL for asset ${props.assetId}:`,
-                urlError?.message,
-              );
-              return obj;
-            }
-
-            return {
-              ...obj,
-              properties: {
-                ...props,
-                imageUrl: signedUrl.signedUrl,
-                originalWidth: (asset.image_width as number) ?? 100,
-                originalHeight: (asset.image_height as number) ?? 100,
-              },
-            };
-          } catch (error) {
-            console.warn(
-              `[SCENE CONSTRUCTION] Failed to resolve imageUrl for asset ${props.assetId}:`,
-              error instanceof Error ? error.message : error,
-            );
-            return obj;
-          }
+      if (!props.imageUrl && props.assetId) {
+        if (!assetCache) {
+          throw new Error(
+            `CACHE_REQUIRED: Asset cache required for resolving asset ${props.assetId} in scene construction. ` +
+            `Ensure asset preparation completed before scene construction.`
+          );
         }
+
+        const cachedAsset = assetCache.getAsset(props.assetId);
+        if (!cachedAsset) {
+          throw new Error(
+            `ASSET_NOT_CACHED: Asset ${props.assetId} not found in cache. ` +
+            `Ensure all assets were prepared successfully. ` +
+            `Required assets: ${props.assetId}`
+          );
+        }
+
+        // Use absolute filesystem path only (no file:// scheme)
+        return {
+          ...obj,
+          properties: {
+            ...props,
+            imageUrl: cachedAsset.localPath, // Absolute path only
+            originalWidth: cachedAsset.width ?? 100,
+            originalHeight: cachedAsset.height ?? 100,
+          },
+        };
       }
-      return obj;
-    }),
-  );
+    }
+    return obj;
+  });
 
   let sortedObjects = resolvedObjects;
   if (layerOrder && layerOrder.length > 0) {

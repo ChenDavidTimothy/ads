@@ -31,6 +31,14 @@ export const env = createEnv({
     RENDER_CONCURRENCY: z.coerce.number().int().positive().max(20).default(2),
     DATABASE_URL: z.string().min(1).url(), // Ensure it's a valid URL
 
+    // Asset cache configuration - platform-appropriate defaults
+    JOB_CACHE_DIR: z.string().default(process.platform === 'win32' ? 'C:\\render\\jobs' : '/var/cache/render/jobs'),
+    SHARED_CACHE_DIR: z.string().default(process.platform === 'win32' ? 'C:\\render\\shared' : '/var/cache/render/shared'),
+    SHARED_CACHE_MAX_BYTES: z.coerce.number().int().positive().default(10737418240), // 10GB
+    MAX_JOB_SIZE_BYTES: z.coerce.number().int().positive().default(2147483648), // 2GB
+    DOWNLOAD_CONCURRENCY_PER_JOB: z.coerce.number().int().positive().max(50).default(8),
+    ENABLE_SHARED_CACHE_JANITOR: z.string().transform((val) => val === "true").default("true"),
+
     // Production-specific requirements
     ...(process.env.NODE_ENV === "production" && {
       // Force HTTPS in production for Supabase URL (also validated in client section)
@@ -75,6 +83,14 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+
+    // Asset cache configuration
+    JOB_CACHE_DIR: process.env.JOB_CACHE_DIR,
+    SHARED_CACHE_DIR: process.env.SHARED_CACHE_DIR,
+    SHARED_CACHE_MAX_BYTES: process.env.SHARED_CACHE_MAX_BYTES,
+    MAX_JOB_SIZE_BYTES: process.env.MAX_JOB_SIZE_BYTES,
+    DOWNLOAD_CONCURRENCY_PER_JOB: process.env.DOWNLOAD_CONCURRENCY_PER_JOB,
+    ENABLE_SHARED_CACHE_JANITOR: process.env.ENABLE_SHARED_CACHE_JANITOR,
   },
 
   // Enhanced runtime validation
