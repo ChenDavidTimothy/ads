@@ -889,6 +889,8 @@ export const animationRouter = createTRPCRouter({
           });
 
           let manifest;
+          let assetCacheCleanup: AssetCacheDeferredCleanup | undefined;
+
           try {
             manifest = await assetCache.prepare(uniqueAssetIds);
 
@@ -912,7 +914,7 @@ export const animationRouter = createTRPCRouter({
 
             // CRITICAL: Setup deferred asset cache cleanup
             // Asset cache will be cleaned up after all jobs complete
-            const assetCacheCleanup = new AssetCacheDeferredCleanup(
+            assetCacheCleanup = new AssetCacheDeferredCleanup(
               assetCache,
               manifest.jobId,
               jobIds // Will be populated in the loop
@@ -1146,7 +1148,10 @@ export const animationRouter = createTRPCRouter({
               generationType: "batch" as const,
             } as const;
           } finally {
-            // Always cleanup job cache
+            // PRODUCTION-READY: Schedule deferred cleanup after all jobs are queued
+            if (assetCacheCleanup) {
+              assetCacheCleanup.scheduleCleanup();
+            }
           }
         } catch (error) {
           // Log server-side error
@@ -1281,8 +1286,10 @@ export const animationRouter = createTRPCRouter({
             enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
           });
 
+          let assetCacheCleanup: AssetCacheDeferredCleanup | undefined;
+
           try {
-            await assetCache.prepare(uniqueAssetIds);
+            const manifest = await assetCache.prepare(uniqueAssetIds);
 
             // Enqueue image jobs
             const supabase = createServiceClient();
@@ -1294,6 +1301,14 @@ export const animationRouter = createTRPCRouter({
               nodeType: "frame";
               batchKey: string | null;
             }> = [];
+
+            // CRITICAL: Setup deferred asset cache cleanup (same as video generation)
+            assetCacheCleanup = new AssetCacheDeferredCleanup(
+              assetCache,
+              manifest.jobId, // Use manifest jobId like video generation
+              jobIds // Will be populated in the loop
+            );
+
             await ensureWorkerReady();
             const { imageQueue } = await import("@/server/jobs/image-queue");
 
@@ -1435,7 +1450,9 @@ export const animationRouter = createTRPCRouter({
             } as const;
           } finally {
             // PRODUCTION-READY: Schedule deferred cleanup after all jobs are queued
-            assetCacheCleanup.scheduleCleanup();
+            if (assetCacheCleanup) {
+              assetCacheCleanup.scheduleCleanup();
+            }
           }
         } catch (error) {
           logger.domain("Image generation failed", error, {
