@@ -638,6 +638,8 @@ export async function buildAnimationSceneFromPartition(
           );
         }
 
+        logger.debug(`Resolving imageUrl for object ${obj.id} with assetId ${props.assetId}`);
+
         const cachedAsset = assetCache.getAsset(props.assetId);
         if (!cachedAsset) {
           throw new Error(
@@ -657,6 +659,12 @@ export async function buildAnimationSceneFromPartition(
             originalHeight: cachedAsset.height ?? 100,
           },
         };
+      } else if (obj.type === "image" && !props.imageUrl && !props.assetId) {
+        // Object has no assetId configured - this will result in a placeholder
+        logger.debug(`Object ${obj.id} has no assetId configured - will render as placeholder`, {
+          objectId: obj.id,
+          properties: props,
+        });
       }
     }
     return obj;

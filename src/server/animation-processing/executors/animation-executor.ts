@@ -527,8 +527,19 @@ export class AnimationNodeExecutor extends BaseExecutor {
       initialOpacity,
       properties: {
         ...resolvedProperties,
-        // Just store assetId - no asset loading here
-        assetId: finalOverrides.imageAssetId ?? "",
+        // Only set assetId if we actually have an asset configured
+        ...(finalOverrides.imageAssetId && finalOverrides.imageAssetId.trim()
+          ? { assetId: finalOverrides.imageAssetId }
+          : (() => {
+              // Debug log when no assetId is configured
+              logger.debug(`Media node processed object ${objectId} without assetId`, {
+                objectId,
+                hasImageAssetId: !!finalOverrides.imageAssetId,
+                imageAssetIdValue: finalOverrides.imageAssetId,
+                nodeOverrides: objectOverrides,
+              });
+              return {};
+            })()),
 
         // Crop properties
         cropX: finalOverrides.cropX ?? 0,

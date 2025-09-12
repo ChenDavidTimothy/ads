@@ -20,6 +20,7 @@ interface RenderJobPayload {
 
 let runner: Runner | null = null;
 
+
 async function main() {
   const concurrency = Number(workerEnv.RENDER_CONCURRENCY);
   const connectionString = workerEnv.DATABASE_URL;

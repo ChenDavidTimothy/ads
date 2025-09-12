@@ -318,9 +318,18 @@ export class SceneRenderer {
         if (props.imageUrl) {
           imageUrls.add(props.imageUrl);
         } else {
-          logger.warn(
-            `[PRELOAD] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
-          );
+          // Only warn if object has an assetId but no imageUrl (cache resolution failed)
+          // Objects without assetId are intentionally unconfigured and should preload silently
+          if (props.assetId) {
+            logger.warn(
+              `[PRELOAD] Missing imageUrl for asset ${props.assetId} - cache resolution failed, will render placeholder`,
+            );
+          } else {
+            // Object has no assetId - this is intentional (unconfigured media node)
+            logger.debug(
+              `[PRELOAD] Object has no assetId configured - skipping preload, will render placeholder`,
+            );
+          }
         }
       }
     }
@@ -378,9 +387,19 @@ export class SceneRenderer {
     _state: ObjectState,
   ): Promise<void> {
     if (!props.imageUrl) {
-      logger.warn(
-        `[RENDER] Missing imageUrl for asset ${props.assetId ?? "unknown"} - rendering placeholder`,
-      );
+      // Only warn if object has an assetId but no imageUrl (cache resolution failed)
+      // Objects without assetId are intentionally unconfigured and should render placeholders silently
+      if (props.assetId) {
+        logger.warn(
+          `[RENDER] Missing imageUrl for asset ${props.assetId} - cache resolution failed, rendering placeholder`,
+        );
+      } else {
+        // Object has no assetId - this is intentional (unconfigured media node)
+        logger.debug(
+          `[RENDER] Object has no assetId configured - rendering placeholder as expected`,
+        );
+      }
+
       this.drawImagePlaceholder(
         ctx,
         props.displayWidth ?? 100,

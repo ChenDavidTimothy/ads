@@ -39,6 +39,90 @@ import {
   getUniqueAssetIds,
 } from "@/server/rendering/asset-dependency-extractor";
 import { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
+
+/**
+ * PRODUCTION-READY: Deferred asset cache cleanup
+ * Ensures cache persists until all render jobs complete
+ */
+class AssetCacheDeferredCleanup {
+  private assetCache: AssetCacheManager;
+  private cacheJobId: string;
+  private jobIds: string[];
+  private cleanupScheduled = false;
+
+  constructor(
+    assetCache: AssetCacheManager,
+    cacheJobId: string,
+    jobIds: string[]
+  ) {
+    this.assetCache = assetCache;
+    this.cacheJobId = cacheJobId;
+    this.jobIds = jobIds;
+  }
+
+  /**
+   * Schedule cleanup to run after all jobs complete
+   * This ensures cache files remain available during rendering
+   */
+  scheduleCleanup(): void {
+    if (this.cleanupScheduled) return;
+    this.cleanupScheduled = true;
+
+    // Run cleanup in background after a delay to ensure jobs have started
+    setTimeout(() => {
+      void this.performDeferredCleanup();
+    }, 5000); // 5 second delay to let jobs start
+  }
+
+  private async performDeferredCleanup(): Promise<void> {
+    try {
+      // Check if all jobs are complete before cleaning up
+      const supabase = createServiceClient();
+      const { data: jobs, error } = await supabase
+        .from("render_jobs")
+        .select("status")
+        .in("id", this.jobIds);
+
+      if (error) {
+        logger.error("Failed to check job completion status", {
+          cacheJobId: this.cacheJobId,
+          error: error.message,
+        });
+        // Don't cleanup if we can't verify completion
+        return;
+      }
+
+      const incompleteJobs = jobs?.filter(
+        (job) => job.status !== "completed" && job.status !== "failed"
+      ) ?? [];
+
+      if (incompleteJobs.length > 0) {
+        logger.info("Deferring cache cleanup - jobs still running", {
+          cacheJobId: this.cacheJobId,
+          incompleteJobs: incompleteJobs.length,
+          totalJobs: this.jobIds.length,
+        });
+        // Schedule another check in 30 seconds
+        setTimeout(() => {
+          void this.performDeferredCleanup();
+        }, 30000);
+        return;
+      }
+
+      // All jobs complete - safe to cleanup
+      await this.assetCache.cleanup();
+      logger.info("Asset cache cleanup completed after job completion", {
+        cacheJobId: this.cacheJobId,
+        totalJobs: this.jobIds.length,
+      });
+    } catch (error) {
+      logger.error("Deferred cache cleanup failed", {
+        cacheJobId: this.cacheJobId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
 import type {
   ScenePartition,
   BatchedScenePartition,
@@ -815,7 +899,7 @@ export const animationRouter = createTRPCRouter({
               metrics: assetCache.getMetrics(),
             });
 
-            // Create render jobs for each valid scene, partitioning by batchKey
+              // Create render jobs for each valid scene, partitioning by batchKey
             const jobIds: string[] = [];
             const jobsOut: Array<{
               jobId: string;
@@ -825,6 +909,14 @@ export const animationRouter = createTRPCRouter({
               batchKey: string | null;
             }> = [];
             await ensureWorkerReady();
+
+            // CRITICAL: Setup deferred asset cache cleanup
+            // Asset cache will be cleaned up after all jobs complete
+            const assetCacheCleanup = new AssetCacheDeferredCleanup(
+              assetCache,
+              manifest.jobId,
+              jobIds // Will be populated in the loop
+            );
 
             for (const partition of scenePartitions) {
               const subPartitions = partitionByBatchKey(partition);
@@ -1342,7 +1434,8 @@ export const animationRouter = createTRPCRouter({
               generationType: "batch" as const,
             } as const;
           } finally {
-            await assetCache.cleanup();
+            // PRODUCTION-READY: Schedule deferred cleanup after all jobs are queued
+            assetCacheCleanup.scheduleCleanup();
           }
         } catch (error) {
           logger.domain("Image generation failed", error, {
