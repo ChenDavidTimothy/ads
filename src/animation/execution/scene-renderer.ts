@@ -453,8 +453,8 @@ export class SceneRenderer {
       srcY,
       srcWidth,
       srcHeight,
-      0,
-      0,
+      -destWidth / 2,
+      -destHeight / 2,
       destWidth,
       destHeight,
     );

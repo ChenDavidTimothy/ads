@@ -528,7 +528,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       properties: {
         ...resolvedProperties,
         // Only set assetId if we actually have an asset configured
-        ...(finalOverrides.imageAssetId && finalOverrides.imageAssetId.trim()
+        ...(finalOverrides.imageAssetId?.trim()
           ? { assetId: finalOverrides.imageAssetId }
           : (() => {
               // Debug log when no assetId is configured
