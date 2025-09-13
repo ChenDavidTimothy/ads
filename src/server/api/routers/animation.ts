@@ -36,6 +36,7 @@ import {
 } from "@/server/animation-processing/scene/scene-partitioner";
 import {
   extractAssetDependencies,
+  extractAssetDependenciesFromBatchedPartitions,
   getUniqueAssetIds,
 } from "@/server/rendering/asset-dependency-extractor";
 import { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
@@ -861,13 +862,21 @@ export const animationRouter = createTRPCRouter({
             throw new NoValidScenesError();
           }
 
-          // Extract asset dependencies (replaces per-scene resolution)
-          const dependencies = extractAssetDependencies(scenePartitions);
+          // First pass: partition all scenes by batch key to collect all batched partitions
+          const allBatchedPartitions: BatchedScenePartition[] = [];
+          for (const partition of scenePartitions) {
+            const subPartitions = partitionByBatchKey(partition);
+            allBatchedPartitions.push(...subPartitions);
+          }
+
+          // Extract asset dependencies from batched partitions (includes batch overrides)
+          const dependencies = extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
           const uniqueAssetIds = getUniqueAssetIds(dependencies);
 
-          logger.info("Asset dependencies extracted", {
+          logger.info("Asset dependencies extracted from batched partitions", {
             totalDependencies: dependencies.length,
             uniqueAssets: uniqueAssetIds.length,
+            totalBatchedPartitions: allBatchedPartitions.length,
             totalScenePartitions: scenePartitions.length,
             userId: ctx.user!.id,
           });

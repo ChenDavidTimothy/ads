@@ -9,19 +9,26 @@ class CleanupService {
   private isRunning = false;
   private lockFile: string;
   private processId: string;
+  private listenersAdded = false;
 
   constructor() {
     // Create a unique identifier for this process
     this.processId = `${process.pid}-${Date.now()}`;
     this.lockFile = path.join(process.cwd(), ".cleanup-service.lock");
 
-    // Ensure lock file is released on process exit
-    process.on("exit", () => this.releaseLock());
-    process.on("SIGINT", () => this.releaseLock());
-    process.on("SIGTERM", () => this.releaseLock());
-    process.on("SIGUSR2", () => this.releaseLock()); // nodemon restart
-
     // Storage provider will be created lazily when needed
+  }
+
+  private ensureListenersAdded(): void {
+    if (this.listenersAdded) return;
+
+    // Ensure lock file is released on process exit
+    process.once("exit", () => this.releaseLock());
+    process.once("SIGINT", () => this.releaseLock());
+    process.once("SIGTERM", () => this.releaseLock());
+    process.once("SIGUSR2", () => this.releaseLock()); // nodemon restart
+
+    this.listenersAdded = true;
   }
 
   private getStorageProvider(): SmartStorageProvider {
@@ -81,6 +88,9 @@ class CleanupService {
       );
       return;
     }
+
+    // Ensure event listeners are added (only once per process)
+    this.ensureListenersAdded();
 
     // Try to acquire the lock
     if (!this.acquireLock()) {

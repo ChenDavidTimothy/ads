@@ -11,6 +11,7 @@ export interface ServiceRegistry {
 
 class ServiceRegistryImpl implements ServiceRegistry {
   private isInitialized = false;
+  private listenersAdded = false;
   private services = new Map<
     string,
     { start: () => void; stop: () => void; getStatus: () => unknown }
@@ -21,11 +22,33 @@ class ServiceRegistryImpl implements ServiceRegistry {
     this.services.set("cleanup", cleanupService);
   }
 
+  private ensureListenersAdded(): void {
+    if (this.listenersAdded) return;
+
+    // Graceful shutdown handling - only add once per process
+    process.once("SIGINT", () => {
+      console.log("🛑 Received SIGINT - shutting down gracefully...");
+      void this.shutdown();
+      process.exit(0);
+    });
+
+    process.once("SIGTERM", () => {
+      console.log("🛑 Received SIGTERM - shutting down gracefully...");
+      void this.shutdown();
+      process.exit(0);
+    });
+
+    this.listenersAdded = true;
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitialized) {
       console.log("✅ Services already initialized - skipping");
       return;
     }
+
+    // Ensure event listeners are added (only once per process)
+    this.ensureListenersAdded();
 
     console.log("🚀 Initializing background services...");
 
@@ -92,16 +115,3 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
 // Export singleton instance
 export const serviceRegistry = new ServiceRegistryImpl();
-
-// Graceful shutdown handling
-process.on("SIGINT", () => {
-  console.log("🛑 Received SIGINT - shutting down gracefully...");
-  void serviceRegistry.shutdown();
-  process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-  console.log("🛑 Received SIGTERM - shutting down gracefully...");
-  void serviceRegistry.shutdown();
-  process.exit(0);
-});
