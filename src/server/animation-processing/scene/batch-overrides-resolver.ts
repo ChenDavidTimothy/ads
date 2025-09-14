@@ -81,10 +81,25 @@ export function resolveFieldValue<T = unknown>(
     if (v !== undefined) return v;
   }
 
-  // 2) per-object default
-  if (byField && Object.prototype.hasOwnProperty.call(byField, "__default__")) {
-    const v = tryValue(byField.__default__, "perObjectDefault");
-    if (v !== undefined) return v;
+  // 2) per-object default (check both "__default__" and "default" for compatibility)
+  if (byField) {
+    let defaultValue: unknown;
+    if (Object.prototype.hasOwnProperty.call(byField, "__default__")) {
+      defaultValue = byField.__default__;
+    } else if (Object.prototype.hasOwnProperty.call(byField, "default")) {
+      defaultValue = byField.default;
+    }
+    if (defaultValue !== undefined) {
+      logger.warn(`DEBUG Batch resolver applying per-object default for ${fieldPath}:`, {
+        objectId,
+        fieldPath,
+        defaultValue,
+        availableKeys: Object.keys(byField),
+        batchKey: ctx.batchKey
+      });
+      const v = tryValue(defaultValue, "perObjectDefault");
+      if (v !== undefined) return v;
+    }
   }
 
   // 3) currentValue (node default or previously resolved)

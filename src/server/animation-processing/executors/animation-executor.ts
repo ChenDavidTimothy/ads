@@ -1415,6 +1415,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       "input",
     );
 
+    logger.warn(`DEBUG Starting typography execution: ${node.data.identifier.displayName}`);
     logger.info(`Applying text styling: ${node.data.identifier.displayName}`);
 
     // Variable binding resolution (identical to Canvas pattern)
@@ -1649,6 +1650,12 @@ export class AnimationNodeExecutor extends BaseExecutor {
           >;
         }
       ).batchOverridesByField ?? {};
+
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} batchOverridesByField:`, {
+      nodeId: node.data.identifier.id,
+      batchOverridesByField: JSON.stringify(batchOverridesByField, null, 2)
+    });
+
     const emittedPerObjectBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
@@ -1668,6 +1675,11 @@ export class AnimationNodeExecutor extends BaseExecutor {
         };
       }
     }
+
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} emitted batch overrides:`, {
+      nodeId: node.data.identifier.id,
+      emittedPerObjectBatchOverrides: JSON.stringify(emittedPerObjectBatchOverrides, null, 2)
+    });
 
     // Bound fields mask for typography
     const perObjectBoundFieldsTypo: Record<string, string[]> = {};
@@ -1772,6 +1784,20 @@ export class AnimationNodeExecutor extends BaseExecutor {
         }
         return Object.keys(out).length > 0 ? out : undefined;
       })();
+
+    // Log the processed objects for debugging
+    const processedObjectsSummary = processedObjects.map(obj => ({
+      id: (obj as any).id,
+      type: (obj as any).type,
+      content: (obj as any).properties?.content,
+      typography: (obj as any).typography?.content
+    }));
+
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} processed objects:`, {
+      nodeId: node.data.identifier.id,
+      processedObjectsSummary: JSON.stringify(processedObjectsSummary, null, 2),
+      perObjectBatchOverrides: mergedPerObjectBatchOverrides ? JSON.stringify(mergedPerObjectBatchOverrides, null, 2) : 'none'
+    });
 
     setNodeOutput(
       context,
@@ -2099,14 +2125,18 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
     // CRITICAL: Update both properties.content AND typography.content
     // This ensures content changes are reflected in the rendered output
+    // Ensure deep clone to prevent shared references between objects
+    const clonedProperties = JSON.parse(JSON.stringify(obj.properties));
+    const clonedTypography = JSON.parse(JSON.stringify(finalTypography));
+
     return {
       ...obj,
       properties: {
-        ...obj.properties,
+        ...clonedProperties,
         content:
-          finalTypography.content ?? (obj.properties as TextProperties).content, // Override text content
+          clonedTypography.content ?? (clonedProperties as TextProperties).content, // Override text content
       },
-      typography: finalTypography,
+      typography: clonedTypography,
     };
   }
 
