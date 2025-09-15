@@ -54,7 +54,7 @@ class AssetCacheDeferredCleanup {
   constructor(
     assetCache: AssetCacheManager,
     cacheJobId: string,
-    jobIds: string[]
+    jobIds: string[],
   ) {
     this.assetCache = assetCache;
     this.cacheJobId = cacheJobId;
@@ -93,9 +93,10 @@ class AssetCacheDeferredCleanup {
         return;
       }
 
-      const incompleteJobs = jobs?.filter(
-        (job) => job.status !== "completed" && job.status !== "failed"
-      ) ?? [];
+      const incompleteJobs =
+        jobs?.filter(
+          (job) => job.status !== "completed" && job.status !== "failed",
+        ) ?? [];
 
       if (incompleteJobs.length > 0) {
         logger.info("Deferring cache cleanup - jobs still running", {
@@ -870,7 +871,8 @@ export const animationRouter = createTRPCRouter({
           }
 
           // Extract asset dependencies from batched partitions (includes batch overrides)
-          const dependencies = extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
+          const dependencies =
+            extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
           const uniqueAssetIds = getUniqueAssetIds(dependencies);
 
           logger.info("Asset dependencies extracted from batched partitions", {
@@ -910,7 +912,7 @@ export const animationRouter = createTRPCRouter({
               metrics: assetCache.getMetrics(),
             });
 
-              // Create render jobs for each valid scene, partitioning by batchKey
+            // Create render jobs for each valid scene, partitioning by batchKey
             const jobIds: string[] = [];
             const jobsOut: Array<{
               jobId: string;
@@ -926,7 +928,7 @@ export const animationRouter = createTRPCRouter({
             assetCacheCleanup = new AssetCacheDeferredCleanup(
               assetCache,
               manifest.jobId,
-              jobIds // Will be populated in the loop
+              jobIds, // Will be populated in the loop
             );
 
             for (const partition of scenePartitions) {
@@ -1315,7 +1317,7 @@ export const animationRouter = createTRPCRouter({
             assetCacheCleanup = new AssetCacheDeferredCleanup(
               assetCache,
               manifest.jobId, // Use manifest jobId like video generation
-              jobIds // Will be populated in the loop
+              jobIds, // Will be populated in the loop
             );
 
             await ensureWorkerReady();

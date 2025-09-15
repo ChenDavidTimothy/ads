@@ -263,23 +263,25 @@ export class AnimationNodeExecutor extends BaseExecutor {
       );
       const defaultMarker = "__default_object__";
       const isBatched = (obj: unknown): boolean => {
-        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
-        const hasBatch = Boolean(anyObj?.batch);
-        const keys = Array.isArray((anyObj as any)?.batchKeys)
-          ? ((anyObj as any).batchKeys as unknown[])
+        const sceneObj = obj as SceneObject;
+        const hasBatch = Boolean(sceneObj?.batch);
+        const keys = Array.isArray(sceneObj?.batchKeys)
+          ? sceneObj.batchKeys
           : [];
         const hasValidKeys = keys.some(
-          (k) => typeof k === "string" && (k as string).trim() !== "",
+          (k) => typeof k === "string" && k.trim() !== "",
         );
         return hasBatch && hasValidKeys;
       };
       const objectsById = new Map<string, unknown>(
         processedObjects
           .filter((o) => this.isImageObject(o))
-          .map((o) => [((o as { id: string }).id as string) ?? "", o]),
+          .map((o) => [o.id ?? "", o]),
       );
-      const scoped: Record<string, Record<string, Record<string, unknown>>> =
-        {};
+      const scoped: Record<
+        string,
+        Record<string, Record<string, unknown>>
+      > = {};
       for (const [fieldPath, byObject] of Object.entries(
         batchOverridesByField,
       )) {
@@ -572,12 +574,15 @@ export class AnimationNodeExecutor extends BaseExecutor {
           ? { assetId: finalOverrides.imageAssetId }
           : (() => {
               // Debug log when no assetId is configured
-              logger.debug(`Media node processed object ${objectId} without assetId`, {
-                objectId,
-                hasImageAssetId: !!finalOverrides.imageAssetId,
-                imageAssetIdValue: finalOverrides.imageAssetId,
-                nodeOverrides: objectOverrides,
-              });
+              logger.debug(
+                `Media node processed object ${objectId} without assetId`,
+                {
+                  objectId,
+                  hasImageAssetId: !!finalOverrides.imageAssetId,
+                  imageAssetIdValue: finalOverrides.imageAssetId,
+                  nodeOverrides: objectOverrides,
+                },
+              );
               return {};
             })()),
 
@@ -827,20 +832,22 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
       // Helper: restrict defaults to batched objects (consistent with Canvas/Media/Typography)
       const isBatched = (obj: unknown): boolean => {
-        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
-        const hasBatch = Boolean(anyObj?.batch);
-        const keys = Array.isArray((anyObj as any)?.batchKeys)
-          ? ((anyObj as any).batchKeys as unknown[])
+        const sceneObj = obj as SceneObject;
+        const hasBatch = Boolean(sceneObj?.batch);
+        const keys = Array.isArray(sceneObj?.batchKeys)
+          ? sceneObj.batchKeys
           : [];
         const hasValidKeys = keys.some(
-          (k) => typeof k === "string" && (k as string).trim() !== "",
+          (k) => typeof k === "string" && k.trim() !== "",
         );
         return hasBatch && hasValidKeys;
       };
 
       const DEFAULT_MARKER = "__default_object__";
       const out: Record<string, Record<string, Record<string, unknown>>> = {};
-      for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      for (const [fieldPath, byObject] of Object.entries(
+        batchOverridesByField,
+      )) {
         for (const [rawObjId, byKey] of Object.entries(byObject)) {
           const cleaned: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(byKey)) {
@@ -854,7 +861,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
               if (!passedIds.has(oid)) continue;
               if (!isBatched(obj)) continue;
               out[oid] ??= {};
-              out[oid][fieldPath] = { ...(out[oid][fieldPath] ?? {}), ...cleaned };
+              out[oid][fieldPath] = {
+                ...(out[oid][fieldPath] ?? {}),
+                ...cleaned,
+              };
             }
           } else if (passedIds.has(rawObjId)) {
             out[rawObjId] ??= {};
@@ -1491,7 +1501,9 @@ export class AnimationNodeExecutor extends BaseExecutor {
       "input",
     );
 
-    logger.warn(`DEBUG Starting typography execution: ${node.data.identifier.displayName}`);
+    logger.warn(
+      `DEBUG Starting typography execution: ${node.data.identifier.displayName}`,
+    );
     logger.info(`Applying text styling: ${node.data.identifier.displayName}`);
 
     // Variable binding resolution (identical to Canvas pattern)
@@ -1727,10 +1739,13 @@ export class AnimationNodeExecutor extends BaseExecutor {
         }
       ).batchOverridesByField ?? {};
 
-    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} batchOverridesByField:`, {
-      nodeId: node.data.identifier.id,
-      batchOverridesByField: JSON.stringify(batchOverridesByField, null, 2)
-    });
+    logger.warn(
+      `DEBUG Typography ${node.data.identifier.displayName} batchOverridesByField:`,
+      {
+        nodeId: node.data.identifier.id,
+        batchOverridesByField: JSON.stringify(batchOverridesByField, null, 2),
+      },
+    );
 
     const emittedPerObjectBatchOverrides: Record<
       string,
@@ -1743,23 +1758,25 @@ export class AnimationNodeExecutor extends BaseExecutor {
       );
       const defaultMarker = "__default_object__";
       const isBatched = (obj: unknown): boolean => {
-        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
-        const hasBatch = Boolean(anyObj?.batch);
-        const keys = Array.isArray((anyObj as any)?.batchKeys)
-          ? ((anyObj as any).batchKeys as unknown[])
+        const sceneObj = obj as SceneObject;
+        const hasBatch = Boolean(sceneObj?.batch);
+        const keys = Array.isArray(sceneObj?.batchKeys)
+          ? sceneObj.batchKeys
           : [];
         const hasValidKeys = keys.some(
-          (k) => typeof k === "string" && (k as string).trim() !== "",
+          (k) => typeof k === "string" && k.trim() !== "",
         );
         return hasBatch && hasValidKeys;
       };
       const objectsById = new Map<string, unknown>(
         processedObjects
           .filter((o) => this.isTextObject(o))
-          .map((o) => [((o as { id: string }).id as string) ?? "", o]),
+          .map((o) => [o.id ?? "", o]),
       );
-      const scoped: Record<string, Record<string, Record<string, unknown>>> =
-        {};
+      const scoped: Record<
+        string,
+        Record<string, Record<string, unknown>>
+      > = {};
       for (const [fieldPath, byObject] of Object.entries(
         batchOverridesByField,
       )) {
@@ -1792,10 +1809,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return scoped;
     })();
 
-    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} emitted batch overrides:`, {
-      nodeId: node.data.identifier.id,
-      emittedPerObjectBatchOverrides: JSON.stringify(emittedPerObjectBatchOverrides, null, 2)
-    });
+    logger.warn(
+      `DEBUG Typography ${node.data.identifier.displayName} emitted batch overrides:`,
+      {
+        nodeId: node.data.identifier.id,
+        emittedPerObjectBatchOverrides: JSON.stringify(
+          emittedPerObjectBatchOverrides,
+          null,
+          2,
+        ),
+      },
+    );
 
     // Bound fields mask for typography
     const perObjectBoundFieldsTypo: Record<string, string[]> = {};
@@ -1902,18 +1926,30 @@ export class AnimationNodeExecutor extends BaseExecutor {
       })();
 
     // Log the processed objects for debugging
-    const processedObjectsSummary = processedObjects.map(obj => ({
-      id: (obj as any).id,
-      type: (obj as any).type,
-      content: (obj as any).properties?.content,
-      typography: (obj as any).typography?.content
-    }));
-
-    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} processed objects:`, {
-      nodeId: node.data.identifier.id,
-      processedObjectsSummary: JSON.stringify(processedObjectsSummary, null, 2),
-      perObjectBatchOverrides: mergedPerObjectBatchOverrides ? JSON.stringify(mergedPerObjectBatchOverrides, null, 2) : 'none'
+    const processedObjectsSummary = processedObjects.map((obj) => {
+      const sceneObj = obj as SceneObject;
+      return {
+        id: sceneObj.id,
+        type: sceneObj.type,
+        content: (sceneObj.properties as TextProperties)?.content,
+        typography: sceneObj.typography,
+      };
     });
+
+    logger.warn(
+      `DEBUG Typography ${node.data.identifier.displayName} processed objects:`,
+      {
+        nodeId: node.data.identifier.id,
+        processedObjectsSummary: JSON.stringify(
+          processedObjectsSummary,
+          null,
+          2,
+        ),
+        perObjectBatchOverrides: mergedPerObjectBatchOverrides
+          ? JSON.stringify(mergedPerObjectBatchOverrides, null, 2)
+          : "none",
+      },
+    );
 
     setNodeOutput(
       context,
@@ -2242,15 +2278,24 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // CRITICAL: Update both properties.content AND typography.content
     // This ensures content changes are reflected in the rendered output
     // Ensure deep clone to prevent shared references between objects
-    const clonedProperties = JSON.parse(JSON.stringify(obj.properties));
-    const clonedTypography = JSON.parse(JSON.stringify(finalTypography));
+    const clonedProperties = JSON.parse(
+      JSON.stringify(obj.properties),
+    ) as TextProperties;
+
+    // Define type for extended typography that includes content
+    type ExtendedTypography = NonNullable<SceneObject["typography"]> & {
+      content?: string;
+    };
+
+    const clonedTypography = JSON.parse(
+      JSON.stringify(finalTypography),
+    ) as ExtendedTypography;
 
     return {
       ...obj,
       properties: {
         ...clonedProperties,
-        content:
-          clonedTypography.content ?? (clonedProperties as TextProperties).content, // Override text content
+        content: clonedTypography.content ?? clonedProperties.content, // Override text content
       },
       typography: clonedTypography,
     };

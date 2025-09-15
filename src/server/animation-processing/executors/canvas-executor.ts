@@ -416,36 +416,28 @@ export class CanvasNodeExecutor extends BaseExecutor {
         ).batchOverridesByField ?? {};
 
       const passedObjectIds = new Set(
-        passThrough
-          .filter((o) => isSceneObject(o))
-          .map((o) => (o as SceneObject).id),
+        passThrough.filter((o) => isSceneObject(o)).map((o) => o.id),
       );
 
       // Helper: consider defaults only for actually batched objects (preserve prior behavior)
       const isBatched = (obj: SceneObject): boolean => {
-        const anyObj = obj as unknown as {
-          batch?: unknown;
-          batchKeys?: unknown;
-        };
-        const hasBatch = Boolean(anyObj.batch);
-        const keys = Array.isArray(anyObj.batchKeys)
-          ? (anyObj.batchKeys as unknown[])
-          : [];
+        const hasBatch = Boolean(obj.batch);
+        const keys = Array.isArray(obj.batchKeys) ? obj.batchKeys : [];
         const hasValidKeys = keys.some(
-          (k) => typeof k === "string" && (k as string).trim() !== "",
+          (k) => typeof k === "string" && k.trim() !== "",
         );
         return hasBatch && hasValidKeys;
       };
 
       const defaultMarker = "__default_object__";
       const objectsById = new Map<string, SceneObject>(
-        passThrough
-          .filter((o) => isSceneObject(o))
-          .map((o) => [((o as SceneObject).id as string) ?? "", o as SceneObject]),
+        passThrough.filter((o) => isSceneObject(o)).map((o) => [o.id ?? "", o]),
       );
 
-      const scoped: Record<string, Record<string, Record<string, unknown>>> =
-        {};
+      const scoped: Record<
+        string,
+        Record<string, Record<string, unknown>>
+      > = {};
       for (const [fieldPath, byObject] of Object.entries(
         batchOverridesByField,
       )) {

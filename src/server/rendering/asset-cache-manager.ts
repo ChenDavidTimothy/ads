@@ -505,10 +505,7 @@ export class AssetCacheManager {
   ): Promise<void> {
     const { body: responseStream } = await request(url, httpConfig);
 
-    await pipeline(
-      responseStream,
-      createWriteStream(tempPath),
-    );
+    await pipeline(responseStream, createWriteStream(tempPath));
 
     // Verify size
     const stat = await fs.stat(tempPath);

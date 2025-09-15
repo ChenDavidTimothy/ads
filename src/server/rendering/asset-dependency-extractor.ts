@@ -1,5 +1,8 @@
 // src/server/rendering/asset-dependency-extractor.ts
-import type { ScenePartition, BatchedScenePartition } from "@/server/animation-processing/scene/scene-partitioner";
+import type {
+  ScenePartition,
+  BatchedScenePartition,
+} from "@/server/animation-processing/scene/scene-partitioner";
 import type { ImageProperties } from "@/shared/types/scene";
 import { applyOverridesToObject } from "@/server/animation-processing/scene/batch-overrides-resolver";
 
