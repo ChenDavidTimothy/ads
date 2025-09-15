@@ -11,6 +11,7 @@ import type {
   ScaleTrackProperties,
   FadeTrackProperties,
   ColorTrackProperties,
+  SlideTrackProperties,
 } from "@/shared/types";
 import {
   getNodeDefinition,
@@ -139,7 +140,8 @@ export function getDefaultTrackProperties(
   | RotateTrackProperties
   | ScaleTrackProperties
   | FadeTrackProperties
-  | ColorTrackProperties {
+  | ColorTrackProperties
+  | SlideTrackProperties {
   switch (trackType) {
     case "move":
       return { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
@@ -151,6 +153,8 @@ export function getDefaultTrackProperties(
       return { from: 1, to: 0.5 };
     case "color":
       return { from: "#ff0000", to: "#00ff00", property: "fill" };
+    case "slide":
+      return { orientationDeg: 0, velocity: 100 };
     default: {
       const _exhaustiveCheck: never = trackType;
       void _exhaustiveCheck;

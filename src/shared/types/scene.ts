@@ -150,7 +150,8 @@ export type SceneAnimationTrack =
   | SceneRotateTrack
   | SceneScaleTrack
   | SceneFadeTrack
-  | SceneColorTrack;
+  | SceneColorTrack
+  | SceneSlideTrack;
 
 // Type guard factory - generates type guards dynamically
 export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(
@@ -170,6 +171,17 @@ export const isSceneFadeTrack =
   createSceneTrackTypeGuard<SceneFadeTrack>("fade");
 export const isSceneColorTrack =
   createSceneTrackTypeGuard<SceneColorTrack>("color");
+
+// Slide track type - additive motion
+export interface SceneSlideTrack extends BaseSceneAnimationTrack {
+  type: "slide";
+  properties: {
+    orientationDeg: number;
+    velocity: number; // px/s, negative reverses
+  };
+}
+export const isSceneSlideTrack =
+  createSceneTrackTypeGuard<SceneSlideTrack>("slide");
 
 // Validation helpers
 export function validateScene(scene: AnimationScene): string[] {

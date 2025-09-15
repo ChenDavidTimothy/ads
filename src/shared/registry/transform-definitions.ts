@@ -3,6 +3,48 @@ import type { TransformDefinition } from "../types/transforms";
 
 // Complete transform definitions with all metadata - follows NodeDefinition pattern
 export const TRANSFORM_DEFINITIONS: Record<string, TransformDefinition> = {
+  // New additive Slide transform: moves relative to current state
+  slide: {
+    type: "slide",
+    label: "Slide",
+    description:
+      "Slide object along an orientation at a given velocity (relative)",
+    category: "movement",
+    properties: [
+      {
+        key: "orientationDeg",
+        type: "number",
+        label: "Orientation (deg)",
+        description: "Direction of motion in degrees",
+        defaultValue: 0,
+        required: true,
+        constraints: { min: -360, max: 360, step: 1 },
+      },
+      {
+        key: "velocity",
+        type: "number",
+        label: "Velocity (px/s)",
+        description:
+          "Speed in pixels per second. Negative values reverse direction.",
+        defaultValue: 100,
+        required: true,
+        constraints: { min: -10000, max: 10000, step: 1 },
+      },
+    ],
+    defaults: {
+      orientationDeg: 0,
+      velocity: 100,
+    },
+    metadata: {
+      supportsEasing: true,
+      defaultEasing: "linear",
+      targetProperty: "position",
+      // Compose additively with existing position (do not overwrite)
+      composeMode: "additive",
+      trackColor: "bg-[var(--transform-slide)]",
+      trackIcon: "➝",
+    },
+  },
   move: {
     type: "move",
     label: "Move",

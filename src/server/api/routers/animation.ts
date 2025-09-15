@@ -1300,13 +1300,16 @@ export const animationRouter = createTRPCRouter({
             extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
           const uniqueAssetIds = getUniqueAssetIds(dependencies);
 
-          logger.info("Asset dependencies extracted from batched partitions (images)", {
-            totalDependencies: dependencies.length,
-            uniqueAssets: uniqueAssetIds.length,
-            totalBatchedPartitions: allBatchedPartitions.length,
-            totalScenePartitions: scenePartitions.length,
-            userId: ctx.user!.id,
-          });
+          logger.info(
+            "Asset dependencies extracted from batched partitions (images)",
+            {
+              totalDependencies: dependencies.length,
+              uniqueAssets: uniqueAssetIds.length,
+              totalBatchedPartitions: allBatchedPartitions.length,
+              totalScenePartitions: scenePartitions.length,
+              userId: ctx.user!.id,
+            },
+          );
 
           const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
             enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",

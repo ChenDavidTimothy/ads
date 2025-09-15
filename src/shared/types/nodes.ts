@@ -173,6 +173,11 @@ export interface ColorTrackProperties {
   property: "fill" | "stroke";
 }
 
+export interface SlideTrackProperties {
+  orientationDeg: number;
+  velocity: number; // px/s, negative reverses
+}
+
 // Animation track types - now using the registry system
 export interface BaseAnimationTrack {
   startTime: number;
@@ -209,13 +214,19 @@ export interface ColorTrack extends BaseAnimationTrack {
   properties: ColorTrackProperties;
 }
 
+export interface SlideTrack extends BaseAnimationTrack {
+  type: "slide";
+  properties: SlideTrackProperties;
+}
+
 // Union type - now extensible through registry
 export type AnimationTrack =
   | MoveTrack
   | RotateTrack
   | ScaleTrack
   | FadeTrack
-  | ColorTrack;
+  | ColorTrack
+  | SlideTrack;
 
 // Type guard factory - generates type guards dynamically
 export function createTrackTypeGuard<T extends AnimationTrack>(
@@ -230,6 +241,7 @@ export const isRotateTrack = createTrackTypeGuard<RotateTrack>("rotate");
 export const isScaleTrack = createTrackTypeGuard<ScaleTrack>("scale");
 export const isFadeTrack = createTrackTypeGuard<FadeTrack>("fade");
 export const isColorTrack = createTrackTypeGuard<ColorTrack>("color");
+export const isSlideTrack = createTrackTypeGuard<SlideTrack>("slide");
 
 // Animation node data
 export interface AnimationNodeData extends BaseNodeData {

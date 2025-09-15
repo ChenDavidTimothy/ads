@@ -22,6 +22,7 @@ import type {
   ScaleTrackProperties,
   FadeTrackProperties,
   ColorTrackProperties,
+  SlideTrackProperties,
   AnimationNodeData,
 } from "@/shared/types/nodes";
 import { deepMerge } from "@/shared/utils/object-path";
@@ -31,6 +32,7 @@ import {
   isScaleTrack,
   isFadeTrack,
   isColorTrack,
+  isSlideTrack,
 } from "@/shared/types/nodes";
 import type {
   PerObjectAssignments,
@@ -112,6 +114,13 @@ function isColorDefaults(value: unknown): value is ColorTrackProperties {
     typeof v.property === "string" &&
     typeof v.from === "string" &&
     typeof v.to === "string"
+  );
+}
+
+function isSlideDefaults(value: unknown): value is SlideTrackProperties {
+  const v = value as Partial<SlideTrackProperties>;
+  return (
+    !!v && typeof v.orientationDeg === "number" && typeof v.velocity === "number"
   );
 }
 
@@ -258,6 +267,17 @@ export function TimelineEditorCore({
             ? baseTrack.properties
             : { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
           newTrack = { ...baseTrack, type: "move", properties: props };
+          break;
+        }
+        case "slide": {
+          const props = isSlideDefaults(baseTrack.properties)
+            ? baseTrack.properties
+            : { orientationDeg: 0, velocity: 100 };
+          newTrack = {
+            ...baseTrack,
+            type: "slide",
+            properties: props as SlideTrackProperties,
+          } as unknown as AnimationTrack;
           break;
         }
         case "rotate": {
@@ -683,6 +703,7 @@ export function TrackProperties({
         | ScaleTrackProperties
         | FadeTrackProperties
         | ColorTrackProperties
+        | SlideTrackProperties
       >,
     ) => {
       switch (track.type) {
@@ -694,6 +715,18 @@ export function TrackProperties({
               track.properties,
               updates,
             ) as MoveTrackProperties;
+            onChange({ properties: mergedProps });
+          }
+          break;
+        }
+        case "slide": {
+          if (selectedObjectId) {
+            onChange({ properties: updates as SlideTrackProperties });
+          } else {
+            const mergedProps = deepMerge(
+              track.properties,
+              updates,
+            ) as SlideTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
@@ -1180,6 +1213,67 @@ export function TrackProperties({
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isSlideTrack(track) && (
+        <div className="space-y-[var(--space-3)]">
+          <div className="border-b border-[var(--border-primary)] pb-[var(--space-2)] text-sm font-medium text-[var(--text-primary)]">
+            Slide Properties
+          </div>
+          <div className="grid grid-cols-2 gap-[var(--space-2)]">
+            <div>
+              <NumberField
+                label={labelWithOverride("Orientation (deg)")}
+                value={getTrackFieldValue(
+                  "slide.orientationDeg",
+                  getOverrideProperty<number>("orientationDeg"),
+                  (track.properties as SlideTrackProperties).orientationDeg,
+                )}
+                onChange={(orientationDeg) =>
+                  updateProperties({ orientationDeg } as Partial<SlideTrackProperties>)
+                }
+                step={1}
+                defaultValue={0}
+                bindAdornment={bindButton(`slide.orientationDeg`)}
+                disabled={isBound("slide.orientationDeg")}
+                inputClassName={leftBorderClass("slide.orientationDeg")}
+              />
+              {(isFieldOverridden("slide.orientationDeg") ||
+                isFieldBound("slide.orientationDeg")) && (
+                <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                  <FieldBadges keyName="slide.orientationDeg" />
+                </div>
+              )}
+            </div>
+            <div>
+              <NumberField
+                label={labelWithOverride("Velocity (px/s)")}
+                value={getTrackFieldValue(
+                  "slide.velocity",
+                  getOverrideProperty<number>("velocity"),
+                  (track.properties as SlideTrackProperties).velocity,
+                )}
+                onChange={(velocity) =>
+                  updateProperties({ velocity } as Partial<SlideTrackProperties>)
+                }
+                step={1}
+                defaultValue={100}
+                bindAdornment={bindButton(`slide.velocity`)}
+                disabled={isBound("slide.velocity")}
+                inputClassName={leftBorderClass("slide.velocity")}
+              />
+              {(isFieldOverridden("slide.velocity") ||
+                isFieldBound("slide.velocity")) && (
+                <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
+                  <FieldBadges keyName="slide.velocity" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="text-xs text-[var(--text-tertiary)]">
+            Slide is relative and additive; it doesn’t overwrite position.
           </div>
         </div>
       )}

@@ -51,6 +51,9 @@ const TIMELINE_MAP: Record<string, string> = {
   "fade.to": "Timeline.fade.to",
   "color.from": "Timeline.color.from",
   "color.to": "Timeline.color.to",
+  // Slide transform
+  "slide.orientationDeg": "Timeline.slide.orientationDeg",
+  "slide.velocity": "Timeline.slide.velocity",
 };
 
 export function getResolverFieldPath(

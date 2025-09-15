@@ -25,6 +25,7 @@ type AnimationValue = Point2D | number | string | boolean | null;
 
 // Evaluate a single animation track at a specific time
 import type { SceneTransform } from "@/shared/types/transforms";
+import { linear, easeInOutCubic, easeInCubic, easeOutCubic } from "@/animation/core/interpolation";
 
 function sceneTrackToSceneTransform(
   track: SceneAnimationTrack,
@@ -93,6 +94,40 @@ export function getObjectStateAtTime(
   // animations is expected to contain only tracks for this object and be pre-sorted by startTime
   const objectAnimations = animations;
 
+  // Precompute baseline rotations at slide start times to keep Slide relative
+  const slideBaselineRotation: Map<string, number> = new Map();
+  for (const anim of objectAnimations) {
+    if (anim.type !== "slide") continue;
+    const s = anim.startTime;
+    // Compute rotation at time s based on initial rotation + rotate tracks up to s
+    let rot = object.initialRotation ?? 0;
+    for (const a of objectAnimations) {
+      const def = getTransformDefinition(a.type);
+      if (def?.metadata?.targetProperty !== "rotation") continue;
+      const end = a.startTime + a.duration;
+      if (s >= end) {
+        const endV = getAnimationEndValue(a);
+        if (typeof endV === "number") rot = endV;
+      } else if (s >= a.startTime) {
+        const v = evaluateAnimation(a, s);
+        if (typeof v === "number") rot = v;
+      }
+    }
+    slideBaselineRotation.set(anim.id, rot);
+  }
+
+  // Accumulate additive deltas for Slide transforms
+  let slideDelta: Point2D = { x: 0, y: 0 };
+  for (const anim of objectAnimations) {
+    if (anim.type !== "slide") continue;
+    const baselineTurns = slideBaselineRotation.get(anim.id) ?? 0;
+    const end = anim.startTime + anim.duration;
+    if (time < anim.startTime) continue;
+    // Evaluate current delta (clamped inside helper)
+    const d = evaluateSlideDelta(anim as any, time, baselineTurns);
+    slideDelta = { x: slideDelta.x + d.x, y: slideDelta.y + d.y };
+  }
+
   // Track the accumulated state from completed animations
   const accumulatedState: ObjectState = {
     position: clonePoint(object.initialPosition),
@@ -110,6 +145,11 @@ export function getObjectStateAtTime(
   };
 
   for (const animation of objectAnimations) {
+    // Special handling for additive Slide transform
+    if (animation.type === "slide") {
+      // Skip default absolute processing; Slide is additive-only
+      continue;
+    }
     const animationEndTime = animation.startTime + animation.duration;
 
     // If this animation has completed, update the accumulated state
@@ -135,6 +175,12 @@ export function getObjectStateAtTime(
       updateStateFromAnimation(state, animation, accumulatedState);
     }
   }
+
+  // Apply additive Slide delta once, after absolute composition is resolved
+  state.position = {
+    x: state.position.x + slideDelta.x,
+    y: state.position.y + slideDelta.y,
+  };
 
   return state;
 }
@@ -190,6 +236,8 @@ function updateStateFromAnimation(
   const definition = getTransformDefinition(animation.type);
   const property = targetProperty ?? definition?.metadata?.targetProperty;
   if (!property) return;
+  // Do not update absolute position for additive Slide tracks
+  if (animation.type === "slide") return;
 
   function isObjectState(v: unknown): v is ObjectState {
     return (
@@ -300,10 +348,12 @@ export function getSceneStateAtTime(
 export class Timeline {
   private readonly scene: AnimationScene;
   private readonly animationsByObject: Map<string, SceneAnimationTrack[]>;
+  private readonly slideBaselineRotation: Map<string, number>;
 
   constructor(scene: AnimationScene) {
     this.scene = scene;
     this.animationsByObject = new Map();
+    this.slideBaselineRotation = new Map();
 
     // Pre-index and sort once
     for (const anim of scene.animations) {
@@ -314,6 +364,31 @@ export class Timeline {
     for (const [key, list] of this.animationsByObject) {
       list.sort((a, b) => a.startTime - b.startTime);
       this.animationsByObject.set(key, list);
+    }
+
+    // Precompute slide baseline rotations per track (per object)
+    for (const [objectId, tracks] of this.animationsByObject) {
+      const obj = this.scene.objects.find((o) => o.id === objectId);
+      if (!obj) continue;
+      const initialRot = obj.initialRotation ?? 0;
+      for (const anim of tracks) {
+        if (anim.type !== "slide") continue;
+        const s = anim.startTime;
+        let rot = initialRot;
+        for (const a of tracks) {
+          const def = getTransformDefinition(a.type);
+          if (def?.metadata?.targetProperty !== "rotation") continue;
+          const end = a.startTime + a.duration;
+          if (s >= end) {
+            const endV = getAnimationEndValue(a);
+            if (typeof endV === "number") rot = endV;
+          } else if (s >= a.startTime) {
+            const v = evaluateAnimation(a, s);
+            if (typeof v === "number") rot = v;
+          }
+        }
+        this.slideBaselineRotation.set(anim.id, rot);
+      }
     }
   }
 
@@ -336,7 +411,7 @@ export class Timeline {
 
 // Helper to create common animation patterns - generic factory + thin wrappers
 function createAnimationTrack<TProps extends Record<string, unknown>>(
-  type: "move" | "rotate" | "scale" | "fade" | "color",
+  type: "move" | "rotate" | "scale" | "fade" | "color" | "slide",
   objectId: string,
   props: TProps,
   startTime: number,
@@ -415,4 +490,58 @@ export function createScaleAnimation(
     duration,
     easing,
   );
+}
+
+// Slide helper - additive motion relative to current orientation at start
+export function createSlideAnimation(
+  objectId: string,
+  orientationDeg: number,
+  velocity: number,
+  startTime: number,
+  duration: number,
+  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "linear",
+): SceneAnimationTrack {
+  return createAnimationTrack(
+    "slide",
+    objectId,
+    { orientationDeg, velocity },
+    startTime,
+    duration,
+    easing,
+  );
+}
+
+// Local easing helper (mirror evaluator mapping)
+function getEasingFn(name: string) {
+  switch (name) {
+    case "easeInOut":
+      return easeInOutCubic;
+    case "easeIn":
+      return easeInCubic;
+    case "easeOut":
+      return easeOutCubic;
+    case "linear":
+    default:
+      return linear;
+  }
+}
+
+// Compute Slide delta at a specific time given baseline rotation at start
+function evaluateSlideDelta(
+  slide: Extract<SceneAnimationTrack, { type: "slide" }>,
+  time: number,
+  baselineRotationTurns: number, // rotations, 1 = 360°
+): Point2D {
+  const start = slide.startTime;
+  const end = slide.startTime + slide.duration;
+  if (time <= start) return { x: 0, y: 0 };
+  const t = Math.min(1, Math.max(0, (time - start) / slide.duration));
+  const easingFn = getEasingFn(slide.easing);
+  const eased = easingFn(t);
+  const totalDisplacement = slide.properties.velocity * slide.duration; // px
+  const angleRad =
+    (baselineRotationTurns * Math.PI * 2) +
+    ((slide.properties.orientationDeg ?? 0) * (Math.PI / 180));
+  const d = totalDisplacement * eased;
+  return { x: d * Math.cos(angleRad), y: d * Math.sin(angleRad) };
 }

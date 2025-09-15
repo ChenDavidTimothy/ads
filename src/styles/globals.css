@@ -57,6 +57,7 @@
   --transform-scale: rgba(139, 92, 246, 0.9);
   --transform-fade: rgba(139, 92, 246, 0.9);
   --transform-color: rgba(139, 92, 246, 0.9);
+  --transform-slide: rgba(139, 92, 246, 0.9);
 
   /* PREMIUM BUTTON INTERACTION STATES - keeping existing names */
   --button-ghost-hover: rgba(18, 18, 26, 0.9);
@@ -272,6 +273,7 @@
   --transform-scale: rgba(139, 92, 246, 0.35);
   --transform-fade: rgba(139, 92, 246, 0.35);
   --transform-color: rgba(139, 92, 246, 0.35);
+  --transform-slide: rgba(139, 92, 246, 0.35);
   /* Slightly reduce purple glow intensity within timeline */
   --purple-shadow-medium: rgba(139, 92, 246, 0.6);
   --purple-shadow-subtle: rgba(139, 92, 246, 0.12);
