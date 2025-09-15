@@ -193,6 +193,22 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return result;
     })();
 
+    // Collect all objects that have batch keys from upstream
+    const batchedObjectIds = new Set<string>();
+    for (const input of inputs) {
+      const inputData = Array.isArray(input.data) ? input.data : [input.data];
+      for (const obj of inputData) {
+        if (
+          isSceneObject(obj) &&
+          obj.batch &&
+          Array.isArray(obj.batchKeys) &&
+          obj.batchKeys.length > 0
+        ) {
+          batchedObjectIds.add(obj.id);
+        }
+      }
+    }
+
     // Emit perObjectBatchOverrides from node.data.batchOverridesByField
     const batchOverridesByField =
       (
@@ -210,6 +226,11 @@ export class CanvasNodeExecutor extends BaseExecutor {
     > = {};
     for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
       for (const [objectId, byKey] of Object.entries(byObject)) {
+        // Skip if this object wasn't tagged by upstream batch nodes
+        if (!batchedObjectIds.has(objectId)) {
+          continue;
+        }
+
         const cleaned: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(byKey)) {
           const key = String(k).trim();
