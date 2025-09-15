@@ -348,12 +348,10 @@ export function getSceneStateAtTime(
 export class Timeline {
   private readonly scene: AnimationScene;
   private readonly animationsByObject: Map<string, SceneAnimationTrack[]>;
-  private readonly slideBaselineRotation: Map<string, number>;
 
   constructor(scene: AnimationScene) {
     this.scene = scene;
     this.animationsByObject = new Map();
-    this.slideBaselineRotation = new Map();
 
     // Pre-index and sort once
     for (const anim of scene.animations) {
@@ -366,30 +364,6 @@ export class Timeline {
       this.animationsByObject.set(key, list);
     }
 
-    // Precompute slide baseline rotations per track (per object)
-    for (const [objectId, tracks] of this.animationsByObject) {
-      const obj = this.scene.objects.find((o) => o.id === objectId);
-      if (!obj) continue;
-      const initialRot = obj.initialRotation ?? 0;
-      for (const anim of tracks) {
-        if (anim.type !== "slide") continue;
-        const s = anim.startTime;
-        let rot = initialRot;
-        for (const a of tracks) {
-          const def = getTransformDefinition(a.type);
-          if (def?.metadata?.targetProperty !== "rotation") continue;
-          const end = a.startTime + a.duration;
-          if (s >= end) {
-            const endV = getAnimationEndValue(a);
-            if (typeof endV === "number") rot = endV;
-          } else if (s >= a.startTime) {
-            const v = evaluateAnimation(a, s);
-            if (typeof v === "number") rot = v;
-          }
-        }
-        this.slideBaselineRotation.set(anim.id, rot);
-      }
-    }
   }
 
   getObjectState(objectId: string, time: number): ObjectState | undefined {
