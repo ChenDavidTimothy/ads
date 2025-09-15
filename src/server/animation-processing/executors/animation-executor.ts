@@ -221,21 +221,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       mergeObjectAssignments,
     );
 
-    const batchedObjectIds = new Set<string>();
-
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
 
       for (const obj of inputData) {
-        if (
-          this.isImageObject(obj) &&
-          (obj as { batch?: boolean }).batch &&
-          Array.isArray((obj as { batchKeys?: unknown[] }).batchKeys) &&
-          (obj as { batchKeys?: unknown[] }).batchKeys!.length > 0
-        ) {
-          batchedObjectIds.add((obj as { id: string }).id);
-        }
-
         if (this.isImageObject(obj)) {
           const processed = await this.processImageObject(
             obj,
@@ -269,10 +258,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     > = {};
     for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
       for (const [objectId, byKey] of Object.entries(byObject)) {
-        // Only emit overrides for objects tagged by upstream batch nodes
-        if (!batchedObjectIds.has(objectId)) {
-          continue;
-        }
         const cleaned: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(byKey)) {
           const key = String(k).trim();
@@ -765,22 +750,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const nodeAssignments: PerObjectAssignments | undefined =
       data.perObjectAssignments as PerObjectAssignments | undefined;
 
-    // Collect all objects that have batch keys from upstream
-    const batchedObjectIds = new Set<string>();
-    for (const input of inputs) {
-      const inputData = Array.isArray(input.data) ? input.data : [input.data];
-      for (const obj of inputData) {
-        if (
-          (obj as { batch?: boolean }).batch &&
-          Array.isArray((obj as { batchKeys?: unknown[] }).batchKeys) &&
-          (obj as { batchKeys?: unknown[] }).batchKeys!.length > 0
-        ) {
-          const id = (obj as { id?: string }).id;
-          if (typeof id === "string") batchedObjectIds.add(id);
-        }
-      }
-    }
-
     // Extract perObjectBatchOverrides from inputs
     const upstreamBatchOverrides:
       | Record<string, Record<string, Record<string, unknown>>>
@@ -791,10 +760,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     // Extract perObjectBatchOverrides from node data (timeline editor)
     const nodeBatchOverrides:
       | Record<string, Record<string, Record<string, unknown>>>
-      | undefined = this.extractPerObjectBatchOverridesFromNode(
-        data,
-        batchedObjectIds,
-      );
+      | undefined = this.extractPerObjectBatchOverridesFromNode(data);
 
     // Merge upstream + node-level batch overrides; node-level takes precedence per object
     const mergedBatchOverrides:
@@ -1401,7 +1367,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
 
   private extractPerObjectBatchOverridesFromNode(
     data: Record<string, unknown>,
-    batchedObjectIds: Set<string>,
   ): Record<string, Record<string, Record<string, unknown>>> | undefined {
     const batchOverridesByField = (
       data as {
@@ -1416,10 +1381,6 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const result: Record<string, Record<string, Record<string, unknown>>> = {};
     for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
       for (const [objectId, byKey] of Object.entries(byObject)) {
-        // Skip if this object wasn't tagged by upstream batch nodes
-        if (!batchedObjectIds.has(objectId)) {
-          continue;
-        }
         const cleaned: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(byKey)) {
           const key = String(k).trim();
@@ -1454,6 +1415,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       "input",
     );
 
+    logger.warn(`DEBUG Starting typography execution: ${node.data.identifier.displayName}`);
     logger.info(`Applying text styling: ${node.data.identifier.displayName}`);
 
     // Variable binding resolution (identical to Canvas pattern)
@@ -1657,21 +1619,10 @@ export class AnimationNodeExecutor extends BaseExecutor {
       return result;
     })();
 
-    const batchedObjectIds = new Set<string>();
-
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
 
       for (const obj of inputData) {
-        if (
-          this.isTextObject(obj) &&
-          (obj as { batch?: boolean }).batch &&
-          Array.isArray((obj as { batchKeys?: unknown[] }).batchKeys) &&
-          (obj as { batchKeys?: unknown[] }).batchKeys!.length > 0
-        ) {
-          batchedObjectIds.add((obj as { id: string }).id);
-        }
-
         if (this.isTextObject(obj)) {
           const processed = this.processTextObject(
             obj,
@@ -1700,16 +1651,17 @@ export class AnimationNodeExecutor extends BaseExecutor {
         }
       ).batchOverridesByField ?? {};
 
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} batchOverridesByField:`, {
+      nodeId: node.data.identifier.id,
+      batchOverridesByField: JSON.stringify(batchOverridesByField, null, 2)
+    });
+
     const emittedPerObjectBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
     > = {};
     for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
       for (const [objectId, byKey] of Object.entries(byObject)) {
-        // Only emit overrides for objects tagged by upstream batch nodes
-        if (!batchedObjectIds.has(objectId)) {
-          continue;
-        }
         const cleaned: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(byKey)) {
           const key = String(k).trim();
@@ -1723,6 +1675,11 @@ export class AnimationNodeExecutor extends BaseExecutor {
         };
       }
     }
+
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} emitted batch overrides:`, {
+      nodeId: node.data.identifier.id,
+      emittedPerObjectBatchOverrides: JSON.stringify(emittedPerObjectBatchOverrides, null, 2)
+    });
 
     // Bound fields mask for typography
     const perObjectBoundFieldsTypo: Record<string, string[]> = {};
@@ -1827,6 +1784,20 @@ export class AnimationNodeExecutor extends BaseExecutor {
         }
         return Object.keys(out).length > 0 ? out : undefined;
       })();
+
+    // Log the processed objects for debugging
+    const processedObjectsSummary = processedObjects.map(obj => ({
+      id: (obj as any).id,
+      type: (obj as any).type,
+      content: (obj as any).properties?.content,
+      typography: (obj as any).typography?.content
+    }));
+
+    logger.warn(`DEBUG Typography ${node.data.identifier.displayName} processed objects:`, {
+      nodeId: node.data.identifier.id,
+      processedObjectsSummary: JSON.stringify(processedObjectsSummary, null, 2),
+      perObjectBatchOverrides: mergedPerObjectBatchOverrides ? JSON.stringify(mergedPerObjectBatchOverrides, null, 2) : 'none'
+    });
 
     setNodeOutput(
       context,

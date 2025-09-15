@@ -66,6 +66,7 @@ export function partitionObjectsByScenes(
     > = {};
     if (edges) {
       const incomingEdges = edges.filter((edge) => edge.target === sceneId);
+      const mergedBoundFields: Record<string, string[]> = {};
 
       for (const edge of incomingEdges) {
         const sourceOutput = context.nodeOutputs.get(
@@ -107,11 +108,62 @@ export function partitionObjectsByScenes(
               mergedBatchOverrides[objectId] = mergedFields;
             }
           }
+          const boundFields = (
+            sourceOutput.metadata as {
+              perObjectBoundFields?: Record<string, string[]>;
+            }
+          )?.perObjectBoundFields;
+          if (boundFields) {
+            for (const [objectId, fieldList] of Object.entries(boundFields)) {
+              const existing = mergedBoundFields[objectId] ?? [];
+              mergedBoundFields[objectId] = Array.from(
+                new Set([...existing, ...fieldList.map(String)]),
+              );
+            }
+          }
         }
       }
 
-      // Remove synthetic default entry; defaults should be expanded by executors
-      delete mergedBatchOverrides["__default_object__"];
+      // Attach bound fields to partitions via later object construction
+      if (Object.keys(mergedBoundFields).length > 0) {
+        // no-op placeholder; bound fields are re-collected below to maintain a single code path
+      }
+
+      // Apply default batch overrides to batched objects only
+      const DEFAULT_OBJECT_ID = "__default_object__";
+      if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
+        const defaultsForAll = mergedBatchOverrides[DEFAULT_OBJECT_ID];
+        for (const obj of sceneObjects) {
+          // Only apply defaults to objects that are actually batched
+          // Match the same logic used in partitionByBatchKey
+          if (!obj.batch) continue;
+          const hasValidBatchKeys =
+            Array.isArray((obj as { batchKeys?: unknown }).batchKeys) &&
+            (obj as { batchKeys?: unknown[] }).batchKeys!.some(
+              (k) => typeof k === "string" && k.trim() !== "",
+            );
+          if (!hasValidBatchKeys) continue;
+
+          const objectId = obj.id;
+          const baseFields = mergedBatchOverrides[objectId] ?? {};
+          const mergedFields: Record<string, Record<string, unknown>> = {
+            ...baseFields,
+          };
+          for (const [fieldPath, byKeyDefault] of Object.entries(
+            defaultsForAll,
+          )) {
+            const current = mergedFields[fieldPath] ?? {};
+            // Default values provide a baseline; object-specific entries take precedence
+            mergedFields[fieldPath] = {
+              ...(byKeyDefault ?? {}),
+              ...current,
+            };
+          }
+          mergedBatchOverrides[objectId] = mergedFields;
+        }
+        // Remove synthetic default entry after expansion
+        delete mergedBatchOverrides[DEFAULT_OBJECT_ID];
+      }
     }
 
     // Fallback: If no animations found from metadata, try the global context method
