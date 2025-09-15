@@ -35,7 +35,6 @@ import {
   partitionByBatchKey,
 } from "@/server/animation-processing/scene/scene-partitioner";
 import {
-  extractAssetDependencies,
   extractAssetDependenciesFromBatchedPartitions,
   getUniqueAssetIds,
 } from "@/server/rendering/asset-dependency-extractor";
@@ -1300,6 +1299,14 @@ export const animationRouter = createTRPCRouter({
           const dependencies =
             extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
           const uniqueAssetIds = getUniqueAssetIds(dependencies);
+
+          logger.info("Asset dependencies extracted from batched partitions (images)", {
+            totalDependencies: dependencies.length,
+            uniqueAssets: uniqueAssetIds.length,
+            totalBatchedPartitions: allBatchedPartitions.length,
+            totalScenePartitions: scenePartitions.length,
+            userId: ctx.user!.id,
+          });
 
           const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
             enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
