@@ -1471,37 +1471,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
     return found ? merged : undefined;
   }
 
-  private extractPerObjectBatchOverridesFromNode(
-    data: Record<string, unknown>,
-  ): Record<string, Record<string, Record<string, unknown>>> | undefined {
-    const batchOverridesByField = (
-      data as {
-        batchOverridesByField?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
-      }
-    ).batchOverridesByField;
-    if (!batchOverridesByField) return undefined;
-
-    const result: Record<string, Record<string, Record<string, unknown>>> = {};
-    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
-      for (const [objectId, byKey] of Object.entries(byObject)) {
-        const cleaned: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(byKey)) {
-          const key = String(k).trim();
-          if (!key) continue;
-          cleaned[key] = v;
-        }
-        result[objectId] ??= {};
-        result[objectId][fieldPath] = {
-          ...(result[objectId][fieldPath] ?? {}),
-          ...cleaned,
-        };
-      }
-    }
-    return Object.keys(result).length > 0 ? result : undefined;
-  }
+  // Removed legacy unscoped node batch-override extraction; scoping is performed inline
 
   private async executeTypography(
     node: ReactFlowNode<NodeData>,
