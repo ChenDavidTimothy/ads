@@ -797,23 +797,89 @@ export class AnimationNodeExecutor extends BaseExecutor {
       inputs as unknown as ExecutionValue[],
     );
 
-    // Extract perObjectBatchOverrides from node data (timeline editor)
-    const nodeBatchOverrides:
+    // Scope node-level perObjectBatchOverrides (Timeline editor) to this node's connected objects
+    const scopedNodeBatchOverrides:
       | Record<string, Record<string, Record<string, unknown>>>
-      | undefined = this.extractPerObjectBatchOverridesFromNode(data);
+      | undefined = (() => {
+      const batchOverridesByField = (
+        data as {
+          batchOverridesByField?: Record<
+            string,
+            Record<string, Record<string, unknown>>
+          >;
+        }
+      ).batchOverridesByField;
+      if (!batchOverridesByField) return undefined;
+
+      // Collect objects connected to this node from inputs
+      const passedIds = new Set<string>();
+      const objectsById = new Map<string, unknown>();
+      for (const inp of inputs) {
+        const arr = Array.isArray(inp.data) ? inp.data : [inp.data];
+        for (const obj of arr) {
+          const oid = (obj as { id?: unknown }).id;
+          if (typeof oid === "string" && oid) {
+            passedIds.add(oid);
+            objectsById.set(oid, obj);
+          }
+        }
+      }
+
+      // Helper: restrict defaults to batched objects (consistent with Canvas/Media/Typography)
+      const isBatched = (obj: unknown): boolean => {
+        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
+        const hasBatch = Boolean(anyObj?.batch);
+        const keys = Array.isArray((anyObj as any)?.batchKeys)
+          ? ((anyObj as any).batchKeys as unknown[])
+          : [];
+        const hasValidKeys = keys.some(
+          (k) => typeof k === "string" && (k as string).trim() !== "",
+        );
+        return hasBatch && hasValidKeys;
+      };
+
+      const DEFAULT_MARKER = "__default_object__";
+      const out: Record<string, Record<string, Record<string, unknown>>> = {};
+      for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
+        for (const [rawObjId, byKey] of Object.entries(byObject)) {
+          const cleaned: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(byKey)) {
+            const key = String(k).trim();
+            if (!key) continue;
+            cleaned[key] = v;
+          }
+          if (rawObjId === DEFAULT_MARKER) {
+            // Expand defaults to only this node's connected objects (batched only)
+            for (const [oid, obj] of objectsById) {
+              if (!passedIds.has(oid)) continue;
+              if (!isBatched(obj)) continue;
+              out[oid] ??= {};
+              out[oid][fieldPath] = { ...(out[oid][fieldPath] ?? {}), ...cleaned };
+            }
+          } else if (passedIds.has(rawObjId)) {
+            out[rawObjId] ??= {};
+            out[rawObjId][fieldPath] = {
+              ...(out[rawObjId][fieldPath] ?? {}),
+              ...cleaned,
+            };
+          }
+        }
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })();
 
     // Merge upstream + node-level batch overrides; node-level takes precedence per object
     const mergedBatchOverrides:
       | Record<string, Record<string, Record<string, unknown>>>
       | undefined = (() => {
-      if (!upstreamBatchOverrides && !nodeBatchOverrides)
+      if (!upstreamBatchOverrides && !scopedNodeBatchOverrides)
         return upstreamBatchOverrides;
       const result: Record<string, Record<string, Record<string, unknown>>> = {
         ...upstreamBatchOverrides,
       };
-      if (nodeBatchOverrides) {
+      if (scopedNodeBatchOverrides) {
         for (const [objectId, fieldOverrides] of Object.entries(
-          nodeBatchOverrides,
+          scopedNodeBatchOverrides,
         )) {
           result[objectId] = { ...result[objectId], ...fieldOverrides };
         }
