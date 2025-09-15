@@ -129,41 +129,8 @@ export function partitionObjectsByScenes(
         // no-op placeholder; bound fields are re-collected below to maintain a single code path
       }
 
-      // Apply default batch overrides to batched objects only
-      const DEFAULT_OBJECT_ID = "__default_object__";
-      if (mergedBatchOverrides[DEFAULT_OBJECT_ID]) {
-        const defaultsForAll = mergedBatchOverrides[DEFAULT_OBJECT_ID];
-        for (const obj of sceneObjects) {
-          // Only apply defaults to objects that are actually batched
-          // Match the same logic used in partitionByBatchKey
-          if (!obj.batch) continue;
-          const hasValidBatchKeys =
-            Array.isArray((obj as { batchKeys?: unknown }).batchKeys) &&
-            (obj as { batchKeys?: unknown[] }).batchKeys!.some(
-              (k) => typeof k === "string" && k.trim() !== "",
-            );
-          if (!hasValidBatchKeys) continue;
-
-          const objectId = obj.id;
-          const baseFields = mergedBatchOverrides[objectId] ?? {};
-          const mergedFields: Record<string, Record<string, unknown>> = {
-            ...baseFields,
-          };
-          for (const [fieldPath, byKeyDefault] of Object.entries(
-            defaultsForAll,
-          )) {
-            const current = mergedFields[fieldPath] ?? {};
-            // Default values provide a baseline; object-specific entries take precedence
-            mergedFields[fieldPath] = {
-              ...(byKeyDefault ?? {}),
-              ...current,
-            };
-          }
-          mergedBatchOverrides[objectId] = mergedFields;
-        }
-        // Remove synthetic default entry after expansion
-        delete mergedBatchOverrides[DEFAULT_OBJECT_ID];
-      }
+      // Do NOT expand defaults here.
+      // Executors now expand "__default_object__" to concrete object IDs scoped to their own outputs.
     }
 
     // Fallback: If no animations found from metadata, try the global context method

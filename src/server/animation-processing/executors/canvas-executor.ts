@@ -193,39 +193,13 @@ export class CanvasNodeExecutor extends BaseExecutor {
       return result;
     })();
 
-    // Emit perObjectBatchOverrides from node.data.batchOverridesByField
-    const batchOverridesByField =
-      (
-        data as unknown as {
-          batchOverridesByField?: Record<
-            string,
-            Record<string, Record<string, unknown>>
-          >;
-        }
-      ).batchOverridesByField ?? {};
-
-    const emittedPerObjectBatchOverrides: Record<
+    // We'll build perObjectBatchOverrides AFTER we know which objects passed through this node
+    // so that defaults apply only to objects connected to this editor node.
+    // The structure will be filled below once passThrough is known.
+    let emittedPerObjectBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
     > = {};
-    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
-      for (const [objectId, byKey] of Object.entries(byObject)) {
-        const cleaned: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(byKey)) {
-          const key = String(k).trim();
-          if (!key) {
-            // Drop invalid keys at emission time
-            continue;
-          }
-          cleaned[key] = v;
-        }
-        emittedPerObjectBatchOverrides[objectId] ??= {};
-        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
-          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
-          ...cleaned,
-        };
-      }
-    }
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -427,6 +401,84 @@ export class CanvasNodeExecutor extends BaseExecutor {
           passThrough.push(obj);
         }
       }
+    }
+
+    // Now that we know which objects passed through, scope batch overrides to these objects only
+    {
+      const batchOverridesByField =
+        (
+          data as unknown as {
+            batchOverridesByField?: Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >;
+          }
+        ).batchOverridesByField ?? {};
+
+      const passedObjectIds = new Set(
+        passThrough
+          .filter((o) => isSceneObject(o))
+          .map((o) => (o as SceneObject).id),
+      );
+
+      // Helper: consider defaults only for actually batched objects (preserve prior behavior)
+      const isBatched = (obj: SceneObject): boolean => {
+        const anyObj = obj as unknown as {
+          batch?: unknown;
+          batchKeys?: unknown;
+        };
+        const hasBatch = Boolean(anyObj.batch);
+        const keys = Array.isArray(anyObj.batchKeys)
+          ? (anyObj.batchKeys as unknown[])
+          : [];
+        const hasValidKeys = keys.some(
+          (k) => typeof k === "string" && (k as string).trim() !== "",
+        );
+        return hasBatch && hasValidKeys;
+      };
+
+      const defaultMarker = "__default_object__";
+      const objectsById = new Map<string, SceneObject>(
+        passThrough
+          .filter((o) => isSceneObject(o))
+          .map((o) => [((o as SceneObject).id as string) ?? "", o as SceneObject]),
+      );
+
+      const scoped: Record<string, Record<string, Record<string, unknown>>> =
+        {};
+      for (const [fieldPath, byObject] of Object.entries(
+        batchOverridesByField,
+      )) {
+        for (const [rawObjId, byKey] of Object.entries(byObject)) {
+          const cleaned: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(byKey)) {
+            const key = String(k).trim();
+            if (!key) continue;
+            cleaned[key] = v;
+          }
+
+          if (rawObjId === defaultMarker) {
+            // Expand defaults to only this node's output objects, and only if batched
+            for (const [oid, obj] of objectsById) {
+              if (!passedObjectIds.has(oid)) continue;
+              if (!isBatched(obj)) continue;
+              scoped[oid] ??= {};
+              scoped[oid][fieldPath] = {
+                ...(scoped[oid][fieldPath] ?? {}),
+                ...cleaned,
+              };
+            }
+          } else if (passedObjectIds.has(rawObjId)) {
+            // Object-specific override: only keep if this object passed through this node
+            scoped[rawObjId] ??= {};
+            scoped[rawObjId][fieldPath] = {
+              ...(scoped[rawObjId][fieldPath] ?? {}),
+              ...cleaned,
+            };
+          }
+        }
+      }
+      emittedPerObjectBatchOverrides = scoped;
     }
 
     // Merge upstream metadata with this node's emissions so multiple editors can contribute

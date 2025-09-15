@@ -242,35 +242,75 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Media scope)
-    const batchOverridesByField =
-      (
-        data as unknown as {
-          batchOverridesByField?: Record<
-            string,
-            Record<string, Record<string, unknown>>
-          >;
-        }
-      ).batchOverridesByField ?? {};
+    // Build perObjectBatchOverrides AFTER we know which image objects passed through
     const emittedPerObjectBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
-    > = {};
-    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
-      for (const [objectId, byKey] of Object.entries(byObject)) {
-        const cleaned: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(byKey)) {
-          const key = String(k).trim();
-          if (!key) continue;
-          cleaned[key] = v;
+    > = (() => {
+      const batchOverridesByField =
+        (
+          data as unknown as {
+            batchOverridesByField?: Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >;
+          }
+        ).batchOverridesByField ?? {};
+      const passedIds = new Set(
+        processedObjects
+          .filter((o) => this.isImageObject(o))
+          .map((o) => (o as { id: string }).id),
+      );
+      const defaultMarker = "__default_object__";
+      const isBatched = (obj: unknown): boolean => {
+        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
+        const hasBatch = Boolean(anyObj?.batch);
+        const keys = Array.isArray((anyObj as any)?.batchKeys)
+          ? ((anyObj as any).batchKeys as unknown[])
+          : [];
+        const hasValidKeys = keys.some(
+          (k) => typeof k === "string" && (k as string).trim() !== "",
+        );
+        return hasBatch && hasValidKeys;
+      };
+      const objectsById = new Map<string, unknown>(
+        processedObjects
+          .filter((o) => this.isImageObject(o))
+          .map((o) => [((o as { id: string }).id as string) ?? "", o]),
+      );
+      const scoped: Record<string, Record<string, Record<string, unknown>>> =
+        {};
+      for (const [fieldPath, byObject] of Object.entries(
+        batchOverridesByField,
+      )) {
+        for (const [rawObjId, byKey] of Object.entries(byObject)) {
+          const cleaned: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(byKey)) {
+            const key = String(k).trim();
+            if (!key) continue;
+            cleaned[key] = v;
+          }
+          if (rawObjId === defaultMarker) {
+            for (const [oid, obj] of objectsById) {
+              if (!passedIds.has(oid)) continue;
+              if (!isBatched(obj)) continue;
+              scoped[oid] ??= {};
+              scoped[oid][fieldPath] = {
+                ...(scoped[oid][fieldPath] ?? {}),
+                ...cleaned,
+              };
+            }
+          } else if (passedIds.has(rawObjId)) {
+            scoped[rawObjId] ??= {};
+            scoped[rawObjId][fieldPath] = {
+              ...(scoped[rawObjId][fieldPath] ?? {}),
+              ...cleaned,
+            };
+          }
         }
-        emittedPerObjectBatchOverrides[objectId] ??= {};
-        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
-          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
-          ...cleaned,
-        };
       }
-    }
+      return scoped;
+    })();
 
     // Bound fields mask for media (normalize to Media.* like Typography does)
     const perObjectBoundFields: Record<string, string[]> = {};
@@ -1640,7 +1680,7 @@ export class AnimationNodeExecutor extends BaseExecutor {
       }
     }
 
-    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Animation scope)
+    // Emit perObjectBatchOverrides from node.data.batchOverridesByField (Typography scope)
     const batchOverridesByField =
       (
         data as unknown as {
@@ -1659,22 +1699,62 @@ export class AnimationNodeExecutor extends BaseExecutor {
     const emittedPerObjectBatchOverrides: Record<
       string,
       Record<string, Record<string, unknown>>
-    > = {};
-    for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
-      for (const [objectId, byKey] of Object.entries(byObject)) {
-        const cleaned: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(byKey)) {
-          const key = String(k).trim();
-          if (!key) continue;
-          cleaned[key] = v;
+    > = (() => {
+      const passedIds = new Set(
+        processedObjects
+          .filter((o) => this.isTextObject(o))
+          .map((o) => (o as { id: string }).id),
+      );
+      const defaultMarker = "__default_object__";
+      const isBatched = (obj: unknown): boolean => {
+        const anyObj = obj as { batch?: unknown; batchKeys?: unknown };
+        const hasBatch = Boolean(anyObj?.batch);
+        const keys = Array.isArray((anyObj as any)?.batchKeys)
+          ? ((anyObj as any).batchKeys as unknown[])
+          : [];
+        const hasValidKeys = keys.some(
+          (k) => typeof k === "string" && (k as string).trim() !== "",
+        );
+        return hasBatch && hasValidKeys;
+      };
+      const objectsById = new Map<string, unknown>(
+        processedObjects
+          .filter((o) => this.isTextObject(o))
+          .map((o) => [((o as { id: string }).id as string) ?? "", o]),
+      );
+      const scoped: Record<string, Record<string, Record<string, unknown>>> =
+        {};
+      for (const [fieldPath, byObject] of Object.entries(
+        batchOverridesByField,
+      )) {
+        for (const [rawObjId, byKey] of Object.entries(byObject)) {
+          const cleaned: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(byKey)) {
+            const key = String(k).trim();
+            if (!key) continue;
+            cleaned[key] = v;
+          }
+          if (rawObjId === defaultMarker) {
+            for (const [oid, obj] of objectsById) {
+              if (!passedIds.has(oid)) continue;
+              if (!isBatched(obj)) continue;
+              scoped[oid] ??= {};
+              scoped[oid][fieldPath] = {
+                ...(scoped[oid][fieldPath] ?? {}),
+                ...cleaned,
+              };
+            }
+          } else if (passedIds.has(rawObjId)) {
+            scoped[rawObjId] ??= {};
+            scoped[rawObjId][fieldPath] = {
+              ...(scoped[rawObjId][fieldPath] ?? {}),
+              ...cleaned,
+            };
+          }
         }
-        emittedPerObjectBatchOverrides[objectId] ??= {};
-        emittedPerObjectBatchOverrides[objectId][fieldPath] = {
-          ...(emittedPerObjectBatchOverrides[objectId][fieldPath] ?? {}),
-          ...cleaned,
-        };
       }
-    }
+      return scoped;
+    })();
 
     logger.warn(`DEBUG Typography ${node.data.identifier.displayName} emitted batch overrides:`, {
       nodeId: node.data.identifier.id,
