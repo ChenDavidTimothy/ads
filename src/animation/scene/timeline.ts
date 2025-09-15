@@ -25,7 +25,12 @@ type AnimationValue = Point2D | number | string | boolean | null;
 
 // Evaluate a single animation track at a specific time
 import type { SceneTransform } from "@/shared/types/transforms";
-import { linear, easeInOutCubic, easeInCubic, easeOutCubic } from "@/animation/core/interpolation";
+import {
+  linear,
+  easeInOutCubic,
+  easeInCubic,
+  easeOutCubic,
+} from "@/animation/core/interpolation";
 
 function sceneTrackToSceneTransform(
   track: SceneAnimationTrack,
@@ -95,7 +100,7 @@ export function getObjectStateAtTime(
   const objectAnimations = animations;
 
   // Precompute baseline rotations at slide start times to keep Slide relative
-  const slideBaselineRotation: Map<string, number> = new Map();
+  const slideBaselineRotation: Map<string, number> = new Map<string, number>();
   for (const anim of objectAnimations) {
     if (anim.type !== "slide") continue;
     const s = anim.startTime;
@@ -121,10 +126,9 @@ export function getObjectStateAtTime(
   for (const anim of objectAnimations) {
     if (anim.type !== "slide") continue;
     const baselineTurns = slideBaselineRotation.get(anim.id) ?? 0;
-    const end = anim.startTime + anim.duration;
     if (time < anim.startTime) continue;
     // Evaluate current delta (clamped inside helper)
-    const d = evaluateSlideDelta(anim as any, time, baselineTurns);
+    const d = evaluateSlideDelta(anim, time, baselineTurns);
     slideDelta = { x: slideDelta.x + d.x, y: slideDelta.y + d.y };
   }
 
@@ -351,7 +355,7 @@ export class Timeline {
 
   constructor(scene: AnimationScene) {
     this.scene = scene;
-    this.animationsByObject = new Map();
+    this.animationsByObject = new Map<string, SceneAnimationTrack[]>();
 
     // Pre-index and sort once
     for (const anim of scene.animations) {
@@ -363,7 +367,6 @@ export class Timeline {
       list.sort((a, b) => a.startTime - b.startTime);
       this.animationsByObject.set(key, list);
     }
-
   }
 
   getObjectState(objectId: string, time: number): ObjectState | undefined {
@@ -507,15 +510,14 @@ function evaluateSlideDelta(
   baselineRotationTurns: number, // rotations, 1 = 360°
 ): Point2D {
   const start = slide.startTime;
-  const end = slide.startTime + slide.duration;
   if (time <= start) return { x: 0, y: 0 };
   const t = Math.min(1, Math.max(0, (time - start) / slide.duration));
   const easingFn = getEasingFn(slide.easing);
   const eased = easingFn(t);
   const totalDisplacement = slide.properties.velocity * slide.duration; // px
   const angleRad =
-    (baselineRotationTurns * Math.PI * 2) +
-    ((slide.properties.orientationDeg ?? 0) * (Math.PI / 180));
+    baselineRotationTurns * Math.PI * 2 +
+    (slide.properties.orientationDeg ?? 0) * (Math.PI / 180);
   const d = totalDisplacement * eased;
   return { x: d * Math.cos(angleRad), y: d * Math.sin(angleRad) };
 }

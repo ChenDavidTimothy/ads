@@ -120,7 +120,9 @@ function isColorDefaults(value: unknown): value is ColorTrackProperties {
 function isSlideDefaults(value: unknown): value is SlideTrackProperties {
   const v = value as Partial<SlideTrackProperties>;
   return (
-    !!v && typeof v.orientationDeg === "number" && typeof v.velocity === "number"
+    !!v &&
+    typeof v.orientationDeg === "number" &&
+    typeof v.velocity === "number"
   );
 }
 
@@ -1229,10 +1231,12 @@ export function TrackProperties({
                 value={getTrackFieldValue(
                   "slide.orientationDeg",
                   getOverrideProperty<number>("orientationDeg"),
-                  (track.properties as SlideTrackProperties).orientationDeg,
+                  track.properties.orientationDeg,
                 )}
                 onChange={(orientationDeg) =>
-                  updateProperties({ orientationDeg } as Partial<SlideTrackProperties>)
+                  updateProperties({
+                    orientationDeg,
+                  } as Partial<SlideTrackProperties>)
                 }
                 step={1}
                 defaultValue={0}
@@ -1253,10 +1257,12 @@ export function TrackProperties({
                 value={getTrackFieldValue(
                   "slide.velocity",
                   getOverrideProperty<number>("velocity"),
-                  (track.properties as SlideTrackProperties).velocity,
+                  track.properties.velocity,
                 )}
                 onChange={(velocity) =>
-                  updateProperties({ velocity } as Partial<SlideTrackProperties>)
+                  updateProperties({
+                    velocity,
+                  } as Partial<SlideTrackProperties>)
                 }
                 step={1}
                 defaultValue={100}
