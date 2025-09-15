@@ -90,13 +90,6 @@ export function resolveFieldValue<T = unknown>(
       defaultValue = byField.default;
     }
     if (defaultValue !== undefined) {
-      logger.warn(`DEBUG Batch resolver applying per-object default for ${fieldPath}:`, {
-        objectId,
-        fieldPath,
-        defaultValue,
-        availableKeys: Object.keys(byField),
-        batchKey: ctx.batchKey
-      });
       const v = tryValue(defaultValue, "perObjectDefault");
       if (v !== undefined) return v;
     }
