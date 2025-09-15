@@ -1290,7 +1290,15 @@ export const animationRouter = createTRPCRouter({
             throw new NoValidScenesError();
           }
 
-          const dependencies = extractAssetDependencies(scenePartitions);
+          // IMPORTANT: When using batch keys, dependencies can differ per key due to overrides.
+          // Mirror video generation: first create all batched sub-partitions and extract deps from them.
+          const allBatchedPartitions: BatchedScenePartition[] = [];
+          for (const partition of scenePartitions) {
+            const subs = partitionByBatchKey(partition);
+            allBatchedPartitions.push(...subs);
+          }
+          const dependencies =
+            extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
           const uniqueAssetIds = getUniqueAssetIds(dependencies);
 
           const assetCache = new AssetCacheManager(randomUUID(), ctx.user!.id, {
@@ -1328,8 +1336,17 @@ export const animationRouter = createTRPCRouter({
               for (const sub of subPartitions) {
                 if (!sub?.sceneNode) continue;
 
+                // Namespace IDs consistently with video generation to avoid collisions across keys
+                const namespacedSubPartition = namespacePartitionForBatch(
+                  sub,
+                  sub.batchKey,
+                );
+
                 const scene: AnimationScene =
-                  await buildAnimationSceneFromPartition(sub, assetCache);
+                  await buildAnimationSceneFromPartition(
+                    namespacedSubPartition,
+                    assetCache,
+                  );
                 const frameData = sub.sceneNode.data as unknown as {
                   width: number;
                   height: number;
