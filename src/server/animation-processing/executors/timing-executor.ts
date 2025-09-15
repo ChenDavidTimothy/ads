@@ -52,9 +52,7 @@ export class TimingNodeExecutor extends BaseExecutor {
     );
 
     const timedObjects: unknown[] = [];
-    const upstreamCursorMap = this.extractCursorsFromInputs(
-      inputs as unknown as ExecutionValue[],
-    );
+    const upstreamCursorMap = this.extractCursorsFromInputs(inputs);
 
     // Resolve variable bindings (Result nodes) for appearanceTime
     const bindings = (data.variableBindings ?? {}) as Record<
