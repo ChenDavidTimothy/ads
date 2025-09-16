@@ -3,10 +3,7 @@ import fs from "fs";
 import path from "path";
 import { Readable } from "stream";
 import type { StoragePreparedTarget, FinalizeOptions } from "./provider";
-import {
-  STORAGE_CONFIG,
-  type SupportedExtension
-} from "./config";
+import { STORAGE_CONFIG, type SupportedExtension } from "./config";
 import type { StorageHealthMonitor } from "./health-monitor";
 import type { createServiceClient } from "@/utils/supabase/service";
 
@@ -114,9 +111,9 @@ export class StorageUploadService {
     const normalizedExtension = extension.toLowerCase() as SupportedExtension;
 
     if (
-      (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images as readonly string[]).includes(
-        normalizedExtension,
-      )
+      (
+        STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images as readonly string[]
+      ).includes(normalizedExtension)
     ) {
       return {
         bucket: this.imagesBucket,
@@ -128,9 +125,9 @@ export class StorageUploadService {
     }
 
     if (
-      (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos as readonly string[]).includes(
-        normalizedExtension,
-      )
+      (
+        STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos as readonly string[]
+      ).includes(normalizedExtension)
     ) {
       return {
         bucket: this.videosBucket,
@@ -277,4 +274,3 @@ export class StorageUploadService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-

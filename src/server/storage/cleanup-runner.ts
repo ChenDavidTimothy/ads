@@ -65,7 +65,9 @@ export class StorageCleanupRunner {
       if (code === "ENOENT") {
         try {
           await fs.promises.mkdir(this.tempDir, { recursive: true });
-          this.logger.warn(`Temp directory missing; recreated at ${this.tempDir}`);
+          this.logger.warn(
+            `Temp directory missing; recreated at ${this.tempDir}`,
+          );
           return;
         } catch (mkdirErr) {
           this.logger.error("Failed to recreate temp directory:", mkdirErr);
@@ -92,7 +94,10 @@ export class StorageCleanupRunner {
       for (const entry of entries) {
         const itemName = entry.name;
 
-        if (itemName.startsWith("storage-") || itemName.startsWith("mat-debug-")) {
+        if (
+          itemName.startsWith("storage-") ||
+          itemName.startsWith("mat-debug-")
+        ) {
           const itemPath = path.join(tempDir, itemName);
 
           try {
@@ -102,17 +107,26 @@ export class StorageCleanupRunner {
             if (ageMs > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
               if (entry.isDirectory()) {
                 try {
-                  await fs.promises.rm(itemPath, { recursive: true, force: true });
+                  await fs.promises.rm(itemPath, {
+                    recursive: true,
+                    force: true,
+                  });
                   cleanedCount++;
                 } catch (error) {
-                  this.logger.warn(`Failed to cleanup temp directory ${itemName}:`, error);
+                  this.logger.warn(
+                    `Failed to cleanup temp directory ${itemName}:`,
+                    error,
+                  );
                 }
               } else {
                 try {
                   await fs.promises.unlink(itemPath);
                   cleanedCount++;
                 } catch (error) {
-                  this.logger.warn(`Failed to cleanup temp file ${itemName}:`, error);
+                  this.logger.warn(
+                    `Failed to cleanup temp file ${itemName}:`,
+                    error,
+                  );
                 }
               }
             }

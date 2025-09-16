@@ -78,7 +78,10 @@ class CleanupService {
       fs.writeFileSync(this.lockFile, this.processId);
       return true;
     } catch (error) {
-      console.error("[cleanup-service] Failed to acquire cleanup service lock:", error);
+      console.error(
+        "[cleanup-service] Failed to acquire cleanup service lock:",
+        error,
+      );
       return false;
     }
   }
@@ -93,7 +96,10 @@ class CleanupService {
         }
       }
     } catch (error) {
-      console.error("[cleanup-service] Failed to release cleanup service lock:", error);
+      console.error(
+        "[cleanup-service] Failed to release cleanup service lock:",
+        error,
+      );
     }
   }
 
@@ -154,7 +160,10 @@ class CleanupService {
 
       console.log("[cleanup-service] Background cleanup cycle completed");
     } catch (error) {
-      console.error("[cleanup-service] Background cleanup cycle failed:", error);
+      console.error(
+        "[cleanup-service] Background cleanup cycle failed:",
+        error,
+      );
     }
   }
 
