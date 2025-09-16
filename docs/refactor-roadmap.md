@@ -1,80 +1,81 @@
 # Refactor Target Roadmap
 
-This document captures the next set of legacy or high-risk areas that should follow the animation/logic executor split. Each entry documents the current pain points, why the file should be decomposed, and a concrete plan of action.
+This roadmap captures the legacy or high-risk areas we are modernising after the animation/logic executor split. For every surface we track the current state, the desired direction, and concrete follow-up work so we keep momentum without losing behavioural parity.
 
-## Recently Completed
+## Current Snapshot
 
-### src/server/api/routers/animation.ts
-- **Status**: Completed (asset cache + validation refactor delivered, September 2025)
-- **Outcome**: Router now delegates to `animation/procedures/*`, job orchestration lives in `rendering/jobs/asset-cache-service.ts`, and transformation/validation helpers are centralized under the `animation-processing` namespace. Behaviour is covered by existing queue + media tests.
+### ? Storage pipeline (src/server/storage)
+- `SmartStorageProvider` now delegates upload and cleanup work to `storage/upload-service.ts` and `storage/cleanup-runner.ts` (September 2025).
+- `cleanup-service.ts` instantiates the shared runner so background janitors and foreground calls share a single implementation.
+- Behavioural parity verified via existing integration usage plus `pnpm typecheck`.
+- **Follow-ups**:
+  - Add targeted unit tests around retry/backoff behaviour in `StorageUploadService`.
+  - Capture metrics for cleanup outcomes so janitor monitoring is visible in dashboards.
 
-## High-Priority Server-Side Refactors
+### ? Animation router (src/server/api/routers/animation.ts)
+- Router delegates to `animation/procedures/*` helpers; job orchestration moved to `rendering/jobs/asset-cache-service.ts`.
+- Existing queue/media tests cover behaviour.
 
-### src/server/storage/smart-storage-provider.ts
-- **Why**: Nearly 1k lines juggling temp-file prep, Supabase streaming, retries, clean-up, and quota enforcement. Mixing filesystem and network concerns hides failure modes.
-- **Plan**:
-  1. Create a `storage/upload-service.ts` responsible for finalize/upload/retry.
-  2. Move clean-up scheduling and orphan detection into `storage/cleanup-service.ts`.
-  3. Keep `SmartStorageProvider` as a facade delegating to the new services and unit test each subsystem individually.
+## High-Priority Server Work
 
-### src/server/rendering/asset-cache-manager.ts
-- **Why**: Large class (800+ lines) covering download orchestration, manifest persistence, concurrency limits, and integrity checks. Hard to reason about race conditions.
-- **Plan**:
-  1. Extract download logic into `asset-cache/download-service.ts` with explicit retry + verification pipelines.
-  2. Move manifest I/O into `asset-cache/manifest-store.ts`.
-  3. Split maintenance/startup checks into `asset-cache/maintenance.ts` and simplify the manager to a coordinator.
+### 1. Asset cache manager (src/server/rendering/asset-cache-manager.ts)
+- **Pain**: ~800 lines covering metadata fetch, download orchestration, manifest persistence, race-safe linking, and janitor wiring. Concurrency and retry logic are intertwined with metrics bookkeeping.
+- **Target shape**:
+  1. `asset-cache/download-service.ts` encapsulates the signed URL refresh, retry/backoff, and integrity verification pipeline while emitting metrics via an injected sink.
+  2. `asset-cache/manifest-store.ts` handles manifest read/write so the manager coordinates only.
+  3. `asset-cache/maintenance.ts` (or equivalent) owns janitor start/stop and hard-link capability checks.
+- **Prereqs**: snapshot current metrics expectations; add smoke tests that lock today's manifest layout so extraction stays backwards compatible.
 
-### src/server/api/routers/assets.ts
-- **Why**: Router currently handles uploads, URL signing, quota tracking, and Supabase CRUD in one file (~900 lines). Any change risks regressions across concerns.
-- **Plan**:
-  1. Introduce `assets/quota-service.ts` for quota CRUD and soft limits.
-  2. Move upload URL generation + confirmation logic into `assets/upload-service.ts`.
-  3. Slim the router to wiring-only, importing the services per procedure.
+### 2. Assets router (src/server/api/routers/assets.ts)
+- **Pain**: ~900 lines blending quota CRUD, upload URL signing, Supabase CRUD, image metadata extraction, and move-to-assets orchestration.
+- **Target shape**:
+  1. `assets/quota-service.ts` consolidates `getOrCreateUserQuota` and `updateUserQuota` with clear interfaces for add/subtract flows.
+  2. `assets/upload-service.ts` manages signed upload URL provisioning, confirmation, and metadata extraction (with configurable fetch client for testing).
+  3. Router procedures become wiring-only, making it easier to test each service in isolation.
+- **Prereqs**: document expected quota deltas per operation and add fixtures around the current Supabase responses (so mocks survive refactor).
 
-## Client-Side / UI Refactors
+### 3. Rendering job orchestration follow-up
+- **Pain**: After storage and animation clean-ups, remaining job orchestration code still mixes data access and business logic in `rendering/jobs/*`.
+- **Target shape**: extract job status transitions and Supabase persistence into `rendering/jobs/job-service.ts`, keeping the graphile worker entry points thin.
+- **Prereqs**: inventory current job states and their side effects to avoid missing edge cases during the move.
 
-### src/components/workspace/timeline-editor-core.tsx
-- **Why**: 1.6k-line component rendering all track panels, field badges, and drag/drop state. Hard to memoize, expensive re-renders.
-- **Plan**:
-  1. Split per-track property editors (move, rotate, scale, fade, color, slide) into `timeline-panels/*` components.
+## Client/UI Focus Areas
+
+### Timeline editor core (src/components/workspace/timeline-editor-core.tsx)
+- **Pain**: 1.6k-line component that renders every track panel and manages drag/drop state, causing heavy re-renders.
+- **Next steps**:
+  1. Break out per-track property editors into `timeline-panels/*` components.
   2. Extract binding/badge helpers into `timeline-binding-utils.tsx`.
-  3. Keep `TimelineEditorCore` focused on layout/state orchestration.
+  3. Keep `TimelineEditorCore` focused on layout/state orchestration with memoized subtrees.
 
-### src/components/workspace/canvas-editor-tab.tsx, media-editor-tab.tsx, typography-editor-tab.tsx
-- **Why**: Each file exceeds 1k lines with duplicated binding logic between global and per-object panels.
-- **Plan**:
+### Workspace editor tabs (canvas/media/typography)
+- **Pain**: Each tab exceeds 1k lines with duplicated binding logic between global and per-object panels.
+- **Next steps**:
   1. Create reusable hooks (`useBindingState`, `usePerObjectOverrides`).
-  2. Move shared per-object inspector into `workspace/binding/per-object-panel.tsx`.
-  3. Extract section components (position, stroke, media asset picker, typography styling) to reduce duplication.
+  2. Move shared inspector UI into `workspace/binding/per-object-panel.tsx`.
+  3. Extract section components (position, stroke, media picker, typography) to reduce duplication.
 
-### src/components/workspace/flow/hooks/use-scene-generation.ts
-- **Why**: ~960 lines combining Supabase writes, polling, error handling, and UI state. Difficult to reason about polling lifecycles.
-- **Plan (next increment)**:
-  1. Split Supabase mutations into `useSceneGenerationMutations` along with shared type definitions (`SceneGenerationJob`).
-  2. Extract polling (videos/images) into a dedicated `useJobPolling` hook with unit coverage for cancellation/timeouts.
-  3. Keep the exported hook as a thin orchestrator that composes the specialized hooks.
+### Scene generation hook (src/components/workspace/flow/hooks/use-scene-generation.ts)
+- **Pain**: ~960 lines combining Supabase writes, polling lifecycles, and UI state.
+- **Next steps**:
+  1. Split Supabase mutations into `useSceneGenerationMutations` with shared type definitions.
+  2. Extract polling into `useJobPolling` with unit coverage for cancellation/timeouts.
+  3. Keep the exported hook as a thin orchestrator.
 
-### src/app/(protected)/dashboard/page.tsx
-- **Why**: 900+ lines with grid/list rendering, menus, filters, and modals in one component; poor reusability and testing.
-- **Plan**:
-  1. Create presentational components (`WorkspaceCard`, `WorkspaceListRow`).
+### Dashboard page (src/app/(protected)/dashboard/page.tsx)
+- **Pain**: 900+ lines with grid/list rendering, menus, filters, and modals.
+- **Next steps**:
+  1. Create presentational `WorkspaceCard` / `WorkspaceListRow` components.
   2. Extract filter sidebar into `WorkspaceFilters.tsx`.
-  3. Move menu logic into `WorkspaceMenuController.tsx` so the page handles data and routing only.
+  3. Move menu logic into `WorkspaceMenuController.tsx` so the page handles data + routing only.
 
 ## Shared Infrastructure
 
-### src/components/workspace/flow/hooks/use-scene-generation.ts (follow-up)
-- **Why**: After splitting polling/mutations, ensure shared job types and response guards stay consistent with the backend validators.
-- **Plan**:
-  1. Define a shared `SceneGenerationJob` type consumed by both client and server validators.
-  2. Add unit tests for polling timeouts and error recovery.
+### Scene generation shared types
+- Ensure server/client validators share a single `SceneGenerationJob` contract once the hook split lands; add tests for polling timeouts and error recovery.
 
-### src/shared/types/definitions.ts
-- **Why**: 1.2k-line registry is coherent but hard to diff; consider codegen.
-- **Plan**:
-  1. Generate node definitions from JSON schemas stored per node category to reduce churn.
-  2. Keep the aggregated file auto-generated with linting checks.
+### Node definitions registry (src/shared/types/definitions.ts)
+- Evaluate generating node definitions from per-category JSON schema to reduce churn and make diffs manageable.
 
 ---
-These items are prioritized by coupling and change frequency; addressing them will continue the removal of legacy bloat and improve modularity across the codebase.
-
+Priorities are ordered by coupling and risk. Each section lists the measurable outcome plus pre-work so we can refactor incrementally while keeping behaviour identical.

@@ -48,11 +48,12 @@ export class StorageCleanupRunner {
         const stats = await fs.promises.stat(filePath);
 
         if (now - stats.mtime.getTime() > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
-          try {
-            await fs.promises.unlink(filePath);
+          const removed = await this.removeFileWithRetry(
+            filePath,
+            `Failed to cleanup old temp file ${file}`,
+          );
+          if (removed) {
             cleanedCount++;
-          } catch (error) {
-            this.logger.warn(`Failed to cleanup old temp file ${file}:`, error);
           }
         }
       }
@@ -106,27 +107,20 @@ export class StorageCleanupRunner {
 
             if (ageMs > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
               if (entry.isDirectory()) {
-                try {
-                  await fs.promises.rm(itemPath, {
-                    recursive: true,
-                    force: true,
-                  });
+                const removedDir = await this.removeDirectoryWithRetry(
+                  itemPath,
+                  `Failed to cleanup temp directory ${itemName}`,
+                );
+                if (removedDir) {
                   cleanedCount++;
-                } catch (error) {
-                  this.logger.warn(
-                    `Failed to cleanup temp directory ${itemName}:`,
-                    error,
-                  );
                 }
               } else {
-                try {
-                  await fs.promises.unlink(itemPath);
+                const removedFile = await this.removeFileWithRetry(
+                  itemPath,
+                  `Failed to cleanup temp file ${itemName}`,
+                );
+                if (removedFile) {
                   cleanedCount++;
-                } catch (error) {
-                  this.logger.warn(
-                    `Failed to cleanup temp file ${itemName}:`,
-                    error,
-                  );
                 }
               }
             }
@@ -340,6 +334,68 @@ export class StorageCleanupRunner {
     }
   }
 
+  private async removeFileWithRetry(
+    filePath: string,
+    context: string,
+  ): Promise<boolean> {
+    return await this.removeWithRetry(
+      () => fs.promises.unlink(filePath),
+      context,
+    );
+  }
+
+  private async removeDirectoryWithRetry(
+    dirPath: string,
+    context: string,
+  ): Promise<boolean> {
+    return await this.removeWithRetry(
+      () =>
+        fs.promises.rm(dirPath, {
+          recursive: true,
+          force: true,
+        }),
+      context,
+    );
+  }
+
+  private async removeWithRetry(
+    removeFn: () => Promise<void>,
+    context: string,
+  ): Promise<boolean> {
+    const maxAttempts = 3;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await removeFn();
+        return true;
+      } catch (error) {
+        lastError = error;
+        const code = (error as NodeJS.ErrnoException | undefined)?.code;
+        if (code === "EBUSY" || code === "EPERM") {
+          if (attempt === maxAttempts) {
+            break;
+          }
+          const delayMs = Math.min(500 * Math.pow(2, attempt - 1), 2000);
+          this.logger.warn(
+            `${context} (attempt ${attempt}) failed with ${code}; retrying in ${delayMs}ms`,
+          );
+          await this.sleep(delayMs);
+          continue;
+        }
+
+        this.logger.warn(`${context}:`, error);
+        return false;
+      }
+    }
+
+    this.logger.warn(`${context} after retries:`, lastError);
+    return false;
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
   private parseStorageUrl(
     url: string,
   ): { bucket: string; path: string } | null {
