@@ -1,23 +1,21 @@
-﻿# Refactor Target Roadmap
+# Refactor Target Roadmap
 
 This document captures the next set of legacy or high-risk areas that should follow the animation/logic executor split. Each entry documents the current pain points, why the file should be decomposed, and a concrete plan of action.
 
-## Server-Side Refactors
+## Recently Completed
 
 ### src/server/api/routers/animation.ts
-- **Why**: 1.8k lines combining TRPC routing, validation utilities, Supabase orchestration, and asset cache coordination. Mixing HTTP surface with domain services makes the router brittle and difficult to test.
-- **Plan**:
-  1. Extract job orchestration (cache deferral, queue handling) into `src/server/rendering/jobs/asset-cache-service.ts`.
-  2. Move node/edge transformation helpers into `src/server/animation-processing/flow-transformers.ts`.
-  3. Isolate validation logic under `src/server/animation-processing/validators/scene-validation.ts`.
-  4. Recompose the router from small `procedures/*.ts` files so the exported router is declarative.
+- **Status**: Completed (asset cache + validation refactor delivered, September 2025)
+- **Outcome**: Router now delegates to `animation/procedures/*`, job orchestration lives in `rendering/jobs/asset-cache-service.ts`, and transformation/validation helpers are centralized under the `animation-processing` namespace. Behaviour is covered by existing queue + media tests.
+
+## High-Priority Server-Side Refactors
 
 ### src/server/storage/smart-storage-provider.ts
 - **Why**: Nearly 1k lines juggling temp-file prep, Supabase streaming, retries, clean-up, and quota enforcement. Mixing filesystem and network concerns hides failure modes.
 - **Plan**:
   1. Create a `storage/upload-service.ts` responsible for finalize/upload/retry.
   2. Move clean-up scheduling and orphan detection into `storage/cleanup-service.ts`.
-  3. Keep `SmartStorageProvider` as a façade delegating to the new services and unit test each subsystem individually.
+  3. Keep `SmartStorageProvider` as a facade delegating to the new services and unit test each subsystem individually.
 
 ### src/server/rendering/asset-cache-manager.ts
 - **Why**: Large class (800+ lines) covering download orchestration, manifest persistence, concurrency limits, and integrity checks. Hard to reason about race conditions.
@@ -51,9 +49,9 @@ This document captures the next set of legacy or high-risk areas that should fol
 
 ### src/components/workspace/flow/hooks/use-scene-generation.ts
 - **Why**: ~960 lines combining Supabase writes, polling, error handling, and UI state. Difficult to reason about polling lifecycles.
-- **Plan**:
-  1. Split Supabase mutations into `useSceneGenerationMutations`.
-  2. Extract polling (videos/images) into `useJobPolling` hook.
+- **Plan (next increment)**:
+  1. Split Supabase mutations into `useSceneGenerationMutations` along with shared type definitions (`SceneGenerationJob`).
+  2. Extract polling (videos/images) into a dedicated `useJobPolling` hook with unit coverage for cancellation/timeouts.
   3. Keep the exported hook as a thin orchestrator that composes the specialized hooks.
 
 ### src/app/(protected)/dashboard/page.tsx
@@ -66,9 +64,9 @@ This document captures the next set of legacy or high-risk areas that should fol
 ## Shared Infrastructure
 
 ### src/components/workspace/flow/hooks/use-scene-generation.ts (follow-up)
-- **Why**: After initial split, ensure poller and mutation modules share a typed job manifest.
+- **Why**: After splitting polling/mutations, ensure shared job types and response guards stay consistent with the backend validators.
 - **Plan**:
-  1. Define a shared `SceneGenerationJob` type.
+  1. Define a shared `SceneGenerationJob` type consumed by both client and server validators.
   2. Add unit tests for polling timeouts and error recovery.
 
 ### src/shared/types/definitions.ts
@@ -79,3 +77,4 @@ This document captures the next set of legacy or high-risk areas that should fol
 
 ---
 These items are prioritized by coupling and change frequency; addressing them will continue the removal of legacy bloat and improve modularity across the codebase.
+

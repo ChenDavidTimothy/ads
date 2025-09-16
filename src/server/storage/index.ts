@@ -1,5 +1,7 @@
 // src/server/storage/index.ts
 export { SmartStorageProvider } from "./smart-storage-provider";
+export { StorageUploadService } from "./upload-service";
+export { StorageCleanupRunner } from "./cleanup-runner";
 export { StorageHealthMonitor } from "./health-monitor";
 export { StorageErrorHandler, StorageErrorCode } from "./error-handler";
 export { STORAGE_CONFIG } from "./config";

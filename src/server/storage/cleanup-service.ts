@@ -1,68 +1,84 @@
 // src/server/storage/cleanup-service.ts
-import { SmartStorageProvider } from "./smart-storage-provider";
+import os from "os";
 import * as fs from "fs";
 import * as path from "path";
+import { createServiceClient } from "@/utils/supabase/service";
+import { StorageCleanupRunner } from "./cleanup-runner";
 
 class CleanupService {
-  private storageProvider: SmartStorageProvider | null = null;
+  private cleanupRunner: StorageCleanupRunner | null = null;
+  private cleanupTempDir: string | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
   private isRunning = false;
-  private lockFile: string;
-  private processId: string;
+  private readonly lockFile: string;
+  private readonly processId: string;
   private listenersAdded = false;
 
   constructor() {
-    // Create a unique identifier for this process
     this.processId = `${process.pid}-${Date.now()}`;
     this.lockFile = path.join(process.cwd(), ".cleanup-service.lock");
-
-    // Storage provider will be created lazily when needed
   }
 
   private ensureListenersAdded(): void {
     if (this.listenersAdded) return;
 
-    // Ensure lock file is released on process exit
     process.once("exit", () => this.releaseLock());
     process.once("SIGINT", () => this.releaseLock());
     process.once("SIGTERM", () => this.releaseLock());
-    process.once("SIGUSR2", () => this.releaseLock()); // nodemon restart
+    process.once("SIGUSR2", () => this.releaseLock());
 
     this.listenersAdded = true;
   }
 
-  private getStorageProvider(): SmartStorageProvider {
-    this.storageProvider ??= new SmartStorageProvider();
-    return this.storageProvider;
+  private ensureCleanupRunner(): StorageCleanupRunner {
+    if (!this.cleanupRunner) {
+      const tempDir =
+        this.cleanupTempDir ??
+        path.join(os.tmpdir(), `storage-${process.pid}-${Date.now()}`);
+
+      try {
+        fs.mkdirSync(tempDir, { recursive: true });
+      } catch (error) {
+        console.error(
+          "[cleanup-service] Failed to initialize cleanup temp directory:",
+          error,
+        );
+        throw error;
+      }
+
+      this.cleanupTempDir = tempDir;
+      this.cleanupRunner = new StorageCleanupRunner({
+        supabase: createServiceClient(),
+        logger: console,
+        tempDir,
+      });
+    }
+
+    return this.cleanupRunner;
   }
 
   private acquireLock(): boolean {
     try {
-      // Check if lock file exists and is valid
       if (fs.existsSync(this.lockFile)) {
         const lockData = fs.readFileSync(this.lockFile, "utf8");
         const [lockPid] = lockData.split("-");
 
-        // Check if the process is still running
         try {
           if (lockPid) {
-            process.kill(parseInt(lockPid), 0); // Signal 0 just checks if process exists
-            // Process is still running, don't acquire lock
+            process.kill(parseInt(lockPid, 10), 0);
             return false;
           }
         } catch {
-          // Process is not running, we can acquire the lock
           console.log(
-            `🔓 Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`,
+            `[cleanup-service] Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`,
           );
         }
       }
 
-      // Create lock file
       fs.writeFileSync(this.lockFile, this.processId);
       return true;
     } catch (error) {
-      console.error("❌ Failed to acquire cleanup service lock:", error);
+      console.error("[cleanup-service] Failed to acquire cleanup service lock:", error);
       return false;
     }
   }
@@ -73,54 +89,51 @@ class CleanupService {
         const lockData = fs.readFileSync(this.lockFile, "utf8");
         if (lockData === this.processId) {
           fs.unlinkSync(this.lockFile);
-          console.log("🔓 Cleanup service lock released");
+          console.log("[cleanup-service] Cleanup service lock released");
         }
       }
     } catch (error) {
-      console.error("❌ Failed to release cleanup service lock:", error);
+      console.error("[cleanup-service] Failed to release cleanup service lock:", error);
     }
   }
 
   start(): void {
     if (this.isRunning) {
       console.log(
-        "✅ Cleanup service is already running - skipping duplicate start",
+        "[cleanup-service] Cleanup service is already running - skipping duplicate start",
       );
       return;
     }
 
-    // Ensure event listeners are added (only once per process)
     this.ensureListenersAdded();
 
-    // Try to acquire the lock
     if (!this.acquireLock()) {
       console.log(
-        "🔒 Another cleanup service is already running - skipping start",
+        "[cleanup-service] Another cleanup service is already running - skipping start",
       );
       return;
     }
 
-    console.log("🚀 Starting background cleanup service...");
+    console.log("[cleanup-service] Starting background cleanup service...");
     this.isRunning = true;
 
-    // Start the cleanup interval - less frequent to reduce resource usage
     this.cleanupInterval = setInterval(
       () => {
         void this.runCleanup();
       },
       10 * 60 * 1000,
-    ); // Every 10 minutes
+    );
 
-    console.log("✅ Background cleanup service started successfully");
+    console.log("[cleanup-service] Background cleanup service started");
   }
 
   stop(): void {
     if (!this.isRunning) {
-      console.log("Cleanup service is not running");
+      console.log("[cleanup-service] Cleanup service is not running");
       return;
     }
 
-    console.log("Stopping background cleanup service...");
+    console.log("[cleanup-service] Stopping background cleanup service...");
     this.isRunning = false;
 
     if (this.cleanupInterval) {
@@ -129,20 +142,19 @@ class CleanupService {
     }
 
     this.releaseLock();
-    console.log("Background cleanup service stopped");
+    console.log("[cleanup-service] Background cleanup service stopped");
   }
 
   private async runCleanup(): Promise<void> {
     try {
-      console.log("🔄 Background cleanup cycle starting...");
+      console.log("[cleanup-service] Background cleanup cycle starting...");
 
-      // Run the comprehensive cleanup
-      const storageProvider = this.getStorageProvider();
-      await storageProvider.performComprehensiveCleanup();
+      const cleanupRunner = this.ensureCleanupRunner();
+      await cleanupRunner.performComprehensiveCleanup();
 
-      console.log("✅ Background cleanup cycle completed");
+      console.log("[cleanup-service] Background cleanup cycle completed");
     } catch (error) {
-      console.error("❌ Background cleanup cycle failed:", error);
+      console.error("[cleanup-service] Background cleanup cycle failed:", error);
     }
   }
 
@@ -153,16 +165,13 @@ class CleanupService {
   }
 }
 
-// Create a singleton instance
 let _cleanupServiceInstance: CleanupService | null = null;
 
 export const getCleanupService = (): CleanupService => {
   _cleanupServiceInstance ??= new CleanupService();
-  // Don't auto-start here - let the application decide when to start
   return _cleanupServiceInstance;
 };
 
-// Export the service instance without auto-starting
 export const cleanupService = getCleanupService();
 
 // Graceful shutdown is now handled by the service registry
