@@ -5,7 +5,11 @@ import pLimit from "p-limit";
 import { createServiceClient } from "@/utils/supabase/service";
 import { logger } from "@/lib/logger";
 import { BulkAssetFetcher, type AssetMetadata } from "./bulk-asset-fetcher";
-import type { CachedAsset, CacheMetrics, JobManifest } from "./asset-cache/types";
+import type {
+  CachedAsset,
+  CacheMetrics,
+  JobManifest,
+} from "./asset-cache/types";
 import { AssetDownloadService } from "./asset-cache/download-service";
 import { ManifestStore } from "./asset-cache/manifest-store";
 import { CacheMaintenance } from "./asset-cache/maintenance";
@@ -316,8 +320,8 @@ export class AssetCacheManager {
     return { ...this.metrics };
   }
 }
-
-
-
-export type { CachedAsset, JobManifest, CacheMetrics } from "./asset-cache/types";
-
+export type {
+  CachedAsset,
+  JobManifest,
+  CacheMetrics,
+} from "./asset-cache/types";

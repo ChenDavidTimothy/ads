@@ -3,7 +3,10 @@ import path from "path";
 
 import { logger } from "@/lib/logger";
 import { ensureDir } from "../path-utils";
-import { SharedCacheJanitor, type JanitorConfig } from "../shared-cache-janitor";
+import {
+  SharedCacheJanitor,
+  type JanitorConfig,
+} from "../shared-cache-janitor";
 
 export class CacheMaintenance {
   private static hardLinkTestCompleted = false;
@@ -17,7 +20,9 @@ export class CacheMaintenance {
     this.jobCacheDir = jobCacheDir;
   }
 
-  async ensureDirectories(options: { logOnSuccess?: boolean } = {}): Promise<void> {
+  async ensureDirectories(
+    options: { logOnSuccess?: boolean } = {},
+  ): Promise<void> {
     try {
       await ensureDir(this.sharedCacheDir);
       await ensureDir(this.jobCacheDir);
@@ -37,7 +42,9 @@ export class CacheMaintenance {
     }
   }
 
-  async startJanitor(config?: Partial<JanitorConfig>): Promise<SharedCacheJanitor> {
+  async startJanitor(
+    config?: Partial<JanitorConfig>,
+  ): Promise<SharedCacheJanitor> {
     await this.ensureDirectories();
     const janitor = new SharedCacheJanitor(this.sharedCacheDir, config);
     await janitor.start();
@@ -55,20 +62,18 @@ export class CacheMaintenance {
       return CacheMaintenance.hardLinkTestPromise ?? Promise.resolve();
     }
 
-    if (!CacheMaintenance.hardLinkTestPromise) {
-      CacheMaintenance.hardLinkTestPromise = this.performStartupHardLinkTest()
-        .catch((error) => {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          logger.warn("Failed to perform hard link startup test", {
-            error: errorMessage,
-          });
-        })
-        .finally(() => {
-          CacheMaintenance.hardLinkTestCompleted = true;
-          CacheMaintenance.hardLinkTestPromise = null;
+    CacheMaintenance.hardLinkTestPromise ??= this.performStartupHardLinkTest()
+      .catch((error) => {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        logger.warn("Failed to perform hard link startup test", {
+          error: errorMessage,
         });
-    }
+      })
+      .finally(() => {
+        CacheMaintenance.hardLinkTestCompleted = true;
+        CacheMaintenance.hardLinkTestPromise = null;
+      });
 
     await CacheMaintenance.hardLinkTestPromise;
   }
@@ -89,11 +94,17 @@ export class CacheMaintenance {
       const sourceStats = await fs.stat(testSource);
       const targetStats = await fs.stat(testTarget);
 
-      if (targetContent === testContent && sourceStats.ino === targetStats.ino) {
-        logger.info("Hard link test passed - optimal cache performance enabled", {
-          sharedCacheDir: this.sharedCacheDir,
-          jobCacheDir: this.jobCacheDir,
-        });
+      if (
+        targetContent === testContent &&
+        sourceStats.ino === targetStats.ino
+      ) {
+        logger.info(
+          "Hard link test passed - optimal cache performance enabled",
+          {
+            sharedCacheDir: this.sharedCacheDir,
+            jobCacheDir: this.jobCacheDir,
+          },
+        );
       } else {
         logger.warn("Hard link test inconclusive - may use copy fallbacks");
       }

@@ -18,6 +18,25 @@ const httpConfig = {
   bodyTimeout: 30000,
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const getStatusCode = (value: unknown): number | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const statusCandidate = value.statusCode;
+  return typeof statusCandidate === "number" ? statusCandidate : undefined;
+};
+
+const getErrorMessage = (value: unknown): string => {
+  if (!isRecord(value)) {
+    return "";
+  }
+  const message = value.message;
+  return typeof message === "string" ? message : "";
+};
+
 interface DownloadServiceDeps {
   sharedCacheDir: string;
   jobCacheDir: string;
@@ -167,31 +186,18 @@ export class AssetDownloadService {
             // Ignore cleanup errors
           });
 
+          const responseStatus =
+            isRecord(error) && "response" in error
+              ? getStatusCode(error.response)
+              : undefined;
+          const directStatus = getStatusCode(error);
+          const message = getErrorMessage(error);
+
           const is403 =
-            (error &&
-              typeof error === "object" &&
-              "response" in error &&
-              (error as { response?: { statusCode?: number } }).response &&
-              typeof (error as { response?: { statusCode?: number } }).response ===
-                "object" &&
-              "statusCode" in (error as { response?: { statusCode?: number } }).response! &&
-              (error as { response?: { statusCode?: number } }).response!.statusCode ===
-                403) ??
-            (error &&
-              typeof error === "object" &&
-              "statusCode" in error &&
-              (error as { statusCode?: number }).statusCode === 403) ??
-            (error &&
-              typeof error === "object" &&
-              "message" in error &&
-              typeof (error as { message?: string }).message === "string" &&
-              (error as { message?: string }).message.includes("403")) ??
-            (error &&
-              typeof error === "object" &&
-              "message" in error &&
-              typeof (error as { message?: string }).message === "string" &&
-              (error as { message?: string }).message.includes("Forbidden")) ??
-            false;
+            responseStatus === 403 ||
+            directStatus === 403 ||
+            message.includes("403") ||
+            message.includes("Forbidden");
 
           if (is403) {
             logger.warn("Signed URL expired for asset, will refresh on retry", {
@@ -224,7 +230,8 @@ export class AssetDownloadService {
             error &&
             typeof error === "object" &&
             "attemptNumber" in error &&
-            typeof (error as { attemptNumber?: number }).attemptNumber === "number"
+            typeof (error as { attemptNumber?: number }).attemptNumber ===
+              "number"
               ? (error as { attemptNumber: number }).attemptNumber
               : 0;
           const retriesLeft =

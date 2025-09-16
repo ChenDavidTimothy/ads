@@ -5,6 +5,11 @@ import { Readable } from "stream";
 import { createHash } from "crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type {
+  CachedAsset,
+  JobManifest,
+} from "@/server/rendering/asset-cache-manager";
+
 type TestAssetRow = {
   id: string;
   user_id: string;
@@ -32,6 +37,47 @@ const requestState: {
   bodyFactory: () => Readable.from([]),
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isCachedAsset = (value: unknown): value is CachedAsset => {
+  if (!isRecord(value)) return false;
+  const { assetId, localPath, contentHash, size, contentType, verified } =
+    value;
+  return (
+    typeof assetId === "string" &&
+    typeof localPath === "string" &&
+    typeof contentHash === "string" &&
+    typeof size === "number" &&
+    typeof contentType === "string" &&
+    typeof verified === "boolean"
+  );
+};
+
+const isJobManifest = (value: unknown): value is JobManifest => {
+  if (!isRecord(value)) return false;
+  if (typeof value.jobId !== "string" || typeof value.version !== "string") {
+    return false;
+  }
+  if (
+    typeof value.totalBytes !== "number" ||
+    typeof value.createdAt !== "string"
+  ) {
+    return false;
+  }
+  if (
+    "completedAt" in value &&
+    value.completedAt !== undefined &&
+    typeof value.completedAt !== "string"
+  ) {
+    return false;
+  }
+  if (!isRecord(value.assets)) {
+    return false;
+  }
+  return Object.values(value.assets).every(isCachedAsset);
+};
+
 vi.mock("@/lib/logger", () => {
   const noop = vi.fn();
   return {
@@ -44,25 +90,48 @@ vi.mock("@/lib/logger", () => {
   };
 });
 
-vi.mock("@/utils/supabase/service", () => {
-  const createQuery = () => {
-    const query: any = {
-      select: vi.fn(() => query),
-      in: vi.fn(() => query),
-      eq: vi.fn(async () => ({ data: supabaseState.assetRows, error: null })),
-    };
-    return query;
-  };
+type QueryResult = Promise<{ data: TestAssetRow[]; error: null }>;
 
-  const createClient = () => ({
+interface MockQuery {
+  select: () => MockQuery;
+  in: () => MockQuery;
+  eq: () => QueryResult;
+}
+
+const createQuery = (): MockQuery => {
+  const query: MockQuery = {
+    select: vi.fn(() => query),
+    in: vi.fn(() => query),
+    eq: vi.fn(async () => ({ data: supabaseState.assetRows, error: null })),
+  };
+  return query;
+};
+
+interface MockStorageBucket {
+  createSignedUrl: () => Promise<{ data: { signedUrl: string }; error: null }>;
+}
+
+interface MockStorageClient {
+  from: (bucket: string) => MockStorageBucket;
+}
+
+interface MockSupabaseClient {
+  from: (table: string) => MockQuery;
+  storage: MockStorageClient;
+}
+
+const createStorageBucket = (): MockStorageBucket => ({
+  createSignedUrl: vi.fn(async () => ({
+    data: { signedUrl: supabaseState.signedUrl },
+    error: null,
+  })),
+});
+
+vi.mock("@/utils/supabase/service", () => {
+  const createClient = (): MockSupabaseClient => ({
     from: vi.fn(() => createQuery()),
     storage: {
-      from: vi.fn(() => ({
-        createSignedUrl: vi.fn(async () => ({
-          data: { signedUrl: supabaseState.signedUrl },
-          error: null,
-        })),
-      })),
+      from: vi.fn(() => createStorageBucket()),
     },
   });
 
@@ -77,7 +146,9 @@ vi.mock("undici", () => ({
   })),
 }));
 
-const { AssetCacheManager } = await import("@/server/rendering/asset-cache-manager");
+const { AssetCacheManager } = await import(
+  "@/server/rendering/asset-cache-manager"
+);
 
 describe("AssetCacheManager", () => {
   let jobCacheDir: string;
@@ -109,7 +180,10 @@ describe("AssetCacheManager", () => {
     expect(manifest.assets).toEqual({});
 
     const manifestPath = path.join(jobCacheDir, "manifest.json");
-    await expect(fs.access(manifestPath)).rejects.toHaveProperty("code", "ENOENT");
+    await expect(fs.access(manifestPath)).rejects.toHaveProperty(
+      "code",
+      "ENOENT",
+    );
 
     const metrics = manager.getMetrics();
     expect(metrics.assetsRequested).toBe(0);
@@ -146,6 +220,9 @@ describe("AssetCacheManager", () => {
 
     expect(Object.keys(manifest.assets)).toEqual(["asset-1"]);
     const cachedAsset = manifest.assets["asset-1"];
+    if (!cachedAsset) {
+      throw new Error("Expected cached asset to be defined");
+    }
     expect(cachedAsset.localPath.startsWith(jobCacheDir)).toBe(true);
     expect(cachedAsset.contentHash).toBe(contentHash);
     expect(cachedAsset.size).toBe(fileContent.byteLength);
@@ -161,7 +238,15 @@ describe("AssetCacheManager", () => {
     expect(metrics.cacheHits).toBe(0);
 
     const manifestPath = path.join(jobCacheDir, "manifest.json");
-    const manifestOnDisk = JSON.parse(await fs.readFile(manifestPath, "utf8"));
-    expect(manifestOnDisk.assets["asset-1"].localPath).toBe(cachedAsset.localPath);
+    const manifestRaw: unknown = JSON.parse(
+      await fs.readFile(manifestPath, "utf8"),
+    );
+    expect(isJobManifest(manifestRaw)).toBe(true);
+    if (!isJobManifest(manifestRaw)) {
+      throw new Error("Manifest format mismatch");
+    }
+    expect(manifestRaw.assets["asset-1"]?.localPath).toBe(
+      cachedAsset.localPath,
+    );
   });
 });

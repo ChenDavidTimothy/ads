@@ -15,7 +15,10 @@ export class ManifestStore {
   }
 
   async save(manifest: JobManifest): Promise<void> {
-    await fs.writeFile(this.getManifestPath(), JSON.stringify(manifest, null, 2));
+    await fs.writeFile(
+      this.getManifestPath(),
+      JSON.stringify(manifest, null, 2),
+    );
   }
 
   async load(): Promise<JobManifest | null> {
@@ -23,7 +26,12 @@ export class ManifestStore {
       const raw = await fs.readFile(this.getManifestPath(), "utf8");
       return JSON.parse(raw) as JobManifest;
     } catch (error) {
-      if (error && typeof error === "object" && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+      ) {
         return null;
       }
       throw error;
