@@ -1,60 +1,16 @@
-// src/server/rendering/asset-cache-manager.ts
 import fs from "fs/promises";
-import { createWriteStream } from "fs";
 import path from "path";
-import { pipeline } from "stream/promises";
-import { request } from "undici";
 import pLimit from "p-limit";
-import pRetry from "p-retry";
-import { createHash } from "crypto";
+
 import { createServiceClient } from "@/utils/supabase/service";
 import { logger } from "@/lib/logger";
 import { BulkAssetFetcher, type AssetMetadata } from "./bulk-asset-fetcher";
-import { SharedCacheJanitor, type JanitorConfig } from "./shared-cache-janitor";
-import { normalizeDir, ensureDir, getDefaultCacheDirs } from "./path-utils";
-
-// Lightweight HTTP client configuration without caching dependencies
-const httpConfig = {
-  headersTimeout: 30000,
-  bodyTimeout: 30000,
-};
-
-export interface CachedAsset {
-  assetId: string;
-  localPath: string;
-  contentHash: string;
-  size: number;
-  contentType: string;
-  width?: number;
-  height?: number;
-  verified: boolean;
-}
-
-export interface JobManifest {
-  jobId: string;
-  version: string;
-  totalBytes: number;
-  createdAt: string;
-  completedAt?: string;
-  assets: Record<string, CachedAsset>;
-}
-
-export interface CacheMetrics {
-  assetsRequested: number;
-  assetsDownloaded: number;
-  bytesDownloaded: number;
-  cacheHits: number;
-  sharedCacheHits: number;
-  retries: number;
-  downloadFailures: number;
-  presignFailures: number;
-  prepTimeMs: number;
-  hardLinkFallbacks: number;
-  copyFallbacks: number;
-  raceLost: number;
-  urlRefreshes: number;
-  integrityFailures: number;
-}
+import type { CachedAsset, CacheMetrics, JobManifest } from "./asset-cache/types";
+import { AssetDownloadService } from "./asset-cache/download-service";
+import { ManifestStore } from "./asset-cache/manifest-store";
+import { CacheMaintenance } from "./asset-cache/maintenance";
+import type { SharedCacheJanitor, JanitorConfig } from "./shared-cache-janitor";
+import { getDefaultCacheDirs, normalizeDir } from "./path-utils";
 
 export class AssetCacheManager {
   private readonly jobId: string;
@@ -63,12 +19,13 @@ export class AssetCacheManager {
   private readonly userId: string;
   private readonly supabase: ReturnType<typeof createServiceClient>;
   private readonly bulkFetcher: BulkAssetFetcher;
-  private readonly downloadLimit: ReturnType<typeof pLimit>;
   private readonly metrics: CacheMetrics;
   private readonly maxJobSizeBytes: number;
+  private readonly maintenance: CacheMaintenance;
+  private readonly manifestStore: ManifestStore;
+  private readonly downloadService: AssetDownloadService;
   private janitor?: SharedCacheJanitor;
   private assets = new Map<string, CachedAsset>();
-  private static hardLinkTestCompleted = false;
 
   constructor(
     jobId: string,
@@ -86,7 +43,6 @@ export class AssetCacheManager {
     this.userId = userId;
     this.maxJobSizeBytes = options.maxJobSizeBytes ?? 2 * 1024 * 1024 * 1024;
 
-    // Cache directories with platform-appropriate defaults and path normalization
     const defaults = getDefaultCacheDirs();
     this.jobCacheDir = normalizeDir(
       options.jobCacheDir ??
@@ -100,20 +56,9 @@ export class AssetCacheManager {
 
     this.supabase = createServiceClient();
     this.bulkFetcher = new BulkAssetFetcher();
-    this.downloadLimit = pLimit(options.downloadConcurrency ?? 8);
 
-    // Initialize shared cache janitor after ensuring directories exist
-    if (options.enableJanitor) {
-      void this.initializeCacheDirectories().then(async () => {
-        this.janitor = new SharedCacheJanitor(
-          this.sharedCacheDir,
-          options.janitorConfig,
-        );
-        await this.janitor.start();
-      });
-    }
+    const downloadLimit = pLimit(options.downloadConcurrency ?? 8);
 
-    // Initialize metrics
     this.metrics = {
       assetsRequested: 0,
       assetsDownloaded: 0,
@@ -131,34 +76,34 @@ export class AssetCacheManager {
       integrityFailures: 0,
     };
 
-    // CRITICAL FIX: Run startup hard link test once per process
-    if (!AssetCacheManager.hardLinkTestCompleted) {
-      AssetCacheManager.hardLinkTestCompleted = true;
-      void this.initializeCacheDirectories().then(() => {
-        void this.performStartupHardLinkTest();
-      });
-    }
-  }
+    this.maintenance = new CacheMaintenance(
+      this.sharedCacheDir,
+      this.jobCacheDir,
+    );
+    this.manifestStore = new ManifestStore(this.jobCacheDir);
+    this.downloadService = new AssetDownloadService({
+      sharedCacheDir: this.sharedCacheDir,
+      jobCacheDir: this.jobCacheDir,
+      supabase: this.supabase,
+      downloadLimit,
+      metrics: this.metrics,
+      cacheAsset: (asset, jobPath, contentHash, fromCache) => {
+        this.cacheAsset(asset, jobPath, contentHash, fromCache);
+      },
+    });
 
-  /**
-   * Ensures cache directories exist before starting services
-   */
-  private async initializeCacheDirectories(): Promise<void> {
-    try {
-      await ensureDir(this.sharedCacheDir);
-      await ensureDir(this.jobCacheDir);
-      logger.debug("Cache directories initialized", {
-        sharedCacheDir: this.sharedCacheDir,
-        jobCacheDir: this.jobCacheDir,
-      });
-    } catch (error) {
-      logger.error("Failed to initialize cache directories", {
-        sharedCacheDir: this.sharedCacheDir,
-        jobCacheDir: this.jobCacheDir,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+    if (options.enableJanitor) {
+      void this.maintenance
+        .startJanitor(options.janitorConfig)
+        .then((janitor) => {
+          this.janitor = janitor;
+        })
+        .catch(() => {
+          // Errors logged inside ensureDirectories
+        });
     }
+
+    void this.maintenance.ensureHardLinkCapability();
   }
 
   async prepare(assetIds: string[]): Promise<JobManifest> {
@@ -179,13 +124,11 @@ export class AssetCacheManager {
     });
 
     try {
-      // 1. Bulk fetch metadata (single DB call)
       const assetsMetadata = await this.bulkFetcher.bulkFetchAssetMetadata(
         uniqueAssetIds,
         this.userId,
       );
 
-      // 2. Validate job assets
       const validation = this.bulkFetcher.validateJobAssets(
         assetsMetadata,
         this.maxJobSizeBytes,
@@ -203,16 +146,10 @@ export class AssetCacheManager {
         });
       }
 
-      // 3. Create cache directories
-      await Promise.all([
-        fs.mkdir(this.jobCacheDir, { recursive: true }),
-        fs.mkdir(this.sharedCacheDir, { recursive: true }),
-      ]);
+      await this.maintenance.ensureDirectories({ logOnSuccess: false });
 
-      // 4. Download and cache assets
-      await this.downloadAndCacheAssets(assetsMetadata);
+      await this.downloadService.downloadAndCacheAssets(assetsMetadata);
 
-      // 5. CRITICAL FIX: Explicit validation that all assets were cached
       const missingAssets = uniqueAssetIds.filter((id) => !this.assets.has(id));
       if (missingAssets.length > 0) {
         throw new Error(
@@ -221,7 +158,6 @@ export class AssetCacheManager {
         );
       }
 
-      // 6. Create and persist manifest
       const manifest: JobManifest = {
         jobId: this.jobId,
         version: "1.0",
@@ -248,330 +184,6 @@ export class AssetCacheManager {
     }
   }
 
-  private async downloadAndCacheAssets(
-    assetsMetadata: AssetMetadata[],
-  ): Promise<void> {
-    const downloadPromises = assetsMetadata.map((asset) =>
-      this.downloadLimit(async () => {
-        await this.downloadAndCacheAsset(asset);
-      }),
-    );
-
-    await Promise.all(downloadPromises);
-  }
-
-  private async downloadAndCacheAsset(asset: AssetMetadata): Promise<void> {
-    const contentHash = this.getContentHash(asset);
-    const extension = this.getFileExtension(asset.storagePath, asset.mimeType);
-    const filename = `${contentHash}${extension}`;
-
-    const sharedPath = path.join(this.sharedCacheDir, filename);
-    const jobPath = path.join(this.jobCacheDir, filename);
-
-    // Check shared cache first
-    if (await this.validateCachedFile(sharedPath, asset.fileSize)) {
-      const linkSuccess = await this.linkOrCopyFile(sharedPath, jobPath);
-      this.cacheAsset(asset, jobPath, contentHash, true);
-      this.metrics.cacheHits++;
-      this.metrics.sharedCacheHits++;
-
-      if (!linkSuccess) {
-        this.metrics.copyFallbacks++;
-      }
-
-      logger.debug(`Shared cache hit for asset`, {
-        assetId: asset.id,
-        filename,
-      });
-      return;
-    }
-
-    // Download required
-    await this.downloadAssetWithRetry(asset, sharedPath, jobPath, contentHash);
-    this.cacheAsset(asset, jobPath, contentHash, false);
-    this.metrics.assetsDownloaded++;
-    this.metrics.bytesDownloaded += asset.fileSize;
-  }
-
-  private async downloadAssetWithRetry(
-    asset: AssetMetadata,
-    sharedPath: string,
-    jobPath: string,
-    _contentHash: string,
-  ): Promise<void> {
-    let signedUrl: string | null = null;
-
-    await pRetry(
-      async () => {
-        // Get or refresh signed URL
-        if (!signedUrl) {
-          const { data: urlData, error: urlError } = await this.supabase.storage
-            .from(asset.bucketName)
-            .createSignedUrl(asset.storagePath, 7200); // 2 hour TTL
-
-          if (urlError || !urlData) {
-            this.metrics.presignFailures++;
-            throw new Error(
-              `PRESIGN_FAILED: Failed to create signed URL for ${asset.id}: ${urlError?.message || "No URL"}`,
-            );
-          }
-
-          signedUrl = urlData.signedUrl;
-        }
-
-        // CRITICAL FIX: Use unique temp name to prevent race conditions
-        const tempPath =
-          sharedPath + "." + Math.random().toString(36).slice(2) + ".part";
-
-        try {
-          // Download with integrity verification if content hash available
-          if (asset.contentHash && asset.contentHash.length >= 32) {
-            await this.downloadWithHashVerification(signedUrl, tempPath, asset);
-          } else {
-            await this.downloadWithSizeVerification(signedUrl, tempPath, asset);
-          }
-
-          // CRITICAL FIX: Race-safe finalization
-          try {
-            await fs.rename(tempPath, sharedPath);
-          } catch (renameError: unknown) {
-            if (
-              renameError &&
-              typeof renameError === "object" &&
-              "code" in renameError &&
-              renameError.code === "EEXIST"
-            ) {
-              // Another process won the race - delete our temp and continue
-              await fs.unlink(tempPath).catch(() => {
-                // Ignore cleanup errors
-              });
-              this.metrics.raceLost++;
-              logger.debug(
-                `Race lost for asset - another process cached first`,
-                { assetId: asset.id },
-              );
-            } else {
-              // Other rename errors are genuine failures
-              await fs.unlink(tempPath).catch(() => {
-                // Ignore cleanup errors
-              });
-              throw renameError;
-            }
-          }
-
-          // Link/copy to job cache
-          const linkSuccess = await this.linkOrCopyFile(sharedPath, jobPath);
-          if (!linkSuccess) {
-            this.metrics.copyFallbacks++;
-          }
-
-          logger.info(`Downloaded asset successfully`, {
-            assetId: asset.id,
-            filename: path.basename(sharedPath),
-            size: this.formatBytes(asset.fileSize),
-            bucket: asset.bucketName,
-            path: asset.storagePath,
-          });
-        } catch (error: unknown) {
-          // Cleanup temp file on failure
-          await fs.unlink(tempPath).catch(() => {
-            // Ignore cleanup errors
-          });
-
-          // CRITICAL FIX: Check HTTP status code, not just error message
-          const is403 =
-            (error &&
-              typeof error === "object" &&
-              "response" in error &&
-              error.response &&
-              typeof error.response === "object" &&
-              "statusCode" in error.response &&
-              error.response.statusCode === 403) ??
-            (error &&
-              typeof error === "object" &&
-              "statusCode" in error &&
-              error.statusCode === 403) ??
-            (error &&
-              typeof error === "object" &&
-              "message" in error &&
-              typeof error.message === "string" &&
-              error.message.includes("403")) ??
-            (error &&
-              typeof error === "object" &&
-              "message" in error &&
-              typeof error.message === "string" &&
-              error.message.includes("Forbidden")) ??
-            false;
-
-          if (is403) {
-            logger.warn(`Signed URL expired for asset, will refresh on retry`, {
-              assetId: asset.id,
-              bucket: asset.bucketName,
-              path: asset.storagePath,
-            });
-            signedUrl = null; // Force refresh on next retry
-            this.metrics.urlRefreshes++;
-          }
-
-          this.metrics.downloadFailures++;
-          throw error;
-        }
-      },
-      {
-        retries: 3,
-        factor: 2,
-        minTimeout: 1000,
-        maxTimeout: 10000,
-        onFailedAttempt: (error) => {
-          this.metrics.retries++;
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : typeof error === "string"
-                ? error
-                : "Unknown error";
-          const attemptNumber =
-            error &&
-            typeof error === "object" &&
-            "attemptNumber" in error &&
-            typeof error.attemptNumber === "number"
-              ? error.attemptNumber
-              : 0;
-          const retriesLeft =
-            error &&
-            typeof error === "object" &&
-            "retriesLeft" in error &&
-            typeof error.retriesLeft === "number"
-              ? error.retriesLeft
-              : 0;
-          logger.warn(`Download retry for asset`, {
-            assetId: asset.id,
-            attempt: attemptNumber,
-            retriesLeft: retriesLeft,
-            error: errorMessage,
-            bucket: asset.bucketName,
-            path: asset.storagePath,
-          });
-        },
-      },
-    );
-  }
-
-  private async downloadWithHashVerification(
-    url: string,
-    tempPath: string,
-    asset: AssetMetadata,
-  ): Promise<void> {
-    const { createHash } = await import("crypto");
-    const { PassThrough } = await import("stream");
-
-    const hasher = createHash("sha256");
-    const passThrough = new PassThrough();
-
-    // Tee stream to hasher while writing to disk
-    passThrough.on("data", (chunk) => {
-      if (Buffer.isBuffer(chunk) || typeof chunk === "string") {
-        hasher.update(chunk);
-      }
-    });
-
-    const { body: responseStream } = await request(url, httpConfig);
-
-    responseStream.pipe(passThrough);
-
-    await pipeline(passThrough, createWriteStream(tempPath));
-
-    // Verify size and hash
-    const stat = await fs.stat(tempPath);
-    if (stat.size !== asset.fileSize) {
-      throw new Error(
-        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`,
-      );
-    }
-
-    const computedHash = hasher.digest("hex");
-    if (computedHash !== asset.contentHash) {
-      this.metrics.integrityFailures++;
-      throw new Error(
-        `INTEGRITY_FAILED: Content hash mismatch for ${asset.id}: expected ${asset.contentHash}, got ${computedHash}`,
-      );
-    }
-  }
-
-  private async downloadWithSizeVerification(
-    url: string,
-    tempPath: string,
-    asset: AssetMetadata,
-  ): Promise<void> {
-    const { body: responseStream } = await request(url, httpConfig);
-
-    await pipeline(responseStream, createWriteStream(tempPath));
-
-    // Verify size
-    const stat = await fs.stat(tempPath);
-    if (stat.size !== asset.fileSize) {
-      throw new Error(
-        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`,
-      );
-    }
-  }
-
-  private async validateCachedFile(
-    filePath: string,
-    expectedSize: number,
-  ): Promise<boolean> {
-    try {
-      const stat = await fs.stat(filePath);
-      return stat.size === expectedSize;
-    } catch {
-      return false;
-    }
-  }
-
-  private async linkOrCopyFile(source: string, dest: string): Promise<boolean> {
-    try {
-      await fs.link(source, dest);
-      return true; // Hard link successful
-    } catch (error: unknown) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "EEXIST"
-      )
-        return true; // Already exists
-
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        (error.code === "EXDEV" || error.code === "EPERM")
-      ) {
-        // Cross-filesystem, fallback to copy
-        try {
-          await fs.copyFile(source, dest);
-          this.metrics.hardLinkFallbacks++;
-          return false; // Copy fallback used
-        } catch (copyError) {
-          const errorMessage =
-            error &&
-            typeof error === "object" &&
-            "message" in error &&
-            typeof error.message === "string"
-              ? error.message
-              : "Unknown error";
-          const copyErrorMessage =
-            copyError instanceof Error ? copyError.message : String(copyError);
-          throw new Error(
-            `Both hard link and copy failed: ${errorMessage}, ${copyErrorMessage}`,
-          );
-        }
-      }
-
-      throw error;
-    }
-  }
-
   private cacheAsset(
     asset: AssetMetadata,
     localPath: string,
@@ -590,39 +202,6 @@ export class AssetCacheManager {
     });
   }
 
-  private getContentHash(asset: AssetMetadata): string {
-    if (asset.contentHash && asset.contentHash.length >= 32) {
-      return asset.contentHash;
-    }
-
-    // Fallback: metadata-based hash (temporary)
-    const metadataContent = `${asset.id}:${asset.storagePath}:${asset.fileSize}:${asset.createdAt}`;
-    return createHash("sha256").update(metadataContent).digest("hex");
-  }
-
-  private getFileExtension(storagePath: string, mimeType: string): string {
-    const pathExt = path.extname(storagePath);
-    if (pathExt) return pathExt;
-
-    const mimeToExt: Record<string, string> = {
-      "image/jpeg": ".jpg",
-      "image/png": ".png",
-      "image/gif": ".gif",
-      "image/webp": ".webp",
-      "image/svg+xml": ".svg",
-      "video/mp4": ".mp4",
-      "video/webm": ".webm",
-      "video/quicktime": ".mov",
-    };
-
-    return mimeToExt[mimeType] ?? ".bin";
-  }
-
-  private async persistManifest(manifest: JobManifest): Promise<void> {
-    const manifestPath = path.join(this.jobCacheDir, "manifest.json");
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-  }
-
   private createEmptyManifest(): JobManifest {
     return {
       jobId: this.jobId,
@@ -632,6 +211,10 @@ export class AssetCacheManager {
       completedAt: new Date().toISOString(),
       assets: {},
     };
+  }
+
+  private async persistManifest(manifest: JobManifest): Promise<void> {
+    await this.manifestStore.save(manifest);
   }
 
   private logMetrics(): void {
@@ -676,7 +259,6 @@ export class AssetCacheManager {
       integrityFailures: this.metrics.integrityFailures,
     });
 
-    // Critical operational warnings
     if (this.metrics.copyFallbacks > 0) {
       logger.warn(
         `Copy fallback rate: ${copyRate}% - consider ensuring cache directories on same filesystem`,
@@ -710,102 +292,13 @@ export class AssetCacheManager {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   }
 
-  /**
-   * CRITICAL FIX: Startup test for hard link capability
-   */
-  private async performStartupHardLinkTest(): Promise<void> {
-    try {
-      await fs.mkdir(this.sharedCacheDir, { recursive: true });
-      await fs.mkdir(this.jobCacheDir, { recursive: true });
-
-      const testContent = `hardlink-test-${Date.now()}`;
-      const testSource = path.join(this.sharedCacheDir, ".hardlink-test");
-      const testTarget = path.join(this.jobCacheDir, ".hardlink-test");
-
-      await fs.writeFile(testSource, testContent);
-
-      try {
-        await fs.link(testSource, testTarget);
-
-        const targetContent = await fs.readFile(testTarget, "utf8");
-        const sourceStats = await fs.stat(testSource);
-        const targetStats = await fs.stat(testTarget);
-
-        if (
-          targetContent === testContent &&
-          sourceStats.ino === targetStats.ino
-        ) {
-          logger.info(
-            "Hard link test passed - optimal cache performance enabled",
-            {
-              sharedCacheDir: this.sharedCacheDir,
-              jobCacheDir: this.jobCacheDir,
-            },
-          );
-        } else {
-          logger.warn("Hard link test inconclusive - may use copy fallbacks");
-        }
-
-        await Promise.all([
-          fs.unlink(testSource).catch(() => {
-            // Ignore cleanup errors
-          }),
-          fs.unlink(testTarget).catch(() => {
-            // Ignore cleanup errors
-          }),
-        ]);
-      } catch (linkError: unknown) {
-        if (
-          linkError &&
-          typeof linkError === "object" &&
-          "code" in linkError &&
-          linkError.code === "EXDEV"
-        ) {
-          logger.warn(
-            "Hard links not supported between cache directories - will use copy fallbacks",
-            {
-              reason: "Cross-filesystem",
-              sharedCacheDir: this.sharedCacheDir,
-              jobCacheDir: this.jobCacheDir,
-              impact: "Doubled disk usage expected",
-            },
-          );
-        } else {
-          const errorMessage =
-            linkError &&
-            typeof linkError === "object" &&
-            "message" in linkError &&
-            typeof linkError.message === "string"
-              ? linkError.message
-              : String(linkError);
-          logger.warn("Hard link test failed - will use copy fallbacks", {
-            error: errorMessage,
-            impact: "Doubled disk usage expected",
-          });
-        }
-
-        await fs.unlink(testSource).catch(() => {
-          // Ignore cleanup errors
-        });
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.warn("Failed to perform hard link startup test", {
-        error: errorMessage,
-      });
-    }
-  }
-
   getAsset(assetId: string): CachedAsset | null {
     return this.assets.get(assetId) ?? null;
   }
 
   async cleanup(): Promise<void> {
     try {
-      if (this.janitor) {
-        this.janitor.stop();
-      }
+      this.maintenance.stopJanitor(this.janitor);
       await fs.rm(this.jobCacheDir, { recursive: true, force: true });
       logger.info(`Cleaned job cache`, {
         jobId: this.jobId,
@@ -823,3 +316,8 @@ export class AssetCacheManager {
     return { ...this.metrics };
   }
 }
+
+
+
+export type { CachedAsset, JobManifest, CacheMetrics } from "./asset-cache/types";
+
