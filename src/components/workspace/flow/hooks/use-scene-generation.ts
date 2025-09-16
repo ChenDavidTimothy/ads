@@ -32,6 +32,10 @@ interface ValidationError {
   nodeName?: string;
 }
 
+type MaybeImmutableValidationError = Omit<ValidationError, "suggestions"> & {
+  suggestions?: ReadonlyArray<string>;
+};
+
 // GracefulErrorResponse type removed as unused
 
 // SuccessResponse type removed as unused
@@ -69,6 +73,14 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     [],
   );
+
+  const toMutableValidationErrors = (
+    errors: ReadonlyArray<MaybeImmutableValidationError>,
+  ): ValidationError[] =>
+    errors.map((err) => ({
+      ...err,
+      suggestions: err.suggestions ? [...err.suggestions] : undefined,
+    }));
   const { toast } = useNotifications();
   const router = useRouter();
   const utils = api.useUtils();
@@ -122,7 +134,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
       if (!data.success) {
         console.log(`[GENERATION] Validation errors detected:`, data.errors);
         setIsGenerating(false);
-        setValidationErrors(data.errors);
+        setValidationErrors(toMutableValidationErrors(data.errors));
 
         // Show user-friendly error notifications
         const errorMessages = data.errors.filter((e) => e.type === "error");
@@ -264,7 +276,7 @@ export function useSceneGeneration(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
     onSuccess: async (data) => {
       if (!data.success) {
         setIsGeneratingImage(false);
-        setValidationErrors(data.errors);
+        setValidationErrors(toMutableValidationErrors(data.errors));
 
         // Show user-friendly error notifications
         const errorMessages = data.errors.filter((e) => e.type === "error");

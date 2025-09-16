@@ -23,7 +23,7 @@ export interface ReactFlowNodeLike {
   id: string;
   type?: string;
   position: { x: number; y: number };
-  data: unknown;
+  data?: unknown;
 }
 
 export interface ReactFlowEdgeLike {
@@ -194,7 +194,7 @@ export function validateInputNodesGracefully(
     id: string;
     type?: string;
     position: { x: number; y: number };
-    data: unknown;
+    data?: unknown;
   }>,
 ): ValidationResult {
   const errors: ValidationResult["errors"] = [];

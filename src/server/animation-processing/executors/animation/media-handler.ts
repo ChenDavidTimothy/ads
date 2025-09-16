@@ -216,8 +216,8 @@ export async function executeMediaNode(
       }
     ).batchOverridesByField ?? {};
 
-  const processedImageObjects = processedObjects.filter((obj): obj is SceneObject =>
-    isImageObject(obj),
+  const processedImageObjects = processedObjects.filter(
+    (obj): obj is SceneObject => isImageObject(obj),
   );
 
   const nodeBatchOverrides = (() => {
@@ -232,13 +232,16 @@ export async function executeMediaNode(
           Array.isArray(obj.batchKeys) &&
           obj.batchKeys.some((k) => typeof k === "string" && k.trim() !== ""),
       }))
-      .filter((entry): entry is { id: string; isBatched: boolean } =>
-        typeof entry.id === "string" && entry.id.length > 0,
+      .filter(
+        (entry): entry is { id: string; isBatched: boolean } =>
+          typeof entry.id === "string" && entry.id.length > 0,
       );
 
     const objectsById = new Map(objectMeta.map((entry) => [entry.id, entry]));
 
-    for (const [rawFieldPath, byObject] of Object.entries(batchOverridesByField)) {
+    for (const [rawFieldPath, byObject] of Object.entries(
+      batchOverridesByField,
+    )) {
       const fieldPath = toMediaFieldPath(rawFieldPath);
       for (const [rawObjId, byKey] of Object.entries(byObject)) {
         const cleaned: Record<string, unknown> = {};
@@ -272,7 +275,9 @@ export async function executeMediaNode(
   })();
 
   const mergeOverrideMaps = (
-    sources: Array<Record<string, Record<string, Record<string, unknown>>> | undefined>,
+    sources: Array<
+      Record<string, Record<string, Record<string, unknown>>> | undefined
+    >,
   ) => {
     const result: Record<string, Record<string, Record<string, unknown>>> = {};
     for (const source of sources) {
@@ -292,7 +297,10 @@ export async function executeMediaNode(
   };
 
   const emittedPerObjectBatchOverrides = (() => {
-    const combined = mergeOverrideMaps([assignmentBatchOverrides, nodeBatchOverrides]);
+    const combined = mergeOverrideMaps([
+      assignmentBatchOverrides,
+      nodeBatchOverrides,
+    ]);
     return Object.keys(combined).length > 0 ? combined : undefined;
   })();
 

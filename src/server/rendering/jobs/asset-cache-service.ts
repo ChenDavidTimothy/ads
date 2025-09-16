@@ -14,10 +14,16 @@ import {
   extractAssetDependenciesFromBatchedPartitions,
   getUniqueAssetIds,
 } from "@/server/rendering/asset-dependency-extractor";
-import { DEFAULT_SCENE_CONFIG, type SceneAnimationConfig } from "@/server/rendering/renderer";
+import {
+  DEFAULT_SCENE_CONFIG,
+  type SceneAnimationConfig,
+} from "@/server/rendering/renderer";
 import { namespacePartitionForBatch } from "@/server/animation-processing/flow-transformers";
 import type { AnimationScene, SceneNodeData } from "@/shared/types";
-import { buildContentBasename, sanitizeForFilename } from "@/shared/utils/naming";
+import {
+  buildContentBasename,
+  sanitizeForFilename,
+} from "@/shared/utils/naming";
 
 interface AssetCacheDeferredCleanupDeps {
   assetCache: AssetCacheManager;
@@ -31,7 +37,11 @@ class AssetCacheDeferredCleanup {
   private readonly jobIds: string[];
   private cleanupScheduled = false;
 
-  constructor({ assetCache, cacheJobId, jobIds }: AssetCacheDeferredCleanupDeps) {
+  constructor({
+    assetCache,
+    cacheJobId,
+    jobIds,
+  }: AssetCacheDeferredCleanupDeps) {
     this.assetCache = assetCache;
     this.cacheJobId = cacheJobId;
     this.jobIds = jobIds;
@@ -178,7 +188,7 @@ function buildVideoConfig(
   sceneNodeData: SceneNodeData,
   batchKey: string | null,
   displayName: string,
-  requestConfig?: SceneAnimationConfig,
+  requestConfig?: Partial<SceneAnimationConfig>,
 ): SceneAnimationConfig {
   return {
     ...DEFAULT_SCENE_CONFIG,
@@ -206,7 +216,9 @@ function logAssetPreparationMetrics(
   });
 }
 
-function ensureUniqueSanitizedFilenames(subPartitions: BatchedScenePartition[]): void {
+function ensureUniqueSanitizedFilenames(
+  subPartitions: BatchedScenePartition[],
+): void {
   const filenameMap = new Map<string, string[]>();
   for (const sp of subPartitions) {
     const base = sp.batchKey ? sanitizeForFilename(sp.batchKey) : "";
@@ -232,7 +244,7 @@ function ensureUniqueSanitizedFilenames(subPartitions: BatchedScenePartition[]):
 export async function generateVideoJobsWithAssetCache(
   scenePartitions: ScenePartition[],
   userId: string,
-  requestConfig?: SceneAnimationConfig,
+  requestConfig?: Partial<SceneAnimationConfig>,
   inlineWaitOverrideMs?: number,
 ): Promise<VideoGenerationResult> {
   const allBatchedPartitions: BatchedScenePartition[] = [];
@@ -258,7 +270,10 @@ export async function generateVideoJobsWithAssetCache(
       process.env.DOWNLOAD_CONCURRENCY_PER_JOB ?? "8",
       10,
     ),
-    maxJobSizeBytes: parseInt(process.env.MAX_JOB_SIZE_BYTES ?? "2147483648", 10),
+    maxJobSizeBytes: parseInt(
+      process.env.MAX_JOB_SIZE_BYTES ?? "2147483648",
+      10,
+    ),
     enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
     janitorConfig: {
       maxTotalBytes: parseInt(
@@ -292,8 +307,10 @@ export async function generateVideoJobsWithAssetCache(
       logger.debug("Processing subPartitions", {
         sceneId: partition.sceneNode?.data?.identifier?.id,
         subPartitionsCount: subPartitions.length,
-        subPartitionsValid: subPartitions.filter((sub) => sub?.sceneNode).length,
-        subPartitionsInvalid: subPartitions.filter((sub) => !sub?.sceneNode).length,
+        subPartitionsValid: subPartitions.filter((sub) => sub?.sceneNode)
+          .length,
+        subPartitionsInvalid: subPartitions.filter((sub) => !sub?.sceneNode)
+          .length,
       });
 
       ensureUniqueSanitizedFilenames(subPartitions);
@@ -355,9 +372,7 @@ export async function generateVideoJobsWithAssetCache(
           continue;
         }
 
-        const jobShort = String(jobRow.id)
-          .replace(/-/g, "")
-          .slice(0, 8);
+        const jobShort = String(jobRow.id).replace(/-/g, "").slice(0, 8);
         const uniqueBasename = `${config.outputBasename}-${jobShort}`;
         const uniqueConfig: SceneAnimationConfig = {
           ...config,
@@ -478,16 +493,13 @@ export async function generateImageJobsWithAssetCache(
     extractAssetDependenciesFromBatchedPartitions(allBatchedPartitions);
   const uniqueAssetIds = getUniqueAssetIds(dependencies);
 
-  logger.info(
-    "Asset dependencies extracted from batched partitions (images)",
-    {
-      totalDependencies: dependencies.length,
-      uniqueAssets: uniqueAssetIds.length,
-      totalBatchedPartitions: allBatchedPartitions.length,
-      totalScenePartitions: scenePartitions.length,
-      userId,
-    },
-  );
+  logger.info("Asset dependencies extracted from batched partitions (images)", {
+    totalDependencies: dependencies.length,
+    uniqueAssets: uniqueAssetIds.length,
+    totalBatchedPartitions: allBatchedPartitions.length,
+    totalScenePartitions: scenePartitions.length,
+    userId,
+  });
 
   const assetCache = new AssetCacheManager(randomUUID(), userId, {
     enableJanitor: process.env.ENABLE_SHARED_CACHE_JANITOR === "true",
@@ -555,9 +567,7 @@ export async function generateImageJobsWithAssetCache(
           .single();
         if (insErr || !jobRow) continue;
 
-        const jobShortImg = String(jobRow.id)
-          .replace(/-/g, "")
-          .slice(0, 8);
+        const jobShortImg = String(jobRow.id).replace(/-/g, "").slice(0, 8);
         const uniqueImgBasename = `${config.outputBasename}-${jobShortImg}`;
         const uniqueImgConfig = {
           ...config,

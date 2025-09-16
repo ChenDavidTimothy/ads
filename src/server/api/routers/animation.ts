@@ -1,6 +1,9 @@
 ﻿import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { getNodeDefinition as fetchNodeDefinition, getNodesByCategory } from "@/shared/registry/registry-utils";
+import {
+  getNodeDefinition as fetchNodeDefinition,
+  getNodesByCategory,
+} from "@/shared/registry/registry-utils";
 import { DEFAULT_SCENE_CONFIG } from "@/server/rendering/renderer";
 import { debugToNodeProcedure } from "./animation/procedures/debug-to-node";
 import { generateSceneProcedure } from "./animation/procedures/generate-scene";

@@ -7,4 +7,3 @@ import * as React from "react";
 // Ensure global React is available for JSX runtime assumptions in tests
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).React = React;
-

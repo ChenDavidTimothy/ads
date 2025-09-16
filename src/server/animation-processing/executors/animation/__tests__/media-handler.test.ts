@@ -4,14 +4,8 @@ import {
   createExecutionContext,
   setNodeOutput,
 } from "../../../execution-context";
-import type {
-  ReactFlowEdge,
-  ReactFlowNode,
-} from "../../../types/graph";
-import type {
-  MediaNodeData,
-  SceneNodeData,
-} from "@/shared/types/nodes";
+import type { ReactFlowEdge, ReactFlowNode } from "../../../types/graph";
+import type { MediaNodeData, SceneNodeData } from "@/shared/types/nodes";
 import type { SceneObject, ImageProperties } from "@/shared/types/scene";
 import {
   partitionByBatchKey,
@@ -36,10 +30,17 @@ describe("media executor batch overrides", () => {
       batchKeys: ["batch1", "batch2"],
     };
 
-    setNodeOutput(context, "imageNode", "output", "object_stream", [imageObject], {
-      perObjectAssignments: {},
-      perObjectTimeCursor: { [imageObject.id]: 0 },
-    });
+    setNodeOutput(
+      context,
+      "imageNode",
+      "output",
+      "object_stream",
+      [imageObject],
+      {
+        perObjectAssignments: {},
+        perObjectTimeCursor: { [imageObject.id]: 0 },
+      },
+    );
 
     const mediaNode: ReactFlowNode<MediaNodeData> = {
       id: "mediaNode",
@@ -99,7 +100,9 @@ describe("media executor batch overrides", () => {
 
     expect(metadata?.perObjectBatchOverrides).toBeDefined();
     expect(
-      metadata?.perObjectBatchOverrides?.[imageObject.id]?.["Media.imageAssetId"],
+      metadata?.perObjectBatchOverrides?.[imageObject.id]?.[
+        "Media.imageAssetId"
+      ],
     ).toEqual({
       batch1: "asset-1",
       batch2: "asset-2",
@@ -159,7 +162,9 @@ describe("media executor batch overrides", () => {
         fakeAssetCache,
       );
       expect(scene.objects).toHaveLength(1);
-      const props = scene.objects[0].properties as Record<string, unknown>;
+      const firstObject = scene.objects[0];
+      expect(firstObject).toBeDefined();
+      const props = firstObject!.properties as Record<string, unknown>;
       const expectedAsset = sub.batchKey === "batch1" ? "asset-1" : "asset-2";
       expect(props.assetId).toBe(expectedAsset);
       expect(props.imageUrl).toBe(`/tmp/${expectedAsset}.png`);

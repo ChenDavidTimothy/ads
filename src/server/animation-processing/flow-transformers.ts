@@ -40,17 +40,53 @@ interface NodeDefinitionWithDefaults {
   };
 }
 
-function isPoint2DValue(value: unknown): value is Point2DValue {
-  return typeof value === "object" && value !== null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function hasIdentifier(
-  data: unknown,
-): data is { identifier: { id: string } } {
+function isPoint2DValue(value: unknown): value is Point2DValue {
+  if (!isRecord(value)) return false;
+  const x = value.x;
+  const y = value.y;
+  const validX =
+    x === undefined || (typeof x === "number" && Number.isFinite(x));
+  const validY =
+    y === undefined || (typeof y === "number" && Number.isFinite(y));
+  return validX && validY;
+}
+
+function toPoint2DValue(value: unknown): Point2DValue | undefined {
+  if (isPoint2DValue(value)) {
+    return {
+      x: value.x,
+      y: value.y,
+    };
+  }
+
+  if (isRecord(value)) {
+    const candidateX = value.x;
+    const candidateY = value.y;
+    const xValue =
+      typeof candidateX === "number" && Number.isFinite(candidateX)
+        ? candidateX
+        : undefined;
+    const yValue =
+      typeof candidateY === "number" && Number.isFinite(candidateY)
+        ? candidateY
+        : undefined;
+
+    if (xValue !== undefined || yValue !== undefined) {
+      return {
+        x: xValue,
+        y: yValue,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function hasIdentifier(data: unknown): data is { identifier: { id: string } } {
   return (
     typeof data === "object" &&
     data !== null &&
@@ -70,7 +106,7 @@ export function mergeNodeDataWithDefaults(
     | NodeDefinitionWithDefaults
     | undefined;
   const defaults = definition?.defaults ?? {};
-  const data = isRecord(rawData) ? rawData : {};
+  const data: Record<string, unknown> = isRecord(rawData) ? rawData : {};
 
   const propertySchemas = definition?.properties?.properties ?? [];
   const point2dKeys = new Set(
@@ -84,9 +120,10 @@ export function mergeNodeDataWithDefaults(
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
 
-    if (point2dKeys.has(key) && isPoint2DValue(value)) {
-      const baseObj = isPoint2DValue(defaults[key]) ? defaults[key] : {};
-      merged[key] = { ...baseObj, ...value };
+    if (point2dKeys.has(key)) {
+      const base = toPoint2DValue(defaults[key]) ?? {};
+      const override = toPoint2DValue(value) ?? {};
+      merged[key] = { ...base, ...override };
     } else {
       merged[key] = value;
     }
@@ -95,47 +132,24 @@ export function mergeNodeDataWithDefaults(
   for (const schema of propertySchemas) {
     if (schema.type !== "point2d") continue;
 
-    let provided: Point2DValue = {};
-    if (isPoint2DValue(data[schema.key])) {
-      provided = data[schema.key];
-    }
-
-    let nodeDefault: Point2DValue | undefined;
-    if (isPoint2DValue(defaults[schema.key])) {
-      nodeDefault = defaults[schema.key];
-    }
-
-    let schemaDefault: Point2DValue | undefined;
-    if (isPoint2DValue(schema.defaultValue)) {
-      schemaDefault = schema.defaultValue;
-    }
-
-    let currentMerged: Point2DValue = {};
-    if (isPoint2DValue(merged[schema.key])) {
-      currentMerged = merged[schema.key];
-    }
+    const provided = toPoint2DValue(data[schema.key]);
+    const nodeDefault = toPoint2DValue(defaults[schema.key]);
+    const schemaDefault = toPoint2DValue(schema.defaultValue);
+    const currentMerged = toPoint2DValue(merged[schema.key]);
 
     const x =
-      typeof provided.x === "number"
-        ? provided.x
-        : typeof currentMerged.x === "number"
-          ? currentMerged.x
-          : typeof nodeDefault?.x === "number"
-            ? nodeDefault.x
-            : typeof schemaDefault?.x === "number"
-              ? schemaDefault.x
-              : 0;
+      provided?.x ??
+      currentMerged?.x ??
+      nodeDefault?.x ??
+      schemaDefault?.x ??
+      0;
 
     const y =
-      typeof provided.y === "number"
-        ? provided.y
-        : typeof currentMerged.y === "number"
-          ? currentMerged.y
-          : typeof nodeDefault?.y === "number"
-            ? nodeDefault.y
-            : typeof schemaDefault?.y === "number"
-              ? schemaDefault.y
-              : 0;
+      provided?.y ??
+      currentMerged?.y ??
+      nodeDefault?.y ??
+      schemaDefault?.y ??
+      0;
 
     merged[schema.key] = { x, y };
   }
@@ -144,7 +158,7 @@ export function mergeNodeDataWithDefaults(
 }
 
 export function createNodeIdMap(
-  nodes: Array<{ id: string; data: unknown }>,
+  nodes: Array<{ id: string; data?: unknown }>,
 ): Map<string, string> {
   const nodeIdMap = new Map<string, string>();
   nodes.forEach((node) => {
@@ -241,4 +255,3 @@ export function namespacePartitionForBatch(
     batchKey,
   };
 }
-
