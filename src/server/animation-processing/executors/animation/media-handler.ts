@@ -1,4 +1,4 @@
-﻿import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
+import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
 import {
   setNodeOutput,
   getConnectedInputs,
@@ -167,14 +167,14 @@ export async function executeMediaNode(
     }
   }
 
-  const emittedPerObjectBatchOverrides = (() => {
+  const assignmentsByObject = mergedAssignments ?? {};
+
+  type AssignmentWithBatchOverrides = {
+    batchOverrides?: Record<string, Record<string, unknown>>;
+  };
+
+  const emittedBatchOverridesFromAssignments = (() => {
     const scoped: Record<string, Record<string, Record<string, unknown>>> = {};
-    const assignmentsByObject = mergedAssignments ?? {};
-
-    type AssignmentWithBatchOverrides = {
-      batchOverrides?: Record<string, Record<string, unknown>>;
-    };
-
     for (const [objectId, assignment] of Object.entries(assignmentsByObject)) {
       if (!assignment || typeof assignment !== "object") continue;
       const batchOverrides = (assignment as AssignmentWithBatchOverrides)
@@ -188,8 +188,98 @@ export async function executeMediaNode(
         };
       }
     }
+    return scoped;
+  })();
 
-    return Object.keys(scoped).length > 0 ? scoped : {};
+  const batchOverridesByField =
+    (
+      data as unknown as {
+        batchOverridesByField?: Record<
+          string,
+          Record<string, Record<string, unknown>>
+        >;
+      }
+    ).batchOverridesByField ?? {};
+
+  const processedImageObjects = processedObjects.filter((obj): obj is SceneObject =>
+    isImageObject(obj),
+  );
+
+  const objectsById = new Map<string, SceneObject>(
+    processedImageObjects.map((obj) => [obj.id ?? "", obj]),
+  );
+  const processedIds = new Set(
+    processedImageObjects.map((obj) => obj.id).filter((id): id is string =>
+      typeof id === "string" && id.length > 0,
+    ),
+  );
+  const isBatched = (obj: SceneObject): boolean => {
+    const keys = Array.isArray(obj.batchKeys) ? obj.batchKeys : [];
+    return Boolean(obj.batch) && keys.some((k) => typeof k === "string" && k.trim() !== "");
+  };
+
+  const emittedBatchOverridesFromNode = (() => {
+    const scoped: Record<string, Record<string, Record<string, unknown>>> = {};
+    if (Object.keys(batchOverridesByField).length === 0) return scoped;
+
+    const defaultMarker = "__default_object__";
+    const normalizeFieldPath = (fieldPath: string): string =>
+      fieldPath.startsWith("Media.") ? fieldPath : `Media.${fieldPath}`;
+
+    for (const [rawFieldPath, byObject] of Object.entries(batchOverridesByField)) {
+      const fieldPath = normalizeFieldPath(rawFieldPath);
+      for (const [rawObjId, byKey] of Object.entries(byObject)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(byKey)) {
+          const key = String(k).trim();
+          if (!key) continue;
+          cleaned[key] = v;
+        }
+        if (Object.keys(cleaned).length === 0) continue;
+
+        if (rawObjId === defaultMarker) {
+          for (const [objectId, obj] of objectsById.entries()) {
+            if (!processedIds.has(objectId)) continue;
+            if (!isBatched(obj)) continue;
+            scoped[objectId] ??= {};
+            scoped[objectId][fieldPath] = {
+              ...(scoped[objectId][fieldPath] ?? {}),
+              ...cleaned,
+            };
+          }
+        } else if (processedIds.has(rawObjId)) {
+          scoped[rawObjId] ??= {};
+          scoped[rawObjId][fieldPath] = {
+            ...(scoped[rawObjId][fieldPath] ?? {}),
+            ...cleaned,
+          };
+        }
+      }
+    }
+
+    return scoped;
+  })();
+
+  const mergeOverrideMaps = (
+    target: Record<string, Record<string, Record<string, unknown>>>,
+    source: Record<string, Record<string, Record<string, unknown>>>,
+  ) => {
+    for (const [objectId, fields] of Object.entries(source)) {
+      const destFields = target[objectId] ?? {};
+      for (const [fieldPath, byKey] of Object.entries(fields)) {
+        const existingByKey = destFields[fieldPath] ?? {};
+        destFields[fieldPath] = { ...existingByKey, ...byKey };
+      }
+      target[objectId] = destFields;
+    }
+    return target;
+  };
+
+  const emittedPerObjectBatchOverrides = (() => {
+    const combined: Record<string, Record<string, Record<string, unknown>>> = {};
+    mergeOverrideMaps(combined, emittedBatchOverridesFromAssignments);
+    mergeOverrideMaps(combined, emittedBatchOverridesFromNode);
+    return combined;
   })();
 
   const perObjectBoundFields: Record<string, string[]> = {};
