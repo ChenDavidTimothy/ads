@@ -99,6 +99,22 @@ export class StorageCleanupRunner {
           itemName.startsWith("storage-") ||
           itemName.startsWith("mat-debug-")
         ) {
+          const isMatDebugLog =
+            itemName.startsWith("mat-debug-") && itemName.endsWith(".log");
+          if (isMatDebugLog) {
+            const pidPart = itemName.slice(
+              "mat-debug-".length,
+              itemName.lastIndexOf("."),
+            );
+            const pid = Number(pidPart);
+            if (Number.isInteger(pid) && this.isProcessRunning(pid)) {
+              this.logger.debug(
+                `Skipping active mat-debug log ${itemName}; process ${pid} still running`,
+              );
+              continue;
+            }
+          }
+
           const itemPath = path.join(tempDir, itemName);
 
           try {
@@ -358,38 +374,88 @@ export class StorageCleanupRunner {
     );
   }
 
+  private isProcessRunning(pid: number): boolean {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async removeWithRetry(
     removeFn: () => Promise<void>,
     context: string,
   ): Promise<boolean> {
     const maxAttempts = 3;
-    let lastError: unknown;
+    let lastFailure: { code?: string; message: string } | null = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await removeFn();
         return true;
-      } catch (error) {
-        lastError = error;
-        const code = (error as NodeJS.ErrnoException | undefined)?.code;
+      } catch (caughtError: unknown) {
+        const code =
+          caughtError &&
+          typeof caughtError === "object" &&
+          "code" in caughtError &&
+          typeof (caughtError as { code?: unknown }).code === "string"
+            ? (caughtError as { code: string }).code
+            : undefined;
+
+        let message: string;
+        if (caughtError instanceof Error) {
+          message = caughtError.message;
+        } else if (typeof caughtError === "string") {
+          message = caughtError;
+        } else if (
+          typeof caughtError === "number" ||
+          typeof caughtError === "boolean" ||
+          typeof caughtError === "bigint"
+        ) {
+          message = String(caughtError);
+        } else if (caughtError === undefined || caughtError === null) {
+          message = "unknown error";
+        } else if (typeof caughtError === "object") {
+          try {
+            message = JSON.stringify(caughtError);
+          } catch {
+            message = "[unserializable error]";
+          }
+        } else {
+          message = "unknown error";
+        }
+
+        lastFailure = { code, message };
+
         if (code === "EBUSY" || code === "EPERM") {
           if (attempt === maxAttempts) {
             break;
           }
           const delayMs = Math.min(500 * Math.pow(2, attempt - 1), 2000);
-          this.logger.warn(
+          this.logger.debug(
             `${context} (attempt ${attempt}) failed with ${code}; retrying in ${delayMs}ms`,
           );
           await this.sleep(delayMs);
           continue;
         }
 
-        this.logger.warn(`${context}:`, error);
+        this.logger.warn(`${context}: ${message}`);
         return false;
       }
     }
 
-    this.logger.warn(`${context} after retries:`, lastError);
+    if (!lastFailure) {
+      return false;
+    }
+
+    if (lastFailure.code === "EBUSY" || lastFailure.code === "EPERM") {
+      this.logger.debug(
+        `${context}: resource is busy (${lastFailure.code}); will retry next cycle`,
+      );
+    } else {
+      this.logger.warn(`${context}: ${lastFailure.message}`);
+    }
     return false;
   }
 
