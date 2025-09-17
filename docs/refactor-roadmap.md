@@ -25,15 +25,20 @@ This roadmap tracks the legacy or high-risk areas we are modernising after the a
 - Router delegates to `animation/procedures/*` helpers; job orchestration moved to `rendering/jobs/asset-cache-service.ts`.
 - Existing queue/media tests cover behaviour.
 
+### Assets router (src/server/api/routers/assets.ts)
+- Router shrank from ~900 lines to wiring-only procedures that invoke the new services in `src/server/api/services/assets/*`.
+- Services cover quota (`quota-service.ts`), uploads (`upload-service.ts`), catalogue/listing (`catalog-service.ts`), and lifecycle operations (`lifecycle-service.ts`), each with dedicated Vitest coverage using injectable dependencies for fetch, logger, and ID generation.
+- `handleServiceError` normalises domain errors into TRPC responses, preserving client behaviour while centralising error translation.
+- Verified with `pnpm test` and `pnpm check` to ensure both unit suites and lint/type checks pass.
+
 ## High-Priority Server Work
 
-### 1. Assets router (src/server/api/routers/assets.ts)
-- **Pain**: ~900 lines blending quota CRUD, upload URL signing, Supabase CRUD, image metadata extraction, and move-to-assets orchestration.
-- **Target shape**:
-  1. `assets/quota-service.ts` consolidates `getOrCreateUserQuota` and `updateUserQuota` with clear interfaces for add/subtract flows.
-  2. `assets/upload-service.ts` manages signed upload URL provisioning, confirmation, and metadata extraction (with configurable fetch client for testing).
-  3. Router procedures become wiring-only, making it easier to test each service in isolation.
-- **Prereqs**: document expected quota deltas per operation and add fixtures around the current Supabase responses (so mocks survive refactor).
+### 1. Asset services hardening
+- **Current state**: Router now delegates to `assets/quota-service.ts`, `assets/upload-service.ts`, `assets/catalog-service.ts`, and `assets/lifecycle-service.ts`. Behaviour parity is locked in by dedicated Vitest suites (`src/server/api/services/assets/__tests__`) and end-to-end checks via `pnpm test`/`pnpm check`.
+- **Next focus**:
+  1. Instrument service layer with structured metrics (quota deltas, upload confirmations, lifecycle moves) and wire into existing telemetry.
+  2. Add integration smoke tests that exercise the router through TRPC to guard against wiring regressions.
+  3. Evaluate opportunities to reuse service helpers on the worker side (render job completion pipeline) to avoid divergence.
 
 ### 2. Rendering job orchestration follow-up
 - **Pain**: After storage and animation clean-ups, remaining job orchestration code still mixes data access and business logic in `rendering/jobs/*`.
