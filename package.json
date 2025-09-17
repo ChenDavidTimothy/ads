@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm run generate && next build",
-    "check": "next lint && tsc --noEmit",
+    "check": "pnpm format:check && next lint && tsc --noEmit",
     "dev": "pnpm run generate && next dev --turbo",
     "generate": "tsx scripts/generate-node-mappings.ts",
     "worker": "tsx ./src/server/jobs/graphile-worker-entry.ts",

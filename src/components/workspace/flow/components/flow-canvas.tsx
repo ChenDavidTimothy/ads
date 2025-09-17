@@ -1,6 +1,6 @@
 // src/components/workspace/flow/components/FlowCanvas.tsx
-import React, { useState, useMemo } from "react";
-import "reactflow/dist/style.css";
+import React, { useState, useMemo } from 'react';
+import 'reactflow/dist/style.css';
 import ReactFlow, {
   Background,
   MiniMap,
@@ -13,8 +13,8 @@ import ReactFlow, {
   type EdgeChange,
   type Connection,
   type NodeDragHandler,
-} from "reactflow";
-import type { NodeData } from "@/shared/types";
+} from 'reactflow';
+import type { NodeData } from '@/shared/types';
 
 // Edge and handle styling - ALL edges use identical styling
 // CRITICAL: All edges must have identical 3px stroke width for consistency across workspaces
@@ -167,20 +167,20 @@ export function FlowCanvas(props: Props) {
     nodes.forEach((node) => {
       if (!nodeColorMap.has(node.type!)) {
         const type = node.type!;
-        let color = "var(--node-output)"; // default
+        let color = 'var(--node-output)'; // default
 
-        if (type.includes("animation")) color = "var(--node-animation)";
-        else if (type.includes("logic")) color = "var(--node-logic)";
-        else if (type.includes("geometry")) color = "var(--node-geometry)";
-        else if (type.includes("text")) color = "var(--node-text)";
-        else if (type.includes("data")) color = "var(--node-data)";
+        if (type.includes('animation')) color = 'var(--node-animation)';
+        else if (type.includes('logic')) color = 'var(--node-logic)';
+        else if (type.includes('geometry')) color = 'var(--node-geometry)';
+        else if (type.includes('text')) color = 'var(--node-text)';
+        else if (type.includes('data')) color = 'var(--node-data)';
 
         nodeColorMap.set(type, color);
       }
     });
 
     // Return optimized lookup function
-    return (node: Node) => nodeColorMap.get(node.type!) ?? "var(--node-output)";
+    return (node: Node) => nodeColorMap.get(node.type!) ?? 'var(--node-output)';
   }, [nodes]);
 
   return (
@@ -206,13 +206,13 @@ export function FlowCanvas(props: Props) {
         // Edge styling - ALL edges use identical 3px stroke width for consistency
         connectionLineType={ConnectionLineType.SmoothStep}
         defaultEdgeOptions={{
-          type: "smoothstep",
-          style: { stroke: "var(--edge-stroke)", strokeWidth: 3 },
+          type: 'smoothstep',
+          style: { stroke: 'var(--edge-stroke)', strokeWidth: 3 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             width: 14,
             height: 14,
-            color: "var(--edge-stroke-hover)",
+            color: 'var(--edge-stroke-hover)',
           },
         }}
         minZoom={0.1}
@@ -225,8 +225,8 @@ export function FlowCanvas(props: Props) {
         selectionOnDrag
         selectNodesOnDrag={false}
         className="bg-[var(--surface-0)]"
-        deleteKeyCode={["Delete", "Backspace"]}
-        multiSelectionKeyCode={disableDeletion ? null : "Meta"}
+        deleteKeyCode={['Delete', 'Backspace']}
+        multiSelectionKeyCode={disableDeletion ? null : 'Meta'}
         proOptions={{ hideAttribution: true }}
       >
         <Background color="var(--border-secondary)" size={2} gap={20} />
@@ -237,7 +237,7 @@ export function FlowCanvas(props: Props) {
           className="shadow-glass absolute right-4 bottom-4 z-50 rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]"
           title="Toggle minimap"
         >
-          {showMinimap ? "Hide Map" : "Show Map"}
+          {showMinimap ? 'Hide Map' : 'Show Map'}
         </button>
 
         {showMinimap && (
@@ -246,10 +246,10 @@ export function FlowCanvas(props: Props) {
             nodeColor={nodeColorMemo}
             maskColor="var(--surface-0)"
             style={{
-              backgroundColor: "var(--surface-1)",
-              border: "1px solid var(--border-primary)",
-              borderRadius: "var(--radius-sm)",
-              boxShadow: "var(--glass-shadow)",
+              backgroundColor: 'var(--surface-1)',
+              border: '1px solid var(--border-primary)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--glass-shadow)',
             }}
           />
         )}

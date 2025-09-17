@@ -1,4 +1,4 @@
-import type { Point2D } from "@/shared/types/core";
+import type { Point2D } from '@/shared/types/core';
 
 export interface Typography {
   fontFamily?: string;
@@ -14,25 +14,25 @@ export function drawText(
   ctx: CanvasRenderingContext2D,
   center: Point2D,
   content: string,
-  style: Typography,
+  style: Typography
 ): void {
   ctx.save();
 
   // Configure font with all typography properties
-  const fontStyle = style.fontStyle ?? "normal";
-  const fontWeight = style.fontWeight ?? "normal";
+  const fontStyle = style.fontStyle ?? 'normal';
+  const fontWeight = style.fontWeight ?? 'normal';
   const fontSize = style.fontSize ?? 16;
-  const fontFamily = style.fontFamily ?? "Arial";
+  const fontFamily = style.fontFamily ?? 'Arial';
   const fontString = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
   ctx.font = fontString;
-  ctx.fillStyle = style.fillColor ?? "black"; // Fallback to black
+  ctx.fillStyle = style.fillColor ?? 'black'; // Fallback to black
 
   // Configure stroke properties for canvas context
-  ctx.strokeStyle = style.strokeColor ?? "transparent";
+  ctx.strokeStyle = style.strokeColor ?? 'transparent';
   ctx.lineWidth = style.strokeWidth ?? 0;
 
   // Handle multi-line text with simplified layout
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const lineHeight = fontSize * 1.2; // Fixed line height
   const totalHeight = lines.length * lineHeight;
   const startY = center.y - totalHeight / 2 + lineHeight / 2;

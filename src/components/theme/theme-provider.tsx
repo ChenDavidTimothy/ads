@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 export function ThemeProvider({
   children,
-  theme = "dark",
+  theme = 'dark',
 }: {
   children: React.ReactNode;
-  theme?: "dark";
+  theme?: 'dark';
 }) {
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
   return children as React.ReactElement;
 }

@@ -1,31 +1,28 @@
 // src/server/animation-processing/executors/scene-executor.ts
-import type { NodeData } from "@/shared/types";
-import type { SceneAnimationTrack } from "@/shared/types/scene";
-import {
-  getConnectedInputs,
-  type ExecutionContext,
-} from "../execution-context";
-import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import { BaseExecutor } from "./base-executor";
-import { MissingInsertConnectionError } from "@/shared/errors/domain";
-import { logger } from "@/lib/logger";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import type { NodeData } from '@/shared/types';
+import type { SceneAnimationTrack } from '@/shared/types/scene';
+import { getConnectedInputs, type ExecutionContext } from '../execution-context';
+import type { ReactFlowNode, ReactFlowEdge } from '../types/graph';
+import { BaseExecutor } from './base-executor';
+import { MissingInsertConnectionError } from '@/shared/errors/domain';
+import { logger } from '@/lib/logger';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
 
 export class SceneNodeExecutor extends BaseExecutor {
   // Register scene node handlers
   protected registerHandlers(): void {
-    this.registerHandler("scene", (node, context, connections) =>
-      this.executeScene(node, context, connections),
+    this.registerHandler('scene', (node, context, connections) =>
+      this.executeScene(node, context, connections)
     );
-    this.registerHandler("frame", (node, context, connections) =>
-      this.executeScene(node, context, connections),
+    this.registerHandler('frame', (node, context, connections) =>
+      this.executeScene(node, context, connections)
     );
   }
 
   private async executeScene(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[],
+    connections: ReactFlowEdge[]
   ): Promise<void> {
     const inputs = getConnectedInputs(
       context,
@@ -36,7 +33,7 @@ export class SceneNodeExecutor extends BaseExecutor {
         sourceHandle: string;
       }>,
       node.data.identifier.id,
-      "input",
+      'input'
     );
 
     const sceneNodeId = node.data.identifier.id;
@@ -44,15 +41,15 @@ export class SceneNodeExecutor extends BaseExecutor {
 
     // Get or create per-scene storage for this scene
     const sceneObjects = context.sceneObjectsByScene.get(sceneNodeId) ?? [];
-    const isFrameNode = node.type === "frame";
+    const isFrameNode = node.type === 'frame';
 
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
 
       for (const item of inputData) {
-        if (typeof item === "object" && item !== null && "id" in item) {
+        if (typeof item === 'object' && item !== null && 'id' in item) {
           // For frame nodes, accept objects without appearanceTime by defaulting to 0
-          const hasAppearance = "appearanceTime" in item;
+          const hasAppearance = 'appearanceTime' in item;
           if (!hasAppearance && !isFrameNode) {
             // Skip non-timed objects for scene nodes (video) as before
             continue;
@@ -72,12 +69,12 @@ export class SceneNodeExecutor extends BaseExecutor {
           objectsAddedToThisScene++;
 
           logger.debug(
-            `Object ${objectId} stored in ${isFrameNode ? "frame" : "scene"} ${sceneNodeId}`,
+            `Object ${objectId} stored in ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId}`,
             {
               objectId,
               sceneId: sceneNodeId,
               properties: (item as { properties?: unknown }).properties,
-            },
+            }
           );
 
           // Track scene membership for validation compatibility (but properties are per-scene now)
@@ -85,22 +82,17 @@ export class SceneNodeExecutor extends BaseExecutor {
           if (!existingSceneId) {
             context.objectSceneMap.set(objectId, sceneNodeId);
           } else if (existingSceneId !== sceneNodeId) {
-            const existingMappings = context.objectSceneMap.get(
-              `${objectId}_scenes`,
-            );
+            const existingMappings = context.objectSceneMap.get(`${objectId}_scenes`);
             const sceneMappings = existingMappings
               ? `${existingMappings},${sceneNodeId}`
               : `${existingSceneId},${sceneNodeId}`;
             context.objectSceneMap.set(`${objectId}_scenes`, sceneMappings);
 
-            logger.debug(
-              `Object ${objectId} branching with different properties`,
-              {
-                previousScene: existingSceneId,
-                currentScene: sceneNodeId,
-                branchMappings: sceneMappings,
-              },
-            );
+            logger.debug(`Object ${objectId} branching with different properties`, {
+              previousScene: existingSceneId,
+              currentScene: sceneNodeId,
+              branchMappings: sceneMappings,
+            });
           }
         }
       }
@@ -110,10 +102,10 @@ export class SceneNodeExecutor extends BaseExecutor {
     context.sceneObjectsByScene.set(sceneNodeId, sceneObjects);
 
     // Only throw insert error for video scenes; frame/image accepts untimed objects
-    if (objectsAddedToThisScene === 0 && node.type === "scene") {
+    if (objectsAddedToThisScene === 0 && node.type === 'scene') {
       throw new MissingInsertConnectionError(
         node.data.identifier.displayName,
-        node.data.identifier.id,
+        node.data.identifier.id
       );
     }
 
@@ -125,13 +117,11 @@ export class SceneNodeExecutor extends BaseExecutor {
           | undefined
       )?.perObjectAnimations;
       if (!perObjectAnimations) continue;
-      for (const [objectId, animations] of Object.entries(
-        perObjectAnimations,
-      )) {
+      for (const [objectId, animations] of Object.entries(perObjectAnimations)) {
         for (const animation of animations) {
           context.animationSceneMap.set(animation.id, sceneNodeId);
           logger.debug(
-            `Animation ${animation.id} assigned to ${isFrameNode ? "frame" : "scene"} ${sceneNodeId} (object ${objectId})`,
+            `Animation ${animation.id} assigned to ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId} (object ${objectId})`
           );
         }
       }
@@ -140,16 +130,14 @@ export class SceneNodeExecutor extends BaseExecutor {
     // Per-object assignments are not consumed in scene assembly (they are applied earlier), but keep for traceability if needed later
     for (const input of inputs) {
       const perObjectAssignments = (
-        input.metadata as
-          | { perObjectAssignments?: PerObjectAssignments }
-          | undefined
+        input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined
       )?.perObjectAssignments;
       if (perObjectAssignments) {
         logger.debug(
-          `Per-object assignments propagated to ${isFrameNode ? "frame" : "scene"} ${sceneNodeId}`,
+          `Per-object assignments propagated to ${isFrameNode ? 'frame' : 'scene'} ${sceneNodeId}`,
           {
             count: Object.keys(perObjectAssignments).length,
-          },
+          }
         );
       }
     }

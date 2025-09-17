@@ -1,23 +1,20 @@
-"use client";
+'use client';
 
-import React, { useMemo, useState, useCallback } from "react";
-import type { Node } from "reactflow";
-import { useWorkspace } from "./workspace-context";
-import { FlowTracker } from "@/lib/flow/flow-tracking";
-import type { CanvasNodeData } from "@/shared/types/nodes";
-import type {
-  PerObjectAssignments,
-  ObjectAssignments,
-} from "@/shared/properties/assignments";
-import { NumberField, ColorField } from "@/components/ui/form-fields";
-import { SelectionList } from "@/components/ui/selection";
-import { useVariableBinding } from "@/components/workspace/binding/bindings";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import { Badge } from "@/components/ui/badge";
-import { OverrideBadge as UnifiedOverrideBadge } from "@/components/workspace/binding/badges";
+import React, { useMemo, useState, useCallback } from 'react';
+import type { Node } from 'reactflow';
+import { useWorkspace } from './workspace-context';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
+import type { CanvasNodeData } from '@/shared/types/nodes';
+import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
+import { NumberField, ColorField } from '@/components/ui/form-fields';
+import { SelectionList } from '@/components/ui/selection';
+import { useVariableBinding } from '@/components/workspace/binding/bindings';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { Badge } from '@/components/ui/badge';
+import { OverrideBadge as UnifiedOverrideBadge } from '@/components/workspace/binding/badges';
 // Batch overrides: only used in per-object panel
-import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
-import { getResolverFieldPath } from "@/shared/properties/field-paths";
+import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
+import { getResolverFieldPath } from '@/shared/properties/field-paths';
 
 function CanvasBindingBadge({
   nodeId,
@@ -31,22 +28,21 @@ function CanvasBindingBadge({
   const { state } = useWorkspace();
   const { resetToDefault } = useVariableBinding(nodeId, objectId);
 
-  const node = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === nodeId,
-  ) as Node<CanvasNodeData> | undefined;
+  const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId) as
+    | Node<CanvasNodeData>
+    | undefined;
   if (!node) return null;
   const bound = objectId
-    ? (node.data?.variableBindingsByObject?.[objectId]?.[keyName]
-        ?.boundResultNodeId ??
+    ? (node.data?.variableBindingsByObject?.[objectId]?.[keyName]?.boundResultNodeId ??
       node.data?.variableBindings?.[keyName]?.boundResultNodeId)
     : node.data?.variableBindings?.[keyName]?.boundResultNodeId;
   if (!bound) return null;
-  const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)
-    ?.data?.identifier?.displayName;
+  const name = state.flow.nodes.find((n) => n.data?.identifier?.id === bound)?.data?.identifier
+    ?.displayName;
 
   return (
     <Badge variant="bound" onRemove={() => resetToDefault(keyName)}>
-      {name ? `Bound: ${name}` : "Bound"}
+      {name ? `Bound: ${name}` : 'Bound'}
     </Badge>
   );
 }
@@ -61,13 +57,7 @@ function OverrideBadge({
   keyName: string;
   objectId?: string;
 }) {
-  return (
-    <UnifiedOverrideBadge
-      nodeId={nodeId}
-      bindingKey={keyName}
-      objectId={objectId}
-    />
-  );
+  return <UnifiedOverrideBadge nodeId={nodeId} bindingKey={keyName} objectId={objectId} />;
 }
 
 export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
@@ -79,11 +69,11 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
       state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId) as
         | Node<CanvasNodeData>
         | undefined,
-    [state.flow.nodes, nodeId],
+    [state.flow.nodes, nodeId]
   );
   const assignments: PerObjectAssignments = useMemo(
     () => canvasNode?.data?.perObjectAssignments ?? {},
-    [canvasNode],
+    [canvasNode]
   );
 
   // NEW: Use enhanced object detection that understands duplication
@@ -94,7 +84,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
     const objectDescriptors = tracker.getUpstreamObjects(
       nodeId,
       state.flow.nodes,
-      state.flow.edges,
+      state.flow.edges
     );
 
     // Convert to display format expected by SelectionList
@@ -131,7 +121,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
         id: o.data.identifier.id,
         name: o.data.identifier.displayName,
         type: o.data.identifier.type,
-      })),
+      }))
     );
   }, [upstreamObjects, nodeId]);
 
@@ -151,9 +141,9 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
       };
       // Deep-merge position/scale if both sides provide partials
       if (
-        typeof baseInitial.position === "object" &&
+        typeof baseInitial.position === 'object' &&
         baseInitial.position !== null &&
-        typeof updates.position === "object" &&
+        typeof updates.position === 'object' &&
         updates.position !== null
       ) {
         mergedInitial.position = {
@@ -162,9 +152,9 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
         };
       }
       if (
-        typeof baseInitial.scale === "object" &&
+        typeof baseInitial.scale === 'object' &&
         baseInitial.scale !== null &&
-        typeof updates.scale === "object" &&
+        typeof updates.scale === 'object' &&
         updates.scale !== null
       ) {
         mergedInitial.scale = {
@@ -173,7 +163,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
         };
       }
       const cleanedInitial = Object.fromEntries(
-        Object.entries(mergedInitial).filter(([_, v]) => v !== undefined),
+        Object.entries(mergedInitial).filter(([_, v]) => v !== undefined)
       );
       current.initial = cleanedInitial;
       next[selectedObjectId] = current;
@@ -184,7 +174,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
         }),
       });
     },
-    [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow],
+    [assignments, selectedObjectId, state.flow.nodes, nodeId, updateFlow]
   );
 
   const handleClearAssignment = useCallback(() => {
@@ -220,7 +210,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
           {/* NEW: Show object count for debugging */}
           <div className="border-t border-[var(--border-primary)] pt-[var(--space-2)] text-xs text-[var(--text-tertiary)]">
             Detected: {upstreamObjects.length} object
-            {upstreamObjects.length !== 1 ? "s" : ""}
+            {upstreamObjects.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
@@ -236,7 +226,7 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
             className="cursor-pointer text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             onClick={() =>
               updateUI({
-                activeTab: "flow",
+                activeTab: 'flow',
                 selectedNodeId: undefined,
                 selectedNodeType: undefined,
               })
@@ -293,9 +283,9 @@ export function CanvasEditorTab({ nodeId }: { nodeId: string }) {
 
 function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
   const { state, updateFlow } = useWorkspace();
-  const node = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === nodeId,
-  ) as Node<CanvasNodeData> | undefined;
+  const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId) as
+    | Node<CanvasNodeData>
+    | undefined;
 
   // EXISTING: All data resolution code unchanged
   const data = (node?.data ?? {}) as Record<string, unknown> & {
@@ -306,10 +296,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
     fillColor?: string;
     strokeColor?: string;
     strokeWidth?: number;
-    variableBindings?: Record<
-      string,
-      { target?: string; boundResultNodeId?: string }
-    >;
+    variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
   };
   const bindings = (data.variableBindings ?? {}) as Record<
     string,
@@ -317,7 +304,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
   >;
 
   const def =
-    (getNodeDefinition("canvas")?.defaults as Record<string, unknown> & {
+    (getNodeDefinition('canvas')?.defaults as Record<string, unknown> & {
       position?: { x: number; y: number };
       scale?: { x: number; y: number };
       rotation?: number;
@@ -334,8 +321,8 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
   const scaleY = data.scale?.y ?? def.scale?.y ?? 1;
   const rotation = data.rotation ?? def.rotation ?? 0;
   const opacity = data.opacity ?? def.opacity ?? 1;
-  const fillColor = data.fillColor ?? def.fillColor ?? "";
-  const strokeColor = data.strokeColor ?? def.strokeColor ?? "";
+  const fillColor = data.fillColor ?? def.fillColor ?? '';
+  const strokeColor = data.strokeColor ?? def.strokeColor ?? '';
   const strokeWidth = data.strokeWidth ?? def.strokeWidth ?? 1;
 
   // ADD: Type detection for conditional rendering
@@ -344,12 +331,11 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
     const objectDescriptors = tracker.getUpstreamObjects(
       nodeId,
       state.flow.nodes,
-      state.flow.edges,
+      state.flow.edges
     );
     return {
       allText:
-        objectDescriptors.length > 0 &&
-        objectDescriptors.every((obj) => obj.type === "text"),
+        objectDescriptors.length > 0 && objectDescriptors.every((obj) => obj.type === 'text'),
       isEmpty: objectDescriptors.length === 0,
     };
   }, [nodeId, state.flow.nodes, state.flow.edges]);
@@ -357,15 +343,13 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
   // EXISTING: All helper functions unchanged
   const isBound = (key: string) => !!bindings?.[key]?.boundResultNodeId;
   const leftBorderClass = (key: string) =>
-    isBound(key) ? "border-l-2 border-[var(--accent-secondary)]" : "";
+    isBound(key) ? 'border-l-2 border-[var(--accent-secondary)]' : '';
 
   return (
     <div className="space-y-[var(--space-3)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Position X
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
           <NumberField
             label=""
             value={posX}
@@ -383,26 +367,26 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                             x,
                           },
                         },
-                      },
+                      }
                 ),
               })
             }
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "position.x" }}
+                bindProps={{ nodeId, bindingKey: 'position.x' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "position.x")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'position.x')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("position.x")}
-            inputClassName={leftBorderClass("position.x")}
+            disabled={isBound('position.x')}
+            inputClassName={leftBorderClass('position.x')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("position.x") && (
+          {isBound('position.x') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="position.x" />
@@ -411,9 +395,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Position Y
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
           <NumberField
             label=""
             value={posY}
@@ -431,26 +413,26 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                             y,
                           },
                         },
-                      },
+                      }
                 ),
               })
             }
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "position.y" }}
+                bindProps={{ nodeId, bindingKey: 'position.y' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "position.y")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'position.y')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("position.y")}
-            inputClassName={leftBorderClass("position.y")}
+            disabled={isBound('position.y')}
+            inputClassName={leftBorderClass('position.y')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("position.y") && (
+          {isBound('position.y') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="position.y" />
@@ -461,9 +443,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
       </div>
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Scale X
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
           <NumberField
             label=""
             value={scaleX}
@@ -478,7 +458,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           ...(n.data as CanvasNodeData),
                           scale: { ...(n.data as CanvasNodeData)?.scale, x },
                         },
-                      },
+                      }
                 ),
               })
             }
@@ -487,19 +467,19 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             step={0.1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "scale.x" }}
+                bindProps={{ nodeId, bindingKey: 'scale.x' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "scale.x")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'scale.x')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("scale.x")}
-            inputClassName={leftBorderClass("scale.x")}
+            disabled={isBound('scale.x')}
+            inputClassName={leftBorderClass('scale.x')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("scale.x") && (
+          {isBound('scale.x') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="scale.x" />
@@ -508,9 +488,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Scale Y
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
           <NumberField
             label=""
             value={scaleY}
@@ -525,7 +503,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                           ...(n.data as CanvasNodeData),
                           scale: { ...(n.data as CanvasNodeData)?.scale, y },
                         },
-                      },
+                      }
                 ),
               })
             }
@@ -534,19 +512,19 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             step={0.1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "scale.y" }}
+                bindProps={{ nodeId, bindingKey: 'scale.y' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "scale.y")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'scale.y')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("scale.y")}
-            inputClassName={leftBorderClass("scale.y")}
+            disabled={isBound('scale.y')}
+            inputClassName={leftBorderClass('scale.y')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("scale.y") && (
+          {isBound('scale.y') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="scale.y" />
@@ -557,18 +535,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
       </div>
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Rotation
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
           <NumberField
             label=""
             value={rotation}
             onChange={(rotation) =>
               updateFlow({
                 nodes: state.flow.nodes.map((n) =>
-                  n.data?.identifier?.id !== nodeId
-                    ? n
-                    : { ...n, data: { ...n.data, rotation } },
+                  n.data?.identifier?.id !== nodeId ? n : { ...n, data: { ...n.data, rotation } }
                 ),
               })
             }
@@ -576,19 +550,19 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "rotation" }}
+                bindProps={{ nodeId, bindingKey: 'rotation' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "rotation")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'rotation')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("rotation")}
-            inputClassName={leftBorderClass("rotation")}
+            disabled={isBound('rotation')}
+            inputClassName={leftBorderClass('rotation')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("rotation") && (
+          {isBound('rotation') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="rotation" />
@@ -597,18 +571,14 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Opacity
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
           <NumberField
             label=""
             value={opacity}
             onChange={(opacity) =>
               updateFlow({
                 nodes: state.flow.nodes.map((n) =>
-                  n.data?.identifier?.id !== nodeId
-                    ? n
-                    : { ...n, data: { ...n.data, opacity } },
+                  n.data?.identifier?.id !== nodeId ? n : { ...n, data: { ...n.data, opacity } }
                 ),
               })
             }
@@ -618,19 +588,19 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
             defaultValue={1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "opacity" }}
+                bindProps={{ nodeId, bindingKey: 'opacity' }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "opacity")!,
-                  valueType: "number",
+                  fieldPath: getResolverFieldPath('canvas', 'opacity')!,
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("opacity")}
-            inputClassName={leftBorderClass("opacity")}
+            disabled={isBound('opacity')}
+            inputClassName={leftBorderClass('opacity')}
           />
           {/* Badge - Only show when bound */}
-          {isBound("opacity") && (
+          {isBound('opacity') && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
                 <CanvasBindingBadge nodeId={nodeId} keyName="opacity" />
@@ -652,25 +622,25 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                     nodes: state.flow.nodes.map((n) =>
                       n.data?.identifier?.id !== nodeId
                         ? n
-                        : { ...n, data: { ...n.data, fillColor } },
+                        : { ...n, data: { ...n.data, fillColor } }
                     ),
                   })
                 }
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "fillColor" }}
+                    bindProps={{ nodeId, bindingKey: 'fillColor' }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "fillColor")!,
-                      valueType: "string",
+                      fieldPath: getResolverFieldPath('canvas', 'fillColor')!,
+                      valueType: 'string',
                     }}
                   />
                 }
-                disabled={isBound("fillColor")}
-                inputClassName={leftBorderClass("fillColor")}
+                disabled={isBound('fillColor')}
+                inputClassName={leftBorderClass('fillColor')}
               />
               {/* Badge - Only show when bound */}
-              {isBound("fillColor") && (
+              {isBound('fillColor') && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     <CanvasBindingBadge nodeId={nodeId} keyName="fillColor" />
@@ -687,25 +657,25 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                     nodes: state.flow.nodes.map((n) =>
                       n.data?.identifier?.id !== nodeId
                         ? n
-                        : { ...n, data: { ...n.data, strokeColor } },
+                        : { ...n, data: { ...n.data, strokeColor } }
                     ),
                   })
                 }
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "strokeColor" }}
+                    bindProps={{ nodeId, bindingKey: 'strokeColor' }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "strokeColor")!,
-                      valueType: "string",
+                      fieldPath: getResolverFieldPath('canvas', 'strokeColor')!,
+                      valueType: 'string',
                     }}
                   />
                 }
-                disabled={isBound("strokeColor")}
-                inputClassName={leftBorderClass("strokeColor")}
+                disabled={isBound('strokeColor')}
+                inputClassName={leftBorderClass('strokeColor')}
               />
               {/* Badge - Only show when bound */}
-              {isBound("strokeColor") && (
+              {isBound('strokeColor') && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     <CanvasBindingBadge nodeId={nodeId} keyName="strokeColor" />
@@ -722,7 +692,7 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                     nodes: state.flow.nodes.map((n) =>
                       n.data?.identifier?.id !== nodeId
                         ? n
-                        : { ...n, data: { ...n.data, strokeWidth } },
+                        : { ...n, data: { ...n.data, strokeWidth } }
                     ),
                   })
                 }
@@ -731,19 +701,19 @@ function CanvasDefaultProperties({ nodeId }: { nodeId: string }) {
                 defaultValue={1}
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "strokeWidth" }}
+                    bindProps={{ nodeId, bindingKey: 'strokeWidth' }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "strokeWidth")!,
-                      valueType: "number",
+                      fieldPath: getResolverFieldPath('canvas', 'strokeWidth')!,
+                      valueType: 'number',
                     }}
                   />
                 }
-                disabled={isBound("strokeWidth")}
-                inputClassName={leftBorderClass("strokeWidth")}
+                disabled={isBound('strokeWidth')}
+                inputClassName={leftBorderClass('strokeWidth')}
               />
               {/* Badge - Only show when bound */}
-              {isBound("strokeWidth") && (
+              {isBound('strokeWidth') && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     <CanvasBindingBadge nodeId={nodeId} keyName="strokeWidth" />
@@ -782,14 +752,11 @@ function CanvasPerObjectProperties({
   const { state } = useWorkspace();
 
   // EXISTING: All data resolution unchanged
-  const node = state.flow.nodes.find(
-    (n) => n.data?.identifier?.id === nodeId,
-  ) as Node<CanvasNodeData> | undefined;
+  const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId) as
+    | Node<CanvasNodeData>
+    | undefined;
   const selectedOverrides = assignments[objectId];
-  const initial = (selectedOverrides?.initial ?? {}) as Record<
-    string,
-    unknown
-  > & {
+  const initial = (selectedOverrides?.initial ?? {}) as Record<string, unknown> & {
     position?: { x: number; y: number };
     scale?: { x: number; y: number };
     rotation?: number;
@@ -805,19 +772,17 @@ function CanvasPerObjectProperties({
     const objectDescriptors = tracker.getUpstreamObjects(
       nodeId,
       state.flow.nodes,
-      state.flow.edges,
+      state.flow.edges
     );
-    const objectDescriptor = objectDescriptors.find(
-      (obj) => obj.id === objectId,
-    );
+    const objectDescriptor = objectDescriptors.find((obj) => obj.id === objectId);
     return objectDescriptor?.type;
   }, [nodeId, objectId, state.flow.nodes, state.flow.edges]);
 
-  const isTextObject = objectType === "text";
+  const isTextObject = objectType === 'text';
 
   // EXISTING: All other resolution logic unchanged
   const def =
-    (getNodeDefinition("canvas")?.defaults as Record<string, unknown> & {
+    (getNodeDefinition('canvas')?.defaults as Record<string, unknown> & {
       position?: { x: number; y: number };
       scale?: { x: number; y: number };
       rotation?: number;
@@ -843,23 +808,23 @@ function CanvasPerObjectProperties({
   // Removed unused isInheritedBound function
   const isOverridden = (key: string) => {
     switch (key) {
-      case "position.x":
+      case 'position.x':
         return initial.position?.x !== undefined;
-      case "position.y":
+      case 'position.y':
         return initial.position?.y !== undefined;
-      case "scale.x":
+      case 'scale.x':
         return initial.scale?.x !== undefined;
-      case "scale.y":
+      case 'scale.y':
         return initial.scale?.y !== undefined;
-      case "rotation":
+      case 'rotation':
         return initial.rotation !== undefined;
-      case "opacity":
+      case 'opacity':
         return initial.opacity !== undefined;
-      case "fillColor":
+      case 'fillColor':
         return initial.fillColor !== undefined;
-      case "strokeColor":
+      case 'strokeColor':
         return initial.strokeColor !== undefined;
-      case "strokeWidth":
+      case 'strokeWidth':
         return initial.strokeWidth !== undefined;
       default:
         return false;
@@ -867,10 +832,10 @@ function CanvasPerObjectProperties({
   };
   const leftBorderClass = (key: string) =>
     isBound(key)
-      ? "border-l-2 border-[var(--accent-secondary)]"
+      ? 'border-l-2 border-[var(--accent-secondary)]'
       : isOverridden(key)
-        ? "border-l-2 border-[var(--warning-600)]"
-        : "";
+        ? 'border-l-2 border-[var(--warning-600)]'
+        : '';
 
   // Helper to get value for bound fields - proper precedence like geometry nodes
   const getValue = (key: string, fallbackValue: number | string) => {
@@ -879,52 +844,24 @@ function CanvasPerObjectProperties({
 
     // Check manual override second (if not bound) - this is the key fix
     switch (key) {
-      case "position.x":
-        return (
-          initial.position?.x ??
-          base.position?.x ??
-          def.position?.x ??
-          fallbackValue
-        );
-      case "position.y":
-        return (
-          initial.position?.y ??
-          base.position?.y ??
-          def.position?.y ??
-          fallbackValue
-        );
-      case "scale.x":
-        return (
-          initial.scale?.x ?? base.scale?.x ?? def.scale?.x ?? fallbackValue
-        );
-      case "scale.y":
-        return (
-          initial.scale?.y ?? base.scale?.y ?? def.scale?.y ?? fallbackValue
-        );
-      case "rotation":
-        return (
-          initial.rotation ?? base.rotation ?? def.rotation ?? fallbackValue
-        );
-      case "opacity":
+      case 'position.x':
+        return initial.position?.x ?? base.position?.x ?? def.position?.x ?? fallbackValue;
+      case 'position.y':
+        return initial.position?.y ?? base.position?.y ?? def.position?.y ?? fallbackValue;
+      case 'scale.x':
+        return initial.scale?.x ?? base.scale?.x ?? def.scale?.x ?? fallbackValue;
+      case 'scale.y':
+        return initial.scale?.y ?? base.scale?.y ?? def.scale?.y ?? fallbackValue;
+      case 'rotation':
+        return initial.rotation ?? base.rotation ?? def.rotation ?? fallbackValue;
+      case 'opacity':
         return initial.opacity ?? base.opacity ?? def.opacity ?? fallbackValue;
-      case "fillColor":
-        return (
-          initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue
-        );
-      case "strokeColor":
-        return (
-          initial.strokeColor ??
-          base.strokeColor ??
-          def.strokeColor ??
-          fallbackValue
-        );
-      case "strokeWidth":
-        return (
-          initial.strokeWidth ??
-          base.strokeWidth ??
-          def.strokeWidth ??
-          fallbackValue
-        );
+      case 'fillColor':
+        return initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue;
+      case 'strokeColor':
+        return initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? fallbackValue;
+      case 'strokeWidth':
+        return initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? fallbackValue;
       default:
         return fallbackValue;
     }
@@ -933,21 +870,14 @@ function CanvasPerObjectProperties({
   // Helper to get string value for color fields - proper precedence like geometry nodes
   const getStringValue = (key: string, fallbackValue: string) => {
     // Check per-object binding first (highest priority)
-    if (isBound(key)) return ""; // Empty string when bound (like geometry nodes)
+    if (isBound(key)) return ''; // Empty string when bound (like geometry nodes)
 
     // Check manual override second (if not bound) - this is the key fix
     switch (key) {
-      case "fillColor":
-        return (
-          initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue
-        );
-      case "strokeColor":
-        return (
-          initial.strokeColor ??
-          base.strokeColor ??
-          def.strokeColor ??
-          fallbackValue
-        );
+      case 'fillColor':
+        return initial.fillColor ?? base.fillColor ?? def.fillColor ?? fallbackValue;
+      case 'strokeColor':
+        return initial.strokeColor ?? base.strokeColor ?? def.strokeColor ?? fallbackValue;
       default:
         return fallbackValue;
     }
@@ -957,90 +887,70 @@ function CanvasPerObjectProperties({
     <div className="space-y-[var(--space-3)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Position X
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Position X</label>
           <NumberField
             label=""
-            value={getValue("position.x", 0)}
+            value={getValue('position.x', 0)}
             onChange={(x) => onChange({ position: { x } })}
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "position.x", objectId }}
+                bindProps={{ nodeId, bindingKey: 'position.x', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "position.x")!,
+                  fieldPath: getResolverFieldPath('canvas', 'position.x')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("position.x")}
-            inputClassName={leftBorderClass("position.x")}
+            disabled={isBound('position.x')}
+            inputClassName={leftBorderClass('position.x')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("position.x") || isBound("position.x")) && (
+          {(isOverridden('position.x') || isBound('position.x')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("position.x") && !isBound("position.x") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="position.x"
-                    objectId={objectId}
-                  />
+                {isOverridden('position.x') && !isBound('position.x') && (
+                  <OverrideBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
                 )}
-                {isBound("position.x") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="position.x"
-                    objectId={objectId}
-                  />
+                {isBound('position.x') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
                 )}
               </div>
             </div>
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Position Y
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Position Y</label>
           <NumberField
             label=""
-            value={getValue("position.y", 0)}
+            value={getValue('position.y', 0)}
             onChange={(y) => onChange({ position: { y } })}
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "position.y", objectId }}
+                bindProps={{ nodeId, bindingKey: 'position.y', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "position.y")!,
+                  fieldPath: getResolverFieldPath('canvas', 'position.y')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("position.y")}
-            inputClassName={leftBorderClass("position.y")}
+            disabled={isBound('position.y')}
+            inputClassName={leftBorderClass('position.y')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("position.y") || isBound("position.y")) && (
+          {(isOverridden('position.y') || isBound('position.y')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("position.y") && !isBound("position.y") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="position.y"
-                    objectId={objectId}
-                  />
+                {isOverridden('position.y') && !isBound('position.y') && (
+                  <OverrideBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
                 )}
-                {isBound("position.y") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="position.y"
-                    objectId={objectId}
-                  />
+                {isBound('position.y') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
                 )}
               </div>
             </div>
@@ -1050,94 +960,74 @@ function CanvasPerObjectProperties({
 
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Scale X
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Scale X</label>
           <NumberField
             label=""
-            value={getValue("scale.x", 1)}
+            value={getValue('scale.x', 1)}
             onChange={(x) => onChange({ scale: { x } })}
             defaultValue={1}
             min={0}
             step={0.1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "scale.x", objectId }}
+                bindProps={{ nodeId, bindingKey: 'scale.x', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "scale.x")!,
+                  fieldPath: getResolverFieldPath('canvas', 'scale.x')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("scale.x")}
-            inputClassName={leftBorderClass("scale.x")}
+            disabled={isBound('scale.x')}
+            inputClassName={leftBorderClass('scale.x')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("scale.x") || isBound("scale.x")) && (
+          {(isOverridden('scale.x') || isBound('scale.x')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("scale.x") && !isBound("scale.x") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="scale.x"
-                    objectId={objectId}
-                  />
+                {isOverridden('scale.x') && !isBound('scale.x') && (
+                  <OverrideBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
                 )}
-                {isBound("scale.x") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="scale.x"
-                    objectId={objectId}
-                  />
+                {isBound('scale.x') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
                 )}
               </div>
             </div>
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Scale Y
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Scale Y</label>
           <NumberField
             label=""
-            value={getValue("scale.y", 1)}
+            value={getValue('scale.y', 1)}
             onChange={(y) => onChange({ scale: { y } })}
             defaultValue={1}
             min={0}
             step={0.1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "scale.y", objectId }}
+                bindProps={{ nodeId, bindingKey: 'scale.y', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "scale.y")!,
+                  fieldPath: getResolverFieldPath('canvas', 'scale.y')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("scale.y")}
-            inputClassName={leftBorderClass("scale.y")}
+            disabled={isBound('scale.y')}
+            inputClassName={leftBorderClass('scale.y')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("scale.y") || isBound("scale.y")) && (
+          {(isOverridden('scale.y') || isBound('scale.y')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("scale.y") && !isBound("scale.y") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="scale.y"
-                    objectId={objectId}
-                  />
+                {isOverridden('scale.y') && !isBound('scale.y') && (
+                  <OverrideBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
                 )}
-                {isBound("scale.y") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="scale.y"
-                    objectId={objectId}
-                  />
+                {isBound('scale.y') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
                 )}
               </div>
             </div>
@@ -1147,58 +1037,46 @@ function CanvasPerObjectProperties({
 
       <div className="grid grid-cols-2 gap-[var(--space-2)]">
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Rotation
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Rotation</label>
           <NumberField
             label=""
-            value={getValue("rotation", 0)}
+            value={getValue('rotation', 0)}
             onChange={(rotation) => onChange({ rotation })}
             step={0.1}
             defaultValue={0}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "rotation", objectId }}
+                bindProps={{ nodeId, bindingKey: 'rotation', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "rotation")!,
+                  fieldPath: getResolverFieldPath('canvas', 'rotation')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("rotation")}
-            inputClassName={leftBorderClass("rotation")}
+            disabled={isBound('rotation')}
+            inputClassName={leftBorderClass('rotation')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("rotation") || isBound("rotation")) && (
+          {(isOverridden('rotation') || isBound('rotation')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("rotation") && !isBound("rotation") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="rotation"
-                    objectId={objectId}
-                  />
+                {isOverridden('rotation') && !isBound('rotation') && (
+                  <OverrideBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
                 )}
-                {isBound("rotation") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="rotation"
-                    objectId={objectId}
-                  />
+                {isBound('rotation') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
                 )}
               </div>
             </div>
           )}
         </div>
         <div>
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Opacity
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Opacity</label>
           <NumberField
             label=""
-            value={getValue("opacity", 1)}
+            value={getValue('opacity', 1)}
             onChange={(opacity) => onChange({ opacity })}
             min={0}
             max={1}
@@ -1206,35 +1084,27 @@ function CanvasPerObjectProperties({
             defaultValue={1}
             bindAdornment={
               <BindingAndBatchControls
-                bindProps={{ nodeId, bindingKey: "opacity", objectId }}
+                bindProps={{ nodeId, bindingKey: 'opacity', objectId }}
                 batchProps={{
                   nodeId,
-                  fieldPath: getResolverFieldPath("canvas", "opacity")!,
+                  fieldPath: getResolverFieldPath('canvas', 'opacity')!,
                   objectId,
-                  valueType: "number",
+                  valueType: 'number',
                 }}
               />
             }
-            disabled={isBound("opacity")}
-            inputClassName={leftBorderClass("opacity")}
+            disabled={isBound('opacity')}
+            inputClassName={leftBorderClass('opacity')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden("opacity") || isBound("opacity")) && (
+          {(isOverridden('opacity') || isBound('opacity')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden("opacity") && !isBound("opacity") && (
-                  <OverrideBadge
-                    nodeId={nodeId}
-                    keyName="opacity"
-                    objectId={objectId}
-                  />
+                {isOverridden('opacity') && !isBound('opacity') && (
+                  <OverrideBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
                 )}
-                {isBound("opacity") && (
-                  <CanvasBindingBadge
-                    nodeId={nodeId}
-                    keyName="opacity"
-                    objectId={objectId}
-                  />
+                {isBound('opacity') && (
+                  <CanvasBindingBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
                 )}
               </div>
             </div>
@@ -1249,39 +1119,31 @@ function CanvasPerObjectProperties({
             <div>
               <ColorField
                 label="Fill"
-                value={getStringValue("fillColor", "")}
+                value={getStringValue('fillColor', '')}
                 onChange={(fillColor) => onChange({ fillColor })}
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "fillColor", objectId }}
+                    bindProps={{ nodeId, bindingKey: 'fillColor', objectId }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "fillColor")!,
+                      fieldPath: getResolverFieldPath('canvas', 'fillColor')!,
                       objectId,
-                      valueType: "string",
+                      valueType: 'string',
                     }}
                   />
                 }
-                disabled={isBound("fillColor")}
-                inputClassName={leftBorderClass("fillColor")}
+                disabled={isBound('fillColor')}
+                inputClassName={leftBorderClass('fillColor')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden("fillColor") || isBound("fillColor")) && (
+              {(isOverridden('fillColor') || isBound('fillColor')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden("fillColor") && !isBound("fillColor") && (
-                      <OverrideBadge
-                        nodeId={nodeId}
-                        keyName="fillColor"
-                        objectId={objectId}
-                      />
+                    {isOverridden('fillColor') && !isBound('fillColor') && (
+                      <OverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
                     )}
-                    {isBound("fillColor") && (
-                      <CanvasBindingBadge
-                        nodeId={nodeId}
-                        keyName="fillColor"
-                        objectId={objectId}
-                      />
+                    {isBound('fillColor') && (
+                      <CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
                     )}
                   </div>
                 </div>
@@ -1290,34 +1152,30 @@ function CanvasPerObjectProperties({
             <div>
               <ColorField
                 label="Stroke"
-                value={getStringValue("strokeColor", "")}
+                value={getStringValue('strokeColor', '')}
                 onChange={(strokeColor) => onChange({ strokeColor })}
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "strokeColor", objectId }}
+                    bindProps={{ nodeId, bindingKey: 'strokeColor', objectId }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "strokeColor")!,
+                      fieldPath: getResolverFieldPath('canvas', 'strokeColor')!,
                       objectId,
-                      valueType: "string",
+                      valueType: 'string',
                     }}
                   />
                 }
-                disabled={isBound("strokeColor")}
-                inputClassName={leftBorderClass("strokeColor")}
+                disabled={isBound('strokeColor')}
+                inputClassName={leftBorderClass('strokeColor')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden("strokeColor") || isBound("strokeColor")) && (
+              {(isOverridden('strokeColor') || isBound('strokeColor')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden("strokeColor") && !isBound("strokeColor") && (
-                      <OverrideBadge
-                        nodeId={nodeId}
-                        keyName="strokeColor"
-                        objectId={objectId}
-                      />
+                    {isOverridden('strokeColor') && !isBound('strokeColor') && (
+                      <OverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
                     )}
-                    {isBound("strokeColor") && (
+                    {isBound('strokeColor') && (
                       <CanvasBindingBadge
                         nodeId={nodeId}
                         keyName="strokeColor"
@@ -1331,37 +1189,33 @@ function CanvasPerObjectProperties({
             <div>
               <NumberField
                 label="Stroke W"
-                value={getValue("strokeWidth", 1)}
+                value={getValue('strokeWidth', 1)}
                 onChange={(strokeWidth) => onChange({ strokeWidth })}
                 min={0}
                 step={0.5}
                 defaultValue={1}
                 bindAdornment={
                   <BindingAndBatchControls
-                    bindProps={{ nodeId, bindingKey: "strokeWidth", objectId }}
+                    bindProps={{ nodeId, bindingKey: 'strokeWidth', objectId }}
                     batchProps={{
                       nodeId,
-                      fieldPath: getResolverFieldPath("canvas", "strokeWidth")!,
+                      fieldPath: getResolverFieldPath('canvas', 'strokeWidth')!,
                       objectId,
-                      valueType: "number",
+                      valueType: 'number',
                     }}
                   />
                 }
-                disabled={isBound("strokeWidth")}
-                inputClassName={leftBorderClass("strokeWidth")}
+                disabled={isBound('strokeWidth')}
+                inputClassName={leftBorderClass('strokeWidth')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden("strokeWidth") || isBound("strokeWidth")) && (
+              {(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden("strokeWidth") && !isBound("strokeWidth") && (
-                      <OverrideBadge
-                        nodeId={nodeId}
-                        keyName="strokeWidth"
-                        objectId={objectId}
-                      />
+                    {isOverridden('strokeWidth') && !isBound('strokeWidth') && (
+                      <OverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
                     )}
-                    {isBound("strokeWidth") && (
+                    {isBound('strokeWidth') && (
                       <CanvasBindingBadge
                         nodeId={nodeId}
                         keyName="strokeWidth"
@@ -1379,9 +1233,7 @@ function CanvasPerObjectProperties({
       {/* ADD: Message for text objects */}
       {isTextObject && (
         <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-3 text-xs text-[var(--text-tertiary)]">
-          <div className="mb-1 font-medium">
-            Color properties disabled for text
-          </div>
+          <div className="mb-1 font-medium">Color properties disabled for text</div>
           <div>Use Typography node for text color and stroke styling</div>
         </div>
       )}

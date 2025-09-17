@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { useWorkspace } from "./workspace-context";
-import { FlowEditorTab } from "@/components/workspace/flow-editor-tab";
-import { TimelineEditorTab } from "@/components/workspace/timeline-editor-tab";
-import { CanvasEditorTab } from "@/components/workspace/canvas-editor-tab";
-import { TypographyEditorTab } from "@/components/workspace/typography-editor-tab";
-import { MediaEditorTab } from "@/components/workspace/media-editor-tab";
+import { useWorkspace } from './workspace-context';
+import { FlowEditorTab } from '@/components/workspace/flow-editor-tab';
+import { TimelineEditorTab } from '@/components/workspace/timeline-editor-tab';
+import { CanvasEditorTab } from '@/components/workspace/canvas-editor-tab';
+import { TypographyEditorTab } from '@/components/workspace/typography-editor-tab';
+import { MediaEditorTab } from '@/components/workspace/media-editor-tab';
 
 export function WorkspaceTabContent() {
   const { state } = useWorkspace();
   const { activeTab, selectedNodeId, selectedNodeType } = state.ui;
 
   switch (activeTab) {
-    case "timeline":
-      if (!selectedNodeId || selectedNodeType !== "animation") {
+    case 'timeline':
+      if (!selectedNodeId || selectedNodeType !== 'animation') {
         return (
           <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
             No animation node selected
@@ -21,8 +21,8 @@ export function WorkspaceTabContent() {
         );
       }
       return <TimelineEditorTab nodeId={selectedNodeId} />;
-    case "canvas":
-      if (!selectedNodeId || selectedNodeType !== "canvas") {
+    case 'canvas':
+      if (!selectedNodeId || selectedNodeType !== 'canvas') {
         return (
           <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
             No canvas node selected
@@ -30,8 +30,8 @@ export function WorkspaceTabContent() {
         );
       }
       return <CanvasEditorTab nodeId={selectedNodeId} />;
-    case "typography":
-      if (!selectedNodeId || selectedNodeType !== "typography") {
+    case 'typography':
+      if (!selectedNodeId || selectedNodeType !== 'typography') {
         return (
           <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
             No Typography node selected
@@ -39,8 +39,8 @@ export function WorkspaceTabContent() {
         );
       }
       return <TypographyEditorTab nodeId={selectedNodeId} />;
-    case "media":
-      if (!selectedNodeId || selectedNodeType !== "media") {
+    case 'media':
+      if (!selectedNodeId || selectedNodeType !== 'media') {
         return (
           <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
             No Media node selected
@@ -48,7 +48,7 @@ export function WorkspaceTabContent() {
         );
       }
       return <MediaEditorTab nodeId={selectedNodeId} />;
-    case "flow":
+    case 'flow':
     default:
       return <FlowEditorTab />;
   }

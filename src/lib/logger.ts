@@ -6,14 +6,14 @@
  * Can be disabled by setting DISABLE_LOGGING=true environment variable
  */
 
-import { isDomainError } from "@/shared/errors/domain";
+import { isDomainError } from '@/shared/errors/domain';
 
-type LogLevel = "debug" | "info" | "warn" | "error";
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 type LogMeta = Record<string, unknown>;
 
-const isDevelopment = process.env.NODE_ENV === "development";
-const isLoggingEnabled = process.env.DISABLE_LOGGING !== "true";
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isLoggingEnabled = process.env.DISABLE_LOGGING !== 'true';
 
 function log(level: LogLevel, message: string, meta?: LogMeta): void {
   // Early return if logging is disabled
@@ -28,29 +28,29 @@ function log(level: LogLevel, message: string, meta?: LogMeta): void {
   if (isDevelopment) {
     // Console logging for development with readable format
     const logMethod =
-      level === "error"
+      level === 'error'
         ? console.error
-        : level === "warn"
+        : level === 'warn'
           ? console.warn
-          : level === "debug"
+          : level === 'debug'
             ? console.debug
             : console.log;
 
-    logMethod(`[${level.toUpperCase()}]`, message, meta ?? "");
+    logMethod(`[${level.toUpperCase()}]`, message, meta ?? '');
   } else {
     // JSON structured logging for production
     const output = JSON.stringify(line);
     switch (level) {
-      case "debug":
+      case 'debug':
         console.debug(output);
         break;
-      case "info":
+      case 'info':
         console.info(output);
         break;
-      case "warn":
+      case 'warn':
         console.warn(output);
         break;
-      case "error":
+      case 'error':
         console.error(output);
         break;
     }
@@ -60,17 +60,17 @@ function log(level: LogLevel, message: string, meta?: LogMeta): void {
 export const logger = {
   debug(message: string, meta?: LogMeta) {
     if (isDevelopment) {
-      log("debug", message, meta);
+      log('debug', message, meta);
     }
   },
   info(message: string, meta?: LogMeta) {
-    log("info", message, meta);
+    log('info', message, meta);
   },
   warn(message: string, meta?: LogMeta) {
-    log("warn", message, meta);
+    log('warn', message, meta);
   },
   error(message: string, meta?: LogMeta) {
-    log("error", message, meta);
+    log('error', message, meta);
   },
   errorWithStack(message: string, error: unknown, meta?: LogMeta) {
     const base: LogMeta = meta ?? {};
@@ -83,7 +83,7 @@ export const logger = {
     } else {
       base.error = { message: String(error) };
     }
-    log("error", message, base);
+    log('error', message, base);
   },
   domain(message: string, error: unknown, meta?: LogMeta) {
     if (isDomainError(error)) {

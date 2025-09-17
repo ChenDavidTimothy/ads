@@ -1,8 +1,8 @@
 // src/components/workspace/property-panel.tsx - Registry-aware property panel
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import type { Node, Edge } from "reactflow";
+import React, { useState } from 'react';
+import type { Node, Edge } from 'reactflow';
 import {
   NumberField,
   ColorField,
@@ -11,12 +11,12 @@ import {
   RangeField,
   BooleanField,
   TextareaField,
-} from "@/components/ui/form-fields";
-import { SelectionList } from "@/components/ui/selection";
-import { Button } from "@/components/ui/button";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import { RESOLUTION_PRESETS } from "@/shared/registry/registry-utils";
-import type { FlowTracker } from "@/lib/flow/flow-tracking";
+} from '@/components/ui/form-fields';
+import { SelectionList } from '@/components/ui/selection';
+import { Button } from '@/components/ui/button';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { RESOLUTION_PRESETS } from '@/shared/registry/registry-utils';
+import type { FlowTracker } from '@/lib/flow/flow-tracking';
 import type {
   NodeData,
   AnimationNodeData,
@@ -25,10 +25,10 @@ import type {
   ConstantsNodeData,
   FrameNodeData,
   CanvasNodeData,
-} from "@/shared/types/nodes";
-import type { PropertySchema } from "@/shared/types/properties";
+} from '@/shared/types/nodes';
+import type { PropertySchema } from '@/shared/types/properties';
 
-import { BindButton } from "@/components/workspace/binding/bindings";
+import { BindButton } from '@/components/workspace/binding/bindings';
 
 interface PropertyPanelProps {
   node: Node<NodeData>;
@@ -42,39 +42,27 @@ interface PropertyPanelProps {
 
 // Type guard functions
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
-  return "duration" in data && "tracks" in data;
+  return 'duration' in data && 'tracks' in data;
 }
 
 function isSceneNodeData(data: NodeData): data is SceneNodeData {
-  return (
-    "width" in data &&
-    "height" in data &&
-    "fps" in data &&
-    "backgroundColor" in data
-  );
+  return 'width' in data && 'height' in data && 'fps' in data && 'backgroundColor' in data;
 }
 
 function isFrameNodeData(data: NodeData): data is FrameNodeData {
-  return (
-    "width" in data && "height" in data && "format" in data && "quality" in data
-  );
+  return 'width' in data && 'height' in data && 'format' in data && 'quality' in data;
 }
 
 function isCanvasNodeData(data: NodeData): data is CanvasNodeData {
-  return (
-    "position" in data &&
-    "rotation" in data &&
-    "scale" in data &&
-    "opacity" in data
-  );
+  return 'position' in data && 'rotation' in data && 'scale' in data && 'opacity' in data;
 }
 
 function isFilterNodeData(data: NodeData): data is FilterNodeData {
-  return "selectedObjectIds" in data;
+  return 'selectedObjectIds' in data;
 }
 
 function isConstantsNodeData(data: NodeData): data is ConstantsNodeData {
-  return "valueType" in data;
+  return 'valueType' in data;
 }
 
 export function PropertyPanel({
@@ -87,23 +75,17 @@ export function PropertyPanel({
   flowTracker,
 }: PropertyPanelProps) {
   const [editingName, setEditingName] = useState(false);
-  const [tempDisplayName, setTempDisplayName] = useState(
-    node.data.identifier.displayName,
-  );
+  const [tempDisplayName, setTempDisplayName] = useState(node.data.identifier.displayName);
 
   // Use registry to get node definition
   const nodeDefinition = getNodeDefinition(node.type!);
 
   if (!nodeDefinition) {
-    return (
-      <div className="text-sm text-gray-400">
-        Unknown node type: {node.type}
-      </div>
-    );
+    return <div className="text-sm text-gray-400">Unknown node type: {node.type}</div>;
   }
 
   // Minimal UX for Batch node: hide properties and show a simple hint
-  if (node.type === "batch") {
+  if (node.type === 'batch') {
     return (
       <div className="space-y-[var(--space-3)] text-xs text-gray-400">
         <div className="text-sm text-white">Batch</div>
@@ -113,10 +95,7 @@ export function PropertyPanel({
   }
 
   const handleSaveDisplayName = () => {
-    const success = onDisplayNameChange(
-      node.data.identifier.id,
-      tempDisplayName,
-    );
+    const success = onDisplayNameChange(node.data.identifier.id, tempDisplayName);
     if (success) {
       setEditingName(false);
     }
@@ -144,17 +123,15 @@ export function PropertyPanel({
                 onChange={setTempDisplayName}
                 placeholder="Enter node name"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !currentError) {
+                  if (e.key === 'Enter' && !currentError) {
                     handleSaveDisplayName();
-                  } else if (e.key === "Escape") {
+                  } else if (e.key === 'Escape') {
                     handleCancelEdit();
                   }
                 }}
                 autoFocus
               />
-              {currentError && (
-                <div className="text-xs text-red-400">{currentError}</div>
-              )}
+              {currentError && <div className="text-xs text-red-400">{currentError}</div>}
               <div className="flex gap-[var(--space-2)]">
                 <Button
                   onClick={handleSaveDisplayName}
@@ -164,25 +141,15 @@ export function PropertyPanel({
                 >
                   Save
                 </Button>
-                <Button
-                  onClick={handleCancelEdit}
-                  variant="secondary"
-                  size="sm"
-                >
+                <Button onClick={handleCancelEdit} variant="secondary" size="sm">
                   Cancel
                 </Button>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <span className="font-medium text-white">
-                {node.data.identifier.displayName}
-              </span>
-              <Button
-                onClick={() => setEditingName(true)}
-                variant="ghost"
-                size="sm"
-              >
+              <span className="font-medium text-white">{node.data.identifier.displayName}</span>
+              <Button onClick={() => setEditingName(true)} variant="ghost" size="sm">
                 Edit
               </Button>
             </div>
@@ -192,9 +159,7 @@ export function PropertyPanel({
         <div className="text-xs text-gray-400">{nodeDefinition.label}</div>
 
         {nodeDefinition.description && (
-          <div className="text-xs text-gray-500">
-            {nodeDefinition.description}
-          </div>
+          <div className="text-xs text-gray-500">{nodeDefinition.description}</div>
         )}
       </div>
 
@@ -207,8 +172,8 @@ export function PropertyPanel({
       />
 
       {/* Special handling for complex node types */}
-      {nodeDefinition.execution.category === "logic" &&
-        node.type === "filter" &&
+      {nodeDefinition.execution.category === 'logic' &&
+        node.type === 'filter' &&
         isFilterNodeData(node.data) && (
           <FilterSpecialProperties
             data={node.data}
@@ -220,63 +185,48 @@ export function PropertyPanel({
           />
         )}
 
-      {nodeDefinition.execution.category === "animation" &&
-        isAnimationNodeData(node.data) && (
-          <AnimationSpecialProperties data={node.data} onChange={onChange} />
-        )}
+      {nodeDefinition.execution.category === 'animation' && isAnimationNodeData(node.data) && (
+        <AnimationSpecialProperties data={node.data} onChange={onChange} />
+      )}
 
-      {nodeDefinition.execution.category === "output" &&
-        isSceneNodeData(node.data) && (
-          <SceneSpecialProperties data={node.data} onChange={onChange} />
-        )}
+      {nodeDefinition.execution.category === 'output' && isSceneNodeData(node.data) && (
+        <SceneSpecialProperties data={node.data} onChange={onChange} />
+      )}
 
-      {nodeDefinition.execution.category === "output" &&
-        isFrameNodeData(node.data) && (
-          <div className="space-y-[var(--space-2)] text-xs text-gray-400">
-            <div>
-              Image output will be rendered as {node.data.format.toUpperCase()}.
-            </div>
-          </div>
-        )}
+      {nodeDefinition.execution.category === 'output' && isFrameNodeData(node.data) && (
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
+          <div>Image output will be rendered as {node.data.format.toUpperCase()}.</div>
+        </div>
+      )}
 
-      {nodeDefinition.execution.category === "animation" &&
-        isCanvasNodeData(node.data) && (
-          <div className="space-y-[var(--space-2)] text-xs text-gray-400">
-            <div>
-              Double-click the Canvas node to edit in its dedicated tab.
-            </div>
-          </div>
-        )}
+      {nodeDefinition.execution.category === 'animation' && isCanvasNodeData(node.data) && (
+        <div className="space-y-[var(--space-2)] text-xs text-gray-400">
+          <div>Double-click the Canvas node to edit in its dedicated tab.</div>
+        </div>
+      )}
 
       {/* Typography special handling */}
-      {node.type === "typography" && (
+      {node.type === 'typography' && (
         <div className="space-y-[var(--space-2)] text-xs text-gray-400">
-          <div>
-            Double-click the Typography node to edit typography in its dedicated
-            tab.
-          </div>
+          <div>Double-click the Typography node to edit typography in its dedicated tab.</div>
         </div>
       )}
 
       {/* Media special handling */}
-      {node.type === "media" && (
+      {node.type === 'media' && (
         <div className="space-y-[var(--space-2)] text-xs text-gray-400">
-          <div>
-            Double-click the Media node to edit media in its dedicated tab.
-          </div>
+          <div>Double-click the Media node to edit media in its dedicated tab.</div>
         </div>
       )}
 
       {/* Image special handling - only show asset selection */}
-      {node.type === "image" && (
+      {node.type === 'image' && (
         <div className="space-y-[var(--space-4)]">
           <div className="space-y-[var(--space-2)]">
-            <label className="block text-sm font-medium text-gray-300">
-              Image Asset
-            </label>
+            <label className="block text-sm font-medium text-gray-300">Image Asset</label>
             <div className="text-xs text-gray-400">
-              Select an image from your assets. Transform properties (position,
-              scale, rotation, opacity) are controlled in the animation system.
+              Select an image from your assets. Transform properties (position, scale, rotation,
+              opacity) are controlled in the animation system.
             </div>
           </div>
         </div>
@@ -292,57 +242,42 @@ interface SchemaBasedProps {
   nodeType: string;
 }
 
-function SchemaBasedProperties({
-  properties,
-  data,
-  onChange,
-  nodeType,
-}: SchemaBasedProps) {
+function SchemaBasedProperties({ properties, data, onChange, nodeType }: SchemaBasedProps) {
   // Skip rendering properties for nodes with dedicated editor tabs - they should only be edited in the dedicated tab
   if (
-    nodeType === "canvas" ||
-    nodeType === "typography" ||
-    nodeType === "image" ||
-    nodeType === "media"
+    nodeType === 'canvas' ||
+    nodeType === 'typography' ||
+    nodeType === 'image' ||
+    nodeType === 'media'
   ) {
     return null;
   }
 
   const renderProperty = (schema: PropertySchema) => {
-    const value =
-      (data as unknown as Record<string, unknown>)[schema.key] ??
-      schema.defaultValue;
+    const value = (data as unknown as Record<string, unknown>)[schema.key] ?? schema.defaultValue;
 
     // Special handling for Constants node - conditional property display
-    if (nodeType === "constants" && isConstantsNodeData(data)) {
+    if (nodeType === 'constants' && isConstantsNodeData(data)) {
       // Only show value properties that match the current valueType
-      if (schema.key === "numberValue" && data.valueType !== "number")
-        return null;
-      if (schema.key === "stringValue" && data.valueType !== "string")
-        return null;
-      if (schema.key === "booleanValue" && data.valueType !== "boolean")
-        return null;
-      if (schema.key === "colorValue" && data.valueType !== "color")
-        return null;
+      if (schema.key === 'numberValue' && data.valueType !== 'number') return null;
+      if (schema.key === 'stringValue' && data.valueType !== 'string') return null;
+      if (schema.key === 'booleanValue' && data.valueType !== 'boolean') return null;
+      if (schema.key === 'colorValue' && data.valueType !== 'color') return null;
     }
 
     // Only nodes that support variableBindings get the bind adornment (animation, canvas)
     const supportsBinding =
-      nodeType === "animation" ||
-      nodeType === "canvas" ||
-      nodeType === "typography";
+      nodeType === 'animation' || nodeType === 'canvas' || nodeType === 'typography';
     const nodeId = data.identifier.id;
 
     switch (schema.type) {
-      case "number":
+      case 'number':
         return (
           <NumberField
             key={schema.key}
             label={schema.label}
             value={value as number}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             min={schema.min}
             max={schema.max}
             step={schema.step}
@@ -355,15 +290,13 @@ function SchemaBasedProperties({
           />
         );
 
-      case "color":
+      case 'color':
         return (
           <ColorField
             key={schema.key}
             label={schema.label}
             value={value as string}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             bindAdornment={
               supportsBinding && nodeId ? (
                 <BindButton nodeId={nodeId} bindingKey={schema.key} />
@@ -372,7 +305,7 @@ function SchemaBasedProperties({
           />
         );
 
-      case "select":
+      case 'select':
         return (
           <SelectField
             key={schema.key}
@@ -380,11 +313,8 @@ function SchemaBasedProperties({
             value={String(value as string | number)}
             onChange={(newValue) => {
               const shouldBeNumber =
-                typeof (data as unknown as Record<string, unknown>)[
-                  schema.key
-                ] === "number" ||
-                typeof (schema as { defaultValue?: unknown }).defaultValue ===
-                  "number";
+                typeof (data as unknown as Record<string, unknown>)[schema.key] === 'number' ||
+                typeof (schema as { defaultValue?: unknown }).defaultValue === 'number';
               const casted = shouldBeNumber ? Number(newValue) : newValue;
               onChange({ [schema.key]: casted } as Partial<NodeData>);
             }}
@@ -392,13 +322,11 @@ function SchemaBasedProperties({
           />
         );
 
-      case "point2d":
+      case 'point2d':
         const point = (value as { x: number; y: number }) ?? { x: 0, y: 0 };
         return (
           <div key={schema.key} className="space-y-[var(--space-2)]">
-            <label className="block text-sm font-medium text-gray-300">
-              {schema.label}
-            </label>
+            <label className="block text-sm font-medium text-gray-300">{schema.label}</label>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <NumberField
                 label="X"
@@ -411,10 +339,7 @@ function SchemaBasedProperties({
                 defaultValue={0}
                 bindAdornment={
                   supportsBinding && nodeId ? (
-                    <BindButton
-                      nodeId={nodeId}
-                      bindingKey={`${schema.key}.x`}
-                    />
+                    <BindButton nodeId={nodeId} bindingKey={`${schema.key}.x`} />
                   ) : undefined
                 }
               />
@@ -429,10 +354,7 @@ function SchemaBasedProperties({
                 defaultValue={0}
                 bindAdornment={
                   supportsBinding && nodeId ? (
-                    <BindButton
-                      nodeId={nodeId}
-                      bindingKey={`${schema.key}.y`}
-                    />
+                    <BindButton nodeId={nodeId} bindingKey={`${schema.key}.y`} />
                   ) : undefined
                 }
               />
@@ -440,55 +362,47 @@ function SchemaBasedProperties({
           </div>
         );
 
-      case "range":
+      case 'range':
         return (
           <RangeField
             key={schema.key}
             label={schema.label}
             value={value as number}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             min={schema.min}
             max={schema.max}
             step={schema.step}
           />
         );
 
-      case "boolean":
+      case 'boolean':
         return (
           <BooleanField
             key={schema.key}
             label={schema.label}
             value={value as boolean}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
           />
         );
 
-      case "string":
+      case 'string':
         return (
           <TextField
             key={schema.key}
             label={schema.label}
-            value={(value as string) || ""}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            value={(value as string) || ''}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             placeholder={`Enter ${schema.label.toLowerCase()}`}
           />
         );
 
-      case "textarea":
+      case 'textarea':
         return (
           <TextareaField
             key={schema.key}
             label={schema.label}
-            value={(value as string) || ""}
-            onChange={(newValue) =>
-              onChange({ [schema.key]: newValue } as Partial<NodeData>)
-            }
+            value={(value as string) || ''}
+            onChange={(newValue) => onChange({ [schema.key]: newValue } as Partial<NodeData>)}
             placeholder={`Enter ${schema.label.toLowerCase()}`}
             rows={schema.rows}
             bindAdornment={
@@ -502,11 +416,10 @@ function SchemaBasedProperties({
       default:
         return (
           <div
-            key={(schema as { key?: string }).key ?? "unsupported"}
+            key={(schema as { key?: string }).key ?? 'unsupported'}
             className="text-sm text-gray-400"
           >
-            Unsupported property type:{" "}
-            {(schema as { type?: string }).type ?? "unknown"}
+            Unsupported property type: {(schema as { type?: string }).type ?? 'unknown'}
           </div>
         );
     }
@@ -535,11 +448,7 @@ function FilterSpecialProperties({
   // NEW: Use enhanced object detection for filter node
   const upstreamObjects = React.useMemo(() => {
     // Get actual objects including duplicates
-    const objectDescriptors = flowTracker.getUpstreamObjects(
-      nodeId,
-      allNodes,
-      allEdges,
-    );
+    const objectDescriptors = flowTracker.getUpstreamObjects(nodeId, allNodes, allEdges);
 
     // Convert to format expected by SelectionList
     return objectDescriptors.map((obj) => ({
@@ -562,7 +471,7 @@ function FilterSpecialProperties({
         id: o.data.identifier.id,
         name: o.data.identifier.displayName,
         type: o.data.identifier.type,
-      })),
+      }))
     );
   }, [upstreamObjects, nodeId]);
 
@@ -601,10 +510,7 @@ function FilterSpecialProperties({
               id: obj.data.identifier.id,
               label: obj.data.identifier.displayName,
               icon: getNodeDefinition(obj.type)?.rendering.icon,
-              color:
-                "color" in obj.data
-                  ? (obj.data as { color?: string }).color
-                  : undefined,
+              color: 'color' in obj.data ? (obj.data as { color?: string }).color : undefined,
             }))}
             selectedIds={data.selectedObjectIds}
             onToggle={handleToggleObject}
@@ -636,9 +542,7 @@ interface AnimationSpecialProps {
 function AnimationSpecialProperties({ data }: AnimationSpecialProps) {
   return (
     <div>
-      <label className="mb-[var(--space-1)] block text-sm font-medium text-gray-300">
-        Tracks
-      </label>
+      <label className="mb-[var(--space-1)] block text-sm font-medium text-gray-300">Tracks</label>
       <div className="text-xs text-gray-400">
         {data.tracks?.length ?? 0} animation tracks defined
       </div>
@@ -658,9 +562,7 @@ function SceneSpecialProperties({ onChange }: SceneSpecialProps) {
   return (
     <div className="space-y-[var(--space-4)]">
       <div>
-        <h4 className="mb-[var(--space-3)] text-sm font-semibold text-white">
-          Resolution Presets
-        </h4>
+        <h4 className="mb-[var(--space-3)] text-sm font-semibold text-white">Resolution Presets</h4>
         <div className="flex flex-wrap gap-[var(--space-2)]">
           {RESOLUTION_PRESETS.map((preset) => (
             <Button

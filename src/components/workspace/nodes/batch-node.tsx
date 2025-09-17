@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Handle, Position } from "reactflow";
-import { useWorkspace } from "@/components/workspace/workspace-context";
-import { Input } from "@/components/ui/input";
+import React from 'react';
+import { Handle, Position } from 'reactflow';
+import { useWorkspace } from '@/components/workspace/workspace-context';
+import { Input } from '@/components/ui/input';
 
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { NodeData } from "@/shared/types/nodes";
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { NodeData } from '@/shared/types/nodes';
 
 export function BatchNode({ id }: { id: string }) {
   const { state, updateFlow } = useWorkspace();
@@ -21,14 +21,14 @@ export function BatchNode({ id }: { id: string }) {
     variableBindings?: Record<string, { boundResultNodeId?: string }>;
   };
   const keys = Array.isArray(data.keys)
-    ? (data.keys as unknown[]).filter((k) => typeof k === "string")
+    ? (data.keys as unknown[]).filter((k) => typeof k === 'string')
     : [];
 
   const [open, setOpen] = React.useState(false);
-  const [localInput, setLocalInput] = React.useState("");
+  const [localInput, setLocalInput] = React.useState('');
 
-  const nodeDefinition = getNodeDefinition("batch");
-  const handleClass = "bg-[var(--node-logic)]";
+  const nodeDefinition = getNodeDefinition('batch');
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
     <Card
@@ -55,7 +55,7 @@ export function BatchNode({ id }: { id: string }) {
             </span>
           </div>
           <span className="font-semibold text-[var(--text-primary)]">
-            {node?.data?.identifier?.displayName ?? "Batch"}
+            {node?.data?.identifier?.displayName ?? 'Batch'}
           </span>
           <span className="ml-auto text-[10px] text-[var(--text-secondary)]">
             {keys.length} keys
@@ -68,9 +68,7 @@ export function BatchNode({ id }: { id: string }) {
           <Button variant="secondary" onClick={() => setOpen(true)}>
             Keys
           </Button>
-          <div className="text-[10px] text-[var(--text-tertiary)]">
-            Manage keys
-          </div>
+          <div className="text-[10px] text-[var(--text-tertiary)]">Manage keys</div>
         </div>
       </CardContent>
 
@@ -87,12 +85,7 @@ export function BatchNode({ id }: { id: string }) {
       ))}
 
       {open ? (
-        <Modal
-          isOpen={open}
-          onClose={() => setOpen(false)}
-          title="Batch Keys"
-          size="sm"
-        >
+        <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch Keys" size="sm">
           <div className="p-[var(--space-4)]">
             <div className="mb-[var(--space-2)] text-[12px] text-[var(--text-secondary)]">
               Add or remove keys
@@ -120,21 +113,21 @@ export function BatchNode({ id }: { id: string }) {
                               ...n.data,
                               keys: nextKeys,
                             } as NodeData,
-                          },
+                          }
                     ),
                   });
                   // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
-                  if (typeof window !== "undefined") {
+                  if (typeof window !== 'undefined') {
                     window.dispatchEvent(
-                      new CustomEvent("batch-keys-updated", {
+                      new CustomEvent('batch-keys-updated', {
                         detail: {
                           nodeIdentifierId: nodeId,
                           keys: [...nextKeys],
                         },
-                      }),
+                      })
                     );
                   }
-                  setLocalInput("");
+                  setLocalInput('');
                 }}
               >
                 Add
@@ -143,9 +136,7 @@ export function BatchNode({ id }: { id: string }) {
 
             <div className="mt-[var(--space-3)] space-y-[var(--space-2)]">
               {keys.length === 0 ? (
-                <div className="text-[12px] text-[var(--text-tertiary)]">
-                  No keys yet.
-                </div>
+                <div className="text-[12px] text-[var(--text-tertiary)]">No keys yet.</div>
               ) : (
                 keys.map((k) => (
                   <div
@@ -168,17 +159,17 @@ export function BatchNode({ id }: { id: string }) {
                                     ...n.data,
                                     keys: nextKeys,
                                   } as NodeData,
-                                },
+                                }
                           ),
                         });
-                        if (typeof window !== "undefined") {
+                        if (typeof window !== 'undefined') {
                           window.dispatchEvent(
-                            new CustomEvent("batch-keys-updated", {
+                            new CustomEvent('batch-keys-updated', {
                               detail: {
                                 nodeIdentifierId: nodeId,
                                 keys: [...nextKeys],
                               },
-                            }),
+                            })
                           );
                         }
                       }}

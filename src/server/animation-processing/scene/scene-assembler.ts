@@ -1,38 +1,27 @@
 // src/server/animation-processing/scene/scene-assembler.ts
-import type { AnimationTrack } from "@/shared/types";
-import type { SceneAnimationTrack } from "@/shared/types/scene";
-import type { SceneTransform } from "@/shared/types/transforms";
-import { transformFactory } from "@/shared/registry/transforms";
-import { transformEvaluator } from "@/shared/registry/transform-evaluator";
-import type { Point2D } from "@/shared/types/core";
-import type {
-  PerObjectAssignments,
-  TrackOverride,
-} from "@/shared/properties/assignments";
-import {
-  resolveFieldValue,
-  type BatchResolveContext,
-} from "./batch-overrides-resolver";
+import type { AnimationTrack } from '@/shared/types';
+import type { SceneAnimationTrack } from '@/shared/types/scene';
+import type { SceneTransform } from '@/shared/types/transforms';
+import { transformFactory } from '@/shared/registry/transforms';
+import { transformEvaluator } from '@/shared/registry/transform-evaluator';
+import type { Point2D } from '@/shared/types/core';
+import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
+import { resolveFieldValue, type BatchResolveContext } from './batch-overrides-resolver';
 
 export type PerObjectCursorMap = Record<string, number>;
 
 // Coercion functions for Timeline batch overrides
-const numberCoerce = (
-  value: unknown,
-): { ok: boolean; value?: number; warn?: string } => {
-  if (typeof value === "number" && Number.isFinite(value))
-    return { ok: true, value };
-  if (typeof value === "string") {
+const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
+  if (typeof value === 'number' && Number.isFinite(value)) return { ok: true, value };
+  if (typeof value === 'string') {
     const parsed = Number.parseFloat(value);
     if (Number.isFinite(parsed)) return { ok: true, value: parsed };
   }
   return { ok: false, warn: `Expected number, got ${typeof value}` };
 };
 
-const stringCoerce = (
-  value: unknown,
-): { ok: boolean; value?: string; warn?: string } => {
-  if (typeof value === "string") return { ok: true, value };
+const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+  if (typeof value === 'string') return { ok: true, value };
   return { ok: false, warn: `Expected string, got ${typeof value}` };
 };
 
@@ -73,28 +62,22 @@ type TrackProperties =
 
 // Type guard functions
 function hasFromProperty(props: unknown): props is { from: unknown } {
-  return typeof props === "object" && props !== null && "from" in props;
+  return typeof props === 'object' && props !== null && 'from' in props;
 }
 
-function isColorProperties(
-  props: TrackProperties,
-): props is ColorTrackProperties {
-  return hasFromProperty(props) && typeof props.from === "string";
+function isColorProperties(props: TrackProperties): props is ColorTrackProperties {
+  return hasFromProperty(props) && typeof props.from === 'string';
 }
 
-export function isPerObjectCursorMap(
-  value: unknown,
-): value is PerObjectCursorMap {
-  if (typeof value !== "object" || value === null) return false;
+export function isPerObjectCursorMap(value: unknown): value is PerObjectCursorMap {
+  if (typeof value !== 'object' || value === null) return false;
   for (const v of Object.values(value as Record<string, unknown>)) {
-    if (typeof v !== "number") return false;
+    if (typeof v !== 'number') return false;
   }
   return true;
 }
 
-export function mergeCursorMaps(
-  cursorMaps: PerObjectCursorMap[],
-): PerObjectCursorMap {
+export function mergeCursorMaps(cursorMaps: PerObjectCursorMap[]): PerObjectCursorMap {
   const merged: PerObjectCursorMap = {};
   for (const map of cursorMaps) {
     for (const [objectId, time] of Object.entries(map)) {
@@ -110,7 +93,7 @@ export function mergeCursorMaps(
 
 export function pickCursorsForIds(
   cursorMap: PerObjectCursorMap,
-  ids: string[],
+  ids: string[]
 ): PerObjectCursorMap {
   const picked: PerObjectCursorMap = {};
   for (const id of ids) {
@@ -119,10 +102,7 @@ export function pickCursorsForIds(
   return picked;
 }
 
-function applyTrackOverride(
-  base: AnimationTrack,
-  override: TrackOverride,
-): AnimationTrack {
+function applyTrackOverride(base: AnimationTrack, override: TrackOverride): AnimationTrack {
   const baseProps = base.properties as unknown as Record<string, unknown>;
   const overrideProps = override.properties ?? {};
   const mergedProps: Record<string, unknown> = {
@@ -132,9 +112,9 @@ function applyTrackOverride(
 
   // Deep-merge nested 'from'/'to' objects to preserve per-field overrides (e.g., move.from.x)
   if (
-    typeof baseProps.from === "object" &&
+    typeof baseProps.from === 'object' &&
     baseProps.from !== null &&
-    typeof overrideProps.from === "object" &&
+    typeof overrideProps.from === 'object' &&
     overrideProps.from !== null
   ) {
     mergedProps.from = {
@@ -143,9 +123,9 @@ function applyTrackOverride(
     };
   }
   if (
-    typeof baseProps.to === "object" &&
+    typeof baseProps.to === 'object' &&
     baseProps.to !== null &&
-    typeof overrideProps.to === "object" &&
+    typeof overrideProps.to === 'object' &&
     overrideProps.to !== null
   ) {
     mergedProps.to = {
@@ -167,12 +147,10 @@ function applyTrackOverride(
 
 function pickOverridesForTrack(
   overrides: TrackOverride[] | undefined,
-  track: AnimationTrack,
+  track: AnimationTrack
 ): TrackOverride | undefined {
   if (!overrides || overrides.length === 0) return undefined;
-  const byId = overrides.find(
-    (o) => o.trackId && o.trackId === track.identifier.id,
-  );
+  const byId = overrides.find((o) => o.trackId && o.trackId === track.identifier.id);
   if (byId) return byId;
   return overrides.find((o) => !o.trackId && o.type === track.type);
 }
@@ -186,12 +164,9 @@ function applyTimelineBatchOverridesToTracks(
   objectId: string,
   context: {
     batchKey: string | null;
-    perObjectBatchOverrides?: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    >;
+    perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
     perObjectBoundFields?: Record<string, string[]>;
-  },
+  }
 ): AnimationTrack[] {
   if (!context.perObjectBatchOverrides?.[objectId]) return tracks;
 
@@ -207,7 +182,7 @@ function applyTimelineBatchOverridesToTracks(
 
     // Apply Timeline batch overrides per track type
     switch (track.type) {
-      case "move": {
+      case 'move': {
         const moveProps = updatedProperties as {
           from?: { x: number; y: number };
           to?: { x: number; y: number };
@@ -216,63 +191,63 @@ function applyTimelineBatchOverridesToTracks(
         if (moveProps.from) {
           moveProps.from.x = resolveFieldValue(
             objectId,
-            "Timeline.move.from.x",
+            'Timeline.move.from.x',
             moveProps.from.x,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           moveProps.from.y = resolveFieldValue(
             objectId,
-            "Timeline.move.from.y",
+            'Timeline.move.from.y',
             moveProps.from.y,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
 
         if (moveProps.to) {
           moveProps.to.x = resolveFieldValue(
             objectId,
-            "Timeline.move.to.x",
+            'Timeline.move.to.x',
             moveProps.to.x,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           moveProps.to.y = resolveFieldValue(
             objectId,
-            "Timeline.move.to.y",
+            'Timeline.move.to.y',
             moveProps.to.y,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "rotate": {
+      case 'rotate': {
         const rotateProps = updatedProperties as { from?: number; to?: number };
-        if (typeof rotateProps.from === "number") {
+        if (typeof rotateProps.from === 'number') {
           rotateProps.from = resolveFieldValue(
             objectId,
-            "Timeline.rotate.from",
+            'Timeline.rotate.from',
             rotateProps.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
-        if (typeof rotateProps.to === "number") {
+        if (typeof rotateProps.to === 'number') {
           rotateProps.to = resolveFieldValue(
             objectId,
-            "Timeline.rotate.to",
+            'Timeline.rotate.to',
             rotateProps.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "scale": {
+      case 'scale': {
         const scaleProps = updatedProperties as {
           from?: { x?: number; y?: number } | number;
           to?: { x?: number; y?: number } | number;
@@ -280,90 +255,90 @@ function applyTimelineBatchOverridesToTracks(
         // Normalize to object form then resolve per-axis
         if (scaleProps.from !== undefined) {
           const fromObj =
-            typeof scaleProps.from === "number"
+            typeof scaleProps.from === 'number'
               ? { x: scaleProps.from, y: scaleProps.from }
               : (scaleProps.from ?? {});
           const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.from.x",
+            'Timeline.scale.from.x',
             fromObj.x ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const y = resolveFieldValue(
             objectId,
-            "Timeline.scale.from.y",
+            'Timeline.scale.from.y',
             fromObj.y ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           scaleProps.from = { x, y } as unknown as Point2D;
         }
         if (scaleProps.to !== undefined) {
           const toObj =
-            typeof scaleProps.to === "number"
+            typeof scaleProps.to === 'number'
               ? { x: scaleProps.to, y: scaleProps.to }
               : (scaleProps.to ?? {});
           const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.to.x",
+            'Timeline.scale.to.x',
             toObj.x ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const y = resolveFieldValue(
             objectId,
-            "Timeline.scale.to.y",
+            'Timeline.scale.to.y',
             toObj.y ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           scaleProps.to = { x, y } as unknown as Point2D;
         }
         break;
       }
 
-      case "fade": {
+      case 'fade': {
         const fadeProps = updatedProperties as { from?: number; to?: number };
-        if (typeof fadeProps.from === "number") {
+        if (typeof fadeProps.from === 'number') {
           fadeProps.from = resolveFieldValue(
             objectId,
-            "Timeline.fade.from",
+            'Timeline.fade.from',
             fadeProps.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
-        if (typeof fadeProps.to === "number") {
+        if (typeof fadeProps.to === 'number') {
           fadeProps.to = resolveFieldValue(
             objectId,
-            "Timeline.fade.to",
+            'Timeline.fade.to',
             fadeProps.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "color": {
+      case 'color': {
         const colorProps = updatedProperties as { from?: string; to?: string };
-        if (typeof colorProps.from === "string") {
+        if (typeof colorProps.from === 'string') {
           colorProps.from = resolveFieldValue(
             objectId,
-            "Timeline.color.from",
+            'Timeline.color.from',
             colorProps.from,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
         }
-        if (typeof colorProps.to === "string") {
+        if (typeof colorProps.to === 'string') {
           colorProps.to = resolveFieldValue(
             objectId,
-            "Timeline.color.to",
+            'Timeline.color.to',
             colorProps.to,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
         }
         break;
@@ -386,12 +361,9 @@ export function convertTracksToSceneAnimations(
   // Optional batch override context for Timeline batch overrides
   batchOverrideContext?: {
     batchKey: string | null;
-    perObjectBatchOverrides?: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    >;
+    perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
     perObjectBoundFields?: Record<string, string[]>;
-  },
+  }
 ): SceneAnimationTrack[] {
   // Helper: deep-ish equality for 'from' defaults
   const isDefaultFrom = (type: string, value: unknown): boolean => {
@@ -399,37 +371,27 @@ export function convertTracksToSceneAnimations(
     if (!defaults) return false;
     const def = defaults.from;
     switch (type) {
-      case "move": {
-        if (
-          typeof def === "object" &&
-          def !== null &&
-          "x" in def &&
-          "y" in def
-        ) {
+      case 'move': {
+        if (typeof def === 'object' && def !== null && 'x' in def && 'y' in def) {
           const v = value as Point2D | undefined;
           const d = def as { x: number; y: number };
           return !!v && v.x === d.x && v.y === d.y;
         }
         return false;
       }
-      case "rotate":
-      case "scale": {
-        if (
-          typeof def === "object" &&
-          def !== null &&
-          "x" in def &&
-          "y" in def
-        ) {
+      case 'rotate':
+      case 'scale': {
+        if (typeof def === 'object' && def !== null && 'x' in def && 'y' in def) {
           const v = value as Point2D | undefined;
           const d = def as { x: number; y: number };
           return !!v && v.x === d.x && v.y === d.y;
         }
         return false;
       }
-      case "fade":
-        return typeof def === "number" && value === def;
-      case "color":
-        return typeof def === "string" && value === def;
+      case 'fade':
+        return typeof def === 'number' && value === def;
+      case 'color':
+        return typeof def === 'string' && value === def;
       default:
         return false;
     }
@@ -437,32 +399,25 @@ export function convertTracksToSceneAnimations(
 
   // Helper: get target property for a transform type
   const getTargetProperty = (type: string): string | undefined => {
-    return transformFactory.getTransformDefinition(type)?.metadata
-      ?.targetProperty;
+    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty;
   };
 
   // Helper: compute last value at a given absolute time from prior animations for the same target property
   const getPriorValue = (
     targetProperty: string | undefined,
     atTime: number,
-    currentTrack?: AnimationTrack,
+    currentTrack?: AnimationTrack
   ): unknown => {
     if (!targetProperty) return undefined;
     // Filter animations for this object and same target property
     let relevant = priorAnimations.filter(
-      (a) =>
-        a.objectId === objectId && getTargetProperty(a.type) === targetProperty,
+      (a) => a.objectId === objectId && getTargetProperty(a.type) === targetProperty
     );
 
     // Special-case color: restrict to same fill/stroke property
-    if (
-      currentTrack?.type === "color" &&
-      isColorProperties(currentTrack.properties)
-    ) {
+    if (currentTrack?.type === 'color' && isColorProperties(currentTrack.properties)) {
       const prop = currentTrack.properties.property;
-      relevant = relevant.filter(
-        (a) => a.type === "color" && a.properties.property === prop,
-      );
+      relevant = relevant.filter((a) => a.type === 'color' && a.properties.property === prop);
     }
     if (relevant.length === 0) return undefined;
 
@@ -481,10 +436,7 @@ export function convertTracksToSceneAnimations(
       .sort((a, b) => a.startTime - b.startTime);
     if (sorted.length > 0) {
       const last = sorted[sorted.length - 1]!;
-      return transformEvaluator.evaluateTransform(
-        sceneTrackToTransform(last),
-        atTime,
-      );
+      return transformEvaluator.evaluateTransform(sceneTrackToTransform(last), atTime);
     }
 
     return undefined;
@@ -492,11 +444,7 @@ export function convertTracksToSceneAnimations(
 
   // Apply Timeline batch overrides to tracks if context provided
   const processedTracks = batchOverrideContext
-    ? applyTimelineBatchOverridesToTracks(
-        tracks,
-        objectId,
-        batchOverrideContext,
-      )
+    ? applyTimelineBatchOverridesToTracks(tracks, objectId, batchOverrideContext)
     : tracks;
 
   const sceneTracks: SceneAnimationTrack[] = [];
@@ -509,43 +457,33 @@ export function convertTracksToSceneAnimations(
     // Time calculations - startTime is relative to previous animation end, not baseline
     const effectiveStart =
       priorAnimations.length > 0
-        ? Math.max(...priorAnimations.map((a) => a.startTime + a.duration)) +
-          baseTrack.startTime
+        ? Math.max(...priorAnimations.map((a) => a.startTime + a.duration)) + baseTrack.startTime
         : baselineTime + baseTrack.startTime;
     const properties = {
       ...(baseTrack.properties as unknown as Record<string, unknown>),
     };
 
     // Inheritance logic: auto-resolve unspecified 'from' values
-    const defaultFrom = transformFactory.getDefaultProperties(
-      baseTrack.type,
-    )?.from;
+    const defaultFrom = transformFactory.getDefaultProperties(baseTrack.type)?.from;
     const tryComputeInherited = () =>
-      getPriorValue(
-        getTargetProperty(baseTrack.type),
-        effectiveStart,
-        baseTrack,
-      );
+      getPriorValue(getTargetProperty(baseTrack.type), effectiveStart, baseTrack);
 
     if (defaultFrom !== undefined) {
       const matchedOverride = perObjectAssignments?.[objectId]?.tracks?.find(
         (o: TrackOverride) =>
           (o.trackId && o.trackId === baseTrack.identifier.id) ??
-          (!o.trackId && o.type === baseTrack.type),
+          (!o.trackId && o.type === baseTrack.type)
       );
       const fromExplicitByOverride = !!(
         matchedOverride &&
-        Object.prototype.hasOwnProperty.call(
-          matchedOverride.properties ?? {},
-          "from",
-        )
+        Object.prototype.hasOwnProperty.call(matchedOverride.properties ?? {}, 'from')
       );
 
       // Type-safe property access instead of (baseTrack as any).properties.from
       const trackProps = baseTrack.properties as unknown as TrackProperties;
       const fromIsNonDefault = !isDefaultFrom(
         baseTrack.type,
-        hasFromProperty(trackProps) ? trackProps.from : undefined,
+        hasFromProperty(trackProps) ? trackProps.from : undefined
       );
       const isFromExplicit = fromExplicitByOverride ?? fromIsNonDefault;
 
@@ -580,7 +518,7 @@ export function convertTracksToSceneAnimations(
         properties: properties as unknown as Record<string, unknown>,
       },
       objectId,
-      baselineTime,
+      baselineTime
     );
 
     // Push typed scene animation track with a stable, collision-safe id
@@ -588,7 +526,7 @@ export function convertTracksToSceneAnimations(
     sceneTracks.push({
       id: `${objectId}::${canonicalTrackId}::${effectiveStart}`,
       ...sceneTransform,
-      properties: properties as SceneAnimationTrack["properties"],
+      properties: properties as SceneAnimationTrack['properties'],
     } as SceneAnimationTrack);
   }
 
@@ -606,16 +544,14 @@ function sceneTrackToTransform(track: SceneAnimationTrack): SceneTransform {
   };
 }
 
-export function extractObjectIdsFromInputs(
-  inputs: Array<{ data: unknown }>,
-): string[] {
+export function extractObjectIdsFromInputs(inputs: Array<{ data: unknown }>): string[] {
   const ids: string[] = [];
   for (const input of inputs) {
     const items = Array.isArray(input.data) ? input.data : [input.data];
     for (const item of items) {
-      if (typeof item === "object" && item !== null && "id" in item) {
+      if (typeof item === 'object' && item !== null && 'id' in item) {
         const id = (item as { id: unknown }).id;
-        if (typeof id === "string") {
+        if (typeof id === 'string') {
           ids.push(id);
         }
       }

@@ -1,17 +1,14 @@
 // src/shared/registry/transform-evaluator.ts - Transform evaluator system
-import type { SceneTransform, AnimationValue } from "../types/transforms";
-import type { Point2D } from "../types/core";
-import { transformFactory } from "./transform-factory";
-import {
-  getInterpolator,
-  getInterpolatorForValue,
-} from "./interpolator-registry";
+import type { SceneTransform, AnimationValue } from '../types/transforms';
+import type { Point2D } from '../types/core';
+import { transformFactory } from './transform-factory';
+import { getInterpolator, getInterpolatorForValue } from './interpolator-registry';
 import {
   linear,
   easeInOutCubic,
   easeInCubic,
   easeOutCubic,
-} from "../../animation/core/interpolation";
+} from '../../animation/core/interpolation';
 
 // Easing function registry
 const EASING_REGISTRY = {
@@ -55,31 +52,29 @@ export class TransformEvaluator {
   public getEndValue(transform: SceneTransform): AnimationValue {
     // Prefer explicit 'to' if present
     let endValue = null;
-    if (Object.prototype.hasOwnProperty.call(transform.properties, "to")) {
+    if (Object.prototype.hasOwnProperty.call(transform.properties, 'to')) {
       endValue = transform.properties.to as AnimationValue;
     } else {
       // Fallback: try property schema from definition
-      const definition = transformFactory.getTransformDefinition(
-        transform.type,
-      );
+      const definition = transformFactory.getTransformDefinition(transform.type);
       if (!definition) {
         return null;
       }
-      const toDef = definition.properties.find((p) => p.key === "to");
+      const toDef = definition.properties.find((p) => p.key === 'to');
       if (toDef) {
         endValue = transform.properties[toDef.key] as AnimationValue;
       }
     }
 
     // Special safeguard for scale transforms to prevent zero values
-    if (transform.type === "scale") {
-      if (typeof endValue === "number") {
+    if (transform.type === 'scale') {
+      if (typeof endValue === 'number') {
         endValue = Math.max(endValue, 0.001);
       } else if (
-        typeof endValue === "object" &&
+        typeof endValue === 'object' &&
         endValue !== null &&
-        "x" in (endValue as unknown as Record<string, unknown>) &&
-        "y" in (endValue as unknown as Record<string, unknown>)
+        'x' in (endValue as unknown as Record<string, unknown>) &&
+        'y' in (endValue as unknown as Record<string, unknown>)
       ) {
         const p = endValue as { x: number; y: number };
         endValue = {
@@ -93,20 +88,15 @@ export class TransformEvaluator {
   }
 
   // Interpolate a transform at a specific progress
-  private interpolateTransform(
-    transform: SceneTransform,
-    progress: number,
-  ): AnimationValue {
+  private interpolateTransform(transform: SceneTransform, progress: number): AnimationValue {
     const definition = transformFactory.getTransformDefinition(transform.type);
     if (!definition) {
       return null;
     }
 
     // Generic interpolation: assume standard from/to schema, guided by definition
-    const fromKey =
-      definition.properties.find((p) => p.key === "from")?.key ?? "from";
-    const toKey =
-      definition.properties.find((p) => p.key === "to")?.key ?? "to";
+    const fromKey = definition.properties.find((p) => p.key === 'from')?.key ?? 'from';
+    const toKey = definition.properties.find((p) => p.key === 'to')?.key ?? 'to';
 
     const from = transform.properties[fromKey];
     const to = transform.properties[toKey];
@@ -126,18 +116,18 @@ export class TransformEvaluator {
       let interpolatedValue = interpolator.interpolate(
         from as never,
         to as never,
-        progress,
+        progress
       ) as AnimationValue;
 
       // Special safeguard for scale transforms to prevent zero values
-      if (transform.type === "scale") {
-        if (typeof interpolatedValue === "number") {
+      if (transform.type === 'scale') {
+        if (typeof interpolatedValue === 'number') {
           interpolatedValue = Math.max(interpolatedValue, 0.001);
         } else if (
-          typeof interpolatedValue === "object" &&
+          typeof interpolatedValue === 'object' &&
           interpolatedValue !== null &&
-          "x" in (interpolatedValue as unknown as Record<string, unknown>) &&
-          "y" in (interpolatedValue as unknown as Record<string, unknown>)
+          'x' in (interpolatedValue as unknown as Record<string, unknown>) &&
+          'y' in (interpolatedValue as unknown as Record<string, unknown>)
         ) {
           const p = interpolatedValue as { x: number; y: number };
           interpolatedValue = {
@@ -151,13 +141,12 @@ export class TransformEvaluator {
     }
 
     // Fallback: detect interpolator by runtime value type
-    const runtimeInterpolator =
-      getInterpolatorForValue(to) ?? getInterpolatorForValue(from);
+    const runtimeInterpolator = getInterpolatorForValue(to) ?? getInterpolatorForValue(from);
     if (runtimeInterpolator) {
       return runtimeInterpolator.interpolate(
         from as never,
         to as never,
-        progress,
+        progress
       ) as AnimationValue;
     }
 
@@ -167,16 +156,14 @@ export class TransformEvaluator {
   // Evaluate multiple transforms for an object
   evaluateObjectTransforms(
     transforms: SceneTransform[],
-    time: number,
+    time: number
   ): Map<string, AnimationValue> {
     const results = new Map<string, AnimationValue>();
 
     for (const transform of transforms) {
       const value = this.evaluateTransform(transform, time);
       if (value !== null) {
-        const definition = transformFactory.getTransformDefinition(
-          transform.type,
-        );
+        const definition = transformFactory.getTransformDefinition(transform.type);
         const key = definition?.metadata?.targetProperty ?? transform.type;
         results.set(key, value);
       }
@@ -194,14 +181,12 @@ export class TransformEvaluator {
       rotation?: number;
       scale?: Point2D;
       opacity?: number;
-    },
+    }
   ): Map<string, AnimationValue> {
     const results = new Map<string, AnimationValue>();
 
     // Sort transforms by start time to ensure proper order
-    const sortedTransforms = [...transforms].sort(
-      (a, b) => a.startTime - b.startTime,
-    );
+    const sortedTransforms = [...transforms].sort((a, b) => a.startTime - b.startTime);
 
     // Track accumulated values
     const accumulated: Record<string, AnimationValue> = {
@@ -244,7 +229,7 @@ export class TransformEvaluator {
   private accumulateTransformValue(
     accumulated: Record<string, AnimationValue>,
     transform: SceneTransform,
-    value: AnimationValue,
+    value: AnimationValue
   ): void {
     const definition = transformFactory.getTransformDefinition(transform.type);
     if (!definition?.metadata?.targetProperty) return;
@@ -252,13 +237,8 @@ export class TransformEvaluator {
     const targetProperty = definition.metadata.targetProperty;
 
     switch (targetProperty) {
-      case "position":
-        if (
-          typeof value === "object" &&
-          value !== null &&
-          "x" in value &&
-          "y" in value
-        ) {
+      case 'position':
+        if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
           const point = value as { x: number; y: number };
           accumulated.position = {
             x: point.x,
@@ -266,23 +246,18 @@ export class TransformEvaluator {
           } as unknown as AnimationValue;
         }
         break;
-      case "rotation":
-        if (typeof value === "number") {
+      case 'rotation':
+        if (typeof value === 'number') {
           accumulated.rotation = value;
         }
         break;
-      case "scale":
-        if (typeof value === "number") {
+      case 'scale':
+        if (typeof value === 'number') {
           accumulated.scale = {
             x: value,
             y: value,
           } as unknown as AnimationValue;
-        } else if (
-          typeof value === "object" &&
-          value !== null &&
-          "x" in value &&
-          "y" in value
-        ) {
+        } else if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
           const point = value as { x: number; y: number };
           accumulated.scale = {
             x: point.x,
@@ -290,27 +265,21 @@ export class TransformEvaluator {
           } as unknown as AnimationValue;
         }
         break;
-      case "opacity":
-        if (typeof value === "number") {
+      case 'opacity':
+        if (typeof value === 'number') {
           accumulated.opacity = value;
         }
         break;
-      case "color":
+      case 'color':
         // color accumulation is handled at application time using animation.properties.property
         break;
     }
   }
 
   // Get all transform types that are active at a specific time
-  getActiveTransforms(
-    transforms: SceneTransform[],
-    time: number,
-  ): SceneTransform[] {
+  getActiveTransforms(transforms: SceneTransform[], time: number): SceneTransform[] {
     return transforms.filter((transform) => {
-      return (
-        time >= transform.startTime &&
-        time < transform.startTime + transform.duration
-      );
+      return time >= transform.startTime && time < transform.startTime + transform.duration;
     });
   }
 
@@ -326,10 +295,8 @@ export const transformEvaluator = new TransformEvaluator();
 // Export convenience wrappers to avoid unbound method references
 export const evaluateTransform = (transform: SceneTransform, time: number) =>
   transformEvaluator.evaluateTransform(transform, time);
-export const evaluateObjectTransforms = (
-  transforms: SceneTransform[],
-  time: number,
-) => transformEvaluator.evaluateObjectTransforms(transforms, time);
+export const evaluateObjectTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.evaluateObjectTransforms(transforms, time);
 export const getAccumulatedObjectState = (
   transforms: SceneTransform[],
   time: number,
@@ -338,14 +305,9 @@ export const getAccumulatedObjectState = (
     rotation?: number;
     scale?: Point2D;
     opacity?: number;
-  },
-) =>
-  transformEvaluator.getAccumulatedObjectState(transforms, time, initialState);
-export const getActiveTransforms = (
-  transforms: SceneTransform[],
-  time: number,
-) => transformEvaluator.getActiveTransforms(transforms, time);
-export const hasActiveTransforms = (
-  transforms: SceneTransform[],
-  time: number,
-) => transformEvaluator.hasActiveTransforms(transforms, time);
+  }
+) => transformEvaluator.getAccumulatedObjectState(transforms, time, initialState);
+export const getActiveTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.getActiveTransforms(transforms, time);
+export const hasActiveTransforms = (transforms: SceneTransform[], time: number) =>
+  transformEvaluator.hasActiveTransforms(transforms, time);

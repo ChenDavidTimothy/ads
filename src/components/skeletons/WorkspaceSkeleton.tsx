@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 export function WorkspaceSkeleton() {
   return (
@@ -11,10 +11,7 @@ export function WorkspaceSkeleton() {
           {/* Tabs */}
           <div className="hidden gap-2 md:flex">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-8 w-20 animate-pulse rounded bg-[var(--surface-2)]"
-              />
+              <div key={i} className="h-8 w-20 animate-pulse rounded bg-[var(--surface-2)]" />
             ))}
           </div>
         </div>
@@ -31,10 +28,7 @@ export function WorkspaceSkeleton() {
         <div className="hidden w-64 border-r border-[var(--border-primary)] bg-[var(--surface-1)] p-3 md:block">
           <div className="mb-3 h-8 w-40 animate-pulse rounded bg-[var(--surface-2)]" />
           {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="mb-2 h-7 w-full animate-pulse rounded bg-[var(--surface-2)]"
-            />
+            <div key={i} className="mb-2 h-7 w-full animate-pulse rounded bg-[var(--surface-2)]" />
           ))}
         </div>
 
@@ -43,10 +37,7 @@ export function WorkspaceSkeleton() {
           {/* Toolbar */}
           <div className="flex items-center gap-2 border-b border-[var(--border-primary)] bg-[var(--surface-1)] p-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-8 w-8 animate-pulse rounded bg-[var(--surface-3)]"
-              />
+              <div key={i} className="h-8 w-8 animate-pulse rounded bg-[var(--surface-3)]" />
             ))}
             <div className="ml-auto h-8 w-40 animate-pulse rounded bg-[var(--surface-3)]" />
           </div>
@@ -57,10 +48,7 @@ export function WorkspaceSkeleton() {
               <div className="mx-auto h-[340px] w-[600px] animate-pulse rounded bg-[var(--surface-2)] md:h-[520px] md:w-[880px]" />
               <div className="mx-auto mt-4 grid max-w-[880px] grid-cols-3 gap-2">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-6 animate-pulse rounded bg-[var(--surface-3)]"
-                  />
+                  <div key={i} className="h-6 animate-pulse rounded bg-[var(--surface-3)]" />
                 ))}
               </div>
             </div>
@@ -71,10 +59,7 @@ export function WorkspaceSkeleton() {
             <div className="mb-2 h-4 w-24 animate-pulse rounded bg-[var(--surface-3)]" />
             <div className="grid grid-cols-12 gap-2">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-8 animate-pulse rounded bg-[var(--surface-2)]"
-                />
+                <div key={i} className="h-8 animate-pulse rounded bg-[var(--surface-2)]" />
               ))}
             </div>
           </div>
@@ -84,10 +69,7 @@ export function WorkspaceSkeleton() {
         <div className="hidden w-80 border-l border-[var(--border-primary)] bg-[var(--surface-1)] p-3 lg:block">
           <div className="mb-3 h-8 w-48 animate-pulse rounded bg-[var(--surface-2)]" />
           {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="mb-2 h-7 w-full animate-pulse rounded bg-[var(--surface-2)]"
-            />
+            <div key={i} className="mb-2 h-7 w-full animate-pulse rounded bg-[var(--surface-2)]" />
           ))}
         </div>
       </div>

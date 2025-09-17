@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "./button";
-import Logo from "./logo";
-import { UserProfile } from "@/components/auth/user-profile";
-import { createBrowserClient } from "@/utils/supabase/client";
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from './button';
+import Logo from './logo';
+import { UserProfile } from '@/components/auth/user-profile';
+import { createBrowserClient } from '@/utils/supabase/client';
 
 interface PageHeaderProps {
   /** Whether to show back navigation */
@@ -35,7 +35,7 @@ declare global {
 export function PageHeader({
   showBack = false,
   title,
-  logoClassName = "h-8 w-32",
+  logoClassName = 'h-8 w-32',
   rightNavigation,
 }: PageHeaderProps) {
   const router = useRouter();
@@ -46,7 +46,7 @@ export function PageHeader({
       router.back();
     } else {
       // Fallback to dashboard if no history
-      router.push("/dashboard");
+      router.push('/dashboard');
     }
   };
 
@@ -57,7 +57,7 @@ export function PageHeader({
       const supabase = createBrowserClient();
       const { data } = await supabase.auth.getSession();
       const isAuthed = Boolean(data.session?.user);
-      const target = isAuthed ? defaultHref : "/";
+      const target = isAuthed ? defaultHref : '/';
       route.push(target);
     } catch {
       route.push(defaultHref);
@@ -86,7 +86,7 @@ export function PageHeader({
 
             {/* Logo - Always goes to dashboard */}
             <button
-              onClick={() => void handleLogoClick("/dashboard")}
+              onClick={() => void handleLogoClick('/dashboard')}
               className="flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-80"
             >
               <Logo className={logoClassName} />
@@ -96,17 +96,13 @@ export function PageHeader({
             {title && (
               <>
                 <div className="text-[var(--text-tertiary)]">/</div>
-                <h1 className="text-lg font-semibold text-[var(--text-primary)]">
-                  {title}
-                </h1>
+                <h1 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h1>
               </>
             )}
           </div>
 
           {/* Right Side Navigation */}
-          <div className="flex items-center gap-4">
-            {rightNavigation ?? <UserProfile />}
-          </div>
+          <div className="flex items-center gap-4">{rightNavigation ?? <UserProfile />}</div>
         </div>
       </div>
     </header>

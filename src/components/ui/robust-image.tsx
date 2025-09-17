@@ -1,17 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useCallback } from "react";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
-import { ImageOff } from "lucide-react";
+import { useState, useCallback } from 'react';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+import { ImageOff } from 'lucide-react';
 
-export type RobustImageVariant = "thumbnail" | "avatar" | "preview" | "asset";
+export type RobustImageVariant = 'thumbnail' | 'avatar' | 'preview' | 'asset';
 
 export interface RobustImageProps
-  extends Omit<
-    React.ComponentProps<typeof Image>,
-    "src" | "alt" | "className"
-  > {
+  extends Omit<React.ComponentProps<typeof Image>, 'src' | 'alt' | 'className'> {
   src: string;
   alt: string;
   className?: string;
@@ -29,13 +26,13 @@ export interface RobustImageProps
 
 const BLUR_DATA_URLS = {
   thumbnail:
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+',
   avatar:
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI0YzQzRDNEiLz48L3N2Zz4=",
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI0YzQzRDNEiLz48L3N2Zz4=',
   preview:
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+',
   asset:
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+",
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRjNGNEY2Ii8+PC9zdmc+',
 } as const;
 
 function getDefaultDimensions(variant: RobustImageVariant): {
@@ -43,13 +40,13 @@ function getDefaultDimensions(variant: RobustImageVariant): {
   height: number;
 } {
   switch (variant) {
-    case "thumbnail":
+    case 'thumbnail':
       return { width: 200, height: 200 };
-    case "avatar":
+    case 'avatar':
       return { width: 40, height: 40 };
-    case "preview":
+    case 'preview':
       return { width: 800, height: 600 };
-    case "asset":
+    case 'asset':
       return { width: 48, height: 48 };
     default:
       return { width: 200, height: 200 };
@@ -60,19 +57,19 @@ function renderFallback(
   variant: RobustImageVariant,
   fallbackText?: string,
   initials?: string,
-  className?: string,
+  className?: string
 ) {
-  const baseClasses = "flex items-center justify-center bg-[var(--surface-2)]";
+  const baseClasses = 'flex items-center justify-center bg-[var(--surface-2)]';
 
   switch (variant) {
-    case "avatar":
+    case 'avatar':
       if (initials) {
         return (
           <div
             className={cn(
               baseClasses,
-              "bg-[var(--accent-primary)] text-xs font-medium text-[var(--text-on-accent)]",
-              className,
+              'bg-[var(--accent-primary)] text-xs font-medium text-[var(--text-on-accent)]',
+              className
             )}
           >
             {initials}
@@ -85,18 +82,18 @@ function renderFallback(
         </div>
       );
 
-    case "preview":
+    case 'preview':
       return (
         <div
           className={cn(
             baseClasses,
-            "flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--border-primary)]",
-            className,
+            'flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--border-primary)]',
+            className
           )}
         >
           <ImageOff size={24} className="text-[var(--text-tertiary)]" />
           <span className="text-xs text-[var(--text-tertiary)]">
-            {fallbackText ?? "Failed to load image"}
+            {fallbackText ?? 'Failed to load image'}
           </span>
         </div>
       );
@@ -114,7 +111,7 @@ export function RobustImage({
   src,
   alt,
   className,
-  variant = "thumbnail",
+  variant = 'thumbnail',
   width,
   height,
   showLoadingState = true,
@@ -136,7 +133,7 @@ export function RobustImage({
       console.warn(`[RobustImage] Failed to load ${variant}: ${src}`);
       onError?.(e);
     },
-    [src, variant, onError],
+    [src, variant, onError]
   );
 
   const handleLoadingComplete = useCallback(
@@ -145,12 +142,11 @@ export function RobustImage({
       setHasError(false);
       onLoadingComplete?.(img);
     },
-    [onLoadingComplete],
+    [onLoadingComplete]
   );
 
   // Use provided dimensions or defaults
-  const dimensions =
-    width && height ? { width, height } : getDefaultDimensions(variant);
+  const dimensions = width && height ? { width, height } : getDefaultDimensions(variant);
 
   if (hasError) {
     return renderFallback(variant, fallbackText, initials, className);
@@ -165,8 +161,8 @@ export function RobustImage({
       fill={fill}
       className={cn(
         className,
-        showLoadingState && isLoading ? "opacity-0" : "opacity-100",
-        "transition-opacity duration-200",
+        showLoadingState && isLoading ? 'opacity-0' : 'opacity-100',
+        'transition-opacity duration-200'
       )}
       onError={handleError}
       onLoadingComplete={handleLoadingComplete}
@@ -180,11 +176,11 @@ export function RobustImage({
   if (showLoadingState && isLoading) {
     return (
       <div className="relative">
-        {variant === "avatar" ? (
+        {variant === 'avatar' ? (
           <div
             className={cn(
-              "absolute inset-0 flex items-center justify-center rounded-full bg-[var(--surface-2)]",
-              className,
+              'absolute inset-0 flex items-center justify-center rounded-full bg-[var(--surface-2)]',
+              className
             )}
           >
             <div className="h-4 w-4 animate-pulse rounded-full bg-[var(--text-tertiary)]" />
@@ -192,8 +188,8 @@ export function RobustImage({
         ) : (
           <div
             className={cn(
-              "absolute inset-0 flex items-center justify-center bg-[var(--surface-2)]",
-              className,
+              'absolute inset-0 flex items-center justify-center bg-[var(--surface-2)]',
+              className
             )}
           >
             <div className="h-4 w-4 animate-pulse rounded-full bg-[var(--text-tertiary)]" />

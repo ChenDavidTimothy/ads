@@ -1,16 +1,16 @@
-﻿import { describe, expect, it } from "vitest";
-import { createAssetUploadService } from "../upload-service";
-import { AssetsServiceError } from "../errors";
+﻿import { describe, expect, it } from 'vitest';
+import { createAssetUploadService } from '../upload-service';
+import { AssetsServiceError } from '../errors';
 import type {
   DatabaseResponse,
   DatabaseUserAsset,
   StorageResponse,
   SupabaseClientLike,
-} from "../types";
-import type { QuotaService } from "../quota-service";
+} from '../types';
+import type { QuotaService } from '../quota-service';
 
 const baseQuota = {
-  user_id: "user-1",
+  user_id: 'user-1',
   current_usage_bytes: 0,
   quota_limit_bytes: 1000,
   image_count: 0,
@@ -18,8 +18,8 @@ const baseQuota = {
   updated_at: new Date().toISOString(),
 };
 
-describe("createAssetUploadService", () => {
-  it("prepares upload and pre-registers asset", async () => {
+describe('createAssetUploadService', () => {
+  it('prepares upload and pre-registers asset', async () => {
     const recordedBuckets: string[] = [];
     const recordedPaths: string[] = [];
     const insertedRecords: Array<Record<string, unknown>> = [];
@@ -32,7 +32,7 @@ describe("createAssetUploadService", () => {
             async createSignedUploadUrl(path: string) {
               recordedPaths.push(path);
               const response: DatabaseResponse<StorageResponse> = {
-                data: { signedUrl: "https://upload" },
+                data: { signedUrl: 'https://upload' },
                 error: null,
               };
               return response;
@@ -41,7 +41,7 @@ describe("createAssetUploadService", () => {
         },
       },
       from(table: string) {
-        if (table !== "user_assets") {
+        if (table !== 'user_assets') {
           throw new Error(`Unexpected table ${table}`);
         }
         return {
@@ -53,53 +53,51 @@ describe("createAssetUploadService", () => {
       },
     } as unknown as SupabaseClientLike;
 
-    const quotaCalls: Array<{ type: "get" | "update"; userId: string }> = [];
+    const quotaCalls: Array<{ type: 'get' | 'update'; userId: string }> = [];
     const quotaService: QuotaService = {
       async getOrCreateUserQuota(userId) {
-        quotaCalls.push({ type: "get", userId });
+        quotaCalls.push({ type: 'get', userId });
         return baseQuota;
       },
       async updateUserQuota({ userId }) {
-        quotaCalls.push({ type: "update", userId });
+        quotaCalls.push({ type: 'update', userId });
       },
     };
 
     const service = createAssetUploadService({
       supabase,
       quotaService,
-      generateId: () => "asset-1234",
-      now: () => new Date("2024-01-01T00:00:00.000Z"),
+      generateId: () => 'asset-1234',
+      now: () => new Date('2024-01-01T00:00:00.000Z'),
     });
 
     const result = await service.prepareUpload({
-      userId: "user-1",
+      userId: 'user-1',
       input: {
-        filename: "photo.png",
-        mimeType: "image/png",
+        filename: 'photo.png',
+        mimeType: 'image/png',
         fileSize: 100,
       },
     });
 
     expect(result).toEqual({
-      assetId: "asset-1234",
-      uploadUrl: "https://upload",
-      expiresAt: "2024-01-01T01:00:00.000Z",
+      assetId: 'asset-1234',
+      uploadUrl: 'https://upload',
+      expiresAt: '2024-01-01T01:00:00.000Z',
     });
-    expect(quotaCalls).toEqual([
-      { type: "get", userId: "user-1" },
-    ]);
-    expect(recordedBuckets).toEqual(["images"]);
-    expect(recordedPaths).toEqual(["user-1/upl_asset1234/asset-1234.png"]);
+    expect(quotaCalls).toEqual([{ type: 'get', userId: 'user-1' }]);
+    expect(recordedBuckets).toEqual(['images']);
+    expect(recordedPaths).toEqual(['user-1/upl_asset1234/asset-1234.png']);
     expect(insertedRecords).toHaveLength(1);
   });
 
-  it("throws on unsupported mime type", async () => {
+  it('throws on unsupported mime type', async () => {
     const quotaService: QuotaService = {
       async getOrCreateUserQuota() {
-        throw new Error("should not be called");
+        throw new Error('should not be called');
       },
       async updateUserQuota() {
-        throw new Error("should not be called");
+        throw new Error('should not be called');
       },
     };
 
@@ -110,27 +108,27 @@ describe("createAssetUploadService", () => {
 
     await expect(
       service.prepareUpload({
-        userId: "user-1",
+        userId: 'user-1',
         input: {
-          filename: "file.xyz",
-          mimeType: "application/unknown",
+          filename: 'file.xyz',
+          mimeType: 'application/unknown',
           fileSize: 1,
         },
-      }),
+      })
     ).rejects.toBeInstanceOf(AssetsServiceError);
   });
 
-  it("confirms upload, updates quota, and stores metadata", async () => {
+  it('confirms upload, updates quota, and stores metadata', async () => {
     const asset: DatabaseUserAsset = {
-      id: "asset-1",
-      user_id: "user-1",
-      filename: "asset-1.png",
-      original_name: "asset-1.png",
+      id: 'asset-1',
+      user_id: 'user-1',
+      filename: 'asset-1.png',
+      original_name: 'asset-1.png',
       file_size: 200,
-      mime_type: "image/png",
-      bucket_name: "images",
-      storage_path: "user-1/upl_asset1/asset-1.png",
-      asset_type: "uploaded",
+      mime_type: 'image/png',
+      bucket_name: 'images',
+      storage_path: 'user-1/upl_asset1/asset-1.png',
+      asset_type: 'uploaded',
       metadata: {},
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -142,7 +140,7 @@ describe("createAssetUploadService", () => {
 
     const userAssetsTable = {
       select(columns: string) {
-        if (columns !== "*") {
+        if (columns !== '*') {
           throw new Error(`Unexpected columns ${columns}`);
         }
         return {
@@ -170,10 +168,14 @@ describe("createAssetUploadService", () => {
       },
     };
 
-    const storageRequests: Array<{ bucket: string; path: string; expiresIn: number }> = [];
+    const storageRequests: Array<{
+      bucket: string;
+      path: string;
+      expiresIn: number;
+    }> = [];
     const supabase = {
       from(table: string) {
-        if (table !== "user_assets") {
+        if (table !== 'user_assets') {
           throw new Error(`Unexpected table ${table}`);
         }
         return userAssetsTable;
@@ -184,7 +186,7 @@ describe("createAssetUploadService", () => {
             async createSignedUrl(path: string, expiresIn: number) {
               storageRequests.push({ bucket, path, expiresIn });
               const response: DatabaseResponse<StorageResponse> = {
-                data: { signedUrl: "https://signed" },
+                data: { signedUrl: 'https://signed' },
                 error: null,
               };
               return response;
@@ -201,24 +203,24 @@ describe("createAssetUploadService", () => {
       },
       async updateUserQuota({ fileSize, mimeType, userId }) {
         quotaUpdates.push({ fileSize, mimeType });
-        if (userId !== "user-1") {
-          throw new Error("unexpected user");
+        if (userId !== 'user-1') {
+          throw new Error('unexpected user');
         }
       },
     };
 
     const fetchCalls: string[] = [];
     const formatRequestInfo = (input: RequestInfo | URL): string => {
-      if (typeof input === "string") {
+      if (typeof input === 'string') {
         return input;
       }
       if (input instanceof URL) {
         return input.toString();
       }
-      if (typeof Request !== "undefined" && input instanceof Request) {
+      if (typeof Request !== 'undefined' && input instanceof Request) {
         return input.url;
       }
-      return "[unknown request]";
+      return '[unknown request]';
     };
     const fetchImpl = async (input: RequestInfo | URL) => {
       fetchCalls.push(formatRequestInfo(input));
@@ -239,35 +241,33 @@ describe("createAssetUploadService", () => {
     });
 
     const response = await service.confirmUpload({
-      userId: "user-1",
+      userId: 'user-1',
       input: {
-        assetId: "asset-1",
-        originalName: "asset-1.png",
+        assetId: 'asset-1',
+        originalName: 'asset-1.png',
         fileSize: 200,
-        mimeType: "image/png",
-        assetType: "uploaded",
+        mimeType: 'image/png',
+        assetType: 'uploaded',
         metadata: {},
       },
     });
 
     expect(response).toEqual({ success: true });
     expect(selectCalls).toEqual([
-      { column: "id", value: "asset-1" },
-      { column: "user_id", value: "user-1" },
+      { column: 'id', value: 'asset-1' },
+      { column: 'user_id', value: 'user-1' },
     ]);
     expect(storageRequests).toEqual([
-      { bucket: "images", path: "user-1/upl_asset1/asset-1.png", expiresIn: 300 },
+      {
+        bucket: 'images',
+        path: 'user-1/upl_asset1/asset-1.png',
+        expiresIn: 300,
+      },
     ]);
-    expect(fetchCalls).toEqual(["https://signed"]);
+    expect(fetchCalls).toEqual(['https://signed']);
     expect(metadataProbeCalls).toBe(1);
-    expect(updateRecords).toEqual([
-      { image_width: 100, image_height: 50 },
-    ]);
-    expect(updateWhere).toEqual([
-      { column: "id", value: "asset-1" },
-    ]);
-    expect(quotaUpdates).toEqual([
-      { fileSize: 200, mimeType: "image/png" },
-    ]);
+    expect(updateRecords).toEqual([{ image_width: 100, image_height: 50 }]);
+    expect(updateWhere).toEqual([{ column: 'id', value: 'asset-1' }]);
+    expect(quotaUpdates).toEqual([{ fileSize: 200, mimeType: 'image/png' }]);
   });
 });

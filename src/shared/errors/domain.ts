@@ -1,25 +1,25 @@
 // src/shared/errors/domain.ts
 
 export type DomainErrorCode =
-  | "ERR_SCENE_REQUIRED"
-  | "ERR_TOO_MANY_SCENES"
-  | "ERR_CIRCULAR_DEPENDENCY"
-  | "ERR_INVALID_CONNECTION"
-  | "ERR_NODE_VALIDATION_FAILED"
-  | "ERR_SCENE_VALIDATION_FAILED"
-  | "ERR_MISSING_INSERT_CONNECTION"
-  | "ERR_MULTIPLE_INSERT_CONNECTIONS"
-  | "ERR_MULTIPLE_INSERT_NODES_IN_SERIES"
-  | "ERR_DUPLICATE_OBJECT_IDS"
-  | "ERR_UNKNOWN_NODE_TYPE"
-  | "ERR_USER_JOB_LIMIT"
-  | "ERR_NO_VALID_SCENES"
-  | "ERR_MULTIPLE_RESULT_VALUES"
-  | "ERR_DUPLICATE_NODE_ERROR"
-  | "ERR_DUPLICATE_COUNT_EXCEEDED"
-  | "ERR_BATCH_EMPTY_KEY"
-  | "ERR_SCENE_BATCH_EMPTY_KEYS"
-  | "ERR_BATCH_MULTIPLE_IN_PATH";
+  | 'ERR_SCENE_REQUIRED'
+  | 'ERR_TOO_MANY_SCENES'
+  | 'ERR_CIRCULAR_DEPENDENCY'
+  | 'ERR_INVALID_CONNECTION'
+  | 'ERR_NODE_VALIDATION_FAILED'
+  | 'ERR_SCENE_VALIDATION_FAILED'
+  | 'ERR_MISSING_INSERT_CONNECTION'
+  | 'ERR_MULTIPLE_INSERT_CONNECTIONS'
+  | 'ERR_MULTIPLE_INSERT_NODES_IN_SERIES'
+  | 'ERR_DUPLICATE_OBJECT_IDS'
+  | 'ERR_UNKNOWN_NODE_TYPE'
+  | 'ERR_USER_JOB_LIMIT'
+  | 'ERR_NO_VALID_SCENES'
+  | 'ERR_MULTIPLE_RESULT_VALUES'
+  | 'ERR_DUPLICATE_NODE_ERROR'
+  | 'ERR_DUPLICATE_COUNT_EXCEEDED'
+  | 'ERR_BATCH_EMPTY_KEY'
+  | 'ERR_SCENE_BATCH_EMPTY_KEYS'
+  | 'ERR_BATCH_MULTIPLE_IN_PATH';
 
 export interface DomainErrorDetails {
   nodeId?: string;
@@ -44,10 +44,10 @@ export class DomainError extends Error {
     message: string,
     code: DomainErrorCode,
     details?: DomainErrorDetails,
-    isUserError = true,
+    isUserError = true
   ) {
     super(message);
-    this.name = "DomainError";
+    this.name = 'DomainError';
     this.code = code;
     this.details = details;
     this.isUserError = isUserError;
@@ -56,8 +56,8 @@ export class DomainError extends Error {
 
 export class SceneRequiredError extends DomainError {
   constructor() {
-    super("Scene node is required", "ERR_SCENE_REQUIRED");
-    this.name = "SceneRequiredError";
+    super('Scene node is required', 'ERR_SCENE_REQUIRED');
+    this.name = 'SceneRequiredError';
   }
 }
 
@@ -66,47 +66,44 @@ export class TooManyScenesError extends DomainError {
     const message =
       currentCount && maxAllowed
         ? `Too many scene nodes: ${currentCount} found, maximum ${maxAllowed} allowed`
-        : "Too many scene nodes in workspace";
+        : 'Too many scene nodes in workspace';
 
-    super(message, "ERR_TOO_MANY_SCENES", {
+    super(message, 'ERR_TOO_MANY_SCENES', {
       info: { currentCount, maxAllowed },
     });
-    this.name = "TooManyScenesError";
+    this.name = 'TooManyScenesError';
   }
 }
 
 export class CircularDependencyError extends DomainError {
   constructor() {
-    super(
-      "Circular dependency detected in node graph",
-      "ERR_CIRCULAR_DEPENDENCY",
-    );
-    this.name = "CircularDependencyError";
+    super('Circular dependency detected in node graph', 'ERR_CIRCULAR_DEPENDENCY');
+    this.name = 'CircularDependencyError';
   }
 }
 
 export class InvalidConnectionError extends DomainError {
   constructor(message: string, details?: DomainErrorDetails) {
-    super(message, "ERR_INVALID_CONNECTION", details);
-    this.name = "InvalidConnectionError";
+    super(message, 'ERR_INVALID_CONNECTION', details);
+    this.name = 'InvalidConnectionError';
   }
 }
 
 export class NodeValidationError extends DomainError {
   constructor(errors: string[]) {
-    super("Node validation failed", "ERR_NODE_VALIDATION_FAILED", {
+    super('Node validation failed', 'ERR_NODE_VALIDATION_FAILED', {
       info: { errors },
     });
-    this.name = "NodeValidationError";
+    this.name = 'NodeValidationError';
   }
 }
 
 export class SceneValidationError extends DomainError {
   constructor(errors: string[]) {
-    super("Scene validation failed", "ERR_SCENE_VALIDATION_FAILED", {
+    super('Scene validation failed', 'ERR_SCENE_VALIDATION_FAILED', {
       info: { errors },
     });
-    this.name = "SceneValidationError";
+    this.name = 'SceneValidationError';
   }
 }
 
@@ -114,21 +111,21 @@ export class MissingInsertConnectionError extends DomainError {
   constructor(nodeName: string, nodeId: string) {
     super(
       `Geometry node ${nodeName} must connect to an Insert node (directly or through Filter nodes) to appear in the scene.`,
-      "ERR_MISSING_INSERT_CONNECTION",
-      { nodeId, nodeName },
+      'ERR_MISSING_INSERT_CONNECTION',
+      { nodeId, nodeName }
     );
-    this.name = "MissingInsertConnectionError";
+    this.name = 'MissingInsertConnectionError';
   }
 }
 
 export class MultipleInsertNodesInSeriesError extends DomainError {
   constructor(insertNodeNames: string[], pathDescription: string) {
     super(
-      `Multiple Insert nodes detected in series along path: ${pathDescription}. Insert nodes: ${insertNodeNames.join(" → ")}. Only one Insert node per path is allowed as objects can only have one appearance time.`,
-      "ERR_MULTIPLE_INSERT_NODES_IN_SERIES",
-      { insertNodeNames, pathDescription },
+      `Multiple Insert nodes detected in series along path: ${pathDescription}. Insert nodes: ${insertNodeNames.join(' → ')}. Only one Insert node per path is allowed as objects can only have one appearance time.`,
+      'ERR_MULTIPLE_INSERT_NODES_IN_SERIES',
+      { insertNodeNames, pathDescription }
     );
-    this.name = "MultipleInsertNodesInSeriesError";
+    this.name = 'MultipleInsertNodesInSeriesError';
   }
 }
 
@@ -136,22 +133,17 @@ export class DuplicateObjectIdsError extends DomainError {
   constructor(nodeName: string, nodeId: string, duplicateIds: string[]) {
     super(
       `Node ${nodeName} receives duplicate object IDs. Use a Merge node to combine identical objects.`,
-      "ERR_DUPLICATE_OBJECT_IDS",
-      { nodeId, nodeName, duplicateIds },
+      'ERR_DUPLICATE_OBJECT_IDS',
+      { nodeId, nodeName, duplicateIds }
     );
-    this.name = "DuplicateObjectIdsError";
+    this.name = 'DuplicateObjectIdsError';
   }
 }
 
 export class UnknownNodeTypeError extends DomainError {
   constructor(nodeType: string) {
-    super(
-      `Unknown node type: ${nodeType}`,
-      "ERR_UNKNOWN_NODE_TYPE",
-      { info: { nodeType } },
-      false,
-    );
-    this.name = "UnknownNodeTypeError";
+    super(`Unknown node type: ${nodeType}`, 'ERR_UNKNOWN_NODE_TYPE', { info: { nodeType } }, false);
+    this.name = 'UnknownNodeTypeError';
   }
 }
 
@@ -159,28 +151,28 @@ export class UserJobLimitError extends DomainError {
   constructor(currentJobs: number, maxJobs: number) {
     super(
       `Maximum ${maxJobs} concurrent render jobs per user (currently: ${currentJobs})`,
-      "ERR_USER_JOB_LIMIT",
-      { info: { currentJobs, maxJobs } },
+      'ERR_USER_JOB_LIMIT',
+      { info: { currentJobs, maxJobs } }
     );
-    this.name = "UserJobLimitError";
+    this.name = 'UserJobLimitError';
   }
 }
 
 export class NoValidScenesError extends DomainError {
   constructor() {
-    super("No scenes received valid data", "ERR_NO_VALID_SCENES");
-    this.name = "NoValidScenesError";
+    super('No scenes received valid data', 'ERR_NO_VALID_SCENES');
+    this.name = 'NoValidScenesError';
   }
 }
 
 export class MultipleResultValuesError extends DomainError {
   constructor(nodeName: string, sourceNames: string[]) {
     super(
-      `Result node "${nodeName}" received multiple values: [${sourceNames.join(", ")}]. Use conditional logic to ensure only one path executes.`,
-      "ERR_MULTIPLE_RESULT_VALUES",
-      { nodeName, info: { sourceNames } },
+      `Result node "${nodeName}" received multiple values: [${sourceNames.join(', ')}]. Use conditional logic to ensure only one path executes.`,
+      'ERR_MULTIPLE_RESULT_VALUES',
+      { nodeName, info: { sourceNames } }
     );
-    this.name = "MultipleResultValuesError";
+    this.name = 'MultipleResultValuesError';
   }
 }
 
@@ -189,35 +181,30 @@ export class DuplicateNodeError extends DomainError {
     public readonly nodeId: string,
     public readonly nodeDisplayName: string,
     message: string,
-    public readonly details?: Record<string, unknown>,
+    public readonly details?: Record<string, unknown>
   ) {
     super(
       `Duplicate node '${nodeDisplayName}' (${nodeId}): ${message}`,
-      "ERR_DUPLICATE_NODE_ERROR",
+      'ERR_DUPLICATE_NODE_ERROR',
       {
         nodeId,
         nodeName: nodeDisplayName,
         info: details,
-      },
+      }
     );
-    this.name = "DuplicateNodeError";
+    this.name = 'DuplicateNodeError';
   }
 }
 
 export class DuplicateCountExceededError extends DuplicateNodeError {
-  constructor(
-    nodeId: string,
-    nodeDisplayName: string,
-    requestedCount: number,
-    maxCount: number,
-  ) {
+  constructor(nodeId: string, nodeDisplayName: string, requestedCount: number, maxCount: number) {
     super(
       nodeId,
       nodeDisplayName,
       `Requested count ${requestedCount} exceeds maximum ${maxCount}`,
-      { requestedCount, maxCount },
+      { requestedCount, maxCount }
     );
-    this.name = "DuplicateCountExceededError";
+    this.name = 'DuplicateCountExceededError';
   }
 }
 
@@ -226,15 +213,15 @@ export class BatchEmptyKeyError extends DomainError {
     const maxDisplay = 20;
     const displayedIds = objectIds.slice(0, maxDisplay);
     const remainingCount = objectIds.length - maxDisplay;
-    const remainingText = remainingCount > 0 ? ` …+${remainingCount} more` : "";
-    const objectIdsText = displayedIds.join(", ") + remainingText;
+    const remainingText = remainingCount > 0 ? ` …+${remainingCount} more` : '';
+    const objectIdsText = displayedIds.join(', ') + remainingText;
 
     super(
       `Batch node '${nodeName}' received objects with empty keys: [${objectIdsText}]`,
-      "ERR_BATCH_EMPTY_KEY",
-      { nodeId, nodeName, objectIds },
+      'ERR_BATCH_EMPTY_KEY',
+      { nodeId, nodeName, objectIds }
     );
-    this.name = "BatchEmptyKeyError";
+    this.name = 'BatchEmptyKeyError';
   }
 }
 
@@ -242,18 +229,16 @@ export class SceneBatchEmptyKeysError extends DomainError {
   constructor(sceneName: string, sceneId: string) {
     super(
       `Scene '${sceneName}' contains batched objects but no batch keys were found. Ensure batch nodes are properly configured.`,
-      "ERR_SCENE_BATCH_EMPTY_KEYS",
-      { nodeId: sceneId, nodeName: sceneName },
+      'ERR_SCENE_BATCH_EMPTY_KEYS',
+      { nodeId: sceneId, nodeName: sceneName }
     );
-    this.name = "SceneBatchEmptyKeysError";
+    this.name = 'SceneBatchEmptyKeysError';
   }
 }
 
 export function isDomainError(error: unknown): error is DomainError {
   if (error instanceof DomainError) return true;
-  if (typeof error !== "object" || error === null) return false;
+  if (typeof error !== 'object' || error === null) return false;
   const maybe = error as { code?: unknown; isUserError?: unknown };
-  return (
-    typeof maybe.code === "string" && typeof maybe.isUserError === "boolean"
-  );
+  return typeof maybe.code === 'string' && typeof maybe.isUserError === 'boolean';
 }

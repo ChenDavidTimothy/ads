@@ -1,13 +1,13 @@
 // src/components/workspace/flow/components/right-sidebar.tsx
-import React, { memo } from "react";
-import type { Edge, Node } from "reactflow";
-import { Play, Settings, Folder } from "lucide-react";
-import { PropertyPanel } from "@/components/workspace/property-panel";
-import { CollapsibleSection } from "./collapsible-section";
-import { PreviewPanel } from "./preview-panel";
-import { AssetsPanel } from "./assets-panel";
-import type { NodeData } from "@/shared/types";
-import type { FlowTracker } from "@/lib/flow/flow-tracking";
+import React, { memo } from 'react';
+import type { Edge, Node } from 'reactflow';
+import { Play, Settings, Folder } from 'lucide-react';
+import { PropertyPanel } from '@/components/workspace/property-panel';
+import { CollapsibleSection } from './collapsible-section';
+import { PreviewPanel } from './preview-panel';
+import { AssetsPanel } from './assets-panel';
+import type { NodeData } from '@/shared/types';
+import type { FlowTracker } from '@/lib/flow/flow-tracking';
 
 // SURGICAL FIX: Memoize PropertyPanel to prevent re-renders during drag
 const MemoizedPropertyPanel = memo(PropertyPanel, (prevProps, nextProps) => {
@@ -24,7 +24,7 @@ interface VideoJob {
   jobId: string;
   sceneName: string;
   sceneId: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   videoUrl?: string;
   error?: string;
 }
@@ -33,7 +33,7 @@ interface ImageJob {
   jobId: string;
   frameName: string;
   frameId: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   imageUrl?: string;
   error?: string;
 }
@@ -72,7 +72,7 @@ export function RightSidebar({
   images = [],
 }: Props) {
   const hasPreviewContent = Boolean(
-    !!videoUrl || videos.length > 0 || !!imageUrl || images.length > 0,
+    !!videoUrl || videos.length > 0 || !!imageUrl || images.length > 0
   );
 
   return (
@@ -113,12 +113,7 @@ export function RightSidebar({
         defaultExpanded={hasPreviewContent}
         persistKey="preview"
       >
-        <PreviewPanel
-          videoUrl={videoUrl}
-          videos={videos}
-          imageUrl={imageUrl}
-          images={images}
-        />
+        <PreviewPanel videoUrl={videoUrl} videos={videos} imageUrl={imageUrl} images={images} />
       </CollapsibleSection>
 
       {/* Assets Section */}

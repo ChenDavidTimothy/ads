@@ -1,5 +1,5 @@
 // src/shared/types/core.ts
-import type { CanvasRenderingContext2D as NodeCanvasCtx } from "canvas";
+import type { CanvasRenderingContext2D as NodeCanvasCtx } from 'canvas';
 
 export interface Point2D {
   x: number;

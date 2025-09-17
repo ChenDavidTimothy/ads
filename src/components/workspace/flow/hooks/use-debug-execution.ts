@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
-import { api } from "@/trpc/react";
-import { useNotifications } from "@/hooks/use-notifications";
-import type { NodeData } from "@/shared/types";
-import { logger } from "@/lib/logger";
+import { useCallback, useState } from 'react';
+import { api } from '@/trpc/react';
+import { useNotifications } from '@/hooks/use-notifications';
+import type { NodeData } from '@/shared/types';
+import { logger } from '@/lib/logger';
 
 // Minimal local types to avoid dependency on reactflow types at build time
 type RFEdge = {
@@ -30,20 +30,18 @@ interface DebugResult {
 }
 
 export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
-  const [debugResults, setDebugResults] = useState<Map<string, DebugResult[]>>(
-    new Map(),
-  );
+  const [debugResults, setDebugResults] = useState<Map<string, DebugResult[]>>(new Map());
   const { toast } = useNotifications();
 
   const debugToNode = api.animation.debugToNode.useMutation({
     onSuccess: (data) => {
       // Handle failed debug execution with validation errors
       if (!data.success && data.error) {
-        toast.error("Debug validation failed", data.error);
+        toast.error('Debug validation failed', data.error);
         if (data.suggestions && data.suggestions.length > 0) {
           // Show suggestions as additional info
           setTimeout(() => {
-            toast.info("Suggestions", data.suggestions.join(" • "));
+            toast.info('Suggestions', data.suggestions.join(' • '));
           }, 1000);
         }
         return;
@@ -54,7 +52,7 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           const newResults = new Map(prevResults);
 
           data.debugLogs.forEach((log) => {
-            if (log.data && typeof log.data === "object" && log.data !== null) {
+            if (log.data && typeof log.data === 'object' && log.data !== null) {
               const logData = log.data as {
                 type?: string;
                 value?: unknown;
@@ -67,10 +65,10 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                   inputCount?: number;
                 };
               };
-              if (logData.type === "result_output") {
+              if (logData.type === 'result_output') {
                 const newEntry: DebugResult = {
                   value: logData.value,
-                  type: logData.valueType ?? "unknown",
+                  type: logData.valueType ?? 'unknown',
                   timestamp: log.timestamp,
                   executionId: logData.executionContext?.executionId,
                   flowState: logData.executionContext?.flowState,
@@ -86,13 +84,12 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
                   (existing) =>
                     existing.timestamp === newEntry.timestamp &&
                     existing.executionId === newEntry.executionId &&
-                    JSON.stringify(existing.value) ===
-                      JSON.stringify(newEntry.value),
+                    JSON.stringify(existing.value) === JSON.stringify(newEntry.value)
                 );
 
                 if (!isDuplicate) {
                   const updatedResults = [...existingResults, newEntry].sort(
-                    (a, b) => a.timestamp - b.timestamp,
+                    (a, b) => a.timestamp - b.timestamp
                   );
                   newResults.set(log.nodeId, updatedResults);
                 }
@@ -103,18 +100,15 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
           return newResults;
         });
 
-        toast.success(
-          `Debug execution completed - ${data.debugLogs.length} output(s) captured`,
-        );
+        toast.success(`Debug execution completed - ${data.debugLogs.length} output(s) captured`);
       } else {
-        toast.info("Debug completed", "No output from result nodes");
+        toast.info('Debug completed', 'No output from result nodes');
       }
     },
     onError: (error) => {
-      logger.errorWithStack("Debug execution failed", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Debug execution failed";
-      toast.error("Debug failed", errorMessage);
+      logger.errorWithStack('Debug execution failed', error);
+      const errorMessage = error instanceof Error ? error.message : 'Debug execution failed';
+      toast.error('Debug failed', errorMessage);
     },
   });
 
@@ -146,24 +140,22 @@ export function useDebugExecution(nodes: RFNode<NodeData>[], edges: RFEdge[]) {
         throw error;
       }
     },
-    [nodes, edges, debugToNode],
+    [nodes, edges, debugToNode]
   );
 
   const getDebugResult = useCallback(
     (nodeId: string): DebugResult | null => {
       const results = debugResults.get(nodeId);
-      return results && results.length > 0
-        ? (results[results.length - 1] ?? null)
-        : null; // Return latest result for backward compatibility
+      return results && results.length > 0 ? (results[results.length - 1] ?? null) : null; // Return latest result for backward compatibility
     },
-    [debugResults],
+    [debugResults]
   );
 
   const getAllDebugResults = useCallback(
     (nodeId: string) => {
       return debugResults.get(nodeId) ?? [];
     },
-    [debugResults],
+    [debugResults]
   );
 
   const clearDebugResults = useCallback((nodeId: string) => {

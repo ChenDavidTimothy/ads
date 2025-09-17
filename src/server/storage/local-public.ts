@@ -1,8 +1,8 @@
 // src/server/storage/local-public.ts
-import path from "path";
-import fs from "fs";
-import type { StorageProvider, StoragePreparedTarget } from "./provider";
-import { sanitizeForFilename } from "@/shared/utils/naming";
+import path from 'path';
+import fs from 'fs';
+import type { StorageProvider, StoragePreparedTarget } from './provider';
+import { sanitizeForFilename } from '@/shared/utils/naming';
 
 function generateUniqueName(prefix: string, extension: string): string {
   const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -14,24 +14,20 @@ export class LocalPublicStorageProvider implements StorageProvider {
   private readonly publicBaseUrl: string;
   private readonly subDir: string;
 
-  constructor(options?: {
-    publicDir?: string;
-    publicBaseUrl?: string;
-    subDir?: string;
-  }) {
-    this.publicDir = options?.publicDir ?? path.join(process.cwd(), "public");
-    this.publicBaseUrl = options?.publicBaseUrl ?? "/";
-    this.subDir = options?.subDir ?? "animations";
+  constructor(options?: { publicDir?: string; publicBaseUrl?: string; subDir?: string }) {
+    this.publicDir = options?.publicDir ?? path.join(process.cwd(), 'public');
+    this.publicBaseUrl = options?.publicBaseUrl ?? '/';
+    this.subDir = options?.subDir ?? 'animations';
   }
 
   async prepareTarget(
     extension: string,
-    opts?: { userId?: string; basename?: string; subdir?: string },
+    opts?: { userId?: string; basename?: string; subdir?: string }
   ): Promise<StoragePreparedTarget> {
     const effectiveSubdir = opts?.subdir ?? this.subDir;
     const dir = path.join(this.publicDir, effectiveSubdir);
     await fs.promises.mkdir(dir, { recursive: true });
-    const base = sanitizeBasename(opts?.basename) ?? "scene";
+    const base = sanitizeBasename(opts?.basename) ?? 'scene';
     const filename = generateUniqueName(base, extension);
     const filePath = path.join(dir, filename);
     const remoteKey = path.posix.join(effectiveSubdir, filename);
@@ -40,9 +36,9 @@ export class LocalPublicStorageProvider implements StorageProvider {
 
   async finalize(
     prepared: StoragePreparedTarget,
-    _opts?: { contentType?: string },
+    _opts?: { contentType?: string }
   ): Promise<{ publicUrl: string }> {
-    const publicUrl = path.posix.join("/", prepared.remoteKey);
+    const publicUrl = path.posix.join('/', prepared.remoteKey);
     return { publicUrl };
   }
 }

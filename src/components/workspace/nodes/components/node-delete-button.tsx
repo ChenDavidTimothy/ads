@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Trash2 } from "lucide-react";
-import { memo, useCallback } from "react";
-import { useReactFlow } from "reactflow";
+import { Trash2 } from 'lucide-react';
+import { memo, useCallback } from 'react';
+import { useReactFlow } from 'reactflow';
 
 interface NodeDeleteButtonProps {
   nodeId: string;
@@ -23,7 +23,7 @@ export const NodeDeleteButton = memo(function NodeDeleteButton({
 
       deleteElements({ nodes: [{ id: nodeId }] });
     },
-    [nodeId, deleteElements],
+    [nodeId, deleteElements]
   );
 
   return (

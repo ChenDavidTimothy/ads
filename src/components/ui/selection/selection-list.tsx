@@ -1,5 +1,5 @@
-import React from "react";
-import { SelectionItem } from "./selection-item";
+import React from 'react';
+import { SelectionItem } from './selection-item';
 
 interface SelectionListProps<T = string> {
   items: Array<{ id: T; label: string; icon?: string; color?: string }>;
@@ -17,7 +17,7 @@ interface SelectionListProps<T = string> {
   onSelectNone?: () => void;
 
   // Configuration
-  mode: "single" | "multi";
+  mode: 'single' | 'multi';
   showDefault?: boolean;
   defaultLabel?: string;
   emptyLabel?: string;
@@ -34,20 +34,20 @@ export function SelectionList<T = string>({
   onSelectNone,
   mode,
   showDefault = false,
-  defaultLabel = "Default",
-  emptyLabel = "No items available",
-  className = "",
+  defaultLabel = 'Default',
+  emptyLabel = 'No items available',
+  className = '',
 }: SelectionListProps<T>) {
   const handleSelect = (id: T) => {
-    if (mode === "single" && onSelect) {
+    if (mode === 'single' && onSelect) {
       onSelect(id);
-    } else if (mode === "multi" && onToggle) {
+    } else if (mode === 'multi' && onToggle) {
       onToggle(id);
     }
   };
 
   const isSelected = (id: T) => {
-    if (mode === "single") {
+    if (mode === 'single') {
       return selectedId === id;
     } else {
       return selectedIds.includes(id);
@@ -69,7 +69,7 @@ export function SelectionList<T = string>({
   };
 
   const renderMultiSelectionActions = () => {
-    if (mode !== "multi" || !onSelectAll || !onSelectNone) return null;
+    if (mode !== 'multi' || !onSelectAll || !onSelectNone) return null;
 
     return (
       <div className="mb-2 flex gap-2">
@@ -91,11 +91,7 @@ export function SelectionList<T = string>({
 
   if (items.length === 0 && !showDefault) {
     return (
-      <div
-        className={`p-2 text-sm text-[var(--foreground-muted)] ${className}`}
-      >
-        {emptyLabel}
-      </div>
+      <div className={`p-2 text-sm text-[var(--foreground-muted)] ${className}`}>{emptyLabel}</div>
     );
   }
 

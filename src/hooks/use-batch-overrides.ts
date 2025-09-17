@@ -1,14 +1,11 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { NodeData } from "@/shared/types/nodes";
+import { useMemo } from 'react';
+import { useWorkspace } from '@/components/workspace/workspace-context';
+import type { NodeData } from '@/shared/types/nodes';
 
 interface BatchOverridesNodeData {
-  batchOverridesByField?: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  >;
+  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 export interface BatchOverridesData {
@@ -19,7 +16,7 @@ export interface BatchOverridesData {
 export function useBatchOverrides(
   nodeId: string,
   fieldPath: string,
-  objectId?: string,
+  objectId?: string
 ): {
   data: BatchOverridesData;
   setPerObjectDefault: (value: unknown) => void;
@@ -31,14 +28,13 @@ export function useBatchOverrides(
 
   const node = useMemo(
     () => state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId),
-    [state.flow.nodes, nodeId],
+    [state.flow.nodes, nodeId]
   );
 
   const locus = useMemo(() => {
-    const map =
-      (node?.data as BatchOverridesNodeData)?.batchOverridesByField ?? {};
+    const map = (node?.data as BatchOverridesNodeData)?.batchOverridesByField ?? {};
     const byField = map[fieldPath] ?? {};
-    const objKey = objectId ?? "__default_object__"; // group per-object; default row uses a fixed id
+    const objKey = objectId ?? '__default_object__'; // group per-object; default row uses a fixed id
     const byKey = byField[objKey] ?? {};
     // per-object default stored under key "default"
     const { default: def, ...rest } = byKey as Record<string, unknown> & {
@@ -51,15 +47,12 @@ export function useBatchOverrides(
   }, [node, fieldPath, objectId]);
 
   const write = (
-    producer: (
-      draft: Record<string, Record<string, Record<string, unknown>>>,
-    ) => void,
+    producer: (draft: Record<string, Record<string, Record<string, unknown>>>) => void
   ) => {
     updateFlow({
       nodes: state.flow.nodes.map((n) => {
         if (n.data?.identifier?.id !== nodeId) return n;
-        const base =
-          (n.data as BatchOverridesNodeData)?.batchOverridesByField ?? {};
+        const base = (n.data as BatchOverridesNodeData)?.batchOverridesByField ?? {};
         const draft = JSON.parse(JSON.stringify(base)) as Record<
           string,
           Record<string, Record<string, unknown>>
@@ -79,8 +72,7 @@ export function useBatchOverrides(
           ...n,
           data: {
             ...n.data,
-            batchOverridesByField:
-              Object.keys(draft).length > 0 ? draft : undefined,
+            batchOverridesByField: Object.keys(draft).length > 0 ? draft : undefined,
           } as NodeData,
         };
       }),
@@ -89,10 +81,10 @@ export function useBatchOverrides(
 
   const setPerObjectDefault = (value: unknown) => {
     write((draft) => {
-      const objKey = objectId ?? "__default_object__";
+      const objKey = objectId ?? '__default_object__';
       draft[fieldPath] ??= {};
       draft[fieldPath][objKey] ??= {};
-      if (value === undefined || value === null || value === "")
+      if (value === undefined || value === null || value === '')
         delete draft[fieldPath][objKey].default;
       else draft[fieldPath][objKey].default = value;
     });
@@ -102,7 +94,7 @@ export function useBatchOverrides(
     const k = String(key).trim();
     if (!k) return;
     write((draft) => {
-      const objKey = objectId ?? "__default_object__";
+      const objKey = objectId ?? '__default_object__';
       draft[fieldPath] ??= {};
       draft[fieldPath][objKey] ??= {};
       draft[fieldPath][objKey][k] = value;
@@ -111,7 +103,7 @@ export function useBatchOverrides(
 
   const clearOverride = (key?: string) => {
     write((draft) => {
-      const objKey = objectId ?? "__default_object__";
+      const objKey = objectId ?? '__default_object__';
       const byField = draft[fieldPath];
       if (!byField) return;
       const byKey = byField[objKey];
@@ -122,10 +114,8 @@ export function useBatchOverrides(
   };
 
   const hasOverrides = useMemo(
-    () =>
-      locus.perObjectDefault !== undefined ||
-      Object.keys(locus.perKeyOverrides).length > 0,
-    [locus],
+    () => locus.perObjectDefault !== undefined || Object.keys(locus.perKeyOverrides).length > 0,
+    [locus]
   );
 
   return {

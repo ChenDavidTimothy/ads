@@ -1,37 +1,30 @@
-import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
-import {
-  setNodeOutput,
-  getConnectedInputs,
-  type ExecutionContext,
-} from "../../execution-context";
-import type { NodeData, AnimationTrack } from "@/shared/types";
-import type { SceneAnimationTrack } from "@/shared/types";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments } from "@/shared/properties/assignments";
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/graph';
+import { setNodeOutput, getConnectedInputs, type ExecutionContext } from '../../execution-context';
+import type { NodeData, AnimationTrack } from '@/shared/types';
+import type { SceneAnimationTrack } from '@/shared/types';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
+import { mergeObjectAssignments } from '@/shared/properties/assignments';
 import {
   resolveBindingLookupId,
   getObjectBindingKeys,
   pickAssignmentsForObject,
-} from "@/shared/properties/override-utils";
-import { convertTracksToSceneAnimations } from "../../scene/scene-assembler";
-import { setByPath, deleteByPath } from "@/shared/utils/object-path";
-import {
-  resolveFieldValue,
-  type BatchResolveContext,
-} from "../../scene/batch-overrides-resolver";
+} from '@/shared/properties/override-utils';
+import { convertTracksToSceneAnimations } from '../../scene/scene-assembler';
+import { setByPath, deleteByPath } from '@/shared/utils/object-path';
+import { resolveFieldValue, type BatchResolveContext } from '../../scene/batch-overrides-resolver';
 import {
   extractCursorsFromInputs,
   extractPerObjectAnimationsFromInputs,
   extractPerObjectAssignmentsFromInputs,
   extractPerObjectBatchOverridesFromInputs,
   clonePerObjectAnimations,
-} from "../shared/per-object-helpers";
-import { deepClone, numberCoerce, stringCoerce } from "../shared/common";
+} from '../shared/per-object-helpers';
+import { deepClone, numberCoerce, stringCoerce } from '../shared/common';
 
 export async function executeAnimationNode(
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ): Promise<void> {
   const data = node.data as unknown as Record<string, unknown>;
   const inputs = getConnectedInputs(
@@ -43,7 +36,7 @@ export async function executeAnimationNode(
       sourceHandle: string;
     }>,
     node.data.identifier.id,
-    "input",
+    'input'
   );
 
   // Resolve variable bindings from upstream Result nodes
@@ -53,17 +46,13 @@ export async function executeAnimationNode(
       | undefined) ?? {};
   const bindingsByObject =
     (data.variableBindingsByObject as
-      | Record<
-          string,
-          Record<string, { target?: string; boundResultNodeId?: string }>
-        >
+      | Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>
       | undefined) ?? {};
   const readVarGlobal = (key: string): unknown => {
     const rid = bindings[key]?.boundResultNodeId;
     if (!rid) return undefined;
     const val = (
-      context.nodeOutputs.get(`${rid}.output`) ??
-      context.nodeOutputs.get(`${rid}.result`)
+      context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`)
     )?.data;
     return val;
   };
@@ -74,15 +63,14 @@ export async function executeAnimationNode(
       const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
       if (rid)
         return (
-          context.nodeOutputs.get(`${rid}.output`) ??
-          context.nodeOutputs.get(`${rid}.result`)
+          context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`)
         )?.data;
       return readVarGlobal(key);
     };
 
   // Resolve duration binding if present (global only)
-  const boundDuration = readVarGlobal("duration");
-  if (typeof boundDuration === "number") {
+  const boundDuration = readVarGlobal('duration');
+  if (typeof boundDuration === 'number') {
     data.duration = boundDuration;
   }
 
@@ -90,13 +78,12 @@ export async function executeAnimationNode(
   const globalBindingKeys = Object.keys(bindings);
 
   // Clone tracks and apply generic per-track bindings using key prefixes
-  const originalTracks: AnimationTrack[] =
-    (data.tracks as AnimationTrack[]) || [];
+  const originalTracks: AnimationTrack[] = (data.tracks as AnimationTrack[]) || [];
 
   const applyBindingsToTrack = (
     t: AnimationTrack,
     keys: string[],
-    reader: (k: string) => unknown,
+    reader: (k: string) => unknown
   ): AnimationTrack => {
     // Copy track and properties
     const next = { ...t, properties: { ...t.properties } } as AnimationTrack;
@@ -112,28 +99,21 @@ export async function executeAnimationNode(
       const val = reader(key);
       if (val === undefined) continue;
       if (
-        subPath === "easing" &&
-        (val === "linear" ||
-          val === "easeInOut" ||
-          val === "easeIn" ||
-          val === "easeOut")
+        subPath === 'easing' &&
+        (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')
       ) {
         next.easing = val;
         continue;
       }
-      if (subPath === "startTime" && typeof val === "number") {
+      if (subPath === 'startTime' && typeof val === 'number') {
         next.startTime = val;
         continue;
       }
-      if (subPath === "duration" && typeof val === "number") {
+      if (subPath === 'duration' && typeof val === 'number') {
         next.duration = val;
         continue;
       }
-      setByPath(
-        next.properties as unknown as Record<string, unknown>,
-        subPath,
-        val,
-      );
+      setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
     }
 
     // 2) Apply track-specific keys (override type-level)
@@ -143,28 +123,21 @@ export async function executeAnimationNode(
         const val = reader(key);
         if (val === undefined) continue;
         if (
-          subPath === "easing" &&
-          (val === "linear" ||
-            val === "easeInOut" ||
-            val === "easeIn" ||
-            val === "easeOut")
+          subPath === 'easing' &&
+          (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')
         ) {
           next.easing = val;
           continue;
         }
-        if (subPath === "startTime" && typeof val === "number") {
+        if (subPath === 'startTime' && typeof val === 'number') {
           next.startTime = val;
           continue;
         }
-        if (subPath === "duration" && typeof val === "number") {
+        if (subPath === 'duration' && typeof val === 'number') {
           next.duration = val;
           continue;
         }
-        setByPath(
-          next.properties as unknown as Record<string, unknown>,
-          subPath,
-          val,
-        );
+        setByPath(next.properties as unknown as Record<string, unknown>, subPath, val);
         continue;
       }
       // Also support scalar track keys like track.<id>.duration, track.<id>.easing
@@ -173,20 +146,17 @@ export async function executeAnimationNode(
         const val = reader(key);
         if (val === undefined) continue;
         if (
-          sub === "easing" &&
-          (val === "linear" ||
-            val === "easeInOut" ||
-            val === "easeIn" ||
-            val === "easeOut")
+          sub === 'easing' &&
+          (val === 'linear' || val === 'easeInOut' || val === 'easeIn' || val === 'easeOut')
         ) {
           next.easing = val;
           continue;
         }
-        if (sub === "startTime" && typeof val === "number") {
+        if (sub === 'startTime' && typeof val === 'number') {
           next.startTime = val;
           continue;
         }
-        if (sub === "duration" && typeof val === "number") {
+        if (sub === 'duration' && typeof val === 'number') {
           next.duration = val;
           continue;
         }
@@ -198,7 +168,7 @@ export async function executeAnimationNode(
 
   // First, apply global bindings once
   const resolvedTracks: AnimationTrack[] = originalTracks.map((t) =>
-    applyBindingsToTrack(t, globalBindingKeys, readVarGlobal),
+    applyBindingsToTrack(t, globalBindingKeys, readVarGlobal)
   );
 
   const allAnimations: SceneAnimationTrack[] = [];
@@ -211,8 +181,9 @@ export async function executeAnimationNode(
     extractPerObjectAssignmentsFromInputs(inputs);
 
   // Read node-level assignments stored on the Animation node itself
-  const nodeAssignments: PerObjectAssignments | undefined =
-    data.perObjectAssignments as PerObjectAssignments | undefined;
+  const nodeAssignments: PerObjectAssignments | undefined = data.perObjectAssignments as
+    | PerObjectAssignments
+    | undefined;
 
   // Extract perObjectBatchOverrides from inputs
   const upstreamBatchOverrides:
@@ -225,10 +196,7 @@ export async function executeAnimationNode(
     | undefined = (() => {
     const batchOverridesByField = (
       data as {
-        batchOverridesByField?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
+        batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
       }
     ).batchOverridesByField;
     if (!batchOverridesByField) return undefined;
@@ -240,7 +208,7 @@ export async function executeAnimationNode(
       const arr = Array.isArray(inp.data) ? inp.data : [inp.data];
       for (const obj of arr) {
         const oid = (obj as { id?: unknown }).id;
-        if (typeof oid === "string" && oid) {
+        if (typeof oid === 'string' && oid) {
           passedIds.add(oid);
           objectsById.set(oid, obj);
         }
@@ -249,19 +217,18 @@ export async function executeAnimationNode(
 
     // Helper: restrict defaults to batched objects (consistent with Canvas/Media/Typography)
     const isBatched = (obj: unknown): boolean => {
-      if (!obj || typeof obj !== "object") return false;
+      if (!obj || typeof obj !== 'object') return false;
       const record = obj as { batch?: unknown; batchKeys?: unknown };
       if (record.batch !== true) return false;
       const keys = Array.isArray(record.batchKeys)
         ? (record.batchKeys as unknown[]).filter(
-            (key): key is string =>
-              typeof key === "string" && key.trim() !== "",
+            (key): key is string => typeof key === 'string' && key.trim() !== ''
           )
         : [];
       return keys.length > 0;
     };
 
-    const DEFAULT_MARKER = "__default_object__";
+    const DEFAULT_MARKER = '__default_object__';
     const out: Record<string, Record<string, Record<string, unknown>>> = {};
     for (const [fieldPath, byObject] of Object.entries(batchOverridesByField)) {
       for (const [rawObjId, byKey] of Object.entries(byObject)) {
@@ -295,23 +262,19 @@ export async function executeAnimationNode(
   })();
 
   // Merge upstream + node-level batch overrides; node-level takes precedence per object
-  const mergedBatchOverrides:
-    | Record<string, Record<string, Record<string, unknown>>>
-    | undefined = (() => {
-    if (!upstreamBatchOverrides && !scopedNodeBatchOverrides)
-      return upstreamBatchOverrides;
-    const result: Record<string, Record<string, Record<string, unknown>>> = {
-      ...upstreamBatchOverrides,
-    };
-    if (scopedNodeBatchOverrides) {
-      for (const [objectId, fieldOverrides] of Object.entries(
-        scopedNodeBatchOverrides,
-      )) {
-        result[objectId] = { ...result[objectId], ...fieldOverrides };
+  const mergedBatchOverrides: Record<string, Record<string, Record<string, unknown>>> | undefined =
+    (() => {
+      if (!upstreamBatchOverrides && !scopedNodeBatchOverrides) return upstreamBatchOverrides;
+      const result: Record<string, Record<string, Record<string, unknown>>> = {
+        ...upstreamBatchOverrides,
+      };
+      if (scopedNodeBatchOverrides) {
+        for (const [objectId, fieldOverrides] of Object.entries(scopedNodeBatchOverrides)) {
+          result[objectId] = { ...result[objectId], ...fieldOverrides };
+        }
       }
-    }
-    return result;
-  })();
+      return result;
+    })();
 
   // Extract bound fields for Timeline batch overrides (following Typography pattern)
   const mergedBoundFields: Record<string, string[]> | undefined = (() => {
@@ -321,25 +284,18 @@ export async function executeAnimationNode(
     for (const input of inputs) {
       const inputData = Array.isArray(input.data) ? input.data : [input.data];
       for (const timedObject of inputData) {
-        const objectId = (timedObject as { id?: unknown }).id as
-          | string
-          | undefined;
+        const objectId = (timedObject as { id?: unknown }).id as string | undefined;
         if (objectId) {
           const objectKeys = Object.keys(bindingsByObject[objectId] ?? {});
 
           // Filter for Timeline-specific bound keys
-          const timelineKeys = [
-            ...globalBoundKeysTimeline,
-            ...objectKeys,
-          ].filter(
-            (key) => key.startsWith("Timeline.") || key.includes("track."),
+          const timelineKeys = [...globalBoundKeysTimeline, ...objectKeys].filter(
+            (key) => key.startsWith('Timeline.') || key.includes('track.')
           );
 
           if (timelineKeys.length > 0) {
             const existing = result[objectId] ?? [];
-            result[objectId] = Array.from(
-              new Set([...existing, ...timelineKeys.map(String)]),
-            );
+            result[objectId] = Array.from(new Set([...existing, ...timelineKeys.map(String)]));
           }
         }
       }
@@ -351,10 +307,7 @@ export async function executeAnimationNode(
   // Get fallback metadata from first input for non-batch-override fields
   const firstInputMeta = inputs[0]?.metadata as
     | {
-        perObjectBatchOverrides?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
+        perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
         perObjectAnimations?: Record<string, SceneAnimationTrack[]>;
         perObjectAssignments?: PerObjectAssignments;
         perObjectBoundFields?: Record<string, string[]>;
@@ -382,56 +335,42 @@ export async function executeAnimationNode(
     const inputData = Array.isArray(input.data) ? input.data : [input.data];
 
     for (const timedObject of inputData) {
-      const objectId = (timedObject as { id?: unknown }).id as
-        | string
-        | undefined;
+      const objectId = (timedObject as { id?: unknown }).id as string | undefined;
       // Removed unused objectIdNoPrefix variable
-      const appearanceTime = (timedObject as { appearanceTime?: unknown })
-        .appearanceTime as number | undefined;
+      const appearanceTime = (timedObject as { appearanceTime?: unknown }).appearanceTime as
+        | number
+        | undefined;
       // Appearance time is ALWAYS the foundation baseline for all animations
       let baseline: number = appearanceTime ?? 0;
 
       // Cursor map should only extend timing for continuing animations within the same path
       // but NEVER override the appearance time - animations can never start before object appears
-      if (
-        typeof objectId === "string" &&
-        upstreamCursorMap[objectId] !== undefined
-      ) {
+      if (typeof objectId === 'string' && upstreamCursorMap[objectId] !== undefined) {
         // Only use cursor position if it's LATER than appearance time (continuing animations)
         baseline = Math.max(baseline, upstreamCursorMap[objectId]);
       }
       // Only include prior animations from the current execution path
-      const priorForObject = objectId
-        ? (perObjectAnimations[objectId] ?? [])
-        : [];
+      const priorForObject = objectId ? (perObjectAnimations[objectId] ?? []) : [];
 
       // Apply per-object bindings if present
       const bindingLookupId = objectId
-        ? resolveBindingLookupId(
-            bindingsByObject as Record<string, unknown>,
-            String(objectId),
-          )
+        ? resolveBindingLookupId(bindingsByObject as Record<string, unknown>, String(objectId))
         : undefined;
       const objectBindingKeys = bindingLookupId
         ? getObjectBindingKeys(
             bindingsByObject as Record<string, Record<string, unknown>>,
-            String(objectId),
+            String(objectId)
           )
         : [];
       const objectReader = readVarForObject(bindingLookupId);
       const resolvedForObject = objectId
-        ? resolvedTracks.map((t) =>
-            applyBindingsToTrack(t, objectBindingKeys, objectReader),
-          )
+        ? resolvedTracks.map((t) => applyBindingsToTrack(t, objectBindingKeys, objectReader))
         : resolvedTracks;
 
       // Build a masked per-object assignment so bound keys take precedence over manual overrides
       const maskedAssignmentsForObject = (() => {
         if (!objectId) return undefined;
-        const base = pickAssignmentsForObject(
-          mergedAssignments,
-          String(objectId),
-        );
+        const base = pickAssignmentsForObject(mergedAssignments, String(objectId));
         if (!base) return undefined;
         // Only mask per-object bound keys; allow per-object manual overrides
         // to override any global bindings (matching Canvas behavior)
@@ -465,11 +404,7 @@ export async function executeAnimationNode(
             const trackPrefix = `track.${trackId}.`;
             if (key.startsWith(trackPrefix)) {
               const sub = key.slice(trackPrefix.length);
-              if (
-                sub === "duration" ||
-                sub === "startTime" ||
-                sub === "easing"
-              ) {
+              if (sub === 'duration' || sub === 'startTime' || sub === 'easing') {
                 delete (t as Record<string, unknown>)[sub];
                 continue;
               }
@@ -478,19 +413,10 @@ export async function executeAnimationNode(
               const typePrefix = `${trackType}.`;
               if (sub.startsWith(typePrefix)) {
                 const propPath = sub.slice(typePrefix.length);
-                if (
-                  propPath === "duration" ||
-                  propPath === "startTime" ||
-                  propPath === "easing"
-                ) {
+                if (propPath === 'duration' || propPath === 'startTime' || propPath === 'easing') {
                   delete (t as Record<string, unknown>)[sub];
-                } else if (
-                  (t as { properties?: Record<string, unknown> }).properties
-                ) {
-                  deleteByPath(
-                    (t as { properties: Record<string, unknown> }).properties,
-                    propPath,
-                  );
+                } else if ((t as { properties?: Record<string, unknown> }).properties) {
+                  deleteByPath((t as { properties: Record<string, unknown> }).properties, propPath);
                 }
               }
               continue;
@@ -500,32 +426,21 @@ export async function executeAnimationNode(
             const typePrefix = `${trackType}.`;
             if (key.startsWith(typePrefix)) {
               const subPath = key.slice(typePrefix.length);
-              if (
-                subPath === "duration" ||
-                subPath === "startTime" ||
-                subPath === "easing"
-              ) {
+              if (subPath === 'duration' || subPath === 'startTime' || subPath === 'easing') {
                 delete (t as Record<string, unknown>)[subPath];
-              } else if (
-                (t as { properties?: Record<string, unknown> }).properties
-              ) {
-                deleteByPath(
-                  (t as { properties: Record<string, unknown> }).properties,
-                  subPath,
-                );
+              } else if ((t as { properties?: Record<string, unknown> }).properties) {
+                deleteByPath((t as { properties: Record<string, unknown> }).properties, subPath);
               }
             }
           }
-          const properties = (t as { properties?: Record<string, unknown> })
-            .properties;
+          const properties = (t as { properties?: Record<string, unknown> }).properties;
           const hasProps = properties && Object.keys(properties).length > 0;
           const tRecord = t as Record<string, unknown>;
           const hasMeta =
             tRecord.easing !== undefined ||
             tRecord.startTime !== undefined ||
             tRecord.duration !== undefined;
-          if (hasProps || hasMeta)
-            prunedTracks.push(t as Record<string, unknown>);
+          if (hasProps || hasMeta) prunedTracks.push(t as Record<string, unknown>);
         }
         const nextRecord = next as Record<string, unknown>;
         if (prunedTracks.length > 0) nextRecord.tracks = prunedTracks;
@@ -541,23 +456,20 @@ export async function executeAnimationNode(
             mergedBatchOverrides,
             mergedBoundFields,
             // Batch key resolution will happen at scene partition level
-            null,
+            null
           )
         : resolvedForObject;
 
       const animations = convertTracksToSceneAnimations(
         batchOverrideAppliedTracks,
-        objectId ?? "",
+        objectId ?? '',
         baseline,
         priorForObject,
-        maskedAssignmentsForObject,
+        maskedAssignmentsForObject
       );
 
       if (objectId) {
-        perObjectAnimations[objectId] = [
-          ...(perObjectAnimations[objectId] ?? []),
-          ...animations,
-        ];
+        perObjectAnimations[objectId] = [...(perObjectAnimations[objectId] ?? []), ...animations];
       }
 
       allAnimations.push(...animations);
@@ -568,33 +480,19 @@ export async function executeAnimationNode(
           animations.length > 0
             ? Math.max(...animations.map((a) => a.startTime + a.duration))
             : baseline;
-        outputCursorMap[objectId] = Math.max(
-          outputCursorMap[objectId] ?? 0,
-          localEnd,
-        );
+        outputCursorMap[objectId] = Math.max(outputCursorMap[objectId] ?? 0, localEnd);
       }
     }
   }
 
-  setNodeOutput(
-    context,
-    node.data.identifier.id,
-    "output",
-    "object_stream",
-    passThroughObjects,
-    {
-      perObjectTimeCursor: outputCursorMap,
-      perObjectAnimations:
-        clonePerObjectAnimations(perObjectAnimations) ??
-        firstInputMeta?.perObjectAnimations,
-      perObjectAssignments:
-        mergedAssignments ?? firstInputMeta?.perObjectAssignments,
-      perObjectBatchOverrides:
-        mergedBatchOverrides ?? firstInputMeta?.perObjectBatchOverrides,
-      perObjectBoundFields:
-        mergedBoundFields ?? firstInputMeta?.perObjectBoundFields,
-    },
-  );
+  setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', passThroughObjects, {
+    perObjectTimeCursor: outputCursorMap,
+    perObjectAnimations:
+      clonePerObjectAnimations(perObjectAnimations) ?? firstInputMeta?.perObjectAnimations,
+    perObjectAssignments: mergedAssignments ?? firstInputMeta?.perObjectAssignments,
+    perObjectBatchOverrides: mergedBatchOverrides ?? firstInputMeta?.perObjectBatchOverrides,
+    perObjectBoundFields: mergedBoundFields ?? firstInputMeta?.perObjectBoundFields,
+  });
 }
 
 /**
@@ -606,7 +504,7 @@ function applyTimelineBatchOverridesToTracks(
   objectId: string,
   batchOverrides?: Record<string, Record<string, Record<string, unknown>>>,
   boundFields?: Record<string, string[]>,
-  batchKey?: string | null,
+  batchKey?: string | null
 ): AnimationTrack[] {
   if (!batchOverrides?.[objectId]) return tracks;
 
@@ -622,7 +520,7 @@ function applyTimelineBatchOverridesToTracks(
 
     // Apply Timeline batch overrides per track type
     switch (track.type) {
-      case "move": {
+      case 'move': {
         const moveProps = updatedProperties as {
           from?: { x: number; y: number };
           to?: { x: number; y: number };
@@ -631,66 +529,66 @@ function applyTimelineBatchOverridesToTracks(
         if (moveProps.from) {
           moveProps.from.x = resolveFieldValue(
             objectId,
-            "Timeline.move.from.x",
+            'Timeline.move.from.x',
             moveProps.from.x,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           moveProps.from.y = resolveFieldValue(
             objectId,
-            "Timeline.move.from.y",
+            'Timeline.move.from.y',
             moveProps.from.y,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
 
         if (moveProps.to) {
           moveProps.to.x = resolveFieldValue(
             objectId,
-            "Timeline.move.to.x",
+            'Timeline.move.to.x',
             moveProps.to.x,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           moveProps.to.y = resolveFieldValue(
             objectId,
-            "Timeline.move.to.y",
+            'Timeline.move.to.y',
             moveProps.to.y,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "rotate": {
+      case 'rotate': {
         const rotateProps = updatedProperties as {
           from?: number;
           to?: number;
         };
-        if (typeof rotateProps.from === "number") {
+        if (typeof rotateProps.from === 'number') {
           rotateProps.from = resolveFieldValue(
             objectId,
-            "Timeline.rotate.from",
+            'Timeline.rotate.from',
             rotateProps.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
-        if (typeof rotateProps.to === "number") {
+        if (typeof rotateProps.to === 'number') {
           rotateProps.to = resolveFieldValue(
             objectId,
-            "Timeline.rotate.to",
+            'Timeline.rotate.to',
             rotateProps.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "scale": {
+      case 'scale': {
         const scaleProps = updatedProperties as {
           from?: { x?: number; y?: number } | number;
           to?: { x?: number; y?: number } | number;
@@ -698,94 +596,94 @@ function applyTimelineBatchOverridesToTracks(
         // Normalize to object form then resolve per-axis
         if (scaleProps.from !== undefined) {
           const fromObj =
-            typeof scaleProps.from === "number"
+            typeof scaleProps.from === 'number'
               ? { x: scaleProps.from, y: scaleProps.from }
               : (scaleProps.from ?? {});
           const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.from.x",
+            'Timeline.scale.from.x',
             fromObj.x ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const y = resolveFieldValue(
             objectId,
-            "Timeline.scale.from.y",
+            'Timeline.scale.from.y',
             fromObj.y ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           scaleProps.from = { x, y } as unknown as Record<string, unknown>;
         }
         if (scaleProps.to !== undefined) {
           const toObj =
-            typeof scaleProps.to === "number"
+            typeof scaleProps.to === 'number'
               ? { x: scaleProps.to, y: scaleProps.to }
               : (scaleProps.to ?? {});
           const x = resolveFieldValue(
             objectId,
-            "Timeline.scale.to.x",
+            'Timeline.scale.to.x',
             toObj.x ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const y = resolveFieldValue(
             objectId,
-            "Timeline.scale.to.y",
+            'Timeline.scale.to.y',
             toObj.y ?? 1,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           scaleProps.to = { x, y } as unknown as Record<string, unknown>;
         }
         break;
       }
 
-      case "fade": {
+      case 'fade': {
         const fadeProps = updatedProperties as { from?: number; to?: number };
-        if (typeof fadeProps.from === "number") {
+        if (typeof fadeProps.from === 'number') {
           fadeProps.from = resolveFieldValue(
             objectId,
-            "Timeline.fade.from",
+            'Timeline.fade.from',
             fadeProps.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
-        if (typeof fadeProps.to === "number") {
+        if (typeof fadeProps.to === 'number') {
           fadeProps.to = resolveFieldValue(
             objectId,
-            "Timeline.fade.to",
+            'Timeline.fade.to',
             fadeProps.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
         }
         break;
       }
 
-      case "color": {
+      case 'color': {
         const colorProps = updatedProperties as {
           from?: string;
           to?: string;
           property?: string;
         };
-        if (typeof colorProps.from === "string") {
+        if (typeof colorProps.from === 'string') {
           colorProps.from = resolveFieldValue(
             objectId,
-            "Timeline.color.from",
+            'Timeline.color.from',
             colorProps.from,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
         }
-        if (typeof colorProps.to === "string") {
+        if (typeof colorProps.to === 'string') {
           colorProps.to = resolveFieldValue(
             objectId,
-            "Timeline.color.to",
+            'Timeline.color.to',
             colorProps.to,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
         }
         break;

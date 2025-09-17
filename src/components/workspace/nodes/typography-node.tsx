@@ -1,36 +1,32 @@
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { TypographyNodeData } from "@/shared/types/nodes";
-import { Type, Settings } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { TypographyNodeData } from '@/shared/types/nodes';
+import { Type, Settings } from 'lucide-react';
 
 interface TypographyNodeProps extends NodeProps<TypographyNodeData> {
   onOpenTypography?: () => void;
 }
 
-export function TypographyNode({
-  data,
-  selected,
-  onOpenTypography,
-}: TypographyNodeProps) {
-  const nodeDefinition = getNodeDefinition("typography");
+export function TypographyNode({ data, selected, onOpenTypography }: TypographyNodeProps) {
+  const nodeDefinition = getNodeDefinition('typography');
 
   const handleDoubleClick = () => {
     if (onOpenTypography) return onOpenTypography();
 
     // Fallback URL navigation (follows AnimationNode pattern)
     const params = new URLSearchParams(window.location.search);
-    const ws = params.get("workspace");
+    const ws = params.get('workspace');
     const url = new URL(window.location.href);
-    url.searchParams.set("tab", "typography");
-    url.searchParams.set("node", data?.identifier?.id ?? "");
-    if (ws) url.searchParams.set("workspace", ws);
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.set('tab', 'typography');
+    url.searchParams.set('node', data?.identifier?.id ?? '');
+    if (ws) url.searchParams.set('workspace', ws);
+    window.history.pushState({}, '', url.toString());
   };
 
-  const currentFont = `${data.fontFamily || "Arial"} ${data.fontWeight || "normal"}`;
+  const currentFont = `${data.fontFamily || 'Arial'} ${data.fontWeight || 'normal'}`;
 
   return (
     <Card
@@ -45,7 +41,7 @@ export function TypographyNode({
           position={Position.Left}
           id={port.id}
           className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
 
@@ -56,7 +52,7 @@ export function TypographyNode({
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold text-[var(--text-primary)]">
-              {data?.identifier?.displayName ?? "Typography"}
+              {data?.identifier?.displayName ?? 'Typography'}
             </div>
           </div>
           <Settings size={12} className="text-[var(--text-tertiary)]" />
@@ -65,7 +61,7 @@ export function TypographyNode({
 
       <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
         <div className="truncate">Font: {currentFont}</div>
-        <div>Align: {data.textAlign || "center"}</div>
+        <div>Align: {data.textAlign || 'center'}</div>
         <div>Line Height: {data.lineHeight || 1.2}</div>
         <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
           Double-click to edit in Typography tab
@@ -79,7 +75,7 @@ export function TypographyNode({
           position={Position.Right}
           id={port.id}
           className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
     </Card>

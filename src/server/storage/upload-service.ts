@@ -1,11 +1,11 @@
 // src/server/storage/upload-service.ts
-import fs from "fs";
-import path from "path";
-import { Readable } from "stream";
-import type { StoragePreparedTarget, FinalizeOptions } from "./provider";
-import { STORAGE_CONFIG, type SupportedExtension } from "./config";
-import type { StorageHealthMonitor } from "./health-monitor";
-import type { createServiceClient } from "@/utils/supabase/service";
+import fs from 'fs';
+import path from 'path';
+import { Readable } from 'stream';
+import type { StoragePreparedTarget, FinalizeOptions } from './provider';
+import { STORAGE_CONFIG, type SupportedExtension } from './config';
+import type { StorageHealthMonitor } from './health-monitor';
+import type { createServiceClient } from '@/utils/supabase/service';
 
 interface StorageUploadServiceDeps {
   supabase: ReturnType<typeof createServiceClient>;
@@ -34,7 +34,7 @@ export class StorageUploadService {
 
   async finalize(
     prepared: StoragePreparedTarget,
-    opts?: FinalizeOptions,
+    opts?: FinalizeOptions
   ): Promise<{ publicUrl: string }> {
     let publicUrl: string | null = null;
     const startTime = Date.now();
@@ -51,49 +51,41 @@ export class StorageUploadService {
       this.validateFileSize(fileSize, config);
 
       const contentType =
-        opts?.contentType ??
-        config.mimeTypes[extension] ??
-        "application/octet-stream";
+        opts?.contentType ?? config.mimeTypes[extension] ?? 'application/octet-stream';
 
       await this.uploadStreamWithRetry(
         bucket,
         prepared.remoteKey,
         prepared.filePath,
         contentType,
-        prepared.allowUpsert ?? false,
+        prepared.allowUpsert ?? false
       );
 
-      publicUrl = await this.createSignedUrlWithRetry(
-        bucket,
-        prepared.remoteKey,
-      );
+      publicUrl = await this.createSignedUrlWithRetry(bucket, prepared.remoteKey);
 
       const uploadTime = Date.now() - startTime;
       this.healthMonitor.recordUploadSuccess(uploadTime);
 
       this.logger.info(
-        `File uploaded successfully: ${prepared.remoteKey} -> ${bucket} (${(fileSize / 1024 / 1024).toFixed(2)}MB) in ${uploadTime}ms`,
+        `File uploaded successfully: ${prepared.remoteKey} -> ${bucket} (${(fileSize / 1024 / 1024).toFixed(2)}MB) in ${uploadTime}ms`
       );
 
       return { publicUrl };
     } catch (error) {
       this.healthMonitor.recordUploadFailure();
 
-      this.logger.error("Failed to finalize upload:", error);
+      this.logger.error('Failed to finalize upload:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
 
       if (/resource already exists/i.test(errMsg) && !prepared.allowUpsert) {
         try {
           const extension = path.extname(prepared.remoteKey).slice(1);
           const { bucket } = this.getBucketForExtension(extension);
-          const signedUrl = await this.createSignedUrlWithRetry(
-            bucket,
-            prepared.remoteKey,
-          );
+          const signedUrl = await this.createSignedUrlWithRetry(bucket, prepared.remoteKey);
           return { publicUrl: signedUrl };
         } catch (urlErr) {
           throw new Error(
-            `Upload failed (existing object) and failed to create signed URL: ${urlErr instanceof Error ? urlErr.message : String(urlErr)}`,
+            `Upload failed (existing object) and failed to create signed URL: ${urlErr instanceof Error ? urlErr.message : String(urlErr)}`
           );
         }
       }
@@ -111,9 +103,9 @@ export class StorageUploadService {
     const normalizedExtension = extension.toLowerCase() as SupportedExtension;
 
     if (
-      (
-        STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images as readonly string[]
-      ).includes(normalizedExtension)
+      (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.images as readonly string[]).includes(
+        normalizedExtension
+      )
     ) {
       return {
         bucket: this.imagesBucket,
@@ -125,9 +117,9 @@ export class StorageUploadService {
     }
 
     if (
-      (
-        STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos as readonly string[]
-      ).includes(normalizedExtension)
+      (STORAGE_CONFIG.SUPPORTED_EXTENSIONS.videos as readonly string[]).includes(
+        normalizedExtension
+      )
     ) {
       return {
         bucket: this.videosBucket,
@@ -144,17 +136,14 @@ export class StorageUploadService {
     ];
 
     throw new Error(
-      `Unsupported file extension: ${extension}. Supported extensions: ${supported.join(",")}`,
+      `Unsupported file extension: ${extension}. Supported extensions: ${supported.join(',')}`
     );
   }
 
-  private validateFileSize(
-    fileSizeBytes: number,
-    config: { maxSizeBytes: number },
-  ): void {
+  private validateFileSize(fileSizeBytes: number, config: { maxSizeBytes: number }): void {
     if (fileSizeBytes > config.maxSizeBytes) {
       throw new Error(
-        `File size ${(fileSizeBytes / 1024 / 1024).toFixed(2)}MB exceeds maximum allowed size of ${(config.maxSizeBytes / 1024 / 1024).toFixed(2)}MB`,
+        `File size ${(fileSizeBytes / 1024 / 1024).toFixed(2)}MB exceeds maximum allowed size of ${(config.maxSizeBytes / 1024 / 1024).toFixed(2)}MB`
       );
     }
   }
@@ -164,7 +153,7 @@ export class StorageUploadService {
     remoteKey: string,
     filePath: string,
     contentType: string,
-    allowUpsert: boolean,
+    allowUpsert: boolean
   ): Promise<void> {
     let lastError: Error | null = null;
 
@@ -173,31 +162,24 @@ export class StorageUploadService {
         const nodeStream = fs.createReadStream(filePath);
 
         let webStream: ReadableStream<Uint8Array>;
-        if (typeof Readable.toWeb === "function") {
+        if (typeof Readable.toWeb === 'function') {
           webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
         } else {
           webStream = nodeStream as unknown as ReadableStream<Uint8Array>;
         }
 
-        const { error } = await this.supabase.storage
-          .from(bucket)
-          .upload(remoteKey, webStream, {
-            upsert: allowUpsert,
-            contentType,
-          });
+        const { error } = await this.supabase.storage.from(bucket).upload(remoteKey, webStream, {
+          upsert: allowUpsert,
+          contentType,
+        });
 
         if (error) throw error;
         return;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        if (
-          /resource already exists/i.test(lastError.message) &&
-          !allowUpsert
-        ) {
-          this.logger.info(
-            `Upload skipped (already exists, no upsert): ${remoteKey}`,
-          );
+        if (/resource already exists/i.test(lastError.message) && !allowUpsert) {
+          this.logger.info(`Upload skipped (already exists, no upsert): ${remoteKey}`);
           return;
         }
 
@@ -205,25 +187,22 @@ export class StorageUploadService {
 
         const delay = Math.min(
           STORAGE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1),
-          STORAGE_CONFIG.MAX_RETRY_DELAY_MS,
+          STORAGE_CONFIG.MAX_RETRY_DELAY_MS
         );
         this.logger.warn(
           `Stream upload attempt ${attempt} failed, retrying in ${delay}ms:`,
-          lastError.message,
+          lastError.message
         );
         await this.sleep(delay);
       }
     }
 
     throw new Error(
-      `Stream upload failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`,
+      `Stream upload failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`
     );
   }
 
-  private async createSignedUrlWithRetry(
-    bucket: string,
-    remoteKey: string,
-  ): Promise<string> {
+  private async createSignedUrlWithRetry(bucket: string, remoteKey: string): Promise<string> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= STORAGE_CONFIG.MAX_RETRIES; attempt++) {
@@ -233,7 +212,7 @@ export class StorageUploadService {
           .createSignedUrl(remoteKey, STORAGE_CONFIG.SIGNED_URL_EXPIRY_SECONDS);
 
         if (error || !signed) {
-          throw error ?? new Error("Failed to create signed URL");
+          throw error ?? new Error('Failed to create signed URL');
         }
 
         return signed.signedUrl;
@@ -246,19 +225,19 @@ export class StorageUploadService {
 
         const delay = Math.min(
           STORAGE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1),
-          STORAGE_CONFIG.MAX_RETRY_DELAY_MS,
+          STORAGE_CONFIG.MAX_RETRY_DELAY_MS
         );
 
         this.logger.warn(
           `Signed URL creation attempt ${attempt} failed, retrying in ${delay}ms:`,
-          lastError.message,
+          lastError.message
         );
         await this.sleep(delay);
       }
     }
 
     throw new Error(
-      `Signed URL creation failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`,
+      `Signed URL creation failed after ${STORAGE_CONFIG.MAX_RETRIES} attempts. Last error: ${lastError?.message}`
     );
   }
 

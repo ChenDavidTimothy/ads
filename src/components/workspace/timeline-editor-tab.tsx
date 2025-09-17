@@ -1,25 +1,21 @@
-"use client";
+'use client';
 
-import React, { useCallback, useMemo, useRef, useEffect } from "react";
-import type { Node } from "reactflow";
-import { useWorkspace } from "./workspace-context";
-import { TimelineEditorCore } from "./timeline-editor-core";
-import { Button } from "@/components/ui/button";
-import type { TimelineEditorData } from "@/types/workspace-state";
-import { FlowTracker } from "@/lib/flow/flow-tracking";
-import type {
-  NodeData,
-  AnimationNodeData,
-  AnimationTrack,
-} from "@/shared/types/nodes";
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
+import type { Node } from 'reactflow';
+import { useWorkspace } from './workspace-context';
+import { TimelineEditorCore } from './timeline-editor-core';
+import { Button } from '@/components/ui/button';
+import type { TimelineEditorData } from '@/types/workspace-state';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
+import type { NodeData, AnimationNodeData, AnimationTrack } from '@/shared/types/nodes';
 import type {
   PerObjectAssignments,
   ObjectAssignments,
   TrackOverride,
-} from "@/shared/properties/assignments";
-import { SelectionList } from "@/components/ui/selection";
-import { TrackProperties } from "./timeline-editor-core";
-import { validateTransformDisplayName as validateNameHelper } from "@/lib/defaults/transforms";
+} from '@/shared/properties/assignments';
+import { SelectionList } from '@/components/ui/selection';
+import { TrackProperties } from './timeline-editor-core';
+import { validateTransformDisplayName as validateNameHelper } from '@/lib/defaults/transforms';
 
 export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   const { state, updateTimeline, updateUI, updateFlow } = useWorkspace();
@@ -27,11 +23,8 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
   // All hooks must be called before any conditional returns
   const pendingRef = useRef<TimelineEditorData | null>(null);
   const rafRef = useRef<number | null>(null);
-  const [selectedObjectId, setSelectedObjectId] = React.useState<string | null>(
-    null,
-  );
-  const [selectedTrack, setSelectedTrack] =
-    React.useState<AnimationTrack | null>(null);
+  const [selectedObjectId, setSelectedObjectId] = React.useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = React.useState<AnimationTrack | null>(null);
 
   // Get the data - this will be undefined if not found, but hooks are already called
   const data = state.editors.timeline[nodeId];
@@ -55,7 +48,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     const objectDescriptors = tracker.getUpstreamObjects(
       nodeId,
       state.flow.nodes,
-      state.flow.edges,
+      state.flow.edges
     );
 
     // Convert to display format expected by SelectionList
@@ -79,7 +72,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         id: o.data.identifier.id,
         name: o.data.identifier.displayName,
         type: o.data.identifier.type,
-      })),
+      }))
     );
   }, [upstreamObjects, nodeId]);
 
@@ -87,9 +80,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
     (objectId: string, trackId: string, updates: Partial<TrackOverride>) => {
       const next: PerObjectAssignments = { ...currentAssignments };
       const obj: ObjectAssignments = { ...(next[objectId] ?? {}) };
-      const list: TrackOverride[] = Array.isArray(obj.tracks)
-        ? [...obj.tracks]
-        : [];
+      const list: TrackOverride[] = Array.isArray(obj.tracks) ? [...obj.tracks] : [];
       const idx = list.findIndex((t) => t.trackId === trackId);
       const base = idx >= 0 ? list[idx]! : { trackId };
       const baseProps: Record<string, unknown> = base.properties ?? {};
@@ -97,9 +88,9 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       const mergedProps = {
         ...baseProps,
         ...updateProps,
-        ...(typeof baseProps.from === "object" &&
+        ...(typeof baseProps.from === 'object' &&
         baseProps.from !== null &&
-        typeof updateProps.from === "object" &&
+        typeof updateProps.from === 'object' &&
         updateProps.from !== null
           ? {
               from: {
@@ -108,9 +99,9 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
               },
             }
           : {}),
-        ...(typeof baseProps.to === "object" &&
+        ...(typeof baseProps.to === 'object' &&
         baseProps.to !== null &&
-        typeof updateProps.to === "object" &&
+        typeof updateProps.to === 'object' &&
         updateProps.to !== null
           ? {
               to: {
@@ -125,12 +116,8 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       const merged: TrackOverride = {
         ...base,
         ...(updates.easing !== undefined ? { easing: updates.easing } : {}),
-        ...(updates.startTime !== undefined
-          ? { startTime: updates.startTime }
-          : {}),
-        ...(updates.duration !== undefined
-          ? { duration: updates.duration }
-          : {}),
+        ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
+        ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
         properties: mergedProps,
       };
       if (idx >= 0) list[idx] = merged;
@@ -149,7 +136,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         }),
       });
     },
-    [currentAssignments, state.flow.nodes, nodeId, updateFlow],
+    [currentAssignments, state.flow.nodes, nodeId, updateFlow]
   );
 
   const scheduleUpdate = useCallback(() => {
@@ -193,7 +180,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       pendingRef.current = merged;
       scheduleUpdate();
     },
-    [data, scheduleUpdate],
+    [data, scheduleUpdate]
   );
 
   // Keep props stable unless nodeId changes (prevents core from reinitializing on every parent re-render)
@@ -203,7 +190,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
       duration: data?.duration ?? 0,
       tracks: data?.tracks ?? [],
     }),
-    [nodeId, data?.duration, data?.tracks],
+    [nodeId, data?.duration, data?.tracks]
   );
 
   // Early return after all hooks have been called
@@ -236,7 +223,7 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
           {/* Show object count for debugging */}
           <div className="border-t border-[var(--border-primary)] pt-[var(--space-2)] text-xs text-[var(--text-tertiary)]">
             Detected: {upstreamObjects.length} object
-            {upstreamObjects.length !== 1 ? "s" : ""}
+            {upstreamObjects.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
@@ -246,16 +233,14 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
         {/* Header */}
         <div className="flex h-12 items-center justify-between border-b border-[var(--border-primary)] bg-[var(--surface-1)]/60 px-4">
           <div className="flex items-center gap-3">
-            <div className="font-medium text-[var(--text-primary)]">
-              Timeline
-            </div>
+            <div className="font-medium text-[var(--text-primary)]">Timeline</div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() =>
               updateUI({
-                activeTab: "flow",
+                activeTab: 'flow',
                 selectedNodeId: undefined,
                 selectedNodeType: undefined,
               })
@@ -298,30 +283,23 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
                 const trackOverride: Partial<TrackOverride> = {
                   ...(updates.properties
                     ? {
-                        properties: updates.properties as unknown as Record<
-                          string,
-                          unknown
-                        >,
+                        properties: updates.properties as unknown as Record<string, unknown>,
                       }
                     : {}),
                   ...(updates.easing ? { easing: updates.easing } : {}),
-                  ...(updates.startTime !== undefined
-                    ? { startTime: updates.startTime }
-                    : {}),
-                  ...(updates.duration !== undefined
-                    ? { duration: updates.duration }
-                    : {}),
+                  ...(updates.startTime !== undefined ? { startTime: updates.startTime } : {}),
+                  ...(updates.duration !== undefined ? { duration: updates.duration } : {}),
                 };
                 updateAssignmentsForTrack(
                   selectedObjectId,
                   selectedTrack.identifier.id,
-                  trackOverride,
+                  trackOverride
                 );
               } else {
                 const nextTracks = data.tracks.map((t) =>
                   t.identifier.id === selectedTrack.identifier.id
                     ? ({ ...t, ...updates } as AnimationTrack)
-                    : t,
+                    : t
                 );
                 handleChange({ tracks: nextTracks });
               }
@@ -335,20 +313,16 @@ export function TimelineEditorTab({ nodeId }: { nodeId: string }) {
                       ...t,
                       identifier: { ...t.identifier, displayName: newName },
                     }
-                  : t,
+                  : t
               );
               handleChange({ tracks: nextTracks });
               return true;
             }}
-            validateDisplayName={(name, trackId) =>
-              validateNameHelper(name, trackId, data.tracks)
-            }
+            validateDisplayName={(name, trackId) => validateNameHelper(name, trackId, data.tracks)}
             trackOverride={(() => {
               if (!selectedObjectId || !currentAssignments) return undefined;
               const obj = currentAssignments[selectedObjectId];
-              const tr = obj?.tracks?.find(
-                (t) => t.trackId === selectedTrack.identifier.id,
-              );
+              const tr = obj?.tracks?.find((t) => t.trackId === selectedTrack.identifier.id);
               return tr;
             })()}
             animationNodeId={nodeId}

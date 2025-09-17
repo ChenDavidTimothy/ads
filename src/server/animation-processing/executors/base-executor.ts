@@ -1,14 +1,14 @@
 // src/server/animation-processing/executors/base-executor.ts
-import type { NodeExecutor } from "./node-executor";
-import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeData } from "@/shared/types";
-import type { ExecutionContext } from "../execution-context";
+import type { NodeExecutor } from './node-executor';
+import type { ReactFlowNode, ReactFlowEdge } from '../types/graph';
+import type { NodeData } from '@/shared/types';
+import type { ExecutionContext } from '../execution-context';
 
 // Type for executor methods
 export type ExecutorMethod = (
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ) => Promise<void>;
 
 // Base executor class with method registration pattern
@@ -31,12 +31,12 @@ export abstract class BaseExecutor implements NodeExecutor {
   async execute(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[],
+    connections: ReactFlowEdge[]
   ): Promise<void> {
     const handler = this.handlers.get(node.type!);
     if (!handler) {
       throw new Error(
-        `No handler registered for node type: ${node.type} in executor ${this.constructor.name}`,
+        `No handler registered for node type: ${node.type} in executor ${this.constructor.name}`
       );
     }
 

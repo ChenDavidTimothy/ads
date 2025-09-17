@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 // scripts/generate-node-mappings.ts - Build-time component mapping generation
-import { NODE_DEFINITIONS } from "../src/shared/types/definitions";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+import { NODE_DEFINITIONS } from '../src/shared/types/definitions';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,28 +13,24 @@ const __dirname = dirname(__filename);
 function getComponentName(nodeType: string): string {
   return (
     nodeType
-      .split("_")
+      .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join("") + "Node"
+      .join('') + 'Node'
   );
 }
 
 // Convert node type to filename (handle underscore to hyphen conversion)
 function getComponentFilename(nodeType: string): string {
-  return `${nodeType.replace(/_/g, "-")}-node.tsx`;
+  return `${nodeType.replace(/_/g, '-')}-node.tsx`;
 }
 
 // Validate component files exist
 function validateComponentExists(nodeType: string): void {
   const filename = getComponentFilename(nodeType);
-  const componentPath = path.join(
-    __dirname,
-    "../src/components/workspace/nodes",
-    filename,
-  );
+  const componentPath = path.join(__dirname, '../src/components/workspace/nodes', filename);
   if (!fs.existsSync(componentPath)) {
     throw new Error(
-      `Component file not found: ${componentPath}\nExpected for node type: ${nodeType}`,
+      `Component file not found: ${componentPath}\nExpected for node type: ${nodeType}`
     );
   }
 }
@@ -59,7 +55,7 @@ function generateComponentMappings(): string {
       throw error;
     }
 
-    const filename = nodeType.replace(/_/g, "-");
+    const filename = nodeType.replace(/_/g, '-');
     imports.push(`import { ${componentName} } from './${filename}-node';`);
     mappings.push(`  '${nodeType}': ${componentName},`);
   });
@@ -68,10 +64,10 @@ function generateComponentMappings(): string {
 // Generated from NODE_DEFINITIONS at build time
 // To regenerate: npm run generate
 
-${imports.join("\n")}
+${imports.join('\n')}
 
 export const COMPONENT_MAPPING = {
-${mappings.join("\n")}
+${mappings.join('\n')}
 } as const;
 
 export type ComponentMapping = typeof COMPONENT_MAPPING;
@@ -96,10 +92,10 @@ function generateExecutorMappings(): string {
 
   const mappingEntries = Object.entries(executorMappings)
     .map(([executor, nodeTypes]) => {
-      const nodeList = nodeTypes.map((type) => `'${type}'`).join(", ");
+      const nodeList = nodeTypes.map((type) => `'${type}'`).join(', ');
       return `  ${executor}: [${nodeList}],`;
     })
-    .join("\n");
+    .join('\n');
 
   return `// AUTO-GENERATED - Executor to node type mappings
 export const EXECUTOR_NODE_MAPPINGS = {
@@ -113,11 +109,11 @@ export type ExecutorType = keyof typeof EXECUTOR_NODE_MAPPINGS;
 // Main generation function
 async function generateMappings(): Promise<void> {
   try {
-    const outputDir = path.join(__dirname, "../src/components/workspace/nodes");
-    const componentMappingPath = path.join(outputDir, "generated-mappings.ts");
+    const outputDir = path.join(__dirname, '../src/components/workspace/nodes');
+    const componentMappingPath = path.join(outputDir, 'generated-mappings.ts');
     const executorMappingPath = path.join(
       __dirname,
-      "../src/server/animation-processing/executors/generated-mappings.ts",
+      '../src/server/animation-processing/executors/generated-mappings.ts'
     );
 
     // Ensure output directories exist
@@ -125,20 +121,20 @@ async function generateMappings(): Promise<void> {
     fs.mkdirSync(path.dirname(executorMappingPath), { recursive: true });
 
     // Generate component mappings
-    console.log("Generating component mappings...");
+    console.log('Generating component mappings...');
     const componentMappings = generateComponentMappings();
     fs.writeFileSync(componentMappingPath, componentMappings);
     console.log(`✓ Generated: ${componentMappingPath}`);
 
     // Generate executor mappings
-    console.log("Generating executor mappings...");
+    console.log('Generating executor mappings...');
     const executorMappings = generateExecutorMappings();
     fs.writeFileSync(executorMappingPath, executorMappings);
     console.log(`✓ Generated: ${executorMappingPath}`);
 
-    console.log("✅ All mappings generated successfully!");
+    console.log('✅ All mappings generated successfully!');
   } catch (error) {
-    console.error("❌ Failed to generate mappings:", error);
+    console.error('❌ Failed to generate mappings:', error);
     process.exit(1);
   }
 }

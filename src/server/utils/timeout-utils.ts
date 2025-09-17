@@ -7,13 +7,11 @@
 export async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  errorMessage?: string,
+  errorMessage?: string
 ): Promise<T> {
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
-      reject(
-        new Error(errorMessage ?? `Operation timed out after ${timeoutMs}ms`),
-      );
+      reject(new Error(errorMessage ?? `Operation timed out after ${timeoutMs}ms`));
     }, timeoutMs);
   });
 

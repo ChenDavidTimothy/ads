@@ -1,54 +1,48 @@
 // src/components/workspace/nodes/boolean-op-node.tsx - Boolean operation logic node
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinitionWithDynamicPorts } from "@/shared/registry/registry-utils";
-import type { BooleanOpNodeData } from "@/shared/types/nodes";
-import { Binary } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
+import type { BooleanOpNodeData } from '@/shared/types/nodes';
+import { Binary } from 'lucide-react';
 
-export function BooleanOpNode({
-  data,
-  selected,
-}: NodeProps<BooleanOpNodeData>) {
+export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
   const nodeDefinition = getNodeDefinitionWithDynamicPorts(
-    "boolean_op",
-    data as unknown as Record<string, unknown>,
+    'boolean_op',
+    data as unknown as Record<string, unknown>
   );
 
   const getOperatorDisplay = () => {
     switch (data.operator) {
-      case "and":
-        return "AND";
-      case "or":
-        return "OR";
-      case "not":
-        return "NOT";
-      case "xor":
-        return "XOR";
+      case 'and':
+        return 'AND';
+      case 'or':
+        return 'OR';
+      case 'not':
+        return 'NOT';
+      case 'xor':
+        return 'XOR';
     }
   };
 
   const getOperatorSymbol = () => {
     switch (data.operator) {
-      case "and":
-        return "∧";
-      case "or":
-        return "∨";
-      case "not":
-        return "¬";
-      case "xor":
-        return "⊕";
+      case 'and':
+        return '∧';
+      case 'or':
+        return '∨';
+      case 'not':
+        return '¬';
+      case 'xor':
+        return '⊕';
     }
   };
 
-  const handleClass = "bg-[var(--node-logic)]";
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {/* Dynamic input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
@@ -78,16 +72,12 @@ export function BooleanOpNode({
             Bool ({getOperatorDisplay()})
           </div>
           <div className="mt-1 font-mono text-lg text-[var(--text-primary)]">
-            {data.operator === "not"
-              ? `${getOperatorSymbol()}A`
-              : `A ${getOperatorSymbol()} B`}
+            {data.operator === 'not' ? `${getOperatorSymbol()}A` : `A ${getOperatorSymbol()} B`}
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">
-            Operation:
-          </span>
+          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
           <span className="text-xs font-medium text-[var(--text-primary)]">
             {getOperatorDisplay()}
           </span>
@@ -101,7 +91,7 @@ export function BooleanOpNode({
 
         <div className="mt-3 border-t border-[var(--border-primary)] pt-2">
           <div className="text-center text-xs text-[var(--text-tertiary)]">
-            {data.operator === "not" ? "1 Input" : "2 Inputs"} → Boolean
+            {data.operator === 'not' ? '1 Input' : '2 Inputs'} → Boolean
           </div>
         </div>
       </CardContent>
@@ -114,7 +104,7 @@ export function BooleanOpNode({
           position={Position.Right}
           id={port.id}
           className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
     </Card>

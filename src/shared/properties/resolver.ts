@@ -8,9 +8,9 @@ import type {
   RectangleProperties,
   ImageProperties,
   TextProperties,
-} from "@/shared/types/scene";
-import type { PropertySourceMap } from "./precedence";
-import type { ObjectAssignments } from "./assignments";
+} from '@/shared/types/scene';
+import type { PropertySourceMap } from './precedence';
+import type { ObjectAssignments } from './assignments';
 
 export interface CanvasOverrides {
   position?: { x: number; y: number };
@@ -37,7 +37,7 @@ export interface ResolveInitialResult {
 export function resolveInitialObject(
   original: SceneObject,
   canvasOverrides?: CanvasOverrides,
-  assignments?: ObjectAssignments,
+  assignments?: ObjectAssignments
 ): ResolveInitialResult {
   const sources: PropertySourceMap = {};
 
@@ -47,8 +47,8 @@ export function resolveInitialObject(
     rotation: 0,
     scale: { x: 1, y: 1 },
     opacity: 1,
-    fillColor: "#4444ff",
-    strokeColor: "#ffffff",
+    fillColor: '#4444ff',
+    strokeColor: '#ffffff',
     strokeWidth: 2,
   };
 
@@ -62,97 +62,83 @@ export function resolveInitialObject(
   if (assignments?.initial?.position)
     initialPosition = { ...initialPosition, ...assignments.initial.position };
   sources.position = assignments?.initial?.position
-    ? "assignment"
+    ? 'assignment'
     : canvasOverrides?.position
-      ? "canvas"
-      : "base";
+      ? 'canvas'
+      : 'base';
 
   const initialRotation =
-    assignments?.initial?.rotation ??
-    canvasOverrides?.rotation ??
-    original.initialRotation ??
-    0;
+    assignments?.initial?.rotation ?? canvasOverrides?.rotation ?? original.initialRotation ?? 0;
   sources.rotation = assignments?.initial?.rotation
-    ? "assignment"
+    ? 'assignment'
     : canvasOverrides?.rotation
-      ? "canvas"
-      : "base";
+      ? 'canvas'
+      : 'base';
 
   const baseScale = original.initialScale ?? { x: 1, y: 1 };
   let initialScale = { ...baseScale };
-  if (canvasOverrides?.scale)
-    initialScale = { ...initialScale, ...canvasOverrides.scale };
-  if (assignments?.initial?.scale)
-    initialScale = { ...initialScale, ...assignments.initial.scale };
+  if (canvasOverrides?.scale) initialScale = { ...initialScale, ...canvasOverrides.scale };
+  if (assignments?.initial?.scale) initialScale = { ...initialScale, ...assignments.initial.scale };
   sources.scale = assignments?.initial?.scale
-    ? "assignment"
+    ? 'assignment'
     : canvasOverrides?.scale
-      ? "canvas"
-      : "base";
+      ? 'canvas'
+      : 'base';
 
   const initialOpacity =
-    assignments?.initial?.opacity ??
-    canvasOverrides?.opacity ??
-    original.initialOpacity ??
-    1;
+    assignments?.initial?.opacity ?? canvasOverrides?.opacity ?? original.initialOpacity ?? 1;
   sources.opacity = assignments?.initial?.opacity
-    ? "assignment"
+    ? 'assignment'
     : canvasOverrides?.opacity
-      ? "canvas"
-      : "base";
+      ? 'canvas'
+      : 'base';
 
   // CHANGE: Make color resolution conditional for text objects
   const initialFillColor =
-    original.type !== "text"
-      ? (assignments?.initial?.fillColor ??
-        canvasOverrides?.fillColor ??
-        "#4444ff")
-      : "#4444ff"; // Default for text (Typography will override)
+    original.type !== 'text'
+      ? (assignments?.initial?.fillColor ?? canvasOverrides?.fillColor ?? '#4444ff')
+      : '#4444ff'; // Default for text (Typography will override)
 
   const initialStrokeColor =
-    original.type !== "text"
-      ? (assignments?.initial?.strokeColor ??
-        canvasOverrides?.strokeColor ??
-        "#ffffff")
-      : "#ffffff"; // Default for text (Typography will override)
+    original.type !== 'text'
+      ? (assignments?.initial?.strokeColor ?? canvasOverrides?.strokeColor ?? '#ffffff')
+      : '#ffffff'; // Default for text (Typography will override)
 
   const initialStrokeWidth =
-    original.type !== "text"
+    original.type !== 'text'
       ? (assignments?.initial?.strokeWidth ?? canvasOverrides?.strokeWidth ?? 2)
       : 0; // Default for text (Typography will override)
 
   // Update sources tracking conditionally
-  if (original.type !== "text") {
+  if (original.type !== 'text') {
     sources.colors = sources.colors ?? {};
     sources.colors.fill = assignments?.initial?.fillColor
-      ? "assignment"
+      ? 'assignment'
       : canvasOverrides?.fillColor
-        ? "canvas"
-        : "base";
+        ? 'canvas'
+        : 'base';
     sources.colors.stroke = assignments?.initial?.strokeColor
-      ? "assignment"
+      ? 'assignment'
       : canvasOverrides?.strokeColor
-        ? "canvas"
-        : "base";
+        ? 'canvas'
+        : 'base';
     sources.strokeWidth = assignments?.initial?.strokeWidth
-      ? "assignment"
+      ? 'assignment'
       : canvasOverrides?.strokeWidth
-        ? "canvas"
-        : "base";
+        ? 'canvas'
+        : 'base';
   }
 
   // Geometry properties with Canvas-provided styling - clone with correct type
   let properties: GeometryProperties;
   switch (original.type) {
-    case "triangle": {
+    case 'triangle': {
       const base = original.properties as TriangleProperties;
       properties = {
         ...base,
         color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
-        strokeColor:
-          assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
-        strokeWidth:
-          assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
+        strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
+        strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
       } as TriangleProperties & {
         color: string;
         strokeColor: string;
@@ -160,15 +146,13 @@ export function resolveInitialObject(
       };
       break;
     }
-    case "circle": {
+    case 'circle': {
       const base = original.properties as CircleProperties;
       properties = {
         ...base,
         color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
-        strokeColor:
-          assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
-        strokeWidth:
-          assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
+        strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
+        strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
       } as CircleProperties & {
         color: string;
         strokeColor: string;
@@ -176,15 +160,13 @@ export function resolveInitialObject(
       };
       break;
     }
-    case "rectangle": {
+    case 'rectangle': {
       const base = original.properties as RectangleProperties;
       properties = {
         ...base,
         color: assignments?.initial?.fillColor ?? effectiveCanvas.fillColor,
-        strokeColor:
-          assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
-        strokeWidth:
-          assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
+        strokeColor: assignments?.initial?.strokeColor ?? effectiveCanvas.strokeColor,
+        strokeWidth: assignments?.initial?.strokeWidth ?? effectiveCanvas.strokeWidth,
       } as RectangleProperties & {
         color: string;
         strokeColor: string;
@@ -192,7 +174,7 @@ export function resolveInitialObject(
       };
       break;
     }
-    case "text": {
+    case 'text': {
       const base = original.properties as TextProperties;
       // CHANGE: Remove Canvas color application for text objects
       properties = {
@@ -204,7 +186,7 @@ export function resolveInitialObject(
       } as TextProperties; // Remove color extensions
       break;
     }
-    case "image": {
+    case 'image': {
       const base = original.properties as ImageProperties;
       // Image objects don't use Canvas color properties - they're rendered as-is
       properties = {
@@ -221,14 +203,12 @@ export function resolveInitialObject(
 
   // Track sources for styling properties
   // CHANGE: Skip color source tracking for text objects
-  if (original.type !== "text") {
+  if (original.type !== 'text') {
     sources.colors = {
-      fill: assignments?.initial?.fillColor ? "assignment" : "canvas",
-      stroke: assignments?.initial?.strokeColor ? "assignment" : "canvas",
+      fill: assignments?.initial?.fillColor ? 'assignment' : 'canvas',
+      stroke: assignments?.initial?.strokeColor ? 'assignment' : 'canvas',
     } as const;
-    sources.strokeWidth = assignments?.initial?.strokeWidth
-      ? "assignment"
-      : "canvas";
+    sources.strokeWidth = assignments?.initial?.strokeWidth ? 'assignment' : 'canvas';
   }
 
   return {

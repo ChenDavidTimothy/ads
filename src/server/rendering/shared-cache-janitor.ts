@@ -1,9 +1,9 @@
 // src/server/rendering/shared-cache-janitor.ts
-import fs from "fs/promises";
-import type { Stats } from "fs";
-import path from "path";
-import { logger } from "@/lib/logger";
-import { normalizeDir, ensureDir } from "./path-utils";
+import fs from 'fs/promises';
+import type { Stats } from 'fs';
+import path from 'path';
+import { logger } from '@/lib/logger';
+import { normalizeDir, ensureDir } from './path-utils';
 
 export interface JanitorConfig {
   maxTotalBytes: number;
@@ -32,7 +32,7 @@ export class SharedCacheJanitor {
       // Ensure directory exists before starting cleanup
       await ensureDir(this.sharedCacheDir);
     } catch (error) {
-      logger.error("Failed to create shared cache directory", {
+      logger.error('Failed to create shared cache directory', {
         sharedCacheDir: this.sharedCacheDir,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -41,9 +41,9 @@ export class SharedCacheJanitor {
 
     this.cleanupTimer = setInterval(() => {
       this.cleanup().catch((error) =>
-        logger.error("Cache janitor cleanup failed", {
+        logger.error('Cache janitor cleanup failed', {
           error: error instanceof Error ? error.message : String(error),
-        }),
+        })
       );
     }, this.config.cleanupIntervalMs);
 
@@ -66,22 +66,16 @@ export class SharedCacheJanitor {
       } catch {
         try {
           await ensureDir(this.sharedCacheDir);
-          logger.debug("Shared cache directory did not exist; created it", {
+          logger.debug('Shared cache directory did not exist; created it', {
             dir: this.sharedCacheDir,
           });
           // Nothing to clean yet
           return;
         } catch (createError) {
-          logger.error(
-            "Cache janitor cleanup error - failed to create directory",
-            {
-              dir: this.sharedCacheDir,
-              error:
-                createError instanceof Error
-                  ? createError.message
-                  : String(createError),
-            },
-          );
+          logger.error('Cache janitor cleanup error - failed to create directory', {
+            dir: this.sharedCacheDir,
+            error: createError instanceof Error ? createError.message : String(createError),
+          });
           return;
         }
       }
@@ -96,7 +90,7 @@ export class SharedCacheJanitor {
           } catch {
             return null;
           }
-        }),
+        })
       );
 
       const validFiles = fileStats.filter(Boolean) as Array<{
@@ -108,7 +102,7 @@ export class SharedCacheJanitor {
       const totalBytes = validFiles.reduce((sum, f) => sum + f.stat.size, 0);
 
       if (totalBytes <= this.config.maxTotalBytes) {
-        logger.debug("Shared cache within size limit", {
+        logger.debug('Shared cache within size limit', {
           totalBytes: this.formatBytes(totalBytes),
           fileCount: validFiles.length,
         });
@@ -116,9 +110,7 @@ export class SharedCacheJanitor {
       }
 
       // Sort by mtime (oldest first) and remove until under limit
-      validFiles.sort(
-        (a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime(),
-      );
+      validFiles.sort((a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime());
 
       let bytesToRemove = totalBytes - this.config.maxTotalBytes;
       let removedCount = 0;
@@ -141,21 +133,21 @@ export class SharedCacheJanitor {
       }
 
       if (removedCount > 0) {
-        logger.info("Cache janitor cleanup completed", {
+        logger.info('Cache janitor cleanup completed', {
           removedFiles: removedCount,
           removedBytes: this.formatBytes(removedBytes),
           remainingFiles: validFiles.length - removedCount,
         });
       }
     } catch (error) {
-      logger.error("Cache janitor cleanup error", {
+      logger.error('Cache janitor cleanup error', {
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
   private formatBytes(bytes: number): string {
-    const units = ["B", "KB", "MB", "GB"];
+    const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
     let unitIndex = 0;
 

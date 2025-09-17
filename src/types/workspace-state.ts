@@ -1,5 +1,5 @@
-import type { Node, Edge } from "reactflow";
-import type { AnimationTrack, NodeData } from "@/shared/types/nodes";
+import type { Node, Edge } from 'reactflow';
+import type { AnimationTrack, NodeData } from '@/shared/types/nodes';
 
 export interface WorkspaceState {
   // Core flow data persisted to backend
@@ -17,14 +17,7 @@ export interface WorkspaceState {
 
   // UI state (not persisted to backend)
   ui: {
-    activeTab:
-      | "flow"
-      | "timeline"
-      | "canvas"
-      | "image"
-      | "audio"
-      | "typography"
-      | "media";
+    activeTab: 'flow' | 'timeline' | 'canvas' | 'image' | 'audio' | 'typography' | 'media';
     selectedNodeId?: string;
     selectedNodeType?: string;
     leftSidebarCollapsed?: boolean;

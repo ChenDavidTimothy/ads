@@ -1,19 +1,15 @@
 // src/animation/scene/timeline.ts
-import type {
-  AnimationScene,
-  ObjectState,
-  SceneObject,
-} from "@/shared/types/scene";
+import type { AnimationScene, ObjectState, SceneObject } from '@/shared/types/scene';
 
-import type { Point2D } from "@/shared/types/core";
-import type { SceneAnimationTrack } from "@/shared/types";
+import type { Point2D } from '@/shared/types/core';
+import type { SceneAnimationTrack } from '@/shared/types';
 
 // Import the new registry system
 import {
   transformFactory,
   TransformEvaluator,
   getTransformDefinition,
-} from "@/shared/registry/transforms";
+} from '@/shared/registry/transforms';
 
 // Create an instance of the transform evaluator
 const transformEvaluator = new TransformEvaluator();
@@ -24,17 +20,10 @@ type AnimationValue = Point2D | number | string | boolean | null;
 // (Legacy easing and color helpers removed; modern evaluator handles interpolation)
 
 // Evaluate a single animation track at a specific time
-import type { SceneTransform } from "@/shared/types/transforms";
-import {
-  linear,
-  easeInOutCubic,
-  easeInCubic,
-  easeOutCubic,
-} from "@/animation/core/interpolation";
+import type { SceneTransform } from '@/shared/types/transforms';
+import { linear, easeInOutCubic, easeInCubic, easeOutCubic } from '@/animation/core/interpolation';
 
-function sceneTrackToSceneTransform(
-  track: SceneAnimationTrack,
-): SceneTransform {
+function sceneTrackToSceneTransform(track: SceneAnimationTrack): SceneTransform {
   return {
     objectId: track.objectId,
     type: track.type,
@@ -45,14 +34,8 @@ function sceneTrackToSceneTransform(
   };
 }
 
-function evaluateAnimation(
-  animation: SceneAnimationTrack,
-  time: number,
-): AnimationValue {
-  return transformEvaluator.evaluateTransform(
-    sceneTrackToSceneTransform(animation),
-    time,
-  );
+function evaluateAnimation(animation: SceneAnimationTrack, time: number): AnimationValue {
+  return transformEvaluator.evaluateTransform(sceneTrackToSceneTransform(animation), time);
 }
 
 function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
@@ -60,8 +43,7 @@ function getAnimationEndValue(animation: SceneAnimationTrack): AnimationValue {
 }
 
 function evaluateVisibility(object: SceneObject, time: number): number {
-  const appearanceTime =
-    (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;
+  const appearanceTime = (object as unknown as { appearanceTime?: number }).appearanceTime ?? 0;
 
   if (time < appearanceTime) {
     return 0;
@@ -79,19 +61,17 @@ function clonePoint(p: Point2D): Point2D {
 export function getObjectStateAtTime(
   object: SceneObject,
   animations: SceneAnimationTrack[],
-  time: number,
+  time: number
 ): ObjectState {
   const state: ObjectState = {
     position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale
-      ? clonePoint(object.initialScale)
-      : { x: 1, y: 1 },
+    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: evaluateVisibility(object, time),
     colors: {
       // ✅ CHANGE - Read from Canvas properties instead of hardcode
-      fill: object.initialFillColor ?? "#4444ff",
-      stroke: object.initialStrokeColor ?? "#ffffff",
+      fill: object.initialFillColor ?? '#4444ff',
+      stroke: object.initialStrokeColor ?? '#ffffff',
     },
     strokeWidth: object.initialStrokeWidth ?? 2, // ✅ ADD
   };
@@ -102,20 +82,20 @@ export function getObjectStateAtTime(
   // Precompute baseline rotations at slide start times to keep Slide relative
   const slideBaselineRotation: Map<string, number> = new Map<string, number>();
   for (const anim of objectAnimations) {
-    if (anim.type !== "slide") continue;
+    if (anim.type !== 'slide') continue;
     const s = anim.startTime;
     // Compute rotation at time s based on initial rotation + rotate tracks up to s
     let rot = object.initialRotation ?? 0;
     for (const a of objectAnimations) {
       const def = getTransformDefinition(a.type);
-      if (def?.metadata?.targetProperty !== "rotation") continue;
+      if (def?.metadata?.targetProperty !== 'rotation') continue;
       const end = a.startTime + a.duration;
       if (s >= end) {
         const endV = getAnimationEndValue(a);
-        if (typeof endV === "number") rot = endV;
+        if (typeof endV === 'number') rot = endV;
       } else if (s >= a.startTime) {
         const v = evaluateAnimation(a, s);
-        if (typeof v === "number") rot = v;
+        if (typeof v === 'number') rot = v;
       }
     }
     slideBaselineRotation.set(anim.id, rot);
@@ -124,7 +104,7 @@ export function getObjectStateAtTime(
   // Accumulate additive deltas for Slide transforms
   let slideDelta: Point2D = { x: 0, y: 0 };
   for (const anim of objectAnimations) {
-    if (anim.type !== "slide") continue;
+    if (anim.type !== 'slide') continue;
     const baselineTurns = slideBaselineRotation.get(anim.id) ?? 0;
     if (time < anim.startTime) continue;
     // Evaluate current delta (clamped inside helper)
@@ -136,21 +116,19 @@ export function getObjectStateAtTime(
   const accumulatedState: ObjectState = {
     position: clonePoint(object.initialPosition),
     rotation: object.initialRotation ?? 0,
-    scale: object.initialScale
-      ? clonePoint(object.initialScale)
-      : { x: 1, y: 1 },
+    scale: object.initialScale ? clonePoint(object.initialScale) : { x: 1, y: 1 },
     opacity: object.initialOpacity ?? 1,
     colors: {
       // ✅ CHANGE - Read from Canvas properties
-      fill: object.initialFillColor ?? "#4444ff",
-      stroke: object.initialStrokeColor ?? "#ffffff",
+      fill: object.initialFillColor ?? '#4444ff',
+      stroke: object.initialStrokeColor ?? '#ffffff',
     },
     strokeWidth: object.initialStrokeWidth ?? 2, // ✅ ADD
   };
 
   for (const animation of objectAnimations) {
     // Special handling for additive Slide transform
-    if (animation.type === "slide") {
+    if (animation.type === 'slide') {
       // Skip default absolute processing; Slide is additive-only
       continue;
     }
@@ -193,38 +171,38 @@ export function getObjectStateAtTime(
 function updateAccumulatedState(
   accumulatedState: ObjectState,
   animation: SceneAnimationTrack,
-  endValue: AnimationValue,
+  endValue: AnimationValue
 ): void {
   const definition = getTransformDefinition(animation.type);
   if (!definition?.metadata?.targetProperty) return;
 
   switch (definition.metadata.targetProperty) {
-    case "position":
+    case 'position':
       accumulatedState.position = clonePoint(endValue as Point2D);
       break;
-    case "rotation":
+    case 'rotation':
       accumulatedState.rotation = endValue as number;
       break;
-    case "scale": {
+    case 'scale': {
       const v = endValue as Point2D;
       accumulatedState.scale = clonePoint(v);
       break;
     }
-    case "opacity":
+    case 'opacity':
       accumulatedState.opacity = endValue as number;
       break;
-    case "color":
-      if (animation.type === "color") {
+    case 'color':
+      if (animation.type === 'color') {
         const colorProperty = animation.properties.property;
-        if (colorProperty === "fill") {
+        if (colorProperty === 'fill') {
           accumulatedState.colors.fill = endValue as string;
-        } else if (colorProperty === "stroke") {
+        } else if (colorProperty === 'stroke') {
           accumulatedState.colors.stroke = endValue as string;
         }
       }
       break;
     // ✅ ADD - New case for strokeWidth animations
-    case "strokeWidth":
+    case 'strokeWidth':
       accumulatedState.strokeWidth = endValue as number;
       break;
   }
@@ -235,84 +213,84 @@ function updateStateFromAnimation(
   state: ObjectState,
   animation: SceneAnimationTrack,
   value: AnimationValue | ObjectState,
-  targetProperty?: string,
+  targetProperty?: string
 ): void {
   const definition = getTransformDefinition(animation.type);
   const property = targetProperty ?? definition?.metadata?.targetProperty;
   if (!property) return;
   // Do not update absolute position for additive Slide tracks
-  if (animation.type === "slide") return;
+  if (animation.type === 'slide') return;
 
   function isObjectState(v: unknown): v is ObjectState {
     return (
-      typeof v === "object" &&
+      typeof v === 'object' &&
       v !== null &&
-      "position" in v &&
-      "rotation" in v &&
-      "scale" in v &&
-      "opacity" in v
+      'position' in v &&
+      'rotation' in v &&
+      'scale' in v &&
+      'opacity' in v
     );
   }
 
   if (isObjectState(value)) {
     // Value is an ObjectState, extract the specific property
     switch (property) {
-      case "position":
+      case 'position':
         state.position = clonePoint(value.position);
         break;
-      case "rotation":
+      case 'rotation':
         state.rotation = value.rotation;
         break;
-      case "scale":
+      case 'scale':
         state.scale = clonePoint(value.scale);
         break;
-      case "opacity":
+      case 'opacity':
         state.opacity = value.opacity;
         break;
-      case "color":
-        if (animation.type === "color") {
+      case 'color':
+        if (animation.type === 'color') {
           const colorProperty = animation.properties.property;
-          if (colorProperty === "fill") {
+          if (colorProperty === 'fill') {
             state.colors.fill = value.colors.fill;
-          } else if (colorProperty === "stroke") {
+          } else if (colorProperty === 'stroke') {
             state.colors.stroke = value.colors.stroke;
           }
         }
         break;
       // ✅ ADD - New case for strokeWidth animations
-      case "strokeWidth":
+      case 'strokeWidth':
         state.strokeWidth = value.strokeWidth;
         break;
     }
   } else {
     // Value is a direct animation value
     switch (property) {
-      case "position":
+      case 'position':
         state.position = clonePoint(value as Point2D);
         break;
-      case "rotation":
+      case 'rotation':
         state.rotation = value as number;
         break;
-      case "scale": {
+      case 'scale': {
         const v = value as Point2D;
         state.scale = clonePoint(v);
         break;
       }
-      case "opacity":
+      case 'opacity':
         state.opacity = value as number;
         break;
-      case "color":
-        if (animation.type === "color") {
+      case 'color':
+        if (animation.type === 'color') {
           const colorProperty = animation.properties.property;
-          if (colorProperty === "fill") {
+          if (colorProperty === 'fill') {
             state.colors.fill = value as string;
-          } else if (colorProperty === "stroke") {
+          } else if (colorProperty === 'stroke') {
             state.colors.stroke = value as string;
           }
         }
         break;
       // ✅ ADD - New case for strokeWidth animations
-      case "strokeWidth":
+      case 'strokeWidth':
         state.strokeWidth = value as number;
         break;
     }
@@ -320,10 +298,7 @@ function updateStateFromAnimation(
 }
 
 // Get states of all objects at a specific time (one-shot)
-export function getSceneStateAtTime(
-  scene: AnimationScene,
-  time: number,
-): Map<string, ObjectState> {
+export function getSceneStateAtTime(scene: AnimationScene, time: number): Map<string, ObjectState> {
   const sceneState = new Map<string, ObjectState>();
 
   // Build per-object animation index once
@@ -388,20 +363,16 @@ export class Timeline {
 
 // Helper to create common animation patterns - generic factory + thin wrappers
 function createAnimationTrack<TProps extends Record<string, unknown>>(
-  type: "move" | "rotate" | "scale" | "fade" | "color" | "slide",
+  type: 'move' | 'rotate' | 'scale' | 'fade' | 'color' | 'slide',
   objectId: string,
   props: TProps,
   startTime: number,
   duration: number,
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut",
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut'
 ): SceneAnimationTrack {
   const transform = transformFactory.createTransform(type, props);
   transform.easing = easing;
-  const sceneTransform = transformFactory.createSceneTransform(
-    transform,
-    objectId,
-    startTime,
-  );
+  const sceneTransform = transformFactory.createSceneTransform(transform, objectId, startTime);
 
   const track = {
     id: `${objectId}::${type}::${startTime}`,
@@ -421,16 +392,9 @@ export function createMoveAnimation(
   to: Point2D,
   startTime: number,
   duration: number,
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "easeInOut",
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
-  return createAnimationTrack(
-    "move",
-    objectId,
-    { from, to },
-    startTime,
-    duration,
-    easing,
-  );
+  return createAnimationTrack('move', objectId, { from, to }, startTime, duration, easing);
 }
 
 export function createRotateAnimation(
@@ -439,16 +403,9 @@ export function createRotateAnimation(
   to: number,
   startTime: number,
   duration: number,
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "linear",
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
 ): SceneAnimationTrack {
-  return createAnimationTrack(
-    "rotate",
-    objectId,
-    { from, to },
-    startTime,
-    duration,
-    easing,
-  );
+  return createAnimationTrack('rotate', objectId, { from, to }, startTime, duration, easing);
 }
 
 export function createScaleAnimation(
@@ -457,16 +414,9 @@ export function createScaleAnimation(
   to: Point2D,
   startTime: number,
   duration: number,
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "easeInOut",
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'easeInOut'
 ): SceneAnimationTrack {
-  return createAnimationTrack(
-    "scale",
-    objectId,
-    { from, to },
-    startTime,
-    duration,
-    easing,
-  );
+  return createAnimationTrack('scale', objectId, { from, to }, startTime, duration, easing);
 }
 
 // Slide helper - additive motion relative to current orientation at start
@@ -476,28 +426,28 @@ export function createSlideAnimation(
   velocity: number,
   startTime: number,
   duration: number,
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut" = "linear",
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' = 'linear'
 ): SceneAnimationTrack {
   return createAnimationTrack(
-    "slide",
+    'slide',
     objectId,
     { orientationDeg, velocity },
     startTime,
     duration,
-    easing,
+    easing
   );
 }
 
 // Local easing helper (mirror evaluator mapping)
 function getEasingFn(name: string) {
   switch (name) {
-    case "easeInOut":
+    case 'easeInOut':
       return easeInOutCubic;
-    case "easeIn":
+    case 'easeIn':
       return easeInCubic;
-    case "easeOut":
+    case 'easeOut':
       return easeOutCubic;
-    case "linear":
+    case 'linear':
     default:
       return linear;
   }
@@ -505,9 +455,9 @@ function getEasingFn(name: string) {
 
 // Compute Slide delta at a specific time given baseline rotation at start
 function evaluateSlideDelta(
-  slide: Extract<SceneAnimationTrack, { type: "slide" }>,
+  slide: Extract<SceneAnimationTrack, { type: 'slide' }>,
   time: number,
-  baselineRotationTurns: number, // rotations, 1 = 360°
+  baselineRotationTurns: number // rotations, 1 = 360°
 ): Point2D {
   const start = slide.startTime;
   if (time <= start) return { x: 0, y: 0 };
@@ -516,8 +466,7 @@ function evaluateSlideDelta(
   const eased = easingFn(t);
   const totalDisplacement = slide.properties.velocity * slide.duration; // px
   const angleRad =
-    baselineRotationTurns * Math.PI * 2 +
-    (slide.properties.orientationDeg ?? 0) * (Math.PI / 180);
+    baselineRotationTurns * Math.PI * 2 + (slide.properties.orientationDeg ?? 0) * (Math.PI / 180);
   const d = totalDisplacement * eased;
   return { x: d * Math.cos(angleRad), y: d * Math.sin(angleRad) };
 }

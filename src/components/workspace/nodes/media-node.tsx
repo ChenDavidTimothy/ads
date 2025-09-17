@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { MediaNodeData } from "@/shared/types/nodes";
-import { Image, Settings } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { MediaNodeData } from '@/shared/types/nodes';
+import { Image, Settings } from 'lucide-react';
 
 export function MediaNode({
   data,
   selected,
   onOpenMedia,
 }: NodeProps<MediaNodeData> & { onOpenMedia?: () => void }) {
-  const nodeDefinition = getNodeDefinition("media");
+  const nodeDefinition = getNodeDefinition('media');
 
   const handleDoubleClick = () => {
     if (onOpenMedia) {
@@ -19,16 +19,15 @@ export function MediaNode({
     } else {
       // Dispatch custom event to open media editor
       window.dispatchEvent(
-        new CustomEvent("open-media-editor", {
+        new CustomEvent('open-media-editor', {
           detail: { nodeId: data.identifier.id },
-        }),
+        })
       );
     }
   };
 
-  const currentAsset = data.imageAssetId ? "Selected" : "No asset";
-  const cropInfo =
-    data.cropWidth > 0 ? `${data.cropWidth}×${data.cropHeight}` : "Full size";
+  const currentAsset = data.imageAssetId ? 'Selected' : 'No asset';
+  const cropInfo = data.cropWidth > 0 ? `${data.cropWidth}×${data.cropHeight}` : 'Full size';
 
   return (
     <Card
@@ -54,10 +53,7 @@ export function MediaNode({
         <div className="truncate">Asset: {currentAsset}</div>
         <div>Crop: {cropInfo}</div>
         <div>
-          Display:{" "}
-          {data.displayWidth > 0
-            ? `${data.displayWidth}×${data.displayHeight}`
-            : "Auto"}
+          Display: {data.displayWidth > 0 ? `${data.displayWidth}×${data.displayHeight}` : 'Auto'}
         </div>
         <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
           Double-click to edit in Media tab
@@ -71,7 +67,7 @@ export function MediaNode({
           position={Position.Left}
           id={port.id}
           className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
 
@@ -82,7 +78,7 @@ export function MediaNode({
           position={Position.Right}
           id={port.id}
           className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
     </Card>

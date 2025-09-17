@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-import { useNotifications } from "@/hooks/use-notifications";
-import JSZip from "jszip";
+import { useState, useCallback } from 'react';
+import { useNotifications } from '@/hooks/use-notifications';
+import JSZip from 'jszip';
 
 /**
  * Simple download function using native browser APIs
@@ -10,10 +10,10 @@ async function downloadFile(url: string, filename: string): Promise<void> {
   const blob = await response.blob();
   const blobUrl = URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
+  const link = document.createElement('a');
   link.href = blobUrl;
   link.download = filename;
-  link.style.display = "none";
+  link.style.display = 'none';
 
   document.body.appendChild(link);
   link.click();
@@ -25,13 +25,13 @@ async function downloadFile(url: string, filename: string): Promise<void> {
 /**
  * Generate a safe filename with timestamp
  */
-function generateSafeFilename(baseName: string, extension = ""): string {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+function generateSafeFilename(baseName: string, extension = ''): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const safeName = baseName
-    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, "-")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[\\\/\0\n\r\t\f\v:*?"<>|]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return `${safeName}_${timestamp}${extension}`;
 }
 
@@ -40,7 +40,7 @@ function generateSafeFilename(baseName: string, extension = ""): string {
  */
 async function downloadFilesAsZip(
   files: Array<{ url: string; filename: string }>,
-  zipFilename: string,
+  zipFilename: string
 ): Promise<void> {
   const zip = new JSZip();
 
@@ -54,13 +54,13 @@ async function downloadFilesAsZip(
   await Promise.all(downloadPromises);
 
   // Generate and download ZIP
-  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
   const zipUrl = URL.createObjectURL(zipBlob);
 
-  const link = document.createElement("a");
+  const link = document.createElement('a');
   link.href = zipUrl;
   link.download = zipFilename;
-  link.style.display = "none";
+  link.style.display = 'none';
 
   document.body.appendChild(link);
   link.click();
@@ -73,7 +73,7 @@ interface VideoJob {
   jobId: string;
   sceneName: string;
   sceneId: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   videoUrl?: string;
   error?: string;
 }
@@ -82,7 +82,7 @@ interface ImageJob {
   jobId: string;
   frameName: string;
   frameId: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   imageUrl?: string;
   error?: string;
 }
@@ -92,20 +92,17 @@ interface UsePreviewDownloadsProps {
   images?: ImageJob[];
 }
 
-export function usePreviewDownloads({
-  videos = [],
-  images = [],
-}: UsePreviewDownloadsProps) {
+export function usePreviewDownloads({ videos = [], images = [] }: UsePreviewDownloadsProps) {
   const { toast } = useNotifications();
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [currentFile, setCurrentFile] = useState<string>("");
+  const [currentFile, setCurrentFile] = useState<string>('');
 
   const downloadVideo = useCallback(
     async (jobId: string) => {
       const video = videos.find((v) => v.jobId === jobId);
       if (!video?.videoUrl) {
-        toast.error("Download Failed", "Video not available");
+        toast.error('Download Failed', 'Video not available');
         return;
       }
 
@@ -115,20 +112,14 @@ export function usePreviewDownloads({
 
       try {
         await downloadFile(video.videoUrl, `${video.sceneName}.mp4`);
-        toast.success(
-          "Download Complete",
-          `${video.sceneName} has been downloaded`,
-        );
+        toast.success('Download Complete', `${video.sceneName} has been downloaded`);
       } catch (error) {
-        toast.error(
-          "Download Failed",
-          error instanceof Error ? error.message : "Unknown error",
-        );
+        toast.error('Download Failed', error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setIsDownloading(false);
       }
     },
-    [videos, toast],
+    [videos, toast]
   );
 
   const downloadImage = useCallback(
@@ -136,7 +127,7 @@ export function usePreviewDownloads({
       const image = images.find((i) => i.jobId === jobId);
 
       if (!image?.imageUrl) {
-        toast.error("Download Failed", "Image not available");
+        toast.error('Download Failed', 'Image not available');
         return;
       }
 
@@ -146,28 +137,20 @@ export function usePreviewDownloads({
 
       try {
         await downloadFile(image.imageUrl, `${image.frameName}.png`);
-        toast.success(
-          "Download Complete",
-          `${image.frameName} has been downloaded`,
-        );
+        toast.success('Download Complete', `${image.frameName} has been downloaded`);
       } catch (error) {
-        toast.error(
-          "Download Failed",
-          error instanceof Error ? error.message : "Unknown error",
-        );
+        toast.error('Download Failed', error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setIsDownloading(false);
       }
     },
-    [images, toast],
+    [images, toast]
   );
 
   const downloadAllVideos = useCallback(async () => {
-    const completedVideos = videos.filter(
-      (v) => v.status === "completed" && v.videoUrl,
-    );
+    const completedVideos = videos.filter((v) => v.status === 'completed' && v.videoUrl);
     if (completedVideos.length === 0) {
-      toast.error("Download Failed", "No completed videos to download");
+      toast.error('Download Failed', 'No completed videos to download');
       return;
     }
 
@@ -180,27 +163,22 @@ export function usePreviewDownloads({
     }));
 
     try {
-      await downloadFilesAsZip(files, generateSafeFilename("videos", ".zip"));
+      await downloadFilesAsZip(files, generateSafeFilename('videos', '.zip'));
       toast.success(
-        "Download Complete",
-        `All ${completedVideos.length} videos have been downloaded as ZIP`,
+        'Download Complete',
+        `All ${completedVideos.length} videos have been downloaded as ZIP`
       );
     } catch (error) {
-      toast.error(
-        "Download Failed",
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      toast.error('Download Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsDownloading(false);
     }
   }, [videos, toast]);
 
   const downloadAllImages = useCallback(async () => {
-    const completedImages = images.filter(
-      (i) => i.status === "completed" && i.imageUrl,
-    );
+    const completedImages = images.filter((i) => i.status === 'completed' && i.imageUrl);
     if (completedImages.length === 0) {
-      toast.error("Download Failed", "No completed images to download");
+      toast.error('Download Failed', 'No completed images to download');
       return;
     }
 
@@ -213,31 +191,24 @@ export function usePreviewDownloads({
     }));
 
     try {
-      await downloadFilesAsZip(files, generateSafeFilename("images", ".zip"));
+      await downloadFilesAsZip(files, generateSafeFilename('images', '.zip'));
       toast.success(
-        "Download Complete",
-        `All ${completedImages.length} images have been downloaded as ZIP`,
+        'Download Complete',
+        `All ${completedImages.length} images have been downloaded as ZIP`
       );
     } catch (error) {
-      toast.error(
-        "Download Failed",
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      toast.error('Download Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsDownloading(false);
     }
   }, [images, toast]);
 
   const downloadAllContent = useCallback(async () => {
-    const completedVideos = videos.filter(
-      (v) => v.status === "completed" && v.videoUrl,
-    );
-    const completedImages = images.filter(
-      (i) => i.status === "completed" && i.imageUrl,
-    );
+    const completedVideos = videos.filter((v) => v.status === 'completed' && v.videoUrl);
+    const completedImages = images.filter((i) => i.status === 'completed' && i.imageUrl);
 
     if (completedVideos.length === 0 && completedImages.length === 0) {
-      toast.error("Download Failed", "No completed content to download");
+      toast.error('Download Failed', 'No completed content to download');
       return;
     }
 
@@ -256,19 +227,13 @@ export function usePreviewDownloads({
     ];
 
     try {
-      await downloadFilesAsZip(
-        allFiles,
-        generateSafeFilename("all_content", ".zip"),
-      );
+      await downloadFilesAsZip(allFiles, generateSafeFilename('all_content', '.zip'));
       toast.success(
-        "Download Complete",
-        `All content (${allFiles.length} files) has been downloaded as ZIP`,
+        'Download Complete',
+        `All content (${allFiles.length} files) has been downloaded as ZIP`
       );
     } catch (error) {
-      toast.error(
-        "Download Failed",
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      toast.error('Download Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsDownloading(false);
     }

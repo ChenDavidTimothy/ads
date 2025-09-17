@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { X } from "lucide-react";
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface TabButtonProps {
   active: boolean;
@@ -13,21 +13,15 @@ interface TabButtonProps {
   onClose?: () => void;
 }
 
-export function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-  onClose,
-}: TabButtonProps) {
+export function TabButton({ active, onClick, icon, label, onClose }: TabButtonProps) {
   return (
     <div className="flex items-center">
       <Button
-        variant={active ? "primary" : "ghost"}
+        variant={active ? 'primary' : 'ghost'}
         size="sm"
         className={cn(
-          "rounded-none border-b-2",
-          active ? "border-[var(--accent-primary)]" : "border-transparent",
+          'rounded-none border-b-2',
+          active ? 'border-[var(--accent-primary)]' : 'border-transparent'
         )}
         onClick={onClick}
       >

@@ -1,9 +1,9 @@
 // src/server/jobs/graphile-queue.ts
-import type { JobQueue } from "./queue";
-import { pgPool } from "@/server/db/pool";
-import { logger } from "@/lib/logger";
-import type { AnimationScene } from "@/shared/types/scene";
-import type { SceneAnimationConfig } from "@/server/rendering/renderer";
+import type { JobQueue } from './queue';
+import { pgPool } from '@/server/db/pool';
+import { logger } from '@/lib/logger';
+import type { AnimationScene } from '@/shared/types/scene';
+import type { SceneAnimationConfig } from '@/server/rendering/renderer';
 
 export interface RenderJobInput {
   scene: AnimationScene;
@@ -26,13 +26,11 @@ interface QueueStatsRow {
 
 // Type guard for queue stats
 function isValidQueueStatsRow(row: unknown): row is QueueStatsRow {
-  return typeof row === "object" && row !== null;
+  return typeof row === 'object' && row !== null;
 }
 
-export class GraphileQueue<
-  TJob extends { jobId: string; jobKey?: string },
-  TResult,
-> implements JobQueue<TJob, TResult>
+export class GraphileQueue<TJob extends { jobId: string; jobKey?: string }, TResult>
+  implements JobQueue<TJob, TResult>
 {
   private readonly taskIdentifier: string;
 
@@ -41,11 +39,11 @@ export class GraphileQueue<
   }
 
   async enqueueOnly(job: TJob): Promise<{ jobId: string }> {
-    const maxAttempts = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? "5");
+    const maxAttempts = Number(process.env.RENDER_JOB_RETRY_LIMIT ?? '5');
     const dedupeKey = job.jobKey ?? job.jobId;
 
     await withTransientPgRetry(async () => {
-      await pgPool.query("select graphile_worker.add_job($1, $2, $3)", [
+      await pgPool.query('select graphile_worker.add_job($1, $2, $3)', [
         this.taskIdentifier,
         job,
         {
@@ -60,7 +58,7 @@ export class GraphileQueue<
       try {
         await pgPool.query("select pg_notify('graphile_worker:jobs', '')");
       } catch (err) {
-        logger.warn("Graphile Worker wake notify failed (best-effort)", {
+        logger.warn('Graphile Worker wake notify failed (best-effort)', {
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -71,9 +69,7 @@ export class GraphileQueue<
 
   async enqueue(job: TJob): Promise<TResult> {
     await this.enqueueOnly(job);
-    throw new Error(
-      "Synchronous enqueue wait is not supported; use waitForRenderJobEvent",
-    );
+    throw new Error('Synchronous enqueue wait is not supported; use waitForRenderJobEvent');
   }
 
   async getQueueStats(): Promise<{
@@ -93,7 +89,7 @@ export class GraphileQueue<
          join graphile_worker.job_queues q on j.queue_name = q.queue_name
          join graphile_worker.job_run_stats r on r.job_id = j.id
          where j.task_identifier = $1`,
-        [this.taskIdentifier],
+        [this.taskIdentifier]
       );
     });
 
@@ -129,5 +125,5 @@ async function withTransientPgRetry<T>(fn: () => Promise<T>): Promise<T> {
       await new Promise((r) => setTimeout(r, backoffMs));
     }
   }
-  throw new Error("unreachable");
+  throw new Error('unreachable');
 }

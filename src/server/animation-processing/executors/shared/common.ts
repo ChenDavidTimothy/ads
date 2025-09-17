@@ -8,13 +8,9 @@ export function deepClone<T>(value: T): T {
 }
 
 export function toDisplayString(value: unknown): string {
-  if (value == null) return "";
-  if (typeof value === "string") return value;
-  if (
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-  )
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint')
     return String(value);
   if (value instanceof Date) return value.toISOString();
   try {
@@ -24,21 +20,16 @@ export function toDisplayString(value: unknown): string {
   }
 }
 
-export const numberCoerce = (
-  value: unknown,
-): { ok: boolean; value?: number; warn?: string } => {
-  if (typeof value === "number" && Number.isFinite(value))
-    return { ok: true, value };
-  if (typeof value === "string") {
+export const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
+  if (typeof value === 'number' && Number.isFinite(value)) return { ok: true, value };
+  if (typeof value === 'string') {
     const parsed = Number.parseFloat(value);
     if (Number.isFinite(parsed)) return { ok: true, value: parsed };
   }
   return { ok: false, warn: `Expected number, got ${typeof value}` };
 };
 
-export const stringCoerce = (
-  value: unknown,
-): { ok: boolean; value?: string; warn?: string } => {
-  if (typeof value === "string") return { ok: true, value };
+export const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+  if (typeof value === 'string') return { ok: true, value };
   return { ok: false, warn: `Expected string, got ${typeof value}` };
 };

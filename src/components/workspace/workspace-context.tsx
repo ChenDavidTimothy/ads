@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   createContext,
@@ -8,27 +8,24 @@ import {
   useMemo,
   useState,
   useRef,
-} from "react";
-import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { api } from "@/trpc/react";
-import type {
-  WorkspaceState,
-  TimelineEditorData,
-} from "@/types/workspace-state";
-import { extractWorkspaceState } from "@/utils/workspace-state";
-import { useWorkspaceSave } from "@/hooks/use-workspace-save";
-import { useNotifications } from "@/hooks/use-notifications";
-import { useCrashBackup } from "@/hooks/use-crash-backup";
-import { useNavigationGuard } from "@/hooks/use-navigation-guard";
-import { UnsavedChangesModal } from "./unsaved-changes-modal";
-import { WorkspaceSkeleton } from "@/components/skeletons/WorkspaceSkeleton";
+} from 'react';
+import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/trpc/react';
+import type { WorkspaceState, TimelineEditorData } from '@/types/workspace-state';
+import { extractWorkspaceState } from '@/utils/workspace-state';
+import { useWorkspaceSave } from '@/hooks/use-workspace-save';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useCrashBackup } from '@/hooks/use-crash-backup';
+import { useNavigationGuard } from '@/hooks/use-navigation-guard';
+import { UnsavedChangesModal } from './unsaved-changes-modal';
+import { WorkspaceSkeleton } from '@/components/skeletons/WorkspaceSkeleton';
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
-  updateFlow: (updates: Partial<WorkspaceState["flow"]>) => void;
+  updateFlow: (updates: Partial<WorkspaceState['flow']>) => void;
   updateTimeline: (nodeId: string, data: Partial<TimelineEditorData>) => void;
-  updateUI: (updates: Partial<WorkspaceState["ui"]>) => void;
+  updateUI: (updates: Partial<WorkspaceState['ui']>) => void;
   saveNow: () => Promise<void>;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
@@ -36,9 +33,7 @@ interface WorkspaceContextValue {
   hasBackup: boolean;
 }
 
-export const WorkspaceContext = createContext<WorkspaceContextValue | null>(
-  null,
-);
+export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({
   children,
@@ -61,16 +56,14 @@ export function WorkspaceProvider({
       staleTime: 5 * 60 * 1000, // 5 minutes - workspace data doesn't change often
       // Keep in cache longer but allow garbage collection
       gcTime: 10 * 60 * 1000, // 10 minutes
-    },
+    }
   );
 
   const [state, setState] = useState<WorkspaceState | null>(null);
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<
-    string | null
-  >(null);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
 
   const {
     saveNow: saveToBackend,
@@ -81,9 +74,9 @@ export function WorkspaceProvider({
   } = useWorkspaceSave({
     workspaceId,
     initialVersion: workspace?.version ?? 0,
-    onSaveSuccess: () => toast.success("Workspace saved"),
+    onSaveSuccess: () => toast.success('Workspace saved'),
     onSaveError: (error) =>
-      toast.error("Save failed", (error as Error)?.message ?? "Unknown error"),
+      toast.error('Save failed', (error as Error)?.message ?? 'Unknown error'),
   });
 
   // Track last loaded workspace signature to refresh state when backend changes
@@ -110,12 +103,12 @@ export function WorkspaceProvider({
     };
   }, [workspaceId, utils]);
 
-  const updateFlow = useCallback((updates: Partial<WorkspaceState["flow"]>) => {
+  const updateFlow = useCallback((updates: Partial<WorkspaceState['flow']>) => {
     setState((prev) => {
       if (!prev) return prev;
 
       // SURGICAL FIX: Fast path for node position updates (avoid expensive JSON.stringify)
-      if ("nodes" in updates && updates.nodes) {
+      if ('nodes' in updates && updates.nodes) {
         const newNodes = updates.nodes;
         const currentNodes = prev.flow.nodes;
 
@@ -148,10 +141,7 @@ export function WorkspaceProvider({
             if (posChanged) hasPositionChanges = true;
 
             // Quick non-position change detection (avoid deep comparison)
-            if (
-              newNode.type !== currentNode.type ||
-              newNode.data !== currentNode.data
-            ) {
+            if (newNode.type !== currentNode.type || newNode.data !== currentNode.data) {
               onlyPositionChanges = false;
             }
           }
@@ -179,54 +169,49 @@ export function WorkspaceProvider({
     });
   }, []);
 
-  const updateTimeline = useCallback(
-    (nodeId: string, data: Partial<TimelineEditorData>) => {
-      setState((prev) => {
-        if (!prev) return prev;
+  const updateTimeline = useCallback((nodeId: string, data: Partial<TimelineEditorData>) => {
+    setState((prev) => {
+      if (!prev) return prev;
 
-        const existing = prev.editors.timeline[nodeId] ?? {
-          duration: 3,
-          tracks: [],
-        };
-        const merged: TimelineEditorData = {
-          duration: data.duration ?? existing.duration,
-          tracks: data.tracks ?? existing.tracks,
-        };
+      const existing = prev.editors.timeline[nodeId] ?? {
+        duration: 3,
+        tracks: [],
+      };
+      const merged: TimelineEditorData = {
+        duration: data.duration ?? existing.duration,
+        tracks: data.tracks ?? existing.tracks,
+      };
 
-        // Mirror changes into the corresponding animation node in flow
-        const updatedNodes = prev.flow.nodes.map((node) => {
-          const isTarget = node.data.identifier?.id === nodeId;
-          if (!isTarget) return node;
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              duration: merged.duration,
-              tracks: merged.tracks,
-            },
-          };
-        });
-
+      // Mirror changes into the corresponding animation node in flow
+      const updatedNodes = prev.flow.nodes.map((node) => {
+        const isTarget = node.data.identifier?.id === nodeId;
+        if (!isTarget) return node;
         return {
-          ...prev,
-          flow: { ...prev.flow, nodes: updatedNodes },
-          editors: {
-            ...prev.editors,
-            timeline: {
-              ...prev.editors.timeline,
-              [nodeId]: merged,
-            },
+          ...node,
+          data: {
+            ...node.data,
+            duration: merged.duration,
+            tracks: merged.tracks,
           },
-        } as WorkspaceState;
+        };
       });
-    },
-    [],
-  );
 
-  const updateUI = useCallback((updates: Partial<WorkspaceState["ui"]>) => {
-    setState((prev) =>
-      prev ? { ...prev, ui: { ...prev.ui, ...updates } } : prev,
-    );
+      return {
+        ...prev,
+        flow: { ...prev.flow, nodes: updatedNodes },
+        editors: {
+          ...prev.editors,
+          timeline: {
+            ...prev.editors.timeline,
+            [nodeId]: merged,
+          },
+        },
+      } as WorkspaceState;
+    });
+  }, []);
+
+  const updateUI = useCallback((updates: Partial<WorkspaceState['ui']>) => {
+    setState((prev) => (prev ? { ...prev, ui: { ...prev.ui, ...updates } } : prev));
   }, []);
 
   const saveNow = useCallback(async () => {
@@ -247,10 +232,7 @@ export function WorkspaceProvider({
       await saveToBackend(state);
       if (pendingNavigationUrl) {
         // Use window.location for external URLs, router for internal
-        if (
-          pendingNavigationUrl.startsWith("http") ||
-          pendingNavigationUrl.startsWith("//")
-        ) {
+        if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
           window.location.href = pendingNavigationUrl;
         } else {
           router.push(pendingNavigationUrl);
@@ -259,15 +241,9 @@ export function WorkspaceProvider({
       setShowUnsavedModal(false);
       setPendingNavigationUrl(null);
     } catch (error) {
-      console.error(
-        "[WorkspaceContext] Failed to save during navigation:",
-        error,
-      );
+      console.error('[WorkspaceContext] Failed to save during navigation:', error);
       // Show user-friendly error message
-      toast.error(
-        "Failed to save workspace",
-        (error as Error)?.message ?? "Please try again",
-      );
+      toast.error('Failed to save workspace', (error as Error)?.message ?? 'Please try again');
       // Don't close modal on error - let user try again or choose different action
     }
   }, [state, saveToBackend, pendingNavigationUrl, router, toast]);
@@ -275,10 +251,7 @@ export function WorkspaceProvider({
   const handleModalDiscard = useCallback(() => {
     if (pendingNavigationUrl) {
       // Use window.location for external URLs, router for internal
-      if (
-        pendingNavigationUrl.startsWith("http") ||
-        pendingNavigationUrl.startsWith("//")
-      ) {
+      if (pendingNavigationUrl.startsWith('http') || pendingNavigationUrl.startsWith('//')) {
         window.location.href = pendingNavigationUrl;
       } else {
         router.push(pendingNavigationUrl);
@@ -347,7 +320,6 @@ export function WorkspaceProvider({
 
 export function useWorkspace() {
   const ctx = useContext(WorkspaceContext);
-  if (!ctx)
-    throw new Error("useWorkspace must be used within WorkspaceProvider");
+  if (!ctx) throw new Error('useWorkspace must be used within WorkspaceProvider');
   return ctx;
 }

@@ -1,27 +1,24 @@
 // src/components/workspace/nodes/if-else-node.tsx - If/Else logic node
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
-import type { IfElseNodeData } from "@/shared/types/nodes";
-import { GitBranch } from "lucide-react";
+import type { IfElseNodeData } from '@/shared/types/nodes';
+import { GitBranch } from 'lucide-react';
 
 export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
-  const handleClass = "bg-[var(--node-logic)]";
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {/* Condition input port */}
       <Handle
         type="target"
         position={Position.Left}
         id="condition"
         className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-        style={{ top: "35%" }}
+        style={{ top: '35%' }}
       />
 
       {/* Data input port */}
@@ -30,7 +27,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         position={Position.Left}
         id="data"
         className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-        style={{ top: "65%" }}
+        style={{ top: '65%' }}
       />
 
       <CardHeader className="p-0 pb-[var(--space-3)]">
@@ -75,14 +72,14 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         position={Position.Right}
         id="true_path"
         className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--success-500)]`}
-        style={{ top: "35%" }}
+        style={{ top: '35%' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="false_path"
         className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--danger-500)]`}
-        style={{ top: "65%" }}
+        style={{ top: '65%' }}
       />
     </Card>
   );

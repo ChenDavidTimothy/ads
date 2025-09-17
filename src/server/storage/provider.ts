@@ -21,11 +21,8 @@ export interface StorageProvider {
       basename?: string;
       subdir?: string;
       allowUpsert?: boolean;
-    },
+    }
   ): Promise<StoragePreparedTarget>;
   // Finalize the artifact (e.g., upload to remote storage) and return a public URL
-  finalize(
-    prepared: StoragePreparedTarget,
-    opts?: FinalizeOptions,
-  ): Promise<{ publicUrl: string }>;
+  finalize(prepared: StoragePreparedTarget, opts?: FinalizeOptions): Promise<{ publicUrl: string }>;
 }

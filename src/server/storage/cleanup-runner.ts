@@ -1,9 +1,9 @@
 // src/server/storage/cleanup-runner.ts
-import os from "os";
-import path from "path";
-import fs from "fs";
-import { STORAGE_CONFIG } from "./config";
-import type { createServiceClient } from "@/utils/supabase/service";
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
+import { STORAGE_CONFIG } from './config';
+import type { createServiceClient } from '@/utils/supabase/service';
 
 interface StorageCleanupRunnerDeps {
   supabase: ReturnType<typeof createServiceClient>;
@@ -24,16 +24,16 @@ export class StorageCleanupRunner {
 
   async performComprehensiveCleanup(): Promise<void> {
     try {
-      this.logger.info("Starting comprehensive cleanup cycle");
+      this.logger.info('Starting comprehensive cleanup cycle');
 
       await this.cleanupOldTempFiles();
       await this.cleanupOldTempDirectories();
       await this.cleanupOrphanedSupabaseFiles();
       await this.cleanupOrphanedRenderJobs();
 
-      this.logger.info("Comprehensive cleanup cycle completed");
+      this.logger.info('Comprehensive cleanup cycle completed');
     } catch (error) {
-      this.logger.error("Comprehensive cleanup cycle failed:", error);
+      this.logger.error('Comprehensive cleanup cycle failed:', error);
     }
   }
 
@@ -50,7 +50,7 @@ export class StorageCleanupRunner {
         if (now - stats.mtime.getTime() > STORAGE_CONFIG.MAX_TEMP_FILE_AGE_MS) {
           const removed = await this.removeFileWithRetry(
             filePath,
-            `Failed to cleanup old temp file ${file}`,
+            `Failed to cleanup old temp file ${file}`
           );
           if (removed) {
             cleanedCount++;
@@ -63,19 +63,17 @@ export class StorageCleanupRunner {
       }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException)?.code;
-      if (code === "ENOENT") {
+      if (code === 'ENOENT') {
         try {
           await fs.promises.mkdir(this.tempDir, { recursive: true });
-          this.logger.warn(
-            `Temp directory missing; recreated at ${this.tempDir}`,
-          );
+          this.logger.warn(`Temp directory missing; recreated at ${this.tempDir}`);
           return;
         } catch (mkdirErr) {
-          this.logger.error("Failed to recreate temp directory:", mkdirErr);
+          this.logger.error('Failed to recreate temp directory:', mkdirErr);
           return;
         }
       }
-      this.logger.error("Failed to read temp directory for cleanup:", error);
+      this.logger.error('Failed to read temp directory for cleanup:', error);
     }
   }
 
@@ -87,29 +85,20 @@ export class StorageCleanupRunner {
       });
       const now = Date.now();
 
-      this.logger.info(
-        `dY"? Checking for old temp files and directories in ${tempDir}`,
-      );
+      this.logger.info(`dY"? Checking for old temp files and directories in ${tempDir}`);
 
       let cleanedCount = 0;
       for (const entry of entries) {
         const itemName = entry.name;
 
-        if (
-          itemName.startsWith("storage-") ||
-          itemName.startsWith("mat-debug-")
-        ) {
-          const isMatDebugLog =
-            itemName.startsWith("mat-debug-") && itemName.endsWith(".log");
+        if (itemName.startsWith('storage-') || itemName.startsWith('mat-debug-')) {
+          const isMatDebugLog = itemName.startsWith('mat-debug-') && itemName.endsWith('.log');
           if (isMatDebugLog) {
-            const pidPart = itemName.slice(
-              "mat-debug-".length,
-              itemName.lastIndexOf("."),
-            );
+            const pidPart = itemName.slice('mat-debug-'.length, itemName.lastIndexOf('.'));
             const pid = Number(pidPart);
             if (Number.isInteger(pid) && this.isProcessRunning(pid)) {
               this.logger.debug(
-                `Skipping active mat-debug log ${itemName}; process ${pid} still running`,
+                `Skipping active mat-debug log ${itemName}; process ${pid} still running`
               );
               continue;
             }
@@ -125,7 +114,7 @@ export class StorageCleanupRunner {
               if (entry.isDirectory()) {
                 const removedDir = await this.removeDirectoryWithRetry(
                   itemPath,
-                  `Failed to cleanup temp directory ${itemName}`,
+                  `Failed to cleanup temp directory ${itemName}`
                 );
                 if (removedDir) {
                   cleanedCount++;
@@ -133,7 +122,7 @@ export class StorageCleanupRunner {
               } else {
                 const removedFile = await this.removeFileWithRetry(
                   itemPath,
-                  `Failed to cleanup temp file ${itemName}`,
+                  `Failed to cleanup temp file ${itemName}`
                 );
                 if (removedFile) {
                   cleanedCount++;
@@ -149,10 +138,10 @@ export class StorageCleanupRunner {
       if (cleanedCount > 0) {
         this.logger.info(`dY1 Cleaned up ${cleanedCount} old temp items`);
       } else {
-        this.logger.info("No old temp items needed cleanup");
+        this.logger.info('No old temp items needed cleanup');
       }
     } catch (error) {
-      this.logger.error("Failed to cleanup old temp items:", error);
+      this.logger.error('Failed to cleanup old temp items:', error);
     }
   }
 
@@ -162,11 +151,11 @@ export class StorageCleanupRunner {
       const cutoffTime = new Date(Date.now() - maxAgeMs);
 
       const { data: orphanedJobs, error } = await this.supabase
-        .from("render_jobs")
-        .select("id, output_url, created_at")
-        .eq("status", "completed")
-        .not("output_url", "is", null)
-        .lt("created_at", cutoffTime.toISOString());
+        .from('render_jobs')
+        .select('id, output_url, created_at')
+        .eq('status', 'completed')
+        .not('output_url', 'is', null)
+        .lt('created_at', cutoffTime.toISOString());
 
       const typedOrphanedJobs = orphanedJobs as Array<{
         id: string;
@@ -175,10 +164,7 @@ export class StorageCleanupRunner {
       }> | null;
 
       if (error) {
-        this.logger.error(
-          "Failed to fetch orphaned jobs for file cleanup:",
-          error,
-        );
+        this.logger.error('Failed to fetch orphaned jobs for file cleanup:', error);
         return;
       }
 
@@ -187,42 +173,37 @@ export class StorageCleanupRunner {
       }
 
       const { data: savedAssets, error: assetsError } = await this.supabase
-        .from("user_assets")
-        .select("metadata")
-        .not("metadata->render_job_id", "is", null);
+        .from('user_assets')
+        .select('metadata')
+        .not('metadata->render_job_id', 'is', null);
 
       const typedSavedAssets = savedAssets as Array<{
         metadata: { render_job_id?: string };
       }> | null;
 
       if (assetsError) {
-        this.logger.error(
-          "Failed to fetch saved assets for cleanup:",
-          assetsError,
-        );
+        this.logger.error('Failed to fetch saved assets for cleanup:', assetsError);
         return;
       }
 
       const savedJobIds = new Set(
         (typedSavedAssets ?? [])
           .map((asset) => asset.metadata?.render_job_id)
-          .filter((jobId): jobId is string => typeof jobId === "string"),
+          .filter((jobId): jobId is string => typeof jobId === 'string')
       );
 
       const filesToDelete = typedOrphanedJobs.filter(
         (job): job is typeof job & { id: string; output_url: string } =>
-          typeof job.id === "string" &&
-          typeof job.output_url === "string" &&
-          !savedJobIds.has(job.id),
+          typeof job.id === 'string' &&
+          typeof job.output_url === 'string' &&
+          !savedJobIds.has(job.id)
       );
 
       if (filesToDelete.length === 0) {
         return;
       }
 
-      this.logger.info(
-        `Cleaning up ${filesToDelete.length} orphaned Supabase files`,
-      );
+      this.logger.info(`Cleaning up ${filesToDelete.length} orphaned Supabase files`);
 
       let deletedCount = 0;
       for (const job of filesToDelete) {
@@ -235,31 +216,21 @@ export class StorageCleanupRunner {
 
             if (!deleteError) {
               deletedCount++;
-              this.logger.info(
-                `Deleted orphaned file: ${fileInfo.bucket}/${fileInfo.path}`,
-              );
+              this.logger.info(`Deleted orphaned file: ${fileInfo.bucket}/${fileInfo.path}`);
             } else {
-              this.logger.warn(
-                `Failed to delete file ${fileInfo.path}:`,
-                deleteError.message,
-              );
+              this.logger.warn(`Failed to delete file ${fileInfo.path}:`, deleteError.message);
             }
           }
         } catch (error) {
-          this.logger.warn(
-            `Error processing file deletion for job ${job.id}:`,
-            error,
-          );
+          this.logger.warn(`Error processing file deletion for job ${job.id}:`, error);
         }
       }
 
       if (deletedCount > 0) {
-        this.logger.info(
-          `Successfully deleted ${deletedCount} orphaned Supabase files`,
-        );
+        this.logger.info(`Successfully deleted ${deletedCount} orphaned Supabase files`);
       }
     } catch (error) {
-      this.logger.error("Failed to cleanup orphaned Supabase files:", error);
+      this.logger.error('Failed to cleanup orphaned Supabase files:', error);
     }
   }
 
@@ -269,18 +240,15 @@ export class StorageCleanupRunner {
       const cutoffTime = new Date(Date.now() - maxAgeMs);
 
       const { data: orphanedJobs, error } = await this.supabase
-        .from("render_jobs")
-        .select("id")
-        .eq("status", "completed")
-        .lt("created_at", cutoffTime.toISOString());
+        .from('render_jobs')
+        .select('id')
+        .eq('status', 'completed')
+        .lt('created_at', cutoffTime.toISOString());
 
       const typedOrphanedJobs = orphanedJobs as Array<{ id: string }> | null;
 
       if (error) {
-        this.logger.error(
-          "Failed to fetch orphaned jobs for record cleanup:",
-          error,
-        );
+        this.logger.error('Failed to fetch orphaned jobs for record cleanup:', error);
         return;
       }
 
@@ -289,88 +257,64 @@ export class StorageCleanupRunner {
       }
 
       const { data: savedAssets, error: assetsError } = await this.supabase
-        .from("user_assets")
-        .select("metadata")
-        .not("metadata->render_job_id", "is", null);
+        .from('user_assets')
+        .select('metadata')
+        .not('metadata->render_job_id', 'is', null);
 
       const typedSavedAssets = savedAssets as Array<{
         metadata: { render_job_id?: string };
       }> | null;
 
       if (assetsError) {
-        this.logger.error(
-          "Failed to fetch saved assets for record cleanup:",
-          assetsError,
-        );
+        this.logger.error('Failed to fetch saved assets for record cleanup:', assetsError);
         return;
       }
 
       const savedJobIds = new Set(
         (typedSavedAssets ?? [])
           .map((asset) => asset.metadata?.render_job_id)
-          .filter((jobId): jobId is string => typeof jobId === "string"),
+          .filter((jobId): jobId is string => typeof jobId === 'string')
       );
 
-      const jobsToDelete = typedOrphanedJobs.filter(
-        (job) => !savedJobIds.has(job.id),
-      );
+      const jobsToDelete = typedOrphanedJobs.filter((job) => !savedJobIds.has(job.id));
 
       if (jobsToDelete.length === 0) {
         return;
       }
 
-      this.logger.info(
-        `Cleaning up ${jobsToDelete.length} orphaned render job records`,
-      );
+      this.logger.info(`Cleaning up ${jobsToDelete.length} orphaned render job records`);
 
       const jobIds = jobsToDelete
         .map((job) => job.id)
-        .filter((id): id is string => typeof id === "string");
+        .filter((id): id is string => typeof id === 'string');
       const { error: deleteError } = await this.supabase
-        .from("render_jobs")
+        .from('render_jobs')
         .delete()
-        .in("id", jobIds);
+        .in('id', jobIds);
 
       if (deleteError) {
-        this.logger.error(
-          "Failed to delete orphaned render job records:",
-          deleteError,
-        );
+        this.logger.error('Failed to delete orphaned render job records:', deleteError);
         return;
       }
 
-      this.logger.info(
-        `Successfully deleted ${jobIds.length} orphaned render job records`,
-      );
+      this.logger.info(`Successfully deleted ${jobIds.length} orphaned render job records`);
     } catch (error) {
-      this.logger.error(
-        "Failed to cleanup orphaned render job records:",
-        error,
-      );
+      this.logger.error('Failed to cleanup orphaned render job records:', error);
     }
   }
 
-  private async removeFileWithRetry(
-    filePath: string,
-    context: string,
-  ): Promise<boolean> {
-    return await this.removeWithRetry(
-      () => fs.promises.unlink(filePath),
-      context,
-    );
+  private async removeFileWithRetry(filePath: string, context: string): Promise<boolean> {
+    return await this.removeWithRetry(() => fs.promises.unlink(filePath), context);
   }
 
-  private async removeDirectoryWithRetry(
-    dirPath: string,
-    context: string,
-  ): Promise<boolean> {
+  private async removeDirectoryWithRetry(dirPath: string, context: string): Promise<boolean> {
     return await this.removeWithRetry(
       () =>
         fs.promises.rm(dirPath, {
           recursive: true,
           force: true,
         }),
-      context,
+      context
     );
   }
 
@@ -383,10 +327,7 @@ export class StorageCleanupRunner {
     }
   }
 
-  private async removeWithRetry(
-    removeFn: () => Promise<void>,
-    context: string,
-  ): Promise<boolean> {
+  private async removeWithRetry(removeFn: () => Promise<void>, context: string): Promise<boolean> {
     const maxAttempts = 3;
     let lastFailure: { code?: string; message: string } | null = null;
 
@@ -397,44 +338,44 @@ export class StorageCleanupRunner {
       } catch (caughtError: unknown) {
         const code =
           caughtError &&
-          typeof caughtError === "object" &&
-          "code" in caughtError &&
-          typeof (caughtError as { code?: unknown }).code === "string"
+          typeof caughtError === 'object' &&
+          'code' in caughtError &&
+          typeof (caughtError as { code?: unknown }).code === 'string'
             ? (caughtError as { code: string }).code
             : undefined;
 
         let message: string;
         if (caughtError instanceof Error) {
           message = caughtError.message;
-        } else if (typeof caughtError === "string") {
+        } else if (typeof caughtError === 'string') {
           message = caughtError;
         } else if (
-          typeof caughtError === "number" ||
-          typeof caughtError === "boolean" ||
-          typeof caughtError === "bigint"
+          typeof caughtError === 'number' ||
+          typeof caughtError === 'boolean' ||
+          typeof caughtError === 'bigint'
         ) {
           message = String(caughtError);
         } else if (caughtError === undefined || caughtError === null) {
-          message = "unknown error";
-        } else if (typeof caughtError === "object") {
+          message = 'unknown error';
+        } else if (typeof caughtError === 'object') {
           try {
             message = JSON.stringify(caughtError);
           } catch {
-            message = "[unserializable error]";
+            message = '[unserializable error]';
           }
         } else {
-          message = "unknown error";
+          message = 'unknown error';
         }
 
         lastFailure = { code, message };
 
-        if (code === "EBUSY" || code === "EPERM") {
+        if (code === 'EBUSY' || code === 'EPERM') {
           if (attempt === maxAttempts) {
             break;
           }
           const delayMs = Math.min(500 * Math.pow(2, attempt - 1), 2000);
           this.logger.debug(
-            `${context} (attempt ${attempt}) failed with ${code}; retrying in ${delayMs}ms`,
+            `${context} (attempt ${attempt}) failed with ${code}; retrying in ${delayMs}ms`
           );
           await this.sleep(delayMs);
           continue;
@@ -449,9 +390,9 @@ export class StorageCleanupRunner {
       return false;
     }
 
-    if (lastFailure.code === "EBUSY" || lastFailure.code === "EPERM") {
+    if (lastFailure.code === 'EBUSY' || lastFailure.code === 'EPERM') {
       this.logger.debug(
-        `${context}: resource is busy (${lastFailure.code}); will retry next cycle`,
+        `${context}: resource is busy (${lastFailure.code}); will retry next cycle`
       );
     } else {
       this.logger.warn(`${context}: ${lastFailure.message}`);
@@ -462,20 +403,18 @@ export class StorageCleanupRunner {
   private async sleep(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
-  private parseStorageUrl(
-    url: string,
-  ): { bucket: string; path: string } | null {
+  private parseStorageUrl(url: string): { bucket: string; path: string } | null {
     try {
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split("/");
+      const pathParts = urlObj.pathname.split('/');
 
-      const signIndex = pathParts.indexOf("sign");
+      const signIndex = pathParts.indexOf('sign');
       if (signIndex === -1 || signIndex + 2 >= pathParts.length) {
         return null;
       }
 
       const bucket = pathParts[signIndex + 1];
-      const filePath = pathParts.slice(signIndex + 2).join("/");
+      const filePath = pathParts.slice(signIndex + 2).join('/');
 
       return { bucket: bucket!, path: filePath };
     } catch {

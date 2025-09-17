@@ -1,26 +1,22 @@
 // src/components/workspace/nodes/result-node.tsx - Production-ready debug node with modal viewer
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { ResultNodeData } from "@/shared/types/nodes";
-import { useDebugContext } from "../flow/debug-context";
-import { logger } from "@/lib/logger";
-import { Target } from "lucide-react";
+import { useState } from 'react';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { ResultNodeData } from '@/shared/types/nodes';
+import { useDebugContext } from '../flow/debug-context';
+import { logger } from '@/lib/logger';
+import { Target } from 'lucide-react';
 
 interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;
 }
 
-export function ResultNode({
-  data,
-  selected,
-  onOpenLogViewer,
-}: ResultNodeProps) {
-  const nodeDefinition = getNodeDefinition("result");
+export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps) {
+  const nodeDefinition = getNodeDefinition('result');
   const [isRunning, setIsRunning] = useState(false);
 
   // Use debug context if available
@@ -34,7 +30,7 @@ export function ResultNode({
     try {
       await onRunToHere(data.identifier.id);
     } catch (error) {
-      logger.errorWithStack("Result node run to here failed", error);
+      logger.errorWithStack('Result node run to here failed', error);
     } finally {
       setIsRunning(false);
     }
@@ -46,7 +42,7 @@ export function ResultNode({
     }
   };
 
-  const handleClass = "bg-[var(--node-output)]";
+  const handleClass = 'bg-[var(--node-output)]';
 
   return (
     <Card
@@ -98,7 +94,7 @@ export function ResultNode({
           size="sm"
           className="w-full"
         >
-          {isRunning ? "Running..." : "Run to Here"}
+          {isRunning ? 'Running...' : 'Run to Here'}
         </Button>
       </CardContent>
     </Card>

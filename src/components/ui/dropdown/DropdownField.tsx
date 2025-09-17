@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { DropdownSelect } from "./DropdownSelect";
-import { FormField } from "../form-fields";
-import { cn } from "@/lib/utils";
+import { DropdownSelect } from './DropdownSelect';
+import { FormField } from '../form-fields';
+import { cn } from '@/lib/utils';
 
 interface DropdownFieldProps {
   label: React.ReactNode;
@@ -21,7 +21,7 @@ interface DropdownFieldProps {
   bindAdornment?: React.ReactNode;
   inputClassName?: string;
   disabled?: boolean;
-  variant?: "default" | "glass" | "minimal";
+  variant?: 'default' | 'glass' | 'minimal';
   placeholder?: string;
 }
 
@@ -36,30 +36,23 @@ export function DropdownField({
   bindAdornment,
   inputClassName,
   disabled,
-  variant = "default",
+  variant = 'default',
   placeholder,
 }: DropdownFieldProps) {
   return (
-    <FormField
-      label={label}
-      required={required}
-      error={error}
-      className={className}
-    >
+    <FormField label={label} required={required} error={error} className={className}>
       <div className="relative">
         <DropdownSelect
           value={value}
           onChange={onChange}
           options={options}
           disabled={disabled}
-          className={cn(bindAdornment ? "pr-9" : undefined, inputClassName)}
+          className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
           variant={variant}
           placeholder={placeholder}
         />
         {bindAdornment && (
-          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">
-            {bindAdornment}
-          </div>
+          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">{bindAdornment}</div>
         )}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />

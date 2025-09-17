@@ -1,12 +1,12 @@
 // src/components/workspace/result-log-modal.tsx - Production-ready debug output viewer
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { useDebugContext } from "./flow/debug-context";
-import { cn } from "@/lib/utils";
-import { Trash2, Download, Target, Clock } from "lucide-react";
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { useDebugContext } from './flow/debug-context';
+import { cn } from '@/lib/utils';
+import { Trash2, Download, Target, Clock } from 'lucide-react';
 
 interface ResultLogEntry {
   value: unknown;
@@ -40,31 +40,28 @@ export function ResultLogModal({
 
   // Format value for display - more efficient
   const formatValue = useCallback((value: unknown): string => {
-    if (value === null) return "null";
-    if (value === undefined) return "undefined";
-    if (typeof value === "string") return `"${value}"`;
-    if (typeof value === "number") return value.toString();
-    if (typeof value === "boolean") return value ? "true" : "false";
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (Array.isArray(value)) {
-      if (value.length === 0) return "[]";
-      if (value.length <= 2) return `[${value.map(formatValue).join(", ")}]`;
-      return `[${value.slice(0, 2).map(formatValue).join(", ")}, ...] (${value.length} items)`;
+      if (value.length === 0) return '[]';
+      if (value.length <= 2) return `[${value.map(formatValue).join(', ')}]`;
+      return `[${value.slice(0, 2).map(formatValue).join(', ')}, ...] (${value.length} items)`;
     }
-    if (typeof value === "object") {
+    if (typeof value === 'object') {
       const keys = Object.keys(value as Record<string, unknown>);
-      if (keys.length === 0) return "{}";
+      if (keys.length === 0) return '{}';
       if (keys.length <= 2) {
         const entries = keys
           .slice(0, 2)
-          .map(
-            (k) =>
-              `${k}: ${formatValue((value as Record<string, unknown>)[k])}`,
-          );
-        return `{${entries.join(", ")}}`;
+          .map((k) => `${k}: ${formatValue((value as Record<string, unknown>)[k])}`);
+        return `{${entries.join(', ')}}`;
       }
-      return `{${keys.slice(0, 2).join(", ")}, ...} (${keys.length} keys)`;
+      return `{${keys.slice(0, 2).join(', ')}, ...} (${keys.length} keys)`;
     }
-    return "[Complex Type]";
+    return '[Complex Type]';
   }, []);
 
   // Load and refresh logs
@@ -96,21 +93,21 @@ export function ResultLogModal({
   // Value type colors
   const getValueTypeColor = (type: string): string => {
     switch (type) {
-      case "string":
-        return "text-[var(--success-500)]";
-      case "number":
-        return "text-[var(--accent-primary)]";
-      case "boolean":
-        return "text-[var(--warning-600)]";
-      case "array":
-        return "text-[var(--node-logic)]";
-      case "object":
-        return "text-[var(--node-geometry)]";
-      case "null":
-      case "undefined":
-        return "text-[var(--text-tertiary)]";
+      case 'string':
+        return 'text-[var(--success-500)]';
+      case 'number':
+        return 'text-[var(--accent-primary)]';
+      case 'boolean':
+        return 'text-[var(--warning-600)]';
+      case 'array':
+        return 'text-[var(--node-logic)]';
+      case 'object':
+        return 'text-[var(--node-geometry)]';
+      case 'null':
+      case 'undefined':
+        return 'text-[var(--text-tertiary)]';
       default:
-        return "text-[var(--text-primary)]";
+        return 'text-[var(--text-primary)]';
     }
   };
 
@@ -129,10 +126,10 @@ export function ResultLogModal({
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `result-logs-${nodeName}-${Date.now()}.json`;
     document.body.appendChild(a);
@@ -175,12 +172,7 @@ export function ResultLogModal({
             <Trash2 size={10} className="mr-1" />
             Clear
           </Button>
-          <Button
-            onClick={exportLogs}
-            variant="minimal"
-            size="xs"
-            disabled={logs.length === 0}
-          >
+          <Button onClick={exportLogs} variant="minimal" size="xs" disabled={logs.length === 0}>
             <Download size={10} className="mr-1" />
             Export
           </Button>
@@ -198,8 +190,7 @@ export function ResultLogModal({
               No Results Available
             </h3>
             <p className="text-refined mb-[var(--space-3)] max-w-[18rem] text-[11px] text-[var(--text-tertiary)]">
-              Run your flow to capture values at this node. Results will appear
-              here in real-time.
+              Run your flow to capture values at this node. Results will appear here in real-time.
             </p>
             <div className="text-refined space-y-[var(--space-1)] text-[10px] text-[var(--text-muted)]">
               <p>• Values are captured when data flows through</p>
@@ -218,9 +209,9 @@ export function ResultLogModal({
                   <div className="flex items-center gap-[var(--space-2)]">
                     <span
                       className={cn(
-                        "rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-half)] font-mono text-[10px] font-medium",
-                        "border border-[var(--border-primary)] bg-[var(--surface-2)]",
-                        getValueTypeColor(log.type),
+                        'rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-half)] font-mono text-[10px] font-medium',
+                        'border border-[var(--border-primary)] bg-[var(--surface-2)]',
+                        getValueTypeColor(log.type)
                       )}
                     >
                       {log.type}

@@ -1,15 +1,15 @@
 // src/components/ui/toast.tsx
-"use client";
+'use client';
 
-import { useNotifications, type Notification } from "@/hooks/use-notifications";
-import { Button } from "./button";
-import { cn } from "@/lib/utils";
+import { useNotifications, type Notification } from '@/hooks/use-notifications';
+import { Button } from './button';
+import { cn } from '@/lib/utils';
 
 const TOAST_ICONS = {
-  success: "✓",
-  error: "✕",
-  warning: "⚠",
-  info: "ℹ",
+  success: '✓',
+  error: '✕',
+  warning: '⚠',
+  info: 'ℹ',
 } as const;
 
 interface ToastItemProps {
@@ -20,43 +20,40 @@ interface ToastItemProps {
 function ToastItem({ notification, onRemove }: ToastItemProps) {
   const getToastStyle = (type: string) => {
     switch (type) {
-      case "success":
+      case 'success':
         return {
           background: `
             linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, transparent 35%, rgba(34, 211, 238, 0.04) 100%),
             linear-gradient(145deg, rgba(16, 185, 129, 0.06), transparent),
             rgba(12, 12, 20, 0.88)
           `,
-          borderColor: "rgba(16, 185, 129, 0.4)",
-          backdropFilter: "blur(20px)",
-          boxShadow:
-            "0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(16, 185, 129, 0.06)",
+          borderColor: 'rgba(16, 185, 129, 0.4)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(16, 185, 129, 0.06)',
         };
-      case "error":
+      case 'error':
         return {
           background: `
             linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, transparent 35%, rgba(245, 158, 11, 0.04) 100%),
             linear-gradient(145deg, rgba(239, 68, 68, 0.06), transparent),
             rgba(12, 12, 20, 0.88)
           `,
-          borderColor: "rgba(239, 68, 68, 0.4)",
-          backdropFilter: "blur(20px)",
-          boxShadow:
-            "0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(239, 68, 68, 0.06)",
+          borderColor: 'rgba(239, 68, 68, 0.4)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(239, 68, 68, 0.06)',
         };
-      case "warning":
+      case 'warning':
         return {
           background: `
             linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, transparent 35%, rgba(239, 68, 68, 0.04) 100%),
             linear-gradient(145deg, rgba(245, 158, 11, 0.06), transparent),
             rgba(12, 12, 20, 0.88)
           `,
-          borderColor: "rgba(245, 158, 11, 0.4)",
-          backdropFilter: "blur(20px)",
-          boxShadow:
-            "0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(245, 158, 11, 0.06)",
+          borderColor: 'rgba(245, 158, 11, 0.4)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(245, 158, 11, 0.06)',
         };
-      case "info":
+      case 'info':
       default:
         return {
           background: `
@@ -64,10 +61,9 @@ function ToastItem({ notification, onRemove }: ToastItemProps) {
             linear-gradient(145deg, rgba(59, 130, 246, 0.06), transparent),
             rgba(12, 12, 20, 0.88)
           `,
-          borderColor: "rgba(59, 130, 246, 0.4)",
-          backdropFilter: "blur(20px)",
-          boxShadow:
-            "0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(59, 130, 246, 0.06)",
+          borderColor: 'rgba(59, 130, 246, 0.4)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 0 32px rgba(59, 130, 246, 0.06)',
         };
     }
   };
@@ -75,7 +71,7 @@ function ToastItem({ notification, onRemove }: ToastItemProps) {
   return (
     <div
       className={cn(
-        "flex max-w-[500px] min-w-[300px] items-start gap-3 rounded-[var(--radius-md)] border p-[var(--space-4)]",
+        'flex max-w-[500px] min-w-[300px] items-start gap-3 rounded-[var(--radius-md)] border p-[var(--space-4)]'
       )}
       style={getToastStyle(notification.type)}
     >
@@ -84,9 +80,7 @@ function ToastItem({ notification, onRemove }: ToastItemProps) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-[var(--text-primary)]">
-          {notification.title}
-        </div>
+        <div className="text-sm font-semibold text-[var(--text-primary)]">{notification.title}</div>
         {notification.message && (
           <div className="mt-1 text-sm text-[var(--text-secondary)] opacity-90">
             {notification.message}

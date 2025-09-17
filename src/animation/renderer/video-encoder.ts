@@ -1,7 +1,7 @@
 // src/animation/renderer/video-encoder.ts
-import { spawn, type ChildProcess } from "child_process";
-import fs from "fs";
-import path from "path";
+import { spawn, type ChildProcess } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 export interface VideoConfig {
   width: number;
@@ -10,10 +10,10 @@ export interface VideoConfig {
   preset: string;
   crf: number;
   // Raw input pixel format
-  inputPixelFormat: "rgb24" | "rgba" | "bgra";
+  inputPixelFormat: 'rgb24' | 'rgba' | 'bgra';
 }
 
-import { ENCODER_TIMEOUTS as GLOBAL_ENCODER_TIMEOUTS } from "@/server/rendering/config";
+import { ENCODER_TIMEOUTS as GLOBAL_ENCODER_TIMEOUTS } from '@/server/rendering/config';
 
 interface EncoderTimeouts {
   startupMs: number;
@@ -26,13 +26,9 @@ export class VideoEncoder {
   private outputPath: string;
   private config: VideoConfig;
   private timeouts: EncoderTimeouts;
-  private stderrBuffer = "";
+  private stderrBuffer = '';
 
-  constructor(
-    outputPath: string,
-    config: VideoConfig,
-    timeouts: Partial<EncoderTimeouts> = {},
-  ) {
+  constructor(outputPath: string, config: VideoConfig, timeouts: Partial<EncoderTimeouts> = {}) {
     this.outputPath = outputPath;
     this.config = config;
     this.timeouts = {
@@ -45,32 +41,28 @@ export class VideoEncoder {
     const ffmpegPath =
       process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
         ? process.env.FFMPEG_PATH
-        : "ffmpeg";
+        : 'ffmpeg';
 
     return new Promise((resolve, reject) => {
-      const testProcess = spawn(ffmpegPath, ["-version"], {
-        stdio: ["ignore", "ignore", "pipe"],
+      const testProcess = spawn(ffmpegPath, ['-version'], {
+        stdio: ['ignore', 'ignore', 'pipe'],
         windowsHide: true,
       });
 
-      let stderr = "";
-      testProcess.stderr?.on("data", (chunk: Buffer | string) => {
+      let stderr = '';
+      testProcess.stderr?.on('data', (chunk: Buffer | string) => {
         stderr += chunk.toString();
       });
 
-      testProcess.on("close", (code) => {
+      testProcess.on('close', (code) => {
         if (code === 0) {
           resolve();
         } else {
-          reject(
-            new Error(
-              `FFmpeg validation failed with code ${code}: ${stderr.slice(-500)}`,
-            ),
-          );
+          reject(new Error(`FFmpeg validation failed with code ${code}: ${stderr.slice(-500)}`));
         }
       });
 
-      testProcess.on("error", (error) => {
+      testProcess.on('error', (error) => {
         reject(new Error(`FFmpeg not found or executable: ${error.message}`));
       });
     });
@@ -89,39 +81,39 @@ export class VideoEncoder {
       const ffmpegPath =
         process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.length > 0
           ? process.env.FFMPEG_PATH
-          : "ffmpeg";
+          : 'ffmpeg';
 
       const args = [
-        "-hide_banner",
-        "-loglevel",
-        "warning",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
+        '-hide_banner',
+        '-loglevel',
+        'warning',
+        '-f',
+        'rawvideo',
+        '-pix_fmt',
         this.config.inputPixelFormat,
-        "-s",
+        '-s',
         `${this.config.width}x${this.config.height}`,
-        "-r",
+        '-r',
         this.config.fps.toString(),
-        "-i",
-        "pipe:0",
+        '-i',
+        'pipe:0',
         // Ensure even dimensions for yuv420p/libx264 to avoid early exit (EPIPE/EOF)
-        "-vf",
-        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        '-vf',
+        'scale=trunc(iw/2)*2:trunc(ih/2)*2',
         // No audio
-        "-an",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:v",
-        "libx264",
-        "-preset",
+        '-an',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:v',
+        'libx264',
+        '-preset',
         this.config.preset,
-        "-crf",
+        '-crf',
         this.config.crf.toString(),
         // Optimize MP4 for streaming
-        "-movflags",
-        "+faststart",
-        "-y",
+        '-movflags',
+        '+faststart',
+        '-y',
         this.outputPath,
       ];
 
@@ -134,7 +126,7 @@ export class VideoEncoder {
 
       try {
         this.ffmpegProcess = spawn(ffmpegPath, args, {
-          stdio: ["pipe", "pipe", "pipe"],
+          stdio: ['pipe', 'pipe', 'pipe'],
           windowsHide: true, // Hide console window on Windows
         });
       } catch (err) {
@@ -143,16 +135,13 @@ export class VideoEncoder {
 
       const proc = this.ffmpegProcess;
 
-      proc.on("error", onError);
+      proc.on('error', onError);
 
       // Prevent stdout pipe from filling up and blocking the child process
       proc.stdout?.resume();
 
       // If the process exits before we're ready, treat as startup failure
-      const startupCloseHandler = (
-        code: number | null,
-        signal: NodeJS.Signals | null,
-      ) => {
+      const startupCloseHandler = (code: number | null, signal: NodeJS.Signals | null) => {
         if (settled) return;
         settled = true;
         const stderr = this.stderrBuffer.slice(-1000);
@@ -160,11 +149,11 @@ export class VideoEncoder {
         console.error(`FFmpeg startup failure: ${errorMsg}`);
         reject(new Error(errorMsg));
       };
-      proc.once("close", startupCloseHandler);
+      proc.once('close', startupCloseHandler);
 
       // Capture stderr for diagnostics
-      proc.stderr?.setEncoding("utf8");
-      proc.stderr?.on("data", (chunk: string) => {
+      proc.stderr?.setEncoding('utf8');
+      proc.stderr?.on('data', (chunk: string) => {
         this.stderrBuffer += chunk;
       });
 
@@ -175,8 +164,8 @@ export class VideoEncoder {
         this.kill();
         reject(
           new Error(
-            `FFmpeg startup timeout after ${this.timeouts.startupMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
+            `FFmpeg startup timeout after ${this.timeouts.startupMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`
+          )
         );
       }, this.timeouts.startupMs);
 
@@ -186,7 +175,7 @@ export class VideoEncoder {
           settled = true;
           clearTimeout(startupTimer);
           // Remove startup close handler to avoid consuming the real close event
-          proc.off("close", startupCloseHandler);
+          proc.off('close', startupCloseHandler);
           resolve();
         }
       };
@@ -198,14 +187,14 @@ export class VideoEncoder {
 
   async writeFrame(frameData: Buffer): Promise<void> {
     if (!this.ffmpegProcess?.stdin) {
-      throw new Error("FFmpeg process not started");
+      throw new Error('FFmpeg process not started');
     }
 
     const stdin = this.ffmpegProcess.stdin;
 
     // Additional validation for Windows compatibility
     if (stdin.destroyed || stdin.writable === false) {
-      throw new Error("FFmpeg stdin stream is not writable");
+      throw new Error('FFmpeg stdin stream is not writable');
     }
 
     return new Promise((resolve, reject) => {
@@ -216,8 +205,8 @@ export class VideoEncoder {
       if (proc.exitCode !== null) {
         return reject(
           new Error(
-            `FFmpeg has already exited (code ${proc.exitCode}). Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
+            `FFmpeg has already exited (code ${proc.exitCode}). Stderr: ${this.stderrBuffer.slice(-1000)}`
+          )
         );
       }
 
@@ -227,16 +216,16 @@ export class VideoEncoder {
         this.kill();
         reject(
           new Error(
-            `FFmpeg frame write timeout after ${this.timeouts.writeMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
+            `FFmpeg frame write timeout after ${this.timeouts.writeMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`
+          )
         );
       }, this.timeouts.writeMs);
 
       const cleanup = () => {
         clearTimeout(timeout);
-        stdin.removeListener("drain", onDrain);
-        stdin.removeListener("error", onError);
-        stdin.removeListener("close", onStdinClose);
+        stdin.removeListener('drain', onDrain);
+        stdin.removeListener('error', onError);
+        stdin.removeListener('close', onStdinClose);
       };
 
       const onDrain = () => {
@@ -251,9 +240,7 @@ export class VideoEncoder {
         finished = true;
         cleanup();
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(
-          `FFmpeg write error: ${errorMsg}\nStderr: ${this.stderrBuffer.slice(-1000)}`,
-        );
+        console.error(`FFmpeg write error: ${errorMsg}\nStderr: ${this.stderrBuffer.slice(-1000)}`);
         reject(error instanceof Error ? error : new Error(String(error)));
       };
 
@@ -262,9 +249,7 @@ export class VideoEncoder {
         finished = true;
         cleanup();
         reject(
-          new Error(
-            `FFmpeg stdin closed unexpectedly. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
+          new Error(`FFmpeg stdin closed unexpectedly. Stderr: ${this.stderrBuffer.slice(-1000)}`)
         );
       };
 
@@ -274,9 +259,9 @@ export class VideoEncoder {
         cleanup();
         resolve();
       } else {
-        stdin.once("drain", onDrain);
-        stdin.once("error", onError);
-        stdin.once("close", onStdinClose);
+        stdin.once('drain', onDrain);
+        stdin.once('error', onError);
+        stdin.once('close', onStdinClose);
       }
     });
   }
@@ -297,8 +282,8 @@ export class VideoEncoder {
         this.kill();
         reject(
           new Error(
-            `FFmpeg finish timeout after ${this.timeouts.finishMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-          ),
+            `FFmpeg finish timeout after ${this.timeouts.finishMs}ms. Stderr: ${this.stderrBuffer.slice(-1000)}`
+          )
         );
       }, this.timeouts.finishMs);
 
@@ -309,16 +294,14 @@ export class VideoEncoder {
         this.ffmpegProcess = null;
         if (code !== 0) {
           reject(
-            new Error(
-              `FFmpeg exited with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`,
-            ),
+            new Error(`FFmpeg exited with code ${code}. Stderr: ${this.stderrBuffer.slice(-1000)}`)
           );
         } else {
           resolve();
         }
       };
 
-      proc.once("close", onClose);
+      proc.once('close', onClose);
       // Signal EOF
       proc.stdin?.end();
     });
@@ -341,11 +324,7 @@ export class VideoEncoder {
   }
 }
 
-export function convertImageDataToRGB(
-  imageData: ImageData,
-  width: number,
-  height: number,
-): Buffer {
+export function convertImageDataToRGB(imageData: ImageData, width: number, height: number): Buffer {
   const pixelCount = width * height;
   const rgbPixels = new Uint8Array(pixelCount * 3);
 

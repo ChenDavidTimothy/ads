@@ -1,5 +1,5 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -14,7 +14,7 @@ export function cn(...inputs: ClassValue[]) {
 // FIX: Replace 'any' with proper generic types
 export function debounce<TArgs extends readonly unknown[], TReturn>(
   func: (...args: TArgs) => TReturn,
-  wait: number,
+  wait: number
 ): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout | null = null;
 

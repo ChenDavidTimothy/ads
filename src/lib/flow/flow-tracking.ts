@@ -1,15 +1,8 @@
 // src/lib/flow/flow-tracking.ts - Registry-aware flow tracking with consistent ID handling
-import type { Node, Edge } from "reactflow";
-import type { NodeData, NodeLineage } from "@/shared/types/nodes";
-import {
-  getNodeDefinition,
-  getNodesByCategory,
-} from "@/shared/registry/registry-utils";
-import {
-  canonicalizeEdges,
-  buildIdMap,
-  toCanonicalId,
-} from "@/shared/graph/id";
+import type { Node, Edge } from 'reactflow';
+import type { NodeData, NodeLineage } from '@/shared/types/nodes';
+import { getNodeDefinition, getNodesByCategory } from '@/shared/registry/registry-utils';
+import { canonicalizeEdges, buildIdMap, toCanonicalId } from '@/shared/graph/id';
 
 // Enhanced object descriptor for duplicate-aware tracking
 interface ObjectDescriptor {
@@ -39,7 +32,7 @@ export class FlowTracker {
     targetNodeId: string,
     sourcePort: string,
     targetPort: string,
-    nodes: Node<NodeData>[],
+    nodes: Node<NodeData>[]
   ): void {
     // Registry-aware connection validation
     const sourceNode = nodes.find((n) => n.data.identifier.id === sourceNodeId);
@@ -59,12 +52,8 @@ export class FlowTracker {
     }
 
     // Validate port compatibility using registry definitions
-    const sourcePortDef = sourceDefinition.ports.outputs.find(
-      (p) => p.id === sourcePort,
-    );
-    const targetPortDef = targetDefinition.ports.inputs.find(
-      (p) => p.id === targetPort,
-    );
+    const sourcePortDef = sourceDefinition.ports.outputs.find((p) => p.id === sourcePort);
+    const targetPortDef = targetDefinition.ports.inputs.find((p) => p.id === targetPort);
 
     if (!sourcePortDef || !targetPortDef) {
       console.warn(`Connection tracking failed: Port definition not found`);
@@ -94,9 +83,7 @@ export class FlowTracker {
     lineage.childNodes.forEach((childId) => {
       const childLineage = this.nodeLineages.get(childId);
       if (childLineage) {
-        childLineage.parentNodes = childLineage.parentNodes.filter(
-          (id) => id !== nodeId,
-        );
+        childLineage.parentNodes = childLineage.parentNodes.filter((id) => id !== nodeId);
         this.recalculateUpstreamConnections(childId);
       }
     });
@@ -104,9 +91,7 @@ export class FlowTracker {
     lineage.parentNodes.forEach((parentId) => {
       const parentLineage = this.nodeLineages.get(parentId);
       if (parentLineage) {
-        parentLineage.childNodes = parentLineage.childNodes.filter(
-          (id) => id !== nodeId,
-        );
+        parentLineage.childNodes = parentLineage.childNodes.filter((id) => id !== nodeId);
       }
     });
 
@@ -117,71 +102,63 @@ export class FlowTracker {
   validateDisplayName(
     newName: string,
     currentNodeId: string,
-    nodes: Node<NodeData>[],
+    nodes: Node<NodeData>[]
   ): string | null {
     if (!newName.trim()) {
-      return "Name cannot be empty";
+      return 'Name cannot be empty';
     }
 
     const duplicate = nodes.find(
       (node) =>
         node.data.identifier.id !== currentNodeId &&
-        node.data.identifier.displayName.toLowerCase() ===
-          newName.toLowerCase(),
+        node.data.identifier.displayName.toLowerCase() === newName.toLowerCase()
     );
 
-    return duplicate ? "Name already exists" : null;
+    return duplicate ? 'Name already exists' : null;
   }
 
   // Enhanced method to get visual objects (geometry nodes only, excluding data nodes like constants)
   getUpstreamObjects(
     nodeId: string,
     allNodes: Node<NodeData>[],
-    allEdges: Edge[],
+    allEdges: Edge[]
   ): ObjectDescriptor[] {
     // Build ID mapping
     const idMap = buildIdMap(
       allNodes as unknown as Array<{
         id: string;
         data: { identifier: { id: string } };
-      }>,
+      }>
     );
 
     // Canonical start identifier (the node we're querying for)
     const startCanonicalId = toCanonicalId(nodeId, idMap);
 
     // Get all node types from registry
-    const geometryNodeTypes = getNodesByCategory("geometry").map(
-      (def) => def.type,
-    );
-    const textNodeTypes = getNodesByCategory("text").map((def) => def.type);
-    const imageNodeTypes = getNodesByCategory("image").map((def) => def.type);
-    const dataNodeTypes = getNodesByCategory("data").map((def) => def.type);
-    const duplicateNodeTypes = ["duplicate"]; // Can be expanded for other multiplier nodes
+    const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
+    const textNodeTypes = getNodesByCategory('text').map((def) => def.type);
+    const imageNodeTypes = getNodesByCategory('image').map((def) => def.type);
+    const dataNodeTypes = getNodesByCategory('data').map((def) => def.type);
+    const duplicateNodeTypes = ['duplicate']; // Can be expanded for other multiplier nodes
 
-    const getNodeByIdentifierId = (
-      identifierId: string,
-    ): Node<NodeData> | undefined => {
+    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
       return allNodes.find((n) => n.data.identifier.id === identifierId);
     };
 
     // Enhanced: Handle multiple input ports for merge nodes
     const getInputPortsForNode = (node: Node<NodeData>): string[] => {
-      if (node.type === "merge") {
+      if (node.type === 'merge') {
         const mergeData = node.data as unknown as { inputPortCount?: number };
-        const portCount = Math.min(
-          Math.max(Number(mergeData.inputPortCount) ?? 2, 2),
-          5,
-        );
+        const portCount = Math.min(Math.max(Number(mergeData.inputPortCount) ?? 2, 2), 5);
         return Array.from({ length: portCount }, (_, i) => `input${i + 1}`);
       }
-      return ["input"]; // Default single input port
+      return ['input']; // Default single input port
     };
 
     // Trace objects through the flow with merge node support
     const traceObjects = (
       currentNodeId: string,
-      objectsByPort: Map<string, ObjectDescriptor[]>,
+      objectsByPort: Map<string, ObjectDescriptor[]>
     ): ObjectDescriptor[] => {
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) {
@@ -212,20 +189,17 @@ export class FlowTracker {
       }
 
       // Handle merge nodes with multiple ports and conflict resolution
-      if (currentNode.type === "merge") {
+      if (currentNode.type === 'merge') {
         return this.processMergeNode(objectsByPort);
       }
 
       // If this is a duplicate node, multiply the objects
       if (duplicateNodeTypes.includes(currentNode.type!)) {
         const duplicateData = currentNode.data as unknown as { count?: number };
-        const count = Math.min(
-          Math.max(Number(duplicateData.count) ?? 1, 1),
-          50,
-        );
+        const count = Math.min(Math.max(Number(duplicateData.count) ?? 1, 1), 50);
 
         // Get objects from single input port
-        const inputObjects = objectsByPort.get("input") ?? [];
+        const inputObjects = objectsByPort.get('input') ?? [];
         const multipliedObjects: ObjectDescriptor[] = [];
 
         for (const obj of inputObjects) {
@@ -234,7 +208,7 @@ export class FlowTracker {
 
           // Add duplicates
           for (let i = 1; i < count; i++) {
-            const duplicateId = `${obj.id}_dup_${i.toString().padStart(3, "0")}`;
+            const duplicateId = `${obj.id}_dup_${i.toString().padStart(3, '0')}`;
             multipliedObjects.push({
               id: duplicateId,
               nodeId: currentNode.data.identifier.id,
@@ -249,18 +223,17 @@ export class FlowTracker {
       }
 
       // Filter node: only allow explicitly selected object IDs to pass through
-      if (currentNode.type === "filter") {
+      if (currentNode.type === 'filter') {
         // If we're computing upstream objects FOR the filter node itself,
         // do NOT apply filtering here — the UI needs to show all upstream objects
         if (currentNodeId === startCanonicalId) {
-          const inputObjects = objectsByPort.get("input") ?? [];
+          const inputObjects = objectsByPort.get('input') ?? [];
           return inputObjects;
         }
 
         const selected = (
-          (currentNode.data as unknown as { selectedObjectIds?: string[] })
-            .selectedObjectIds ?? []
-        ).filter((id) => typeof id === "string");
+          (currentNode.data as unknown as { selectedObjectIds?: string[] }).selectedObjectIds ?? []
+        ).filter((id) => typeof id === 'string');
 
         // If nothing is selected, nothing passes through this path
         if (selected.length === 0) {
@@ -268,19 +241,19 @@ export class FlowTracker {
         }
 
         const allow = new Set(selected);
-        const inputObjects = objectsByPort.get("input") ?? [];
+        const inputObjects = objectsByPort.get('input') ?? [];
         return inputObjects.filter((obj) => allow.has(obj.id));
       }
 
       // For other nodes (canvas, animation, etc.), pass through from single input
-      const inputObjects = objectsByPort.get("input") ?? [];
+      const inputObjects = objectsByPort.get('input') ?? [];
       return inputObjects;
     };
 
     // Recursive traversal with merge-aware port handling
     const traverseUpstream = (
       currentNodeId: string,
-      pathVisited: Set<string>,
+      pathVisited: Set<string>
     ): ObjectDescriptor[] => {
       const currentNode = getNodeByIdentifierId(currentNodeId);
       if (!currentNode) return [];
@@ -303,8 +276,7 @@ export class FlowTracker {
           const targetCanonicalId = toCanonicalId(edge.target, idMap);
           return (
             targetCanonicalId === currentNode.data.identifier.id &&
-            (edge.targetHandle === portId ||
-              (!edge.targetHandle && portId === "input"))
+            (edge.targetHandle === portId || (!edge.targetHandle && portId === 'input'))
           );
         });
 
@@ -312,10 +284,7 @@ export class FlowTracker {
         for (const edge of portEdges) {
           // Map edge source to canonical identifier ID
           const sourceCanonicalId = toCanonicalId(edge.source, idMap);
-          const upstreamObjs = traverseUpstream(
-            sourceCanonicalId,
-            nextPathVisited,
-          );
+          const upstreamObjs = traverseUpstream(sourceCanonicalId, nextPathVisited);
           portObjects.push(...upstreamObjs);
         }
 
@@ -330,7 +299,7 @@ export class FlowTracker {
         (geometryNodeTypes.includes(currentNode.type!) ||
           imageNodeTypes.includes(currentNode.type!))
       ) {
-        const emptyMap = new Map([["input", []]]);
+        const emptyMap = new Map([['input', []]]);
         return traceObjects(currentNodeId, emptyMap);
       }
 
@@ -348,20 +317,18 @@ export class FlowTracker {
     }
 
     return Array.from(uniqueObjects.values()).sort((a, b) =>
-      a.displayName.localeCompare(b.displayName),
+      a.displayName.localeCompare(b.displayName)
     );
   }
 
   // Process merge node with port priority (matches backend logic)
-  private processMergeNode(
-    objectsByPort: Map<string, ObjectDescriptor[]>,
-  ): ObjectDescriptor[] {
+  private processMergeNode(objectsByPort: Map<string, ObjectDescriptor[]>): ObjectDescriptor[] {
     const mergedObjects = new Map<string, ObjectDescriptor>();
 
     // Process ports in reverse order so Port 1 (input1) has highest priority
     const portNames = Array.from(objectsByPort.keys()).sort((a, b) => {
-      const aNum = parseInt(a.replace("input", "")) ?? 0;
-      const bNum = parseInt(b.replace("input", "")) ?? 0;
+      const aNum = parseInt(a.replace('input', '')) ?? 0;
+      const bNum = parseInt(b.replace('input', '')) ?? 0;
       return bNum - aNum; // Reverse order
     });
 
@@ -373,7 +340,7 @@ export class FlowTracker {
         if (existingObject) {
           // Conflict resolution: current port overwrites (lower port number = higher priority)
           console.debug(
-            `[FlowTracker] Object ID conflict resolved: ${obj.id} from ${portName} overwrites previous`,
+            `[FlowTracker] Object ID conflict resolved: ${obj.id} from ${portName} overwrites previous`
           );
         }
         mergedObjects.set(obj.id, obj);
@@ -386,73 +353,66 @@ export class FlowTracker {
   // Registry-aware node category validation
   isGeometryNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "geometry";
+    return definition?.execution.category === 'geometry';
   }
 
   isDataNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "data";
+    return definition?.execution.category === 'data';
   }
 
   isTimingNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "timing";
+    return definition?.execution.category === 'timing';
   }
 
   isLogicNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "logic";
+    return definition?.execution.category === 'logic';
   }
 
   isAnimationNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "animation";
+    return definition?.execution.category === 'animation';
   }
 
   isOutputNode(nodeType: string): boolean {
     const definition = getNodeDefinition(nodeType);
-    return definition?.execution.category === "output";
+    return definition?.execution.category === 'output';
   }
 
   // Registry-aware flow validation
-  validateNodeFlow(
-    nodes: Node<NodeData>[],
-    edges: Edge[],
-  ): { valid: boolean; errors: string[] } {
+  validateNodeFlow(nodes: Node<NodeData>[], edges: Edge[]): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Get node categories from registry
-    const geometryNodeTypes = getNodesByCategory("geometry").map(
-      (def) => def.type,
-    );
+    const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
 
     // Validate proper flow architecture
-    const geometryNodes = nodes.filter((n) =>
-      geometryNodeTypes.includes(n.type!),
-    );
+    const geometryNodes = nodes.filter((n) => geometryNodeTypes.includes(n.type!));
     // Data nodes are sources like geometry nodes, so they follow the same validation rules
 
     // Validate geometry nodes
     for (const geoNode of geometryNodes) {
       const isConnectedToOutput = this.isNodeConnectedToCategory(
         geoNode.data.identifier.id,
-        "output",
+        'output',
         edges,
-        nodes,
+        nodes
       );
 
       if (isConnectedToOutput) {
         const canReachTiming = this.canReachNodeCategory(
           geoNode.data.identifier.id,
-          "timing",
+          'timing',
           edges,
-          nodes,
+          nodes
         );
 
         if (!canReachTiming) {
           errors.push(
             `Geometry node ${geoNode.data.identifier.displayName} must connect to a timing node ` +
-              `to control when it appears in the scene.`,
+              `to control when it appears in the scene.`
           );
         }
       }
@@ -470,27 +430,19 @@ export class FlowTracker {
     startNodeId: string,
     targetCategory: string,
     edges: Edge[],
-    nodes: Node<NodeData>[],
+    nodes: Node<NodeData>[]
   ): boolean {
     const visited = new Set<string>();
     const targetNodeTypes = getNodesByCategory(
-      targetCategory as
-        | "geometry"
-        | "timing"
-        | "animation"
-        | "logic"
-        | "output",
+      targetCategory as 'geometry' | 'timing' | 'animation' | 'logic' | 'output'
     ).map((def) => def.type);
 
     const traverse = (currentNodeId: string): boolean => {
       if (visited.has(currentNodeId)) return false;
       visited.add(currentNodeId);
 
-      const currentNode = nodes.find(
-        (n) => n.data.identifier.id === currentNodeId,
-      );
-      if (currentNode && targetNodeTypes.includes(currentNode.type!))
-        return true;
+      const currentNode = nodes.find((n) => n.data.identifier.id === currentNodeId);
+      if (currentNode && targetNodeTypes.includes(currentNode.type!)) return true;
 
       const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
       return outgoingEdges.some((edge) => traverse(edge.target));
@@ -504,27 +456,19 @@ export class FlowTracker {
     nodeId: string,
     targetCategory: string,
     edges: Edge[],
-    nodes: Node<NodeData>[],
+    nodes: Node<NodeData>[]
   ): boolean {
     const visited = new Set<string>();
     const targetNodeTypes = getNodesByCategory(
-      targetCategory as
-        | "geometry"
-        | "timing"
-        | "animation"
-        | "logic"
-        | "output",
+      targetCategory as 'geometry' | 'timing' | 'animation' | 'logic' | 'output'
     ).map((def) => def.type);
 
     const traverse = (currentNodeId: string): boolean => {
       if (visited.has(currentNodeId)) return false;
       visited.add(currentNodeId);
 
-      const currentNode = nodes.find(
-        (n) => n.data.identifier.id === currentNodeId,
-      );
-      if (currentNode && targetNodeTypes.includes(currentNode.type!))
-        return true;
+      const currentNode = nodes.find((n) => n.data.identifier.id === currentNodeId);
+      if (currentNode && targetNodeTypes.includes(currentNode.type!)) return true;
 
       const outgoingEdges = edges.filter((e) => e.source === currentNodeId);
       return outgoingEdges.some((edge) => traverse(edge.target));
@@ -534,11 +478,7 @@ export class FlowTracker {
   }
 
   // Update node lineages for topology tracking
-  private updateNodeLineages(
-    sourceNodeId: string,
-    targetNodeId: string,
-    edgeId: string,
-  ): void {
+  private updateNodeLineages(sourceNodeId: string, targetNodeId: string, edgeId: string): void {
     const sourceLineage = this.nodeLineages.get(sourceNodeId);
     const targetLineage = this.nodeLineages.get(targetNodeId);
 
@@ -587,20 +527,16 @@ export class FlowTracker {
   }
 
   // Future: Get conditional execution paths
-  getConditionalPaths(
-    nodeId: string,
-    nodes: Node<NodeData>[],
-    edges: Edge[],
-  ): string[] {
+  getConditionalPaths(nodeId: string, nodes: Node<NodeData>[], edges: Edge[]): string[] {
     const node = nodes.find((n) => n.data.identifier.id === nodeId);
     if (!node) return [];
 
     const definition = getNodeDefinition(node.type!);
-    if (!definition || definition.execution.category !== "logic") return [];
+    if (!definition || definition.execution.category !== 'logic') return [];
 
     // Get all outgoing edges (potential conditional paths)
     const outgoingEdges = edges.filter((e) => e.source === nodeId);
-    return outgoingEdges.map((e) => e.targetHandle ?? "default");
+    return outgoingEdges.map((e) => e.targetHandle ?? 'default');
   }
 
   // Check if there's a node of specific type upstream from the given node
@@ -608,7 +544,7 @@ export class FlowTracker {
     nodeId: string,
     targetNodeType: string,
     nodes: Node<NodeData>[],
-    edges: Edge[],
+    edges: Edge[]
   ): boolean {
     const visited = new Set<string>();
 
@@ -644,7 +580,7 @@ export class FlowTracker {
   getUpstreamResultNodes(
     nodeId: string,
     allNodes: Node<NodeData>[],
-    allEdges: Edge[],
+    allEdges: Edge[]
   ): Node<NodeData>[] {
     const result: Node<NodeData>[] = [];
     const visited = new Set<string>();
@@ -652,18 +588,16 @@ export class FlowTracker {
       allNodes as unknown as Array<{
         id: string;
         data: { identifier: { id: string } };
-      }>,
+      }>
     );
     const canonicalEdges = canonicalizeEdges(
       allNodes as unknown as Array<{
         id: string;
         data: { identifier: { id: string } };
       }>,
-      allEdges as unknown as Array<{ source: string; target: string }>,
+      allEdges as unknown as Array<{ source: string; target: string }>
     );
-    const getNodeByIdentifierId = (
-      identifierId: string,
-    ): Node<NodeData> | undefined => {
+    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined => {
       return allNodes.find((n) => n.data.identifier.id === identifierId);
     };
     const traverseUpstream = (currentId: string) => {
@@ -671,20 +605,16 @@ export class FlowTracker {
       visited.add(currentId);
       const current = getNodeByIdentifierId(currentId);
       if (!current) return;
-      if (current.type === "result") {
+      if (current.type === 'result') {
         result.push(current);
       }
-      const incoming = canonicalEdges.filter(
-        (e: { target: string }) => e.target === currentId,
-      );
+      const incoming = canonicalEdges.filter((e: { target: string }) => e.target === currentId);
       for (const e of incoming) traverseUpstream(e.source);
     };
     const start = toCanonicalId(nodeId, idMap);
     traverseUpstream(start);
     return result.sort((a, b) =>
-      a.data.identifier.displayName.localeCompare(
-        b.data.identifier.displayName,
-      ),
+      a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)
     );
   }
 
@@ -692,7 +622,7 @@ export class FlowTracker {
   getConnectedResultNodes(
     nodeId: string,
     allNodes: Node<NodeData>[],
-    allEdges: Edge[],
+    allEdges: Edge[]
   ): Node<NodeData>[] {
     const result: Node<NodeData>[] = [];
     const visited = new Set<string>();
@@ -700,14 +630,14 @@ export class FlowTracker {
       allNodes as unknown as Array<{
         id: string;
         data: { identifier: { id: string } };
-      }>,
+      }>
     );
     const canonicalEdges = canonicalizeEdges(
       allNodes as unknown as Array<{
         id: string;
         data: { identifier: { id: string } };
       }>,
-      allEdges as unknown as Array<{ source: string; target: string }>,
+      allEdges as unknown as Array<{ source: string; target: string }>
     );
     const neighbors = new Map<string, Set<string>>();
     // Build undirected adjacency for reachability
@@ -722,9 +652,7 @@ export class FlowTracker {
       neighbors.get(a)!.add(b);
       neighbors.get(b)!.add(a);
     }
-    const getNodeByIdentifierId = (
-      identifierId: string,
-    ): Node<NodeData> | undefined =>
+    const getNodeByIdentifierId = (identifierId: string): Node<NodeData> | undefined =>
       allNodes.find((n) => n.data.identifier.id === identifierId);
 
     const queue: string[] = [toCanonicalId(nodeId, idMap)];
@@ -733,15 +661,13 @@ export class FlowTracker {
       if (visited.has(cur)) continue;
       visited.add(cur);
       const node = getNodeByIdentifierId(cur);
-      if (node && node.type === "result") result.push(node);
+      if (node && node.type === 'result') result.push(node);
       for (const nb of neighbors.get(cur) ?? []) {
         if (!visited.has(nb)) queue.push(nb);
       }
     }
     return result.sort((a, b) =>
-      a.data.identifier.displayName.localeCompare(
-        b.data.identifier.displayName,
-      ),
+      a.data.identifier.displayName.localeCompare(b.data.identifier.displayName)
     );
   }
 
@@ -749,7 +675,7 @@ export class FlowTracker {
   getAvailableResultVariables(
     nodeId: string,
     allNodes: Node<NodeData>[],
-    allEdges: Edge[],
+    allEdges: Edge[]
   ): Array<{ id: string; name: string }> {
     return this.getUpstreamResultNodes(nodeId, allNodes, allEdges).map((n) => ({
       id: n.data.identifier.id,

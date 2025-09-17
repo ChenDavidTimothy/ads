@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Input } from "./input";
-import { DropdownField as UIDropdownField } from "./dropdown/DropdownField";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from 'react';
+import { Input } from './input';
+import { DropdownField as UIDropdownField } from './dropdown/DropdownField';
+import { cn } from '@/lib/utils';
 
 interface FormFieldProps {
   label: React.ReactNode;
@@ -14,15 +14,9 @@ interface FormFieldProps {
   children: React.ReactNode;
 }
 
-export function FormField({
-  label,
-  error,
-  className,
-  labelRight,
-  children,
-}: FormFieldProps) {
+export function FormField({ label, error, className, labelRight, children }: FormFieldProps) {
   return (
-    <div className={cn("space-y-1", className)}>
+    <div className={cn('space-y-1', className)}>
       <label className="block">
         <div className="flex items-center justify-between text-sm font-medium text-[var(--text-secondary)]">
           <span className="truncate">{label}</span>
@@ -70,25 +64,23 @@ export function NumberField({
   inputClassName,
   disabled,
 }: NumberFieldProps) {
-  const [inputValue, setInputValue] = useState(
-    value === undefined ? "" : value.toString(),
-  );
-  const [internalError, setInternalError] = useState<string>("");
+  const [inputValue, setInputValue] = useState(value === undefined ? '' : value.toString());
+  const [internalError, setInternalError] = useState<string>('');
 
   // Sync with external value changes
   useEffect(() => {
-    setInputValue(value === undefined ? "" : value.toString());
+    setInputValue(value === undefined ? '' : value.toString());
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
 
-    if (newValue === "") {
+    if (newValue === '') {
       if (required) {
-        setInternalError("This field is required");
+        setInternalError('This field is required');
       } else {
-        setInternalError("");
+        setInternalError('');
       }
       // Don't call onChange for empty values
       return;
@@ -97,7 +89,7 @@ export function NumberField({
     const numValue = Number(newValue);
 
     if (isNaN(numValue)) {
-      setInternalError("Please enter a valid number");
+      setInternalError('Please enter a valid number');
       return;
     }
 
@@ -111,24 +103,24 @@ export function NumberField({
       return;
     }
 
-    setInternalError("");
+    setInternalError('');
     onChange(numValue);
   };
 
   const handleBlur = () => {
-    if (inputValue === "") {
+    if (inputValue === '') {
       if (defaultValue !== undefined) {
         setInputValue(defaultValue.toString());
         onChange(defaultValue);
-        setInternalError("");
+        setInternalError('');
       } else if (required) {
         // Keep the error state for required fields
         return;
       } else {
         // For non-required fields without default, use 0
-        setInputValue("0");
+        setInputValue('0');
         onChange(0);
-        setInternalError("");
+        setInternalError('');
       }
     }
   };
@@ -136,12 +128,7 @@ export function NumberField({
   const displayError = externalError ?? internalError;
 
   return (
-    <FormField
-      label={label}
-      required={required}
-      error={displayError}
-      className={className}
-    >
+    <FormField label={label} required={required} error={displayError} className={className}>
       <div className="relative">
         <Input
           type="number"
@@ -152,13 +139,11 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
-          className={cn(bindAdornment ? "pr-9" : undefined, inputClassName)}
+          className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
           disabled={disabled}
         />
         {bindAdornment && (
-          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">
-            {bindAdornment}
-          </div>
+          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">{bindAdornment}</div>
         )}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />
@@ -192,25 +177,18 @@ export function ColorField({
   disabled,
 }: ColorFieldProps) {
   return (
-    <FormField
-      label={label}
-      required={required}
-      error={error}
-      className={className}
-    >
+    <FormField label={label} required={required} error={error} className={className}>
       <div className="relative">
         <Input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           error={!!error}
-          className={cn("h-12", bindAdornment ? "pr-9" : "", inputClassName)}
+          className={cn('h-12', bindAdornment ? 'pr-9' : '', inputClassName)}
           disabled={disabled}
         />
         {bindAdornment && (
-          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">
-            {bindAdornment}
-          </div>
+          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">{bindAdornment}</div>
         )}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />
@@ -231,7 +209,7 @@ interface SelectFieldProps {
   bindAdornment?: React.ReactNode;
   inputClassName?: string;
   disabled?: boolean;
-  variant?: "default" | "glass" | "minimal";
+  variant?: 'default' | 'glass' | 'minimal';
   placeholder?: string;
 }
 
@@ -246,7 +224,7 @@ export function SelectField({
   bindAdornment,
   inputClassName,
   disabled,
-  variant = "default",
+  variant = 'default',
   placeholder,
 }: SelectFieldProps) {
   return (
@@ -297,12 +275,7 @@ export function TextField({
   disabled,
 }: TextFieldProps) {
   return (
-    <FormField
-      label={label}
-      required={required}
-      error={error}
-      className={className}
-    >
+    <FormField label={label} required={required} error={error} className={className}>
       <div className="relative">
         <Input
           type="text"
@@ -312,13 +285,11 @@ export function TextField({
           onKeyDown={onKeyDown}
           autoFocus={autoFocus}
           error={!!error}
-          className={cn(bindAdornment ? "pr-9" : undefined, inputClassName)}
+          className={cn(bindAdornment ? 'pr-9' : undefined, inputClassName)}
           disabled={disabled}
         />
         {bindAdornment && (
-          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">
-            {bindAdornment}
-          </div>
+          <div className="absolute top-1/2 right-2 z-20 -translate-y-1/2">{bindAdornment}</div>
         )}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />
@@ -387,12 +358,7 @@ interface BooleanFieldProps {
   className?: string;
 }
 
-export function BooleanField({
-  label,
-  value,
-  onChange,
-  className,
-}: BooleanFieldProps) {
+export function BooleanField({ label, value, onChange, className }: BooleanFieldProps) {
   return (
     <FormField label="" className={className}>
       <div className="flex items-center gap-[var(--space-2)]">
@@ -436,12 +402,7 @@ export function TextareaField({
   rows = 3,
 }: TextareaFieldProps) {
   return (
-    <FormField
-      label={label}
-      required={required}
-      error={error}
-      className={className}
-    >
+    <FormField label={label} required={required} error={error} className={className}>
       <div className="relative">
         <textarea
           value={value}
@@ -451,23 +412,21 @@ export function TextareaField({
           disabled={disabled}
           className={cn(
             // Base textarea styling - follows Input component pattern
-            "text-refined w-full cursor-text text-[12px] text-[var(--text-primary)] transition-all",
-            "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
-            "placeholder:text-[var(--text-muted)]",
-            "border border-[var(--border-primary)] bg-[var(--surface-2)]",
-            "rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
-            "resize-vertical min-h-[60px]", // Allow vertical resize, min height
+            'text-refined w-full cursor-text text-[12px] text-[var(--text-primary)] transition-all',
+            'duration-[var(--duration-fast)] ease-[var(--easing-standard)]',
+            'placeholder:text-[var(--text-muted)]',
+            'border border-[var(--border-primary)] bg-[var(--surface-2)]',
+            'rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]',
+            'resize-vertical min-h-[60px]', // Allow vertical resize, min height
             error
-              ? "border-[var(--danger-500)] focus:ring-1 focus:ring-[var(--danger-500)] focus:outline-none"
-              : "focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none",
-            disabled ? "opacity-60" : undefined,
-            bindAdornment ? "pr-9" : undefined,
-            inputClassName,
+              ? 'border-[var(--danger-500)] focus:ring-1 focus:ring-[var(--danger-500)] focus:outline-none'
+              : 'focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none',
+            disabled ? 'opacity-60' : undefined,
+            bindAdornment ? 'pr-9' : undefined,
+            inputClassName
           )}
         />
-        {bindAdornment && (
-          <div className="absolute top-2 right-2 z-20">{bindAdornment}</div>
-        )}
+        {bindAdornment && <div className="absolute top-2 right-2 z-20">{bindAdornment}</div>}
         {disabled && (
           <div className="absolute inset-0 z-10 rounded-[var(--radius-sm)] bg-[var(--surface-3)]" />
         )}

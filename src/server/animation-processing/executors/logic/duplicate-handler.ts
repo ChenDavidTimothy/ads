@@ -1,34 +1,22 @@
-import {
-  setNodeOutput,
-  getConnectedInputs,
-  type ExecutionContext,
-} from "../../execution-context";
-import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
-import type { NodeData } from "@/shared/types";
-import type {
-  PerObjectAssignments,
-  ObjectAssignments,
-} from "@/shared/properties/assignments";
-import type { SceneAnimationTrack } from "@/shared/types/scene";
-import { logger } from "@/lib/logger";
+import { setNodeOutput, getConnectedInputs, type ExecutionContext } from '../../execution-context';
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/graph';
+import type { NodeData } from '@/shared/types';
+import type { PerObjectAssignments, ObjectAssignments } from '@/shared/properties/assignments';
+import type { SceneAnimationTrack } from '@/shared/types/scene';
+import { logger } from '@/lib/logger';
 import {
   extractPerObjectAssignmentsFromInputs,
   extractPerObjectAnimationsFromInputs,
   extractCursorsFromInputs,
-} from "./shared/per-object";
-import {
-  DuplicateNodeError,
-  DuplicateCountExceededError,
-} from "@/shared/errors/domain";
+} from './shared/per-object';
+import { DuplicateNodeError, DuplicateCountExceededError } from '@/shared/errors/domain';
 
 export async function executeDuplicateNode(
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ): Promise<void> {
-  logger.debug(
-    `Starting duplicate execution for node: ${node.data.identifier.displayName}`,
-  );
+  logger.debug(`Starting duplicate execution for node: ${node.data.identifier.displayName}`);
 
   const data = node.data as unknown as Record<string, unknown>;
   const count = Math.min(Math.max(Number(data.count) || 1, 1), 50);
@@ -42,7 +30,7 @@ export async function executeDuplicateNode(
       sourceHandle: string;
     }>,
     node.data.identifier.id,
-    "input",
+    'input'
   );
 
   const totalInputObjects = inputs.reduce((acc, input) => {
@@ -54,23 +42,16 @@ export async function executeDuplicateNode(
     count,
     totalInputObjects,
     node.data.identifier.id,
-    node.data.identifier.displayName,
+    node.data.identifier.displayName
   );
 
   if (inputs.length === 0) {
-    logger.debug("No inputs connected to duplicate node");
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      "output",
-      "object_stream",
-      [],
-      {
-        perObjectTimeCursor: {},
-        perObjectAnimations: {},
-        perObjectAssignments: {},
-      },
-    );
+    logger.debug('No inputs connected to duplicate node');
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], {
+      perObjectTimeCursor: {},
+      perObjectAnimations: {},
+      perObjectAssignments: {},
+    });
     return;
   }
 
@@ -84,14 +65,8 @@ export async function executeDuplicateNode(
     }
   }
 
-  const upstreamAssignments = extractPerObjectAssignmentsFromInputs(
-    inputs,
-    inputObjectIds,
-  );
-  const upstreamAnimations = extractPerObjectAnimationsFromInputs(
-    inputs,
-    inputObjectIds,
-  );
+  const upstreamAssignments = extractPerObjectAssignmentsFromInputs(inputs, inputObjectIds);
+  const upstreamAnimations = extractPerObjectAnimationsFromInputs(inputs, inputObjectIds);
   const upstreamCursors = extractCursorsFromInputs(inputs);
 
   const allOutputObjects: unknown[] = [];
@@ -121,16 +96,11 @@ export async function executeDuplicateNode(
         upstreamCursors,
         expandedAssignments,
         expandedAnimations,
-        expandedCursors,
+        expandedCursors
       );
 
       for (let i = 1; i < count; i++) {
-        const duplicateId = generateUniqueId(
-          originalId,
-          i,
-          allExistingIds,
-          newlyCreatedIds,
-        );
+        const duplicateId = generateUniqueId(originalId, i, allExistingIds, newlyCreatedIds);
         const duplicate = createDuplicateObject(originalObject, duplicateId);
         allOutputObjects.push(duplicate);
         copyMetadataForObject(
@@ -141,50 +111,37 @@ export async function executeDuplicateNode(
           upstreamCursors,
           expandedAssignments,
           expandedAnimations,
-          expandedCursors,
+          expandedCursors
         );
         newlyCreatedIds.add(duplicateId);
       }
     }
   }
 
-  logger.debug(
-    `Duplicate execution complete. Output: ${allOutputObjects.length} objects`,
-  );
+  logger.debug(`Duplicate execution complete. Output: ${allOutputObjects.length} objects`);
 
-  setNodeOutput(
-    context,
-    node.data.identifier.id,
-    "output",
-    "object_stream",
-    allOutputObjects,
-    {
-      perObjectTimeCursor: expandedCursors,
-      perObjectAnimations: expandedAnimations,
-      perObjectAssignments: expandedAssignments,
-    },
-  );
+  setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', allOutputObjects, {
+    perObjectTimeCursor: expandedCursors,
+    perObjectAnimations: expandedAnimations,
+    perObjectAssignments: expandedAssignments,
+  });
 }
 
 function validateDuplicateInputs(
   count: number,
   totalInputObjects: number,
   nodeId: string,
-  nodeDisplayName: string,
+  nodeDisplayName: string
 ): void {
   if (totalInputObjects === 0) {
     throw new DuplicateNodeError(
       nodeId,
       nodeDisplayName,
-      "Duplicate node requires at least one input object",
+      'Duplicate node requires at least one input object'
     );
   }
   if (count < 1) {
-    throw new DuplicateNodeError(
-      nodeId,
-      nodeDisplayName,
-      "Duplicate count must be at least 1",
-    );
+    throw new DuplicateNodeError(nodeId, nodeDisplayName, 'Duplicate count must be at least 1');
   }
   if (count > 50) {
     throw new DuplicateCountExceededError(nodeId, nodeDisplayName, count, 50);
@@ -195,17 +152,17 @@ function validateDuplicateInputs(
     throw new DuplicateNodeError(
       nodeId,
       nodeDisplayName,
-      `Operation would create ${totalOutput} objects, exceeding system limit of 200`,
+      `Operation would create ${totalOutput} objects, exceeding system limit of 200`
     );
   }
 }
 
 function hasValidObjectStructure(obj: unknown): boolean {
   return (
-    typeof obj === "object" &&
+    typeof obj === 'object' &&
     obj !== null &&
-    "id" in obj &&
-    typeof (obj as { id: unknown }).id === "string"
+    'id' in obj &&
+    typeof (obj as { id: unknown }).id === 'string'
   );
 }
 
@@ -213,9 +170,9 @@ function generateUniqueId(
   originalId: string,
   index: number,
   existingIds: Set<string>,
-  newIds: Set<string>,
+  newIds: Set<string>
 ): string {
-  const baseId = `${originalId}_dup_${index.toString().padStart(3, "0")}`;
+  const baseId = `${originalId}_dup_${index.toString().padStart(3, '0')}`;
   let candidateId = baseId;
   let suffix = 0;
 
@@ -231,7 +188,7 @@ function getAllExistingObjectIds(context: ExecutionContext): Set<string> {
   const ids = new Set<string>();
 
   for (const output of context.nodeOutputs.values()) {
-    if (output.type !== "object_stream") continue;
+    if (output.type !== 'object_stream') continue;
 
     const objects = Array.isArray(output.data) ? output.data : [output.data];
     for (const obj of objects) {
@@ -244,14 +201,8 @@ function getAllExistingObjectIds(context: ExecutionContext): Set<string> {
   return ids;
 }
 
-function createDuplicateObject(
-  original: unknown,
-  duplicateId: string,
-): unknown {
-  const duplicate = JSON.parse(JSON.stringify(original)) as Record<
-    string,
-    unknown
-  >;
+function createDuplicateObject(original: unknown, duplicateId: string): unknown {
+  const duplicate = JSON.parse(JSON.stringify(original)) as Record<string, unknown>;
   duplicate.id = duplicateId;
   return duplicate;
 }
@@ -264,12 +215,12 @@ function copyMetadataForObject(
   sourceCursors: Record<string, number>,
   targetAssignments: PerObjectAssignments,
   targetAnimations: Record<string, SceneAnimationTrack[]>,
-  targetCursors: Record<string, number>,
+  targetCursors: Record<string, number>
 ): void {
   if (sourceAssignments?.[sourceId]) {
     try {
       targetAssignments[targetId] = JSON.parse(
-        JSON.stringify(sourceAssignments[sourceId]),
+        JSON.stringify(sourceAssignments[sourceId])
       ) as ObjectAssignments;
     } catch (error) {
       logger.warn(`Failed to clone assignments for ${sourceId}->${targetId}:`, {
@@ -285,9 +236,7 @@ function copyMetadataForObject(
         ...anim,
         objectId: targetId,
         id: anim.id.replace(sourceId, targetId),
-        properties: JSON.parse(
-          JSON.stringify(anim.properties),
-        ) as typeof anim.properties,
+        properties: JSON.parse(JSON.stringify(anim.properties)) as typeof anim.properties,
       })) as SceneAnimationTrack[];
     } catch (error) {
       logger.warn(`Failed to clone animations for ${sourceId}->${targetId}:`, {

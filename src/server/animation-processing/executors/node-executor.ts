@@ -1,14 +1,14 @@
 // src/server/animation-processing/executors/node-executor.ts
-import type { ExecutionContext } from "../execution-context";
-import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
-import type { NodeData } from "@/shared/types";
+import type { ExecutionContext } from '../execution-context';
+import type { ReactFlowEdge, ReactFlowNode } from '../types/graph';
+import type { NodeData } from '@/shared/types';
 
 export interface NodeExecutor {
   canHandle(nodeType: string): boolean;
   execute(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    connections: ReactFlowEdge[],
+    connections: ReactFlowEdge[]
   ): Promise<void>;
 }
 

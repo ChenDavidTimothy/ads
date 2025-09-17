@@ -1,5 +1,5 @@
-﻿import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UserAsset, UserStorageQuota } from "@/shared/types/assets";
+﻿import type { SupabaseClient } from '@supabase/supabase-js';
+import type { UserAsset, UserStorageQuota } from '@/shared/types/assets';
 
 export interface DatabaseResponse<T> {
   data: T | null;
@@ -22,4 +22,3 @@ export type QuotaRecord = UserStorageQuota;
 export type DatabaseUserAsset = UserAsset & { updated_at: string };
 
 export type SupabaseClientLike = SupabaseClient;
-

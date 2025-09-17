@@ -1,10 +1,10 @@
 // src/shared/properties/override-utils.ts
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
 
 // All objects now use their canonical node identifier id. No normalization required.
 export function resolveBindingLookupId(
   bindingsByObject: Record<string, unknown>,
-  objectId: string,
+  objectId: string
 ): string {
   return objectId;
 }
@@ -15,7 +15,7 @@ export function resolveBindingLookupId(
  */
 export function getObjectBindingKeys(
   bindingsByObject: Record<string, Record<string, unknown>>,
-  objectId: string,
+  objectId: string
 ): string[] {
   return Object.keys(bindingsByObject[objectId] ?? {});
 }
@@ -23,11 +23,9 @@ export function getObjectBindingKeys(
 /**
  * Pick the per-object assignments for an object id, supporting normalized id fallback.
  */
-export function pickAssignmentsForObject<
-  T extends PerObjectAssignments | undefined,
->(
+export function pickAssignmentsForObject<T extends PerObjectAssignments | undefined>(
   assignments: T,
-  objectId: string,
+  objectId: string
 ): T extends undefined ? undefined : NonNullable<T>[string] | undefined {
   if (!assignments) return undefined as never;
   // @ts-expect-error - generic indexed access through runtime keys
@@ -42,15 +40,12 @@ export function mergePerObjectAssignments(
   node: PerObjectAssignments | undefined,
   mergeFn: (
     base: NonNullable<PerObjectAssignments>[string] | undefined,
-    overrides: NonNullable<PerObjectAssignments>[string] | undefined,
-  ) => NonNullable<PerObjectAssignments>[string] | undefined,
+    overrides: NonNullable<PerObjectAssignments>[string] | undefined
+  ) => NonNullable<PerObjectAssignments>[string] | undefined
 ): PerObjectAssignments | undefined {
   if (!upstream && !node) return undefined;
   const result: PerObjectAssignments = {};
-  const objectIds = new Set<string>([
-    ...Object.keys(upstream ?? {}),
-    ...Object.keys(node ?? {}),
-  ]);
+  const objectIds = new Set<string>([...Object.keys(upstream ?? {}), ...Object.keys(node ?? {})]);
   for (const id of objectIds) {
     const merged = mergeFn(upstream?.[id], node?.[id]);
     if (merged) result[id] = merged;

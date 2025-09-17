@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from "react";
-import { Link as LinkIcon, Search } from "lucide-react";
+import React, { useMemo, useState } from 'react';
+import { Link as LinkIcon, Search } from 'lucide-react';
 
-import { useWorkspace } from "@/components/workspace/workspace-context";
-import { FlowTracker } from "@/lib/flow/flow-tracking";
-import { deleteByPath } from "@/shared/utils/object-path";
+import { useWorkspace } from '@/components/workspace/workspace-context';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
+import { deleteByPath } from '@/shared/utils/object-path';
 import type {
   NodeData,
   AnimationNodeData,
@@ -11,14 +11,14 @@ import type {
   TypographyNodeData,
   MediaNodeData,
   InsertNodeData,
-} from "@/shared/types/nodes";
+} from '@/shared/types/nodes';
 import type {
   PerObjectAssignments,
   ObjectAssignments,
   TrackOverride,
-} from "@/shared/properties/assignments";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
+} from '@/shared/properties/assignments';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
 
 interface BindButtonProps {
   nodeId: string;
@@ -29,26 +29,26 @@ interface BindButtonProps {
 
 // Type guards for safe node data access
 function isAnimationNodeData(data: NodeData): data is AnimationNodeData {
-  return data.identifier.type === "animation";
+  return data.identifier.type === 'animation';
 }
 
 function isCanvasNodeData(data: NodeData): data is CanvasNodeData {
-  return data.identifier.type === "canvas";
+  return data.identifier.type === 'canvas';
 }
 
 // NEW: Add Typography support
 function isTypographyNodeData(data: NodeData): data is TypographyNodeData {
-  return data.identifier.type === "typography";
+  return data.identifier.type === 'typography';
 }
 
 // NEW: Add Media support
 function isMediaNodeData(data: NodeData): data is MediaNodeData {
-  return data.identifier.type === "media";
+  return data.identifier.type === 'media';
 }
 
 // NEW: Add Insert support
 function isInsertNodeData(data: NodeData): data is InsertNodeData {
-  return data.identifier.type === "insert";
+  return data.identifier.type === 'insert';
 }
 
 // Helper type for variable binding structure
@@ -65,17 +65,11 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 
   const variables = useMemo(() => {
     const tracker = new FlowTracker();
-    return tracker.getAvailableResultVariables(
-      nodeId,
-      state.flow.nodes,
-      state.flow.edges,
-    );
+    return tracker.getAvailableResultVariables(nodeId, state.flow.nodes, state.flow.edges);
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
   const getBinding = (key: string): string | undefined => {
-    const node = state.flow.nodes.find(
-      (n) => n.data?.identifier?.id === nodeId,
-    );
+    const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId);
     if (!node?.data) return undefined;
 
     if (objectId) {
@@ -112,15 +106,13 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
   };
 
   // Helper: prune empty nested objects
-  const pruneEmpty = (
-    obj: Record<string, unknown>,
-  ): Record<string, unknown> => {
-    if (!obj || typeof obj !== "object") return obj;
+  const pruneEmpty = (obj: Record<string, unknown>): Record<string, unknown> => {
+    if (!obj || typeof obj !== 'object') return obj;
 
     const result = { ...obj };
     for (const k of Object.keys(result)) {
       const value = result[k];
-      if (value && typeof value === "object" && !Array.isArray(value)) {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
         result[k] = pruneEmpty(value as Record<string, unknown>);
         if (Object.keys(result[k] as Record<string, unknown>).length === 0) {
           delete result[k];
@@ -131,30 +123,24 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
   };
 
   // Helper: clear animation track override for a specific property
-  const clearTrackOverride = (
-    nextData: AnimationNodeData,
-    objectId: string,
-    key: string,
-  ): void => {
-    const trackPrefix = "track.";
+  const clearTrackOverride = (nextData: AnimationNodeData, objectId: string, key: string): void => {
+    const trackPrefix = 'track.';
     if (!key.startsWith(trackPrefix)) return;
 
-    const [, trackId, ...rest] = key.split(".");
-    const subPath = rest.join(".");
+    const [, trackId, ...rest] = key.split('.');
+    const subPath = rest.join('.');
 
     const poa: PerObjectAssignments = {
       ...(nextData.perObjectAssignments ?? {}),
     };
     const entry: ObjectAssignments = { ...(poa[objectId] ?? {}) };
-    const tracks: TrackOverride[] = Array.isArray(entry.tracks)
-      ? [...entry.tracks]
-      : [];
+    const tracks: TrackOverride[] = Array.isArray(entry.tracks) ? [...entry.tracks] : [];
     const idx = tracks.findIndex((t) => t.trackId === trackId);
 
     if (idx >= 0) {
       const t: TrackOverride = { ...tracks[idx] };
       const props = { ...(t.properties ?? {}) };
-      const dot = subPath.indexOf(".");
+      const dot = subPath.indexOf('.');
       const propPath = dot >= 0 ? subPath.slice(dot + 1) : subPath;
       deleteByPath(props, propPath);
 
@@ -194,8 +180,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
 
         // 1) Set the binding
         if (objectId) {
-          const prevAll: PerObjectVariableBindings =
-            nextData.variableBindingsByObject ?? {};
+          const prevAll: PerObjectVariableBindings = nextData.variableBindingsByObject ?? {};
           const prev: VariableBindingsMap = prevAll[objectId] ?? {};
           const nextObj: VariableBindingsMap = {
             ...prev,
@@ -273,21 +258,17 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
               const result = { ...initial };
 
               // Handle coordinate pairs specially
-              if (key === "position.x" || key === "position.y") {
-                const pos = result.position as
-                  | { x?: number; y?: number }
-                  | undefined;
-                if (pos && typeof pos === "object") {
+              if (key === 'position.x' || key === 'position.y') {
+                const pos = result.position as { x?: number; y?: number } | undefined;
+                if (pos && typeof pos === 'object') {
                   // Only remove position object if BOTH x and y are undefined
                   if (pos.x === undefined && pos.y === undefined) {
                     delete result.position;
                   }
                 }
-              } else if (key === "scale.x" || key === "scale.y") {
-                const scale = result.scale as
-                  | { x?: number; y?: number }
-                  | undefined;
-                if (scale && typeof scale === "object") {
+              } else if (key === 'scale.x' || key === 'scale.y') {
+                const scale = result.scale as { x?: number; y?: number } | undefined;
+                if (scale && typeof scale === 'object') {
                   // Only remove scale object if BOTH x and y are undefined
                   if (scale.x === undefined && scale.y === undefined) {
                     delete result.scale;
@@ -303,10 +284,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
             } else {
               entry.initial = prunedInitial;
             }
-            if (
-              entry.initial === undefined &&
-              (!entry.tracks || entry.tracks.length === 0)
-            ) {
+            if (entry.initial === undefined && (!entry.tracks || entry.tracks.length === 0)) {
               delete poa[objectId];
             } else {
               poa[objectId] = entry;
@@ -334,10 +312,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
             } else {
               entry.initial = prunedInitial;
             }
-            if (
-              entry.initial === undefined &&
-              (!entry.tracks || entry.tracks.length === 0)
-            ) {
+            if (entry.initial === undefined && (!entry.tracks || entry.tracks.length === 0)) {
               delete poa[objectId];
             } else {
               poa[objectId] = entry;
@@ -361,10 +336,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
             } else {
               entry.initial = prunedInitial;
             }
-            if (
-              entry.initial === undefined &&
-              (!entry.tracks || entry.tracks.length === 0)
-            ) {
+            if (entry.initial === undefined && (!entry.tracks || entry.tracks.length === 0)) {
               delete poa[objectId];
             } else {
               poa[objectId] = entry;
@@ -385,18 +357,10 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
   return { variables, getBinding, getBoundName, bind, resetToDefault } as const;
 }
 
-export function BindButton({
-  nodeId,
-  bindingKey,
-  objectId,
-  className,
-}: BindButtonProps) {
-  const { variables, getBinding, getBoundName, bind } = useVariableBinding(
-    nodeId,
-    objectId,
-  );
+export function BindButton({ nodeId, bindingKey, objectId, className }: BindButtonProps) {
+  const { variables, getBinding, getBoundName, bind } = useVariableBinding(nodeId, objectId);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const boundId = getBinding(bindingKey);
   const boundName = getBoundName(boundId);
   const isBound = !!boundId;
@@ -408,16 +372,12 @@ export function BindButton({
   }, [variables, query]);
 
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div className={`relative ${className ?? ''}`}>
       <button
         type="button"
-        title={
-          boundId
-            ? `Bound to ${boundName ?? boundId}`
-            : "Bind to Result variable"
-        }
+        title={boundId ? `Bound to ${boundName ?? boundId}` : 'Bind to Result variable'}
         onClick={() => setOpen(true)}
-        className={`relative cursor-pointer rounded p-1 hover:bg-[var(--surface-interactive)] ${isBound ? "text-[var(--accent-primary)]" : ""}`}
+        className={`relative cursor-pointer rounded p-1 hover:bg-[var(--surface-interactive)] ${isBound ? 'text-[var(--accent-primary)]' : ''}`}
       >
         <LinkIcon size={14} />
         {isBound && (
@@ -448,9 +408,7 @@ export function BindButton({
           <div className="scrollbar-elegant flex-1 overflow-auto">
             {filtered.length === 0 ? (
               <div className="px-[var(--space-3)] py-[var(--space-6)] text-center text-sm text-[var(--text-tertiary)]">
-                {query.trim()
-                  ? "No results found"
-                  : "No Result variables available"}
+                {query.trim() ? 'No results found' : 'No Result variables available'}
               </div>
             ) : (
               <div className="space-y-[var(--space-1)]">
@@ -474,7 +432,7 @@ export function BindButton({
           {filtered.length > 0 && (
             <div className="flex items-center justify-center border-t border-[var(--border-primary)] pt-[var(--space-2)]">
               <div className="text-refined text-xs text-[var(--text-muted)]">
-                {filtered.length} {filtered.length === 1 ? "result" : "results"}
+                {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
               </div>
             </div>
           )}

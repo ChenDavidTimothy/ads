@@ -1,13 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useRef, useState } from "react";
-import { api } from "@/trpc/react";
-import type { WorkspaceState } from "@/types/workspace-state";
-import {
-  extractWorkspaceState,
-  mergeEditorsIntoFlow,
-} from "@/utils/workspace-state";
-import { createStableFlowSnapshot } from "@/utils/workspace-snapshot";
+import { useCallback, useRef, useState } from 'react';
+import { api } from '@/trpc/react';
+import type { WorkspaceState } from '@/types/workspace-state';
+import { extractWorkspaceState, mergeEditorsIntoFlow } from '@/utils/workspace-state';
+import { createStableFlowSnapshot } from '@/utils/workspace-snapshot';
 
 interface SaveResult {
   version: number;
@@ -27,14 +24,12 @@ export function useWorkspaceSave({
   onSaveSuccess,
   onSaveError,
 }: UseWorkspaceSaveOptions) {
-  const [lastSavedState, setLastSavedState] = useState<WorkspaceState | null>(
-    null,
-  );
+  const [lastSavedState, setLastSavedState] = useState<WorkspaceState | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [currentVersion, setCurrentVersion] = useState<number>(initialVersion);
 
-  const lastSavedFlowSnapshotRef = useRef<string>("");
-  const lastQueuedFlowSnapshotRef = useRef<string>("");
+  const lastSavedFlowSnapshotRef = useRef<string>('');
+  const lastQueuedFlowSnapshotRef = useRef<string>('');
 
   const saveMutation = api.workspace.save.useMutation({
     onSuccess: (result) => {
@@ -43,7 +38,7 @@ export function useWorkspaceSave({
       onSaveSuccess?.(result as SaveResult);
     },
     onError: (error) => {
-      console.error("[WorkspaceSave] Mutation failed:", error);
+      console.error('[WorkspaceSave] Mutation failed:', error);
       onSaveError?.(error);
     },
     onSettled: () => {
@@ -62,26 +57,21 @@ export function useWorkspaceSave({
       try {
         const currentFlowSnapshot = createStableFlowSnapshot(currentState.flow);
         const lastFlowSnapshot =
-          lastSavedFlowSnapshotRef.current ||
-          createStableFlowSnapshot(lastSavedState.flow);
+          lastSavedFlowSnapshotRef.current || createStableFlowSnapshot(lastSavedState.flow);
 
         if (currentFlowSnapshot !== lastFlowSnapshot) return true;
 
         // Also compare editor-specific persistable data (timeline)
-        const currentEditorsSnapshot = JSON.stringify(
-          stableEditorsSnapshot(currentState),
-        );
-        const lastEditorsSnapshot = JSON.stringify(
-          stableEditorsSnapshot(lastSavedState),
-        );
+        const currentEditorsSnapshot = JSON.stringify(stableEditorsSnapshot(currentState));
+        const lastEditorsSnapshot = JSON.stringify(stableEditorsSnapshot(lastSavedState));
         return currentEditorsSnapshot !== lastEditorsSnapshot;
       } catch (error) {
         // If snapshot comparison fails, assume there are changes to be safe
-        console.warn("[WorkspaceSave] Error comparing snapshots:", error);
+        console.warn('[WorkspaceSave] Error comparing snapshots:', error);
         return true;
       }
     },
-    [lastSavedState],
+    [lastSavedState]
   );
 
   const saveNow = useCallback(
@@ -125,27 +115,23 @@ export function useWorkspaceSave({
         lastSavedFlowSnapshotRef.current = currentFlowSnapshot;
         return result as SaveResult;
       } catch (error) {
-        console.error("[WorkspaceSave] Save operation failed:", error);
+        console.error('[WorkspaceSave] Save operation failed:', error);
         throw error; // Re-throw to maintain error handling chain
       } finally {
         isSaveInFlightRef.current = false;
       }
     },
-    [workspaceId, currentVersion, hasUnsavedChanges, saveMutation],
+    [workspaceId, currentVersion, hasUnsavedChanges, saveMutation]
   );
 
   const initializeFromWorkspace = useCallback(
     (workspaceData: unknown) => {
       const initialState = extractWorkspaceState(workspaceData);
       setLastSavedState(initialState);
-      setCurrentVersion(
-        (workspaceData as { version?: number }).version ?? initialVersion,
-      );
-      lastSavedFlowSnapshotRef.current = createStableFlowSnapshot(
-        initialState.flow,
-      );
+      setCurrentVersion((workspaceData as { version?: number }).version ?? initialVersion);
+      lastSavedFlowSnapshotRef.current = createStableFlowSnapshot(initialState.flow);
     },
-    [initialVersion],
+    [initialVersion]
   );
 
   return {

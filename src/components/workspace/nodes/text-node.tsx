@@ -1,24 +1,21 @@
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { TextNodeData } from "@/shared/types/nodes";
-import { Type } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { TextNodeData } from '@/shared/types/nodes';
+import { Type } from 'lucide-react';
 
 export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
-  const nodeDefinition = getNodeDefinition("text");
+  const nodeDefinition = getNodeDefinition('text');
 
   const displayContent =
     data.content?.length > 20
-      ? data.content.substring(0, 20) + "..."
-      : data.content || "Hello World";
+      ? data.content.substring(0, 20) + '...'
+      : data.content || 'Hello World';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-text)] text-[var(--text-primary)]">
@@ -44,7 +41,7 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
           position={Position.Right}
           id={port.id}
           className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-text)]"
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
     </Card>

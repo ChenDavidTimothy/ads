@@ -1,39 +1,32 @@
 // src/components/workspace/flow-editor-tab.tsx - Updated to use collapsible right sidebar
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { type NodeTypes } from "reactflow";
-import { FlowCanvas } from "./flow/components/flow-canvas";
-import { NodePalette } from "./node-palette";
-import { ActionsToolbar } from "./flow/components/actions-toolbar";
-import { RightSidebar } from "./flow/components/right-sidebar";
-import { ResultLogModal } from "./result-log-modal";
-import { createNodeTypes } from "./flow/node-types";
-import { useFlowGraph } from "./flow/hooks/use-flow-graph";
-import { useConnections } from "./flow/hooks/use-connections";
-import { useResultLogViewer } from "./flow/hooks/use-result-log-viewer";
-import { useSceneGeneration } from "./flow/hooks/use-scene-generation";
-import { useDebugExecution } from "./flow/hooks/use-debug-execution";
-import { DebugProvider } from "./flow/debug-context";
-import type { NodeData, AnimationTrack } from "@/shared/types/nodes";
-import type { Node, Edge } from "reactflow";
-import { useWorkspace } from "./workspace-context";
-import { useOnlineStatus } from "@/hooks/use-online-status";
-import { generateTransformIdentifier } from "@/lib/defaults/transforms";
-import { debounce } from "@/lib/utils";
-import { FlowTracker } from "@/lib/flow/flow-tracking";
-import { reconcileLayerOrder } from "./layer-management/layer-management-utils";
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { type NodeTypes } from 'reactflow';
+import { FlowCanvas } from './flow/components/flow-canvas';
+import { NodePalette } from './node-palette';
+import { ActionsToolbar } from './flow/components/actions-toolbar';
+import { RightSidebar } from './flow/components/right-sidebar';
+import { ResultLogModal } from './result-log-modal';
+import { createNodeTypes } from './flow/node-types';
+import { useFlowGraph } from './flow/hooks/use-flow-graph';
+import { useConnections } from './flow/hooks/use-connections';
+import { useResultLogViewer } from './flow/hooks/use-result-log-viewer';
+import { useSceneGeneration } from './flow/hooks/use-scene-generation';
+import { useDebugExecution } from './flow/hooks/use-debug-execution';
+import { DebugProvider } from './flow/debug-context';
+import type { NodeData, AnimationTrack } from '@/shared/types/nodes';
+import type { Node, Edge } from 'reactflow';
+import { useWorkspace } from './workspace-context';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import { generateTransformIdentifier } from '@/lib/defaults/transforms';
+import { debounce } from '@/lib/utils';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
+import { reconcileLayerOrder } from './layer-management/layer-management-utils';
 
 export function FlowEditorTab() {
-  const {
-    state,
-    updateFlow,
-    updateUI,
-    updateTimeline,
-    saveNow,
-    isSaving,
-    hasUnsavedChanges,
-  } = useWorkspace();
+  const { state, updateFlow, updateUI, updateTimeline, saveNow, isSaving, hasUnsavedChanges } =
+    useWorkspace();
   const isOnline = useOnlineStatus();
   const { nodes: ctxNodes, edges: ctxEdges } = state.flow;
 
@@ -65,7 +58,7 @@ export function FlowEditorTab() {
     if (ctxNodes.length > 0 && nodes.length === 0) {
       const nodeIdSet = new Set(ctxNodes.map((n) => n.id));
       const initialEdges = (ctxEdges ?? []).filter(
-        (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target),
+        (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
       );
       setNodes(ctxNodes);
       if (initialEdges.length > 0) setEdges(initialEdges);
@@ -111,10 +104,7 @@ export function FlowEditorTab() {
       if (suspendContextSyncRef.current) return;
       const ctxNodesNow = ctxNodes;
       const ctxEdgesNow = ctxEdges;
-      if (
-        areNodesEqual(newNodes, ctxNodesNow) &&
-        areEdgesEqual(newEdges, ctxEdgesNow)
-      ) {
+      if (areNodesEqual(newNodes, ctxNodesNow) && areEdgesEqual(newEdges, ctxEdgesNow)) {
         return; // No-op
       }
       updateFlow({ nodes: newNodes, edges: newEdges });
@@ -139,9 +129,7 @@ export function FlowEditorTab() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = (e: Event) => {
-      const detail = (
-        e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>
-      ).detail;
+      const detail = (e as CustomEvent<{ nodeIdentifierId: string; order: string[] }>).detail;
       if (!detail) return;
 
       // Suspend context sync briefly to prevent overwriting the external change
@@ -164,12 +152,9 @@ export function FlowEditorTab() {
       });
     };
 
-    window.addEventListener("layer-order-updated", handler as EventListener);
+    window.addEventListener('layer-order-updated', handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "layer-order-updated",
-        handler as EventListener,
-      );
+      window.removeEventListener('layer-order-updated', handler as EventListener);
       if (timer) clearTimeout(timer);
     };
   }, [setNodes]);
@@ -178,9 +163,7 @@ export function FlowEditorTab() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const handler = (e: Event) => {
-      const detail = (
-        e as CustomEvent<{ nodeIdentifierId: string; keys: string[] }>
-      ).detail;
+      const detail = (e as CustomEvent<{ nodeIdentifierId: string; keys: string[] }>).detail;
       if (!detail) return;
 
       // Suspend context sync briefly to prevent overwriting the external change
@@ -203,12 +186,9 @@ export function FlowEditorTab() {
       });
     };
 
-    window.addEventListener("batch-keys-updated", handler as EventListener);
+    window.addEventListener('batch-keys-updated', handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "batch-keys-updated",
-        handler as EventListener,
-      );
+      window.removeEventListener('batch-keys-updated', handler as EventListener);
       if (timer) clearTimeout(timer);
     };
   }, [setNodes]);
@@ -240,10 +220,10 @@ export function FlowEditorTab() {
         return prev.map((n) => {
           const nid = n.data.identifier?.id;
           if (nid !== detail.nodeIdentifierId) return n;
-          if (n.type !== "insert") return n;
+          if (n.type !== 'insert') return n;
 
           // Default time update
-          if (typeof detail.defaultTime === "number") {
+          if (typeof detail.defaultTime === 'number') {
             return {
               ...n,
               data: { ...n.data, appearanceTime: detail.defaultTime },
@@ -273,7 +253,7 @@ export function FlowEditorTab() {
               return { ...n, data: nextData } as typeof n;
             }
 
-            if (typeof detail.time === "number") {
+            if (typeof detail.time === 'number') {
               const next = { ...currentMap, [detail.objectId]: detail.time };
               return {
                 ...n,
@@ -287,15 +267,9 @@ export function FlowEditorTab() {
       });
     };
 
-    window.addEventListener(
-      "insert-appearance-time-updated",
-      handler as EventListener,
-    );
+    window.addEventListener('insert-appearance-time-updated', handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "insert-appearance-time-updated",
-        handler as EventListener,
-      );
+      window.removeEventListener('insert-appearance-time-updated', handler as EventListener);
       if (timer) clearTimeout(timer);
     };
   }, [setNodes]);
@@ -311,13 +285,10 @@ export function FlowEditorTab() {
   const selectedNodesRef = useRef<Node<NodeData>[]>([]);
   const selectedEdgesRef = useRef<Edge[]>([]);
 
-  const handleSelectionChange = useCallback(
-    (params: { nodes: Node[]; edges: Edge[] }) => {
-      selectedNodesRef.current = (params.nodes as Node<NodeData>[]) ?? [];
-      selectedEdgesRef.current = params.edges ?? [];
-    },
-    [],
-  );
+  const handleSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
+    selectedNodesRef.current = (params.nodes as Node<NodeData>[]) ?? [];
+    selectedEdgesRef.current = params.edges ?? [];
+  }, []);
 
   // Use the robust deletion handlers from useFlowGraph - no custom keyboard handling needed
 
@@ -336,28 +307,22 @@ export function FlowEditorTab() {
             tracks?: AnimationTrack[];
           };
         };
-        return (
-          flowNode.id === nodeId || flowNode.data?.identifier?.id === nodeId
-        );
+        return flowNode.id === nodeId || flowNode.data?.identifier?.id === nodeId;
       });
 
-      if (!node || !("type" in node) || node.type !== "animation") return;
+      if (!node || !('type' in node) || node.type !== 'animation') return;
 
       const animationNode = node as {
         data: { duration?: number; tracks?: AnimationTrack[] };
       };
       const duration: number =
-        typeof animationNode.data?.duration === "number"
-          ? animationNode.data.duration
-          : 3;
-      const rawTracks: AnimationTrack[] = Array.isArray(
-        animationNode.data?.tracks,
-      )
+        typeof animationNode.data?.duration === 'number' ? animationNode.data.duration : 3;
+      const rawTracks: AnimationTrack[] = Array.isArray(animationNode.data?.tracks)
         ? animationNode.data.tracks
         : [];
 
       const tracks: AnimationTrack[] = rawTracks.map((track) => {
-        if ("identifier" in track && track.identifier) {
+        if ('identifier' in track && track.identifier) {
           return track;
         }
         const identifier = generateTransformIdentifier(track.type, rawTracks);
@@ -366,115 +331,102 @@ export function FlowEditorTab() {
 
       updateTimeline(nodeId, { duration, tracks });
     },
-    [state.editors.timeline, state.flow.nodes, updateTimeline],
+    [state.editors.timeline, state.flow.nodes, updateTimeline]
   );
 
   // Stable handler refs to avoid recreating nodeTypes
   const openTimelineRef = useRef<(nodeId: string) => void>((nodeId: string) => {
-    console.warn("Timeline handler not initialized yet for node:", nodeId);
+    console.warn('Timeline handler not initialized yet for node:', nodeId);
   });
   const openCanvasRef = useRef<(nodeId: string) => void>((nodeId: string) => {
-    console.warn("Canvas handler not initialized yet for node:", nodeId);
+    console.warn('Canvas handler not initialized yet for node:', nodeId);
   });
-  const openTypographyRef = useRef<(nodeId: string) => void>(
-    (nodeId: string) => {
-      console.warn("Typography handler not initialized yet for node:", nodeId);
-    },
-  );
+  const openTypographyRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+    console.warn('Typography handler not initialized yet for node:', nodeId);
+  });
   const openMediaRef = useRef<(nodeId: string) => void>((nodeId: string) => {
-    console.warn("Media handler not initialized yet for node:", nodeId);
+    console.warn('Media handler not initialized yet for node:', nodeId);
   });
-  const openLogViewerRef = useRef<(nodeId: string) => void>(
-    (nodeId: string) => {
-      console.warn("Log viewer handler not initialized yet for node:", nodeId);
-    },
-  );
+  const openLogViewerRef = useRef<(nodeId: string) => void>((nodeId: string) => {
+    console.warn('Log viewer handler not initialized yet for node:', nodeId);
+  });
 
   useEffect(() => {
     openTimelineRef.current = (nodeId: string) => {
       ensureTimelineForNode(nodeId);
       updateUI({
-        activeTab: "timeline",
+        activeTab: 'timeline',
         selectedNodeId: nodeId,
-        selectedNodeType: "animation",
+        selectedNodeType: 'animation',
       });
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", "timeline");
-      url.searchParams.set("node", nodeId);
-      window.history.pushState({}, "", url.toString());
+      url.searchParams.set('tab', 'timeline');
+      url.searchParams.set('node', nodeId);
+      window.history.pushState({}, '', url.toString());
     };
   }, [ensureTimelineForNode, updateUI]);
 
   useEffect(() => {
     openCanvasRef.current = (nodeId: string) => {
       updateUI({
-        activeTab: "canvas",
+        activeTab: 'canvas',
         selectedNodeId: nodeId,
-        selectedNodeType: "canvas",
+        selectedNodeType: 'canvas',
       });
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", "canvas");
-      url.searchParams.set("node", nodeId);
-      window.history.pushState({}, "", url.toString());
+      url.searchParams.set('tab', 'canvas');
+      url.searchParams.set('node', nodeId);
+      window.history.pushState({}, '', url.toString());
     };
 
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ nodeId: string }>).detail;
       if (detail?.nodeId) openCanvasRef.current(detail.nodeId);
     };
-    window.addEventListener("open-canvas-editor", handler as EventListener);
-    return () =>
-      window.removeEventListener(
-        "open-canvas-editor",
-        handler as EventListener,
-      );
+    window.addEventListener('open-canvas-editor', handler as EventListener);
+    return () => window.removeEventListener('open-canvas-editor', handler as EventListener);
   }, [updateUI]);
 
   useEffect(() => {
     openTypographyRef.current = (nodeId: string) => {
       updateUI({
-        activeTab: "typography",
+        activeTab: 'typography',
         selectedNodeId: nodeId,
-        selectedNodeType: "typography",
+        selectedNodeType: 'typography',
       });
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", "typography");
-      url.searchParams.set("node", nodeId);
-      window.history.pushState({}, "", url.toString());
+      url.searchParams.set('tab', 'typography');
+      url.searchParams.set('node', nodeId);
+      window.history.pushState({}, '', url.toString());
     };
 
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ nodeId: string }>).detail;
       if (detail?.nodeId) openTypographyRef.current(detail.nodeId);
     };
-    window.addEventListener("open-typography-editor", handler as EventListener);
-    return () =>
-      window.removeEventListener(
-        "open-typography-editor",
-        handler as EventListener,
-      );
+    window.addEventListener('open-typography-editor', handler as EventListener);
+    return () => window.removeEventListener('open-typography-editor', handler as EventListener);
   }, [updateUI]);
 
   useEffect(() => {
     openMediaRef.current = (nodeId: string) => {
       updateUI({
-        activeTab: "media",
+        activeTab: 'media',
         selectedNodeId: nodeId,
-        selectedNodeType: "media",
+        selectedNodeType: 'media',
       });
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", "media");
-      url.searchParams.set("node", nodeId);
-      window.history.pushState({}, "", url.toString());
+      url.searchParams.set('tab', 'media');
+      url.searchParams.set('node', nodeId);
+      window.history.pushState({}, '', url.toString());
     };
 
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ nodeId: string }>).detail;
       if (detail?.nodeId) openMediaRef.current(detail.nodeId);
     };
-    window.addEventListener("open-media-editor", handler as EventListener);
-    return () =>
-      window.removeEventListener("open-media-editor", handler as EventListener);
+    window.addEventListener('open-media-editor', handler as EventListener);
+    return () => window.removeEventListener('open-media-editor', handler as EventListener);
   }, [updateUI]);
 
   useEffect(() => {
@@ -486,24 +438,15 @@ export function FlowEditorTab() {
   const nodeTypes: NodeTypes = useMemo(() => {
     return createNodeTypes(
       (id) => openTimelineRef.current?.(id),
-      (id) => openLogViewerRef.current?.(id),
+      (id) => openLogViewerRef.current?.(id)
     );
   }, []); // Empty deps array - create once
 
-  const { onConnect } = useConnections(
-    nodes,
-    edges,
-    setEdges,
-    flowTracker,
-    (newEdges: Edge[]) => updateFlow({ edges: newEdges }),
+  const { onConnect } = useConnections(nodes, edges, setEdges, flowTracker, (newEdges: Edge[]) =>
+    updateFlow({ edges: newEdges })
   );
-  const {
-    runToNode,
-    getDebugResult,
-    getAllDebugResults,
-    clearDebugResults,
-    isDebugging,
-  } = useDebugExecution(nodes, edges);
+  const { runToNode, getDebugResult, getAllDebugResults, clearDebugResults, isDebugging } =
+    useDebugExecution(nodes, edges);
 
   const {
     videoUrl,
@@ -539,7 +482,7 @@ export function FlowEditorTab() {
     const tracker = new FlowTracker();
     let didChange = false;
     const nextNodes = nodes.map((n) => {
-      if (n.type !== "scene" && n.type !== "frame") return n;
+      if (n.type !== 'scene' && n.type !== 'frame') return n;
       const identifierId = n.data.identifier?.id;
       if (!identifierId) return n;
       const objects = tracker.getUpstreamObjects(identifierId, nodes, edges);
@@ -547,9 +490,7 @@ export function FlowEditorTab() {
       const saved = (n.data as { layerOrder?: string[] }).layerOrder;
       const effective = reconcileLayerOrder(ids, saved);
       const arraysEqual = (a: string[] | undefined, b: string[]) =>
-        Array.isArray(a) &&
-        a.length === b.length &&
-        a.every((v, i) => v === b[i]);
+        Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]);
       if (!arraysEqual(saved, effective)) {
         didChange = true;
         const data = (n.data as unknown as Record<string, unknown>) || {};
@@ -625,7 +566,7 @@ export function FlowEditorTab() {
             <ResultLogModal
               isOpen={resultLogModalState.isOpen}
               onClose={handleCloseResultLogViewer}
-              nodeId={resultLogModalState.nodeId ?? ""}
+              nodeId={resultLogModalState.nodeId ?? ''}
               nodeName={getResultNodeData().name}
               nodeLabel={getResultNodeData().label}
             />

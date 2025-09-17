@@ -1,6 +1,6 @@
 // src/shared/types/scene.ts
-import type { Point2D } from "./core";
-import type { PropertySourceMap } from "@/shared/properties/precedence";
+import type { Point2D } from './core';
+import type { PropertySourceMap } from '@/shared/properties/precedence';
 
 // Animation Scene
 export interface AnimationScene {
@@ -14,7 +14,7 @@ export interface AnimationScene {
 
 export interface SceneObject {
   id: string;
-  type: "triangle" | "circle" | "rectangle" | "text" | "image";
+  type: 'triangle' | 'circle' | 'rectangle' | 'text' | 'image';
   properties: GeometryProperties;
   initialPosition: Point2D;
   initialRotation?: number;
@@ -99,12 +99,12 @@ export interface BaseSceneAnimationTrack {
   objectId: string;
   startTime: number;
   duration: number;
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
 }
 
 // Individual scene track types - now generated from registry
 export interface SceneMoveTrack extends BaseSceneAnimationTrack {
-  type: "move";
+  type: 'move';
   properties: {
     from: Point2D;
     to: Point2D;
@@ -112,7 +112,7 @@ export interface SceneMoveTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneRotateTrack extends BaseSceneAnimationTrack {
-  type: "rotate";
+  type: 'rotate';
   properties: {
     from: number;
     to: number;
@@ -120,7 +120,7 @@ export interface SceneRotateTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneScaleTrack extends BaseSceneAnimationTrack {
-  type: "scale";
+  type: 'scale';
   properties: {
     from: Point2D;
     to: Point2D;
@@ -128,7 +128,7 @@ export interface SceneScaleTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneFadeTrack extends BaseSceneAnimationTrack {
-  type: "fade";
+  type: 'fade';
   properties: {
     from: number;
     to: number;
@@ -136,11 +136,11 @@ export interface SceneFadeTrack extends BaseSceneAnimationTrack {
 }
 
 export interface SceneColorTrack extends BaseSceneAnimationTrack {
-  type: "color";
+  type: 'color';
   properties: {
     from: string;
     to: string;
-    property: "fill" | "stroke";
+    property: 'fill' | 'stroke';
   };
 }
 
@@ -154,45 +154,37 @@ export type SceneAnimationTrack =
   | SceneSlideTrack;
 
 // Type guard factory - generates type guards dynamically
-export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(
-  type: T["type"],
-) {
+export function createSceneTrackTypeGuard<T extends SceneAnimationTrack>(type: T['type']) {
   return (track: SceneAnimationTrack): track is T => track.type === type;
 }
 
 // Pre-generated type guards for existing types
-export const isSceneMoveTrack =
-  createSceneTrackTypeGuard<SceneMoveTrack>("move");
-export const isSceneRotateTrack =
-  createSceneTrackTypeGuard<SceneRotateTrack>("rotate");
-export const isSceneScaleTrack =
-  createSceneTrackTypeGuard<SceneScaleTrack>("scale");
-export const isSceneFadeTrack =
-  createSceneTrackTypeGuard<SceneFadeTrack>("fade");
-export const isSceneColorTrack =
-  createSceneTrackTypeGuard<SceneColorTrack>("color");
+export const isSceneMoveTrack = createSceneTrackTypeGuard<SceneMoveTrack>('move');
+export const isSceneRotateTrack = createSceneTrackTypeGuard<SceneRotateTrack>('rotate');
+export const isSceneScaleTrack = createSceneTrackTypeGuard<SceneScaleTrack>('scale');
+export const isSceneFadeTrack = createSceneTrackTypeGuard<SceneFadeTrack>('fade');
+export const isSceneColorTrack = createSceneTrackTypeGuard<SceneColorTrack>('color');
 
 // Slide track type - additive motion
 export interface SceneSlideTrack extends BaseSceneAnimationTrack {
-  type: "slide";
+  type: 'slide';
   properties: {
     orientationDeg: number;
     velocity: number; // px/s, negative reverses
   };
 }
-export const isSceneSlideTrack =
-  createSceneTrackTypeGuard<SceneSlideTrack>("slide");
+export const isSceneSlideTrack = createSceneTrackTypeGuard<SceneSlideTrack>('slide');
 
 // Validation helpers
 export function validateScene(scene: AnimationScene): string[] {
   const errors: string[] = [];
 
   if (scene.duration <= 0) {
-    errors.push("Scene duration must be positive");
+    errors.push('Scene duration must be positive');
   }
 
   if (scene.objects.length === 0) {
-    errors.push("Scene must contain at least one object");
+    errors.push('Scene must contain at least one object');
   }
 
   const objectIds = new Set(scene.objects.map((obj) => obj.id));
@@ -203,15 +195,11 @@ export function validateScene(scene: AnimationScene): string[] {
     }
 
     if (animation.startTime < 0) {
-      errors.push(
-        `Animation start time cannot be negative: ${animation.objectId}`,
-      );
+      errors.push(`Animation start time cannot be negative: ${animation.objectId}`);
     }
 
     if (animation.startTime + animation.duration > scene.duration) {
-      errors.push(
-        `Animation extends beyond scene duration: ${animation.objectId}`,
-      );
+      errors.push(`Animation extends beyond scene duration: ${animation.objectId}`);
     }
   }
 

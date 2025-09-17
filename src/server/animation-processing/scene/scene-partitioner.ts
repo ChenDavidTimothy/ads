@@ -1,20 +1,13 @@
 // src/server/animation-processing/scene/scene-partitioner.ts - Multi-scene partitioning logic
-import type { NodeData, SceneAnimationTrack } from "@/shared/types";
-import type {
-  AnimationScene,
-  SceneObject,
-  ImageProperties,
-} from "@/shared/types/scene";
-import { applyOverridesToObject } from "./batch-overrides-resolver";
-import type { ReactFlowNode } from "../types/graph";
-import type { ExecutionContext } from "../execution-context";
-import { logger } from "@/lib/logger";
-import { DomainError, type DomainErrorCode } from "@/shared/errors/domain";
-import {
-  resolveFieldValue,
-  type BatchResolveContext,
-} from "./batch-overrides-resolver";
-import type { AssetCacheManager } from "@/server/rendering/asset-cache-manager";
+import type { NodeData, SceneAnimationTrack } from '@/shared/types';
+import type { AnimationScene, SceneObject, ImageProperties } from '@/shared/types/scene';
+import { applyOverridesToObject } from './batch-overrides-resolver';
+import type { ReactFlowNode } from '../types/graph';
+import type { ExecutionContext } from '../execution-context';
+import { logger } from '@/lib/logger';
+import { DomainError, type DomainErrorCode } from '@/shared/errors/domain';
+import { resolveFieldValue, type BatchResolveContext } from './batch-overrides-resolver';
+import type { AssetCacheManager } from '@/server/rendering/asset-cache-manager';
 
 export interface ScenePartition {
   sceneNode: ReactFlowNode<NodeData>;
@@ -42,9 +35,9 @@ export function partitionObjectsByScenes(
     target: string;
     sourceHandle?: string;
     targetHandle?: string;
-  }>,
+  }>
 ): ScenePartition[] {
-  logger.info("Partitioning objects by scenes", {
+  logger.info('Partitioning objects by scenes', {
     totalScenes: sceneNodes.length,
     scenesWithObjects: context.sceneObjectsByScene.size,
     totalAnimations: context.sceneAnimations.length,
@@ -60,17 +53,14 @@ export function partitionObjectsByScenes(
 
     let sceneAnimations: SceneAnimationTrack[] = [];
     // Collect per-object batch overrides from upstream inputs
-    const mergedBatchOverrides: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    > = {};
+    const mergedBatchOverrides: Record<string, Record<string, Record<string, unknown>>> = {};
     if (edges) {
       const incomingEdges = edges.filter((edge) => edge.target === sceneId);
       const mergedBoundFields: Record<string, string[]> = {};
 
       for (const edge of incomingEdges) {
         const sourceOutput = context.nodeOutputs.get(
-          `${edge.source}.${edge.sourceHandle ?? "output"}`,
+          `${edge.source}.${edge.sourceHandle ?? 'output'}`
         );
         if (sourceOutput?.metadata) {
           const perObjectAnimations = (
@@ -85,16 +75,11 @@ export function partitionObjectsByScenes(
           }
           const perObjectBatchOverrides = (
             sourceOutput.metadata as {
-              perObjectBatchOverrides?: Record<
-                string,
-                Record<string, Record<string, unknown>>
-              >;
+              perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
             }
           )?.perObjectBatchOverrides;
           if (perObjectBatchOverrides) {
-            for (const [objectId, fields] of Object.entries(
-              perObjectBatchOverrides,
-            )) {
+            for (const [objectId, fields] of Object.entries(perObjectBatchOverrides)) {
               const baseFields = mergedBatchOverrides[objectId] ?? {};
               const mergedFields: Record<string, Record<string, unknown>> = {
                 ...baseFields,
@@ -117,7 +102,7 @@ export function partitionObjectsByScenes(
             for (const [objectId, fieldList] of Object.entries(boundFields)) {
               const existing = mergedBoundFields[objectId] ?? [];
               mergedBoundFields[objectId] = Array.from(
-                new Set([...existing, ...fieldList.map(String)]),
+                new Set([...existing, ...fieldList.map(String)])
               );
             }
           }
@@ -151,8 +136,7 @@ export function partitionObjectsByScenes(
       objectProperties: sceneObjects.map((obj) => ({
         id: obj.id,
         type: obj.type,
-        hasAnimations:
-          sceneAnimations.filter((anim) => anim.objectId === obj.id).length > 0,
+        hasAnimations: sceneAnimations.filter((anim) => anim.objectId === obj.id).length > 0,
       })),
     });
 
@@ -163,20 +147,14 @@ export function partitionObjectsByScenes(
         const incoming = edges.filter((e) => e.target === sceneId);
         const out: Record<string, string[]> = {};
         for (const e of incoming) {
-          const so = context.nodeOutputs.get(
-            `${e.source}.${e.sourceHandle ?? "output"}`,
-          );
+          const so = context.nodeOutputs.get(`${e.source}.${e.sourceHandle ?? 'output'}`);
           const m = (
-            so?.metadata as
-              | { perObjectBoundFields?: Record<string, string[]> }
-              | undefined
+            so?.metadata as { perObjectBoundFields?: Record<string, string[]> } | undefined
           )?.perObjectBoundFields;
           if (!m) continue;
           for (const [objectId, list] of Object.entries(m)) {
             const existing = out[objectId] ?? [];
-            out[objectId] = Array.from(
-              new Set([...existing, ...list.map(String)]),
-            );
+            out[objectId] = Array.from(new Set([...existing, ...list.map(String)]));
           }
         }
         return Object.keys(out).length > 0 ? out : undefined;
@@ -187,15 +165,13 @@ export function partitionObjectsByScenes(
         objects: sceneObjects,
         animations: sceneAnimations,
         batchOverrides:
-          Object.keys(mergedBatchOverrides).length > 0
-            ? mergedBatchOverrides
-            : undefined,
+          Object.keys(mergedBatchOverrides).length > 0 ? mergedBatchOverrides : undefined,
         boundFieldsByObject,
       });
     }
   }
 
-  logger.info("Scene partitioning completed", {
+  logger.info('Scene partitioning completed', {
     validScenes: partitions.length,
     totalScenes: sceneNodes.length,
   });
@@ -207,14 +183,11 @@ export function partitionObjectsByScenes(
  * Partition a single-scene partition further by batchKey, returning per-key partitions.
  * If no batched objects are present, returns a single partition with batchKey=null.
  */
-export function partitionByBatchKey(
-  base: ScenePartition,
-): BatchedScenePartition[] {
+export function partitionByBatchKey(base: ScenePartition): BatchedScenePartition[] {
   const sceneId = base.sceneNode?.data?.identifier?.id;
-  const sceneName =
-    base.sceneNode?.data?.identifier?.displayName ?? "Unknown Scene";
+  const sceneName = base.sceneNode?.data?.identifier?.displayName ?? 'Unknown Scene';
 
-  logger.debug("Partitioning by batch key", {
+  logger.debug('Partitioning by batch key', {
     sceneId,
     sceneName,
     totalObjects: base.objects.length,
@@ -227,12 +200,12 @@ export function partitionByBatchKey(
     return (
       Array.isArray((o as { batchKeys?: unknown }).batchKeys) &&
       (o as { batchKeys?: unknown[] }).batchKeys!.some(
-        (k) => typeof k === "string" && k.trim() !== "",
+        (k) => typeof k === 'string' && k.trim() !== ''
       )
     );
   });
 
-  logger.debug("Batch analysis", {
+  logger.debug('Batch analysis', {
     nonBatchedCount: nonBatched.length,
     batchedCount: batched.length,
     batchedKeys: batched.map((o) => (o as { batchKeys?: string[] }).batchKeys),
@@ -240,7 +213,7 @@ export function partitionByBatchKey(
 
   if (batched.length === 0) {
     const result = [{ ...base, batchKey: null }];
-    logger.debug("No batched objects, returning single partition", {
+    logger.debug('No batched objects, returning single partition', {
       resultCount: result.length,
       hasSceneNode: !!result[0]?.sceneNode,
     });
@@ -253,23 +226,23 @@ export function partitionByBatchKey(
         const b = o as { batchKeys?: string[] };
         return Array.isArray(b.batchKeys)
           ? b.batchKeys
-              .filter((k) => typeof k === "string")
+              .filter((k) => typeof k === 'string')
               .map((k) => k.trim())
               .filter((k) => k.length > 0)
           : [];
-      }),
-    ),
+      })
+    )
   ).filter((k) => k.trim().length > 0);
 
-  logger.debug("Extracted keys", { keys, keysCount: keys.length });
+  logger.debug('Extracted keys', { keys, keysCount: keys.length });
 
   // VALIDATION: Batched objects exist but no valid keys found
   if (keys.length === 0) {
     // Throw domain error compatible with runtime
     throw new DomainError(
       `Scene '${sceneName}' contains batched objects but no batch keys were found. Ensure batch nodes are properly configured.`,
-      "ERR_SCENE_BATCH_EMPTY_KEYS" as DomainErrorCode,
-      { nodeId: sceneId ?? "", nodeName: sceneName },
+      'ERR_SCENE_BATCH_EMPTY_KEYS' as DomainErrorCode,
+      { nodeId: sceneId ?? '', nodeName: sceneName }
     );
   }
 
@@ -283,8 +256,8 @@ export function partitionByBatchKey(
         sceneName,
         keyCount: keys.length,
         threshold: EXCESSIVE_KEY_THRESHOLD,
-        keys: keys.slice(0, 10).join(", ") + (keys.length > 10 ? " ..." : ""),
-      },
+        keys: keys.slice(0, 10).join(', ') + (keys.length > 10 ? ' ...' : ''),
+      }
     );
   }
 
@@ -305,7 +278,7 @@ export function partitionByBatchKey(
     boundFieldsByObject: base.boundFieldsByObject,
   }));
 
-  logger.debug("Created sub-partitions", {
+  logger.debug('Created sub-partitions', {
     keysCount: keys.length,
     resultCount: result.length,
     partitions: result.map((p, i) => ({
@@ -324,7 +297,7 @@ export function partitionByBatchKey(
  */
 export function calculateSceneDuration(
   animations: SceneAnimationTrack[],
-  sceneData: Record<string, unknown>,
+  sceneData: Record<string, unknown>
 ): number {
   // Calculate maximum animation end time
   const maxAnimationTime =
@@ -333,8 +306,7 @@ export function calculateSceneDuration(
       : 0;
 
   // Use scene-specific duration if set, otherwise use animation duration with minimum padding
-  const sceneDuration =
-    typeof sceneData.duration === "number" ? sceneData.duration : undefined;
+  const sceneDuration = typeof sceneData.duration === 'number' ? sceneData.duration : undefined;
   const minDuration = 1; // Minimum 1 second duration
 
   return sceneDuration ?? Math.max(maxAnimationTime + 0.5, minDuration);
@@ -345,24 +317,18 @@ export function calculateSceneDuration(
  */
 export async function buildAnimationSceneFromPartition(
   partition: ScenePartition,
-  assetCache?: AssetCacheManager,
+  assetCache?: AssetCacheManager
 ): Promise<AnimationScene> {
-  const sceneData = partition.sceneNode.data as unknown as Record<
-    string,
-    unknown
-  >;
+  const sceneData = partition.sceneNode.data as unknown as Record<string, unknown>;
   const duration = calculateSceneDuration(partition.animations, sceneData);
 
   // Apply optional layer ordering from node data (back-to-front)
-  const layerOrder = Array.isArray(
-    (sceneData as { layerOrder?: unknown }).layerOrder,
-  )
+  const layerOrder = Array.isArray((sceneData as { layerOrder?: unknown }).layerOrder)
     ? ((sceneData as { layerOrder?: unknown }).layerOrder as string[])
     : undefined;
 
   // Apply batch overrides per object using partition metadata and batch key if present
-  const batchKey =
-    (partition as unknown as { batchKey?: string | null }).batchKey ?? null;
+  const batchKey = (partition as unknown as { batchKey?: string | null }).batchKey ?? null;
   const perObjectBatchOverrides = partition.batchOverrides;
   const perObjectBoundFields = partition.boundFieldsByObject;
 
@@ -376,26 +342,26 @@ export async function buildAnimationSceneFromPartition(
     };
     const maybeMapTrackKey = (raw: string): string[] => {
       const mappings: Array<{ test: (s: string) => boolean; map: string }> = [
-        { test: (s) => s.includes("move.from.x"), map: "Timeline.move.from.x" },
-        { test: (s) => s.includes("move.from.y"), map: "Timeline.move.from.y" },
-        { test: (s) => s.includes("move.to.x"), map: "Timeline.move.to.x" },
-        { test: (s) => s.includes("move.to.y"), map: "Timeline.move.to.y" },
-        { test: (s) => s.includes("rotate.from"), map: "Timeline.rotate.from" },
-        { test: (s) => s.includes("rotate.to"), map: "Timeline.rotate.to" },
+        { test: (s) => s.includes('move.from.x'), map: 'Timeline.move.from.x' },
+        { test: (s) => s.includes('move.from.y'), map: 'Timeline.move.from.y' },
+        { test: (s) => s.includes('move.to.x'), map: 'Timeline.move.to.x' },
+        { test: (s) => s.includes('move.to.y'), map: 'Timeline.move.to.y' },
+        { test: (s) => s.includes('rotate.from'), map: 'Timeline.rotate.from' },
+        { test: (s) => s.includes('rotate.to'), map: 'Timeline.rotate.to' },
         {
-          test: (s) => s.includes("scale.from.x"),
-          map: "Timeline.scale.from.x",
+          test: (s) => s.includes('scale.from.x'),
+          map: 'Timeline.scale.from.x',
         },
         {
-          test: (s) => s.includes("scale.from.y"),
-          map: "Timeline.scale.from.y",
+          test: (s) => s.includes('scale.from.y'),
+          map: 'Timeline.scale.from.y',
         },
-        { test: (s) => s.includes("scale.to.x"), map: "Timeline.scale.to.x" },
-        { test: (s) => s.includes("scale.to.y"), map: "Timeline.scale.to.y" },
-        { test: (s) => s.includes("fade.from"), map: "Timeline.fade.from" },
-        { test: (s) => s.includes("fade.to"), map: "Timeline.fade.to" },
-        { test: (s) => s.includes("color.from"), map: "Timeline.color.from" },
-        { test: (s) => s.includes("color.to"), map: "Timeline.color.to" },
+        { test: (s) => s.includes('scale.to.x'), map: 'Timeline.scale.to.x' },
+        { test: (s) => s.includes('scale.to.y'), map: 'Timeline.scale.to.y' },
+        { test: (s) => s.includes('fade.from'), map: 'Timeline.fade.from' },
+        { test: (s) => s.includes('fade.to'), map: 'Timeline.fade.to' },
+        { test: (s) => s.includes('color.from'), map: 'Timeline.color.from' },
+        { test: (s) => s.includes('color.to'), map: 'Timeline.color.to' },
       ];
       const hits: string[] = [];
       for (const m of mappings) if (m.test(raw)) hits.push(m.map);
@@ -403,10 +369,10 @@ export async function buildAnimationSceneFromPartition(
     };
     for (const [objId, list] of Object.entries(perObjectBoundFields)) {
       for (const key of list) {
-        if (key.startsWith("Timeline.")) add(objId, key);
-        if (key.startsWith("Canvas.")) add(objId, key);
-        if (key.startsWith("Typography.")) add(objId, key);
-        if (key.startsWith("Media.")) add(objId, key);
+        if (key.startsWith('Timeline.')) add(objId, key);
+        if (key.startsWith('Canvas.')) add(objId, key);
+        if (key.startsWith('Typography.')) add(objId, key);
+        if (key.startsWith('Media.')) add(objId, key);
         const mapped = maybeMapTrackKey(key);
         for (const mk of mapped) add(objId, mk);
       }
@@ -415,21 +381,16 @@ export async function buildAnimationSceneFromPartition(
   })();
 
   // Coercion helpers for Timeline overrides
-  const numberCoerce = (
-    value: unknown,
-  ): { ok: boolean; value?: number; warn?: string } => {
-    if (typeof value === "number" && Number.isFinite(value))
-      return { ok: true, value };
-    if (typeof value === "string") {
+  const numberCoerce = (value: unknown): { ok: boolean; value?: number; warn?: string } => {
+    if (typeof value === 'number' && Number.isFinite(value)) return { ok: true, value };
+    if (typeof value === 'string') {
       const parsed = Number.parseFloat(value);
       if (Number.isFinite(parsed)) return { ok: true, value: parsed };
     }
     return { ok: false, warn: `Expected number, got ${typeof value}` };
   };
-  const stringCoerce = (
-    value: unknown,
-  ): { ok: boolean; value?: string; warn?: string } => {
-    if (typeof value === "string") return { ok: true, value };
+  const stringCoerce = (value: unknown): { ok: boolean; value?: string; warn?: string } => {
+    if (typeof value === 'string') return { ok: true, value };
     return { ok: false, warn: `Expected string, got ${typeof value}` };
   };
 
@@ -444,57 +405,33 @@ export async function buildAnimationSceneFromPartition(
     return partition.animations.map((anim) => {
       const objId = anim.objectId;
       switch (anim.type) {
-        case "move": {
+        case 'move': {
           const from = { ...anim.properties.from };
           const to = { ...anim.properties.to };
-          from.x = resolveFieldValue(
-            objId,
-            "Timeline.move.from.x",
-            from.x,
-            ctx,
-            numberCoerce,
-          );
-          from.y = resolveFieldValue(
-            objId,
-            "Timeline.move.from.y",
-            from.y,
-            ctx,
-            numberCoerce,
-          );
-          to.x = resolveFieldValue(
-            objId,
-            "Timeline.move.to.x",
-            to.x,
-            ctx,
-            numberCoerce,
-          );
-          to.y = resolveFieldValue(
-            objId,
-            "Timeline.move.to.y",
-            to.y,
-            ctx,
-            numberCoerce,
-          );
+          from.x = resolveFieldValue(objId, 'Timeline.move.from.x', from.x, ctx, numberCoerce);
+          from.y = resolveFieldValue(objId, 'Timeline.move.from.y', from.y, ctx, numberCoerce);
+          to.x = resolveFieldValue(objId, 'Timeline.move.to.x', to.x, ctx, numberCoerce);
+          to.y = resolveFieldValue(objId, 'Timeline.move.to.y', to.y, ctx, numberCoerce);
           return { ...anim, properties: { from, to } } as typeof anim;
         }
-        case "rotate": {
+        case 'rotate': {
           const from = resolveFieldValue(
             objId,
-            "Timeline.rotate.from",
+            'Timeline.rotate.from',
             anim.properties.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const to = resolveFieldValue(
             objId,
-            "Timeline.rotate.to",
+            'Timeline.rotate.to',
             anim.properties.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
-        case "scale": {
+        case 'scale': {
           const currentFrom = anim.properties.from as unknown as {
             x: number;
             y: number;
@@ -504,70 +441,46 @@ export async function buildAnimationSceneFromPartition(
             y: number;
           };
           const from = {
-            x: resolveFieldValue(
-              objId,
-              "Timeline.scale.from.x",
-              currentFrom.x,
-              ctx,
-              numberCoerce,
-            ),
-            y: resolveFieldValue(
-              objId,
-              "Timeline.scale.from.y",
-              currentFrom.y,
-              ctx,
-              numberCoerce,
-            ),
+            x: resolveFieldValue(objId, 'Timeline.scale.from.x', currentFrom.x, ctx, numberCoerce),
+            y: resolveFieldValue(objId, 'Timeline.scale.from.y', currentFrom.y, ctx, numberCoerce),
           };
           const to = {
-            x: resolveFieldValue(
-              objId,
-              "Timeline.scale.to.x",
-              currentTo.x,
-              ctx,
-              numberCoerce,
-            ),
-            y: resolveFieldValue(
-              objId,
-              "Timeline.scale.to.y",
-              currentTo.y,
-              ctx,
-              numberCoerce,
-            ),
+            x: resolveFieldValue(objId, 'Timeline.scale.to.x', currentTo.x, ctx, numberCoerce),
+            y: resolveFieldValue(objId, 'Timeline.scale.to.y', currentTo.y, ctx, numberCoerce),
           };
           return { ...anim, properties: { from, to } } as typeof anim;
         }
-        case "fade": {
+        case 'fade': {
           const from = resolveFieldValue(
             objId,
-            "Timeline.fade.from",
+            'Timeline.fade.from',
             anim.properties.from,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           const to = resolveFieldValue(
             objId,
-            "Timeline.fade.to",
+            'Timeline.fade.to',
             anim.properties.to,
             ctx,
-            numberCoerce,
+            numberCoerce
           );
           return { ...anim, properties: { from, to } } as typeof anim;
         }
-        case "color": {
+        case 'color': {
           const from = resolveFieldValue(
             objId,
-            "Timeline.color.from",
+            'Timeline.color.from',
             anim.properties.from,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
           const to = resolveFieldValue(
             objId,
-            "Timeline.color.to",
+            'Timeline.color.to',
             anim.properties.to,
             ctx,
-            stringCoerce,
+            stringCoerce
           );
           return {
             ...anim,
@@ -589,32 +502,30 @@ export async function buildAnimationSceneFromPartition(
       batchKey,
       perObjectBatchOverrides,
       perObjectBoundFields,
-    }),
+    })
   );
 
   // Resolve image URLs for images that need them using asset cache
   const resolvedObjects: SceneObject[] = overriddenObjects.map((obj) => {
-    if (obj.type === "image") {
+    if (obj.type === 'image') {
       const props = obj.properties as ImageProperties;
 
       if (!props.imageUrl && props.assetId) {
         if (!assetCache) {
           throw new Error(
             `CACHE_REQUIRED: Asset cache required for resolving asset ${props.assetId} in scene construction. ` +
-              `Ensure asset preparation completed before scene construction.`,
+              `Ensure asset preparation completed before scene construction.`
           );
         }
 
-        logger.debug(
-          `Resolving imageUrl for object ${obj.id} with assetId ${props.assetId}`,
-        );
+        logger.debug(`Resolving imageUrl for object ${obj.id} with assetId ${props.assetId}`);
 
         const cachedAsset = assetCache.getAsset(props.assetId);
         if (!cachedAsset) {
           throw new Error(
             `ASSET_NOT_CACHED: Asset ${props.assetId} not found in cache. ` +
               `Ensure all assets were prepared successfully. ` +
-              `Required assets: ${props.assetId}`,
+              `Required assets: ${props.assetId}`
           );
         }
 
@@ -628,15 +539,12 @@ export async function buildAnimationSceneFromPartition(
             originalHeight: cachedAsset.height ?? 100,
           },
         };
-      } else if (obj.type === "image" && !props.imageUrl && !props.assetId) {
+      } else if (obj.type === 'image' && !props.imageUrl && !props.assetId) {
         // Object has no assetId configured - this will result in a placeholder
-        logger.debug(
-          `Object ${obj.id} has no assetId configured - will render as placeholder`,
-          {
-            objectId: obj.id,
-            properties: props,
-          },
-        );
+        logger.debug(`Object ${obj.id} has no assetId configured - will render as placeholder`, {
+          objectId: obj.id,
+          properties: props,
+        });
       }
     }
     return obj;
@@ -645,7 +553,7 @@ export async function buildAnimationSceneFromPartition(
   let sortedObjects = resolvedObjects;
   if (layerOrder && layerOrder.length > 0) {
     // Normalize IDs to be batch-agnostic: strip trailing @<batchKey> suffix if present
-    const normalizeId = (id: string): string => id.replace(/@[^@]+$/, "");
+    const normalizeId = (id: string): string => id.replace(/@[^@]+$/, '');
 
     const indexById = new Map<string, number>();
     for (let i = 0; i < layerOrder.length; i++) {
@@ -674,10 +582,7 @@ export async function buildAnimationSceneFromPartition(
     objects: sortedObjects,
     animations: resolvedAnimations,
     background: {
-      color:
-        typeof sceneData.backgroundColor === "string"
-          ? sceneData.backgroundColor
-          : "#000000",
+      color: typeof sceneData.backgroundColor === 'string' ? sceneData.backgroundColor : '#000000',
     },
   };
 }

@@ -1,11 +1,11 @@
-﻿import type { ReactFlowNode } from "@/server/animation-processing/execution-engine";
+﻿import type { ReactFlowNode } from '@/server/animation-processing/execution-engine';
 import type {
   BatchedScenePartition,
   ScenePartition,
-} from "@/server/animation-processing/scene/scene-partitioner";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { NodeData } from "@/shared/types";
-import type { SceneAnimationTrack, SceneObject } from "@/shared/types/scene";
+} from '@/server/animation-processing/scene/scene-partitioner';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { NodeData } from '@/shared/types';
+import type { SceneAnimationTrack, SceneObject } from '@/shared/types/scene';
 
 export type BackendNode = {
   id: string;
@@ -41,17 +41,15 @@ interface NodeDefinitionWithDefaults {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 function isPoint2DValue(value: unknown): value is Point2DValue {
   if (!isRecord(value)) return false;
   const x = value.x;
   const y = value.y;
-  const validX =
-    x === undefined || (typeof x === "number" && Number.isFinite(x));
-  const validY =
-    y === undefined || (typeof y === "number" && Number.isFinite(y));
+  const validX = x === undefined || (typeof x === 'number' && Number.isFinite(x));
+  const validY = y === undefined || (typeof y === 'number' && Number.isFinite(y));
   return validX && validY;
 }
 
@@ -67,13 +65,9 @@ function toPoint2DValue(value: unknown): Point2DValue | undefined {
     const candidateX = value.x;
     const candidateY = value.y;
     const xValue =
-      typeof candidateX === "number" && Number.isFinite(candidateX)
-        ? candidateX
-        : undefined;
+      typeof candidateX === 'number' && Number.isFinite(candidateX) ? candidateX : undefined;
     const yValue =
-      typeof candidateY === "number" && Number.isFinite(candidateY)
-        ? candidateY
-        : undefined;
+      typeof candidateY === 'number' && Number.isFinite(candidateY) ? candidateY : undefined;
 
     if (xValue !== undefined || yValue !== undefined) {
       return {
@@ -88,19 +82,19 @@ function toPoint2DValue(value: unknown): Point2DValue | undefined {
 
 function hasIdentifier(data: unknown): data is { identifier: { id: string } } {
   return (
-    typeof data === "object" &&
+    typeof data === 'object' &&
     data !== null &&
-    "identifier" in data &&
-    typeof (data as { identifier: unknown }).identifier === "object" &&
+    'identifier' in data &&
+    typeof (data as { identifier: unknown }).identifier === 'object' &&
     (data as { identifier: unknown }).identifier !== null &&
-    "id" in (data as { identifier: { id: unknown } }).identifier &&
-    typeof (data as { identifier: { id: unknown } }).identifier.id === "string"
+    'id' in (data as { identifier: { id: unknown } }).identifier &&
+    typeof (data as { identifier: { id: unknown } }).identifier.id === 'string'
   );
 }
 
 export function mergeNodeDataWithDefaults(
   nodeType: string | undefined,
-  rawData: unknown,
+  rawData: unknown
 ): Record<string, unknown> {
   const definition = (nodeType ? getNodeDefinition(nodeType) : undefined) as
     | NodeDefinitionWithDefaults
@@ -110,9 +104,7 @@ export function mergeNodeDataWithDefaults(
 
   const propertySchemas = definition?.properties?.properties ?? [];
   const point2dKeys = new Set(
-    propertySchemas
-      .filter((schema) => schema.type === "point2d")
-      .map((schema) => schema.key),
+    propertySchemas.filter((schema) => schema.type === 'point2d').map((schema) => schema.key)
   );
 
   const merged: Record<string, unknown> = { ...defaults };
@@ -130,26 +122,16 @@ export function mergeNodeDataWithDefaults(
   }
 
   for (const schema of propertySchemas) {
-    if (schema.type !== "point2d") continue;
+    if (schema.type !== 'point2d') continue;
 
     const provided = toPoint2DValue(data[schema.key]);
     const nodeDefault = toPoint2DValue(defaults[schema.key]);
     const schemaDefault = toPoint2DValue(schema.defaultValue);
     const currentMerged = toPoint2DValue(merged[schema.key]);
 
-    const x =
-      provided?.x ??
-      currentMerged?.x ??
-      nodeDefault?.x ??
-      schemaDefault?.x ??
-      0;
+    const x = provided?.x ?? currentMerged?.x ?? nodeDefault?.x ?? schemaDefault?.x ?? 0;
 
-    const y =
-      provided?.y ??
-      currentMerged?.y ??
-      nodeDefault?.y ??
-      schemaDefault?.y ??
-      0;
+    const y = provided?.y ?? currentMerged?.y ?? nodeDefault?.y ?? schemaDefault?.y ?? 0;
 
     merged[schema.key] = { x, y };
   }
@@ -157,9 +139,7 @@ export function mergeNodeDataWithDefaults(
   return merged;
 }
 
-export function createNodeIdMap(
-  nodes: Array<{ id: string; data?: unknown }>,
-): Map<string, string> {
+export function createNodeIdMap(nodes: Array<{ id: string; data?: unknown }>): Map<string, string> {
   const nodeIdMap = new Map<string, string>();
   nodes.forEach((node) => {
     if (hasIdentifier(node.data)) {
@@ -170,7 +150,7 @@ export function createNodeIdMap(
 }
 
 export function convertBackendNodeToReactFlowNode(
-  backendNode: BackendNode,
+  backendNode: BackendNode
 ): ReactFlowNode<NodeData> {
   return {
     id: backendNode.id,
@@ -180,10 +160,7 @@ export function convertBackendNodeToReactFlowNode(
   };
 }
 
-function namespaceObjectsForBatch(
-  objects: SceneObject[],
-  batchKey: string | null,
-): SceneObject[] {
+function namespaceObjectsForBatch(objects: SceneObject[], batchKey: string | null): SceneObject[] {
   if (!batchKey) return objects;
   const suffix = `@${batchKey}`;
   return objects.map((object) => ({ ...object, id: `${object.id}${suffix}` }));
@@ -191,7 +168,7 @@ function namespaceObjectsForBatch(
 
 function namespaceAnimationsForBatch(
   animations: SceneAnimationTrack[],
-  batchKey: string | null,
+  batchKey: string | null
 ): SceneAnimationTrack[] {
   if (!batchKey) return animations;
   const suffix = `@${batchKey}`;
@@ -203,10 +180,8 @@ function namespaceAnimationsForBatch(
 }
 
 function namespaceBatchOverridesForBatch(
-  batchOverrides:
-    | Record<string, Record<string, Record<string, unknown>>>
-    | undefined,
-  batchKey: string | null,
+  batchOverrides: Record<string, Record<string, Record<string, unknown>>> | undefined,
+  batchKey: string | null
 ): Record<string, Record<string, Record<string, unknown>>> | undefined {
   if (!batchOverrides) return batchOverrides;
   if (!batchKey) return { ...batchOverrides };
@@ -224,7 +199,7 @@ function namespaceBatchOverridesForBatch(
 
 function namespaceBoundFieldsForBatch(
   bound: Record<string, string[]> | undefined,
-  batchKey: string | null,
+  batchKey: string | null
 ): Record<string, string[]> | undefined {
   if (!bound) return bound;
   if (!batchKey) return { ...bound };
@@ -238,20 +213,14 @@ function namespaceBoundFieldsForBatch(
 
 export function namespacePartitionForBatch(
   partition: ScenePartition,
-  batchKey: string | null,
+  batchKey: string | null
 ): BatchedScenePartition {
   return {
     sceneNode: partition.sceneNode,
     objects: namespaceObjectsForBatch(partition.objects, batchKey),
     animations: namespaceAnimationsForBatch(partition.animations, batchKey),
-    batchOverrides: namespaceBatchOverridesForBatch(
-      partition.batchOverrides,
-      batchKey,
-    ),
-    boundFieldsByObject: namespaceBoundFieldsForBatch(
-      partition.boundFieldsByObject,
-      batchKey,
-    ),
+    batchOverrides: namespaceBatchOverridesForBatch(partition.batchOverrides, batchKey),
+    boundFieldsByObject: namespaceBoundFieldsForBatch(partition.boundFieldsByObject, batchKey),
     batchKey,
   };
 }

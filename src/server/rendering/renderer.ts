@@ -1,5 +1,5 @@
 // src/server/rendering/renderer.ts
-import type { AnimationScene } from "@/shared/types/scene";
+import type { AnimationScene } from '@/shared/types/scene';
 
 export interface SceneAnimationConfig {
   width: number;
@@ -17,8 +17,8 @@ export const DEFAULT_SCENE_CONFIG: SceneAnimationConfig = {
   width: 1920,
   height: 1080,
   fps: 60,
-  backgroundColor: "#000000",
-  videoPreset: "medium",
+  backgroundColor: '#000000',
+  videoPreset: 'medium',
   videoCrf: 18,
 };
 
@@ -30,8 +30,5 @@ export interface RenderOutput {
 }
 
 export interface Renderer {
-  render(
-    scene: AnimationScene,
-    config: SceneAnimationConfig,
-  ): Promise<RenderOutput>;
+  render(scene: AnimationScene, config: SceneAnimationConfig): Promise<RenderOutput>;
 }

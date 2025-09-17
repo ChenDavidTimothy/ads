@@ -1,6 +1,6 @@
 // src/server/rendering/bulk-asset-fetcher.ts
-import { createServiceClient } from "@/utils/supabase/service";
-import { logger } from "@/lib/logger";
+import { createServiceClient } from '@/utils/supabase/service';
+import { logger } from '@/lib/logger';
 
 interface RawAssetData {
   id: string;
@@ -42,10 +42,7 @@ export class BulkAssetFetcher {
     this.supabase = createServiceClient();
   }
 
-  async bulkFetchAssetMetadata(
-    assetIds: string[],
-    userId: string,
-  ): Promise<AssetMetadata[]> {
+  async bulkFetchAssetMetadata(assetIds: string[], userId: string): Promise<AssetMetadata[]> {
     if (assetIds.length === 0) return [];
 
     logger.info(`Bulk fetching metadata for ${assetIds.length} assets`, {
@@ -53,23 +50,23 @@ export class BulkAssetFetcher {
     });
 
     const { data: assets, error } = await this.supabase
-      .from("user_assets")
+      .from('user_assets')
       .select(
         `
         id, user_id, bucket_name, storage_path,
         file_size, mime_type, content_hash,
         image_width, image_height, created_at
-      `,
+      `
       )
-      .in("id", assetIds)
-      .eq("user_id", userId); // Enforce ownership
+      .in('id', assetIds)
+      .eq('user_id', userId); // Enforce ownership
 
     if (error) {
       throw new Error(`BULK_FETCH_FAILED: ${error.message}`);
     }
 
     if (!assets || assets.length === 0) {
-      throw new Error("OWNERSHIP_DENIED: No assets found or access denied");
+      throw new Error('OWNERSHIP_DENIED: No assets found or access denied');
     }
 
     // Type assert the raw data from Supabase
@@ -79,7 +76,7 @@ export class BulkAssetFetcher {
 
     if (missingIds.length > 0) {
       throw new Error(
-        `ASSET_NOT_FOUND: Assets not found or access denied: ${missingIds.join(", ")}`,
+        `ASSET_NOT_FOUND: Assets not found or access denied: ${missingIds.join(', ')}`
       );
     }
 
@@ -99,7 +96,7 @@ export class BulkAssetFetcher {
 
   validateJobAssets(
     assets: AssetMetadata[],
-    maxJobSizeBytes: number = 2 * 1024 * 1024 * 1024,
+    maxJobSizeBytes: number = 2 * 1024 * 1024 * 1024
   ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -107,23 +104,21 @@ export class BulkAssetFetcher {
 
     if (totalBytes > maxJobSizeBytes) {
       errors.push(
-        `SIZE_CAP_EXCEEDED: Job assets exceed size limit: ${this.formatBytes(totalBytes)} > ${this.formatBytes(maxJobSizeBytes)}`,
+        `SIZE_CAP_EXCEEDED: Job assets exceed size limit: ${this.formatBytes(totalBytes)} > ${this.formatBytes(maxJobSizeBytes)}`
       );
     }
 
-    const invalidAssets = assets.filter(
-      (asset) => !asset.bucketName || !asset.storagePath,
-    );
+    const invalidAssets = assets.filter((asset) => !asset.bucketName || !asset.storagePath);
     if (invalidAssets.length > 0) {
       errors.push(
-        `INVALID_ASSET_DATA: Invalid asset data for: ${invalidAssets.map((a) => a.id).join(", ")}`,
+        `INVALID_ASSET_DATA: Invalid asset data for: ${invalidAssets.map((a) => a.id).join(', ')}`
       );
     }
 
     const assetsWithoutHash = assets.filter((asset) => !asset.contentHash);
     if (assetsWithoutHash.length > 0) {
       warnings.push(
-        `${assetsWithoutHash.length} assets lack content hash - using metadata hash fallback`,
+        `${assetsWithoutHash.length} assets lack content hash - using metadata hash fallback`
       );
     }
 
@@ -131,7 +126,7 @@ export class BulkAssetFetcher {
   }
 
   private formatBytes(bytes: number): string {
-    const units = ["B", "KB", "MB", "GB"];
+    const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
     let unitIndex = 0;
 

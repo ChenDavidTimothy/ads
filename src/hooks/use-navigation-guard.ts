@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useCallback } from "react";
-import type { WorkspaceState } from "@/types/workspace-state";
+import { useEffect, useCallback } from 'react';
+import type { WorkspaceState } from '@/types/workspace-state';
 
 interface NavigationGuardOptions {
   onNavigationAttempt?: (url: string) => void;
@@ -26,7 +26,7 @@ declare global {
 export function useNavigationGuard(
   hasUnsavedChanges: boolean,
   getState: () => WorkspaceState | null,
-  options?: NavigationGuardOptions,
+  options?: NavigationGuardOptions
 ) {
   const { onNavigationAttempt } = options ?? {};
 
@@ -37,7 +37,7 @@ export function useNavigationGuard(
         try {
           localStorage.setItem(
             `workspace-emergency-backup-${state.meta.workspaceId}`,
-            JSON.stringify({ state, timestamp: Date.now() }),
+            JSON.stringify({ state, timestamp: Date.now() })
           );
         } catch {
           // ignore quota errors
@@ -53,8 +53,8 @@ export function useNavigationGuard(
         handleEmergencyBackup();
         // Use browser's native warning - it's the most reliable approach
         e.preventDefault();
-        e.returnValue = "";
-        return "";
+        e.returnValue = '';
+        return '';
       }
     };
 
@@ -62,12 +62,12 @@ export function useNavigationGuard(
       handleEmergencyBackup();
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
     };
   }, [hasUnsavedChanges, handleEmergencyBackup]);
 
@@ -77,13 +77,12 @@ export function useNavigationGuard(
       if (!hasUnsavedChanges) return;
 
       const target = e.target as HTMLElement;
-      const link = target.closest("a[href]")!;
+      const link = target.closest('a[href]')!;
 
       if (!link) return;
 
-      const href = link.getAttribute("href");
-      if (!href || href.startsWith("#") || href.startsWith("javascript:"))
-        return;
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
 
       // Prevent default navigation
       e.preventDefault();
@@ -93,10 +92,10 @@ export function useNavigationGuard(
     };
 
     // Intercept all link clicks within the workspace
-    document.addEventListener("click", handleLinkClick, true);
+    document.addEventListener('click', handleLinkClick, true);
 
     return () => {
-      document.removeEventListener("click", handleLinkClick, true);
+      document.removeEventListener('click', handleLinkClick, true);
     };
   }, [hasUnsavedChanges, onNavigationAttempt]);
 
@@ -111,18 +110,18 @@ export function useNavigationGuard(
 
       return {
         push: (url: string) => {
-          if (url && !url.startsWith("#")) {
+          if (url && !url.startsWith('#')) {
             onNavigationAttempt(url);
             return; // Don't navigate, let modal handle it
           }
-          originalPush.call(window.history, null, "", url);
+          originalPush.call(window.history, null, '', url);
         },
         replace: (url: string) => {
-          if (url && !url.startsWith("#")) {
+          if (url && !url.startsWith('#')) {
             onNavigationAttempt(url);
             return; // Don't navigate, let modal handle it
           }
-          originalReplace.call(window.history, null, "", url);
+          originalReplace.call(window.history, null, '', url);
         },
         back: () => {
           window.history.back();

@@ -1,56 +1,53 @@
 // src/components/workspace/nodes/compare-node.tsx - Compare logic node
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { CompareNodeData } from "@/shared/types/nodes";
-import { Equal } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { CompareNodeData } from '@/shared/types/nodes';
+import { Equal } from 'lucide-react';
 
 export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
-  const nodeDefinition = getNodeDefinition("compare");
+  const nodeDefinition = getNodeDefinition('compare');
 
   const getOperatorSymbol = () => {
     switch (data.operator) {
-      case "gt":
-        return ">";
-      case "lt":
-        return "<";
-      case "eq":
-        return "==";
-      case "neq":
-        return "!=";
-      case "gte":
-        return ">=";
-      case "lte":
-        return "<=";
+      case 'gt':
+        return '>';
+      case 'lt':
+        return '<';
+      case 'eq':
+        return '==';
+      case 'neq':
+        return '!=';
+      case 'gte':
+        return '>=';
+      case 'lte':
+        return '<=';
     }
   };
 
   const getOperatorLabel = () => {
     switch (data.operator) {
-      case "gt":
-        return "Greater than";
-      case "lt":
-        return "Less than";
-      case "eq":
-        return "Equal";
-      case "neq":
-        return "Not equal";
-      case "gte":
-        return "Greater or equal";
-      case "lte":
-        return "Less or equal";
+      case 'gt':
+        return 'Greater than';
+      case 'lt':
+        return 'Less than';
+      case 'eq':
+        return 'Equal';
+      case 'neq':
+        return 'Not equal';
+      case 'gte':
+        return 'Greater or equal';
+      case 'lte':
+        return 'Less or equal';
     }
   };
 
-  const handleClass = "bg-[var(--node-logic)]";
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {/* Input ports */}
       {nodeDefinition?.ports.inputs.map((port, index) => (
         <Handle
@@ -82,9 +79,7 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">
-            Operation:
-          </span>
+          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
           <span className="text-xs font-medium text-[var(--text-primary)]">
             {getOperatorLabel()}
           </span>
@@ -111,7 +106,7 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
           position={Position.Right}
           id={port.id}
           className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: "50%" }}
+          style={{ top: '50%' }}
         />
       ))}
     </Card>

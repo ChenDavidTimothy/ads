@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import { BindButton } from "@/components/workspace/binding/bindings";
-import { BatchButton } from "./BatchButton";
-import { BatchModal } from "./BatchModal";
+import React from 'react';
+import { BindButton } from '@/components/workspace/binding/bindings';
+import { BatchButton } from './BatchButton';
+import { BatchModal } from './BatchModal';
 
 export function BindingAndBatchControls({
   bindProps,
@@ -14,13 +14,13 @@ export function BindingAndBatchControls({
     nodeId: string;
     fieldPath: string;
     objectId?: string;
-    valueType: "number" | "string";
+    valueType: 'number' | 'string';
   };
 }) {
   const [open, setOpen] = React.useState(false);
 
   // Debug logging
-  console.log("[BindingAndBatchControls] Rendering:", {
+  console.log('[BindingAndBatchControls] Rendering:', {
     bindProps,
     batchProps,
   });

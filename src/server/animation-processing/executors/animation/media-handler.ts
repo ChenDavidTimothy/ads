@@ -1,43 +1,35 @@
-import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
-import {
-  setNodeOutput,
-  getConnectedInputs,
-  type ExecutionContext,
-} from "../../execution-context";
-import type { NodeData } from "@/shared/types";
-import type { SceneObject } from "@/shared/types/scene";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments } from "@/shared/properties/assignments";
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/graph';
+import { setNodeOutput, getConnectedInputs, type ExecutionContext } from '../../execution-context';
+import type { NodeData } from '@/shared/types';
+import type { SceneObject } from '@/shared/types/scene';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
+import { mergeObjectAssignments } from '@/shared/properties/assignments';
 import {
   resolveBindingLookupId,
   getObjectBindingKeys,
   pickAssignmentsForObject,
   mergePerObjectAssignments,
-} from "@/shared/properties/override-utils";
-import { resolveInitialObject } from "@/shared/properties/resolver";
-import { logger } from "@/lib/logger";
+} from '@/shared/properties/override-utils';
+import { resolveInitialObject } from '@/shared/properties/resolver';
+import { logger } from '@/lib/logger';
 import {
   extractCursorsFromInputs,
   extractPerObjectAssignmentsFromInputs,
   extractPerObjectBatchOverridesFromInputs,
   extractPerObjectAnimationsFromInputs,
-} from "../shared/per-object-helpers";
+} from '../shared/per-object-helpers';
 const MEDIA_FIELD_KEYS = new Set([
-  "imageAssetId",
-  "cropX",
-  "cropY",
-  "cropWidth",
-  "cropHeight",
-  "displayWidth",
-  "displayHeight",
+  'imageAssetId',
+  'cropX',
+  'cropY',
+  'cropWidth',
+  'cropHeight',
+  'displayWidth',
+  'displayHeight',
 ]);
 
 const toMediaFieldPath = (key: string): string =>
-  key.startsWith("Media.")
-    ? key
-    : MEDIA_FIELD_KEYS.has(key)
-      ? `Media.${key}`
-      : key;
+  key.startsWith('Media.') ? key : MEDIA_FIELD_KEYS.has(key) ? `Media.${key}` : key;
 
 interface MediaOverrides {
   imageAssetId?: string;
@@ -56,7 +48,7 @@ interface MediaOverrides {
 export async function executeMediaNode(
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ): Promise<void> {
   const data = node.data as unknown as Record<string, unknown>;
   const inputs = getConnectedInputs(
@@ -68,7 +60,7 @@ export async function executeMediaNode(
       sourceHandle: string;
     }>,
     node.data.identifier.id,
-    "input",
+    'input'
   );
 
   logger.info(`Applying media processing: ${node.data.identifier.displayName}`);
@@ -79,19 +71,14 @@ export async function executeMediaNode(
       | undefined) ?? {};
   const bindingsByObject =
     (data.variableBindingsByObject as
-      | Record<
-          string,
-          Record<string, { target?: string; boundResultNodeId?: string }>
-        >
+      | Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>
       | undefined) ?? {};
 
   const readVarGlobal = (key: string): unknown => {
     const rid = bindings[key]?.boundResultNodeId;
     if (!rid) return undefined;
-    return (
-      context.nodeOutputs.get(`${rid}.output`) ??
-      context.nodeOutputs.get(`${rid}.result`)
-    )?.data;
+    return (context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`))
+      ?.data;
   };
 
   const readVarForObject =
@@ -101,8 +88,7 @@ export async function executeMediaNode(
       const rid = bindingsByObject[objectId]?.[key]?.boundResultNodeId;
       if (rid)
         return (
-          context.nodeOutputs.get(`${rid}.output`) ??
-          context.nodeOutputs.get(`${rid}.result`)
+          context.nodeOutputs.get(`${rid}.output`) ?? context.nodeOutputs.get(`${rid}.result`)
         )?.data;
       return readVarGlobal(key);
     };
@@ -118,35 +104,33 @@ export async function executeMediaNode(
   };
 
   const globalKeys = Object.keys(bindings);
-  const nodeOverrides = JSON.parse(
-    JSON.stringify(baseOverrides),
-  ) as MediaOverrides;
+  const nodeOverrides = JSON.parse(JSON.stringify(baseOverrides)) as MediaOverrides;
 
   for (const key of globalKeys) {
     const val = readVarGlobal(key);
     if (val === undefined) continue;
 
     switch (key) {
-      case "imageAssetId":
-        if (typeof val === "string") nodeOverrides.imageAssetId = val;
+      case 'imageAssetId':
+        if (typeof val === 'string') nodeOverrides.imageAssetId = val;
         break;
-      case "cropX":
-        if (typeof val === "number") nodeOverrides.cropX = val;
+      case 'cropX':
+        if (typeof val === 'number') nodeOverrides.cropX = val;
         break;
-      case "cropY":
-        if (typeof val === "number") nodeOverrides.cropY = val;
+      case 'cropY':
+        if (typeof val === 'number') nodeOverrides.cropY = val;
         break;
-      case "cropWidth":
-        if (typeof val === "number") nodeOverrides.cropWidth = val;
+      case 'cropWidth':
+        if (typeof val === 'number') nodeOverrides.cropWidth = val;
         break;
-      case "cropHeight":
-        if (typeof val === "number") nodeOverrides.cropHeight = val;
+      case 'cropHeight':
+        if (typeof val === 'number') nodeOverrides.cropHeight = val;
         break;
-      case "displayWidth":
-        if (typeof val === "number") nodeOverrides.displayWidth = val;
+      case 'displayWidth':
+        if (typeof val === 'number') nodeOverrides.displayWidth = val;
         break;
-      case "displayHeight":
-        if (typeof val === "number") nodeOverrides.displayHeight = val;
+      case 'displayHeight':
+        if (typeof val === 'number') nodeOverrides.displayHeight = val;
         break;
     }
   }
@@ -154,13 +138,11 @@ export async function executeMediaNode(
   const processedObjects: unknown[] = [];
 
   const upstreamAssignments = extractPerObjectAssignmentsFromInputs(inputs);
-  const nodeAssignments = data.perObjectAssignments as
-    | PerObjectAssignments
-    | undefined;
+  const nodeAssignments = data.perObjectAssignments as PerObjectAssignments | undefined;
   const mergedAssignments = mergePerObjectAssignments(
     upstreamAssignments,
     nodeAssignments,
-    mergeObjectAssignments,
+    mergeObjectAssignments
   );
 
   for (const input of inputs) {
@@ -174,7 +156,7 @@ export async function executeMediaNode(
           mergedAssignments,
           bindingsByObject ?? {},
           readVarForObject,
-          context,
+          context
         );
         processedObjects.push(processed);
       } else {
@@ -191,10 +173,9 @@ export async function executeMediaNode(
     if (!mergedAssignments) return {};
     const scoped: Record<string, Record<string, Record<string, unknown>>> = {};
     for (const [objectId, assignment] of Object.entries(mergedAssignments)) {
-      if (!assignment || typeof assignment !== "object") continue;
-      const batchOverrides = (assignment as AssignmentWithBatchOverrides)
-        .batchOverrides;
-      if (!batchOverrides || typeof batchOverrides !== "object") continue;
+      if (!assignment || typeof assignment !== 'object') continue;
+      const batchOverrides = (assignment as AssignmentWithBatchOverrides).batchOverrides;
+      if (!batchOverrides || typeof batchOverrides !== 'object') continue;
       for (const [fieldPath, overrides] of Object.entries(batchOverrides)) {
         const destForField = scoped[objectId]?.[fieldPath] ?? {};
         scoped[objectId] = {
@@ -209,20 +190,17 @@ export async function executeMediaNode(
   const batchOverridesByField =
     (
       data as unknown as {
-        batchOverridesByField?: Record<
-          string,
-          Record<string, Record<string, unknown>>
-        >;
+        batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
       }
     ).batchOverridesByField ?? {};
 
-  const processedImageObjects = processedObjects.filter(
-    (obj): obj is SceneObject => isImageObject(obj),
+  const processedImageObjects = processedObjects.filter((obj): obj is SceneObject =>
+    isImageObject(obj)
   );
 
   const nodeBatchOverrides = (() => {
     if (Object.keys(batchOverridesByField).length === 0) return {};
-    const defaultMarker = "__default_object__";
+    const defaultMarker = '__default_object__';
     const scoped: Record<string, Record<string, Record<string, unknown>>> = {};
     const objectMeta = processedImageObjects
       .map((obj) => ({
@@ -230,18 +208,16 @@ export async function executeMediaNode(
         isBatched:
           Boolean(obj.batch) &&
           Array.isArray(obj.batchKeys) &&
-          obj.batchKeys.some((k) => typeof k === "string" && k.trim() !== ""),
+          obj.batchKeys.some((k) => typeof k === 'string' && k.trim() !== ''),
       }))
       .filter(
         (entry): entry is { id: string; isBatched: boolean } =>
-          typeof entry.id === "string" && entry.id.length > 0,
+          typeof entry.id === 'string' && entry.id.length > 0
       );
 
     const objectsById = new Map(objectMeta.map((entry) => [entry.id, entry]));
 
-    for (const [rawFieldPath, byObject] of Object.entries(
-      batchOverridesByField,
-    )) {
+    for (const [rawFieldPath, byObject] of Object.entries(batchOverridesByField)) {
       const fieldPath = toMediaFieldPath(rawFieldPath);
       for (const [rawObjId, byKey] of Object.entries(byObject)) {
         const cleaned: Record<string, unknown> = {};
@@ -275,9 +251,7 @@ export async function executeMediaNode(
   })();
 
   const mergeOverrideMaps = (
-    sources: Array<
-      Record<string, Record<string, Record<string, unknown>>> | undefined
-    >,
+    sources: Array<Record<string, Record<string, Record<string, unknown>>> | undefined>
   ) => {
     const result: Record<string, Record<string, Record<string, unknown>>> = {};
     for (const source of sources) {
@@ -297,10 +271,7 @@ export async function executeMediaNode(
   };
 
   const emittedPerObjectBatchOverrides = (() => {
-    const combined = mergeOverrideMaps([
-      assignmentBatchOverrides,
-      nodeBatchOverrides,
-    ]);
+    const combined = mergeOverrideMaps([assignmentBatchOverrides, nodeBatchOverrides]);
     return Object.keys(combined).length > 0 ? combined : undefined;
   })();
 
@@ -316,80 +287,62 @@ export async function executeMediaNode(
         const imageObj = obj as { id: string };
         const objectId = imageObj.id;
         const objectKeys = Object.keys(bindingsByObject?.[objectId] ?? {});
-        const combinedRaw = Array.from(
-          new Set([...globalBoundKeys, ...objectKeys].map(String)),
-        );
+        const combinedRaw = Array.from(new Set([...globalBoundKeys, ...objectKeys].map(String)));
         const combined = combinedRaw.map(toMediaFieldPath);
         if (combined.length > 0) perObjectBoundFields[objectId] = combined;
       }
     }
   }
 
-  const upstreamBatchOverrides =
-    extractPerObjectBatchOverridesFromInputs(inputs);
+  const upstreamBatchOverrides = extractPerObjectBatchOverridesFromInputs(inputs);
 
   const mergedPerObjectBatchOverrides = (() => {
-    const combined = mergeOverrideMaps([
-      upstreamBatchOverrides,
-      emittedPerObjectBatchOverrides,
-    ]);
+    const combined = mergeOverrideMaps([upstreamBatchOverrides, emittedPerObjectBatchOverrides]);
     return Object.keys(combined).length > 0 ? combined : undefined;
   })();
 
-  const mergedPerObjectBoundFields: Record<string, string[]> | undefined =
-    (() => {
-      const out: Record<string, string[]> = {};
-      for (const input of inputs) {
-        const upstreamMeta = input?.metadata?.perObjectBoundFields;
-        if (upstreamMeta && typeof upstreamMeta === "object") {
-          for (const [objId, keys] of Object.entries(upstreamMeta)) {
-            if (Array.isArray(keys)) {
-              const existing = out[objId] ?? [];
-              out[objId] = Array.from(
-                new Set([...existing, ...keys.map(String)]),
-              );
-            }
+  const mergedPerObjectBoundFields: Record<string, string[]> | undefined = (() => {
+    const out: Record<string, string[]> = {};
+    for (const input of inputs) {
+      const upstreamMeta = input?.metadata?.perObjectBoundFields;
+      if (upstreamMeta && typeof upstreamMeta === 'object') {
+        for (const [objId, keys] of Object.entries(upstreamMeta)) {
+          if (Array.isArray(keys)) {
+            const existing = out[objId] ?? [];
+            out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
           }
         }
       }
-      for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
-        const existing = out[objId] ?? [];
-        out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
-      }
-      return Object.keys(out).length > 0 ? out : undefined;
-    })();
+    }
+    for (const [objId, keys] of Object.entries(perObjectBoundFields)) {
+      const existing = out[objId] ?? [];
+      out[objId] = Array.from(new Set([...existing, ...keys.map(String)]));
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  })();
 
-  setNodeOutput(
-    context,
-    node.data.identifier.id,
-    "output",
-    "object_stream",
-    processedObjects,
-    {
-      perObjectTimeCursor: extractCursorsFromInputs(inputs),
-      perObjectAnimations: extractPerObjectAnimationsFromInputs(inputs),
-      perObjectAssignments: mergedAssignments,
-      perObjectBatchOverrides: mergedPerObjectBatchOverrides,
-      perObjectBoundFields: mergedPerObjectBoundFields,
-    },
-  );
+  setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', processedObjects, {
+    perObjectTimeCursor: extractCursorsFromInputs(inputs),
+    perObjectAnimations: extractPerObjectAnimationsFromInputs(inputs),
+    perObjectAssignments: mergedAssignments,
+    perObjectBatchOverrides: mergedPerObjectBatchOverrides,
+    perObjectBoundFields: mergedPerObjectBoundFields,
+  });
 
-  logger.info(
-    `Media processing applied: ${processedObjects.length} objects processed`,
-  );
+  logger.info(`Media processing applied: ${processedObjects.length} objects processed`);
 }
 
 function isImageObject(obj: unknown): obj is SceneObject {
   return (
-    typeof obj === "object" &&
+    typeof obj === 'object' &&
     obj !== null &&
-    "type" in obj &&
-    (obj as { type: string }).type === "image" &&
-    "initialPosition" in obj &&
-    "initialRotation" in obj &&
-    "initialScale" in obj &&
-    "initialOpacity" in obj &&
-    "properties" in obj
+    'type' in obj &&
+    (obj as { type: string }).type === 'image' &&
+    'initialPosition' in obj &&
+    'initialRotation' in obj &&
+    'initialScale' in obj &&
+    'initialOpacity' in obj &&
+    'properties' in obj
   );
 }
 
@@ -397,18 +350,15 @@ async function processImageObject(
   obj: SceneObject,
   nodeOverrides: MediaOverrides,
   assignments: PerObjectAssignments | undefined,
-  bindingsByObject: Record<
-    string,
-    Record<string, { target?: string; boundResultNodeId?: string }>
-  >,
+  bindingsByObject: Record<string, Record<string, { target?: string; boundResultNodeId?: string }>>,
   readVarForObject: (objectId: string | undefined) => (key: string) => unknown,
-  _context: ExecutionContext,
+  _context: ExecutionContext
 ): Promise<SceneObject> {
   const objectId = obj.id;
 
   const bindingLookupId = resolveBindingLookupId(
     bindingsByObject as Record<string, unknown>,
-    String(objectId),
+    String(objectId)
   );
 
   const reader = readVarForObject(bindingLookupId);
@@ -416,7 +366,7 @@ async function processImageObject(
   const objectOverrides: MediaOverrides = { ...nodeOverrides };
   const objectKeys = getObjectBindingKeys(
     bindingsByObject as Record<string, Record<string, unknown>>,
-    String(objectId),
+    String(objectId)
   );
 
   for (const key of objectKeys) {
@@ -424,26 +374,26 @@ async function processImageObject(
     if (val === undefined) continue;
 
     switch (key) {
-      case "imageAssetId":
-        if (typeof val === "string") objectOverrides.imageAssetId = val;
+      case 'imageAssetId':
+        if (typeof val === 'string') objectOverrides.imageAssetId = val;
         break;
-      case "cropX":
-        if (typeof val === "number") objectOverrides.cropX = val;
+      case 'cropX':
+        if (typeof val === 'number') objectOverrides.cropX = val;
         break;
-      case "cropY":
-        if (typeof val === "number") objectOverrides.cropY = val;
+      case 'cropY':
+        if (typeof val === 'number') objectOverrides.cropY = val;
         break;
-      case "cropWidth":
-        if (typeof val === "number") objectOverrides.cropWidth = val;
+      case 'cropWidth':
+        if (typeof val === 'number') objectOverrides.cropWidth = val;
         break;
-      case "cropHeight":
-        if (typeof val === "number") objectOverrides.cropHeight = val;
+      case 'cropHeight':
+        if (typeof val === 'number') objectOverrides.cropHeight = val;
         break;
-      case "displayWidth":
-        if (typeof val === "number") objectOverrides.displayWidth = val;
+      case 'displayWidth':
+        if (typeof val === 'number') objectOverrides.displayWidth = val;
         break;
-      case "displayHeight":
-        if (typeof val === "number") objectOverrides.displayHeight = val;
+      case 'displayHeight':
+        if (typeof val === 'number') objectOverrides.displayHeight = val;
         break;
     }
   }
@@ -452,9 +402,9 @@ async function processImageObject(
   const initial = assignment?.initial ?? {};
 
   const batchResolvedAssetId =
-    obj.type === "image" &&
+    obj.type === 'image' &&
     obj.properties &&
-    typeof (obj.properties as { assetId?: string }).assetId === "string"
+    typeof (obj.properties as { assetId?: string }).assetId === 'string'
       ? (obj.properties as { assetId?: string }).assetId
       : undefined;
 
@@ -463,8 +413,8 @@ async function processImageObject(
     rotation: objectOverrides.rotation,
     scale: objectOverrides.scale,
     opacity: objectOverrides.opacity,
-    fillColor: "#4444ff",
-    strokeColor: "#ffffff",
+    fillColor: '#4444ff',
+    strokeColor: '#ffffff',
     strokeWidth: 2,
   };
 
@@ -493,15 +443,12 @@ async function processImageObject(
       ...(finalOverrides.imageAssetId?.trim()
         ? { assetId: finalOverrides.imageAssetId }
         : (() => {
-            logger.debug(
-              `Media node processed object ${objectId} without assetId`,
-              {
-                objectId,
-                hasImageAssetId: !!finalOverrides.imageAssetId,
-                imageAssetIdValue: finalOverrides.imageAssetId,
-                nodeOverrides: objectOverrides,
-              },
-            );
+            logger.debug(`Media node processed object ${objectId} without assetId`, {
+              objectId,
+              hasImageAssetId: !!finalOverrides.imageAssetId,
+              imageAssetIdValue: finalOverrides.imageAssetId,
+              nodeOverrides: objectOverrides,
+            });
             return {};
           })()),
       cropX: finalOverrides.cropX ?? 0,

@@ -1,5 +1,5 @@
 // src/animation/geometry/triangle.ts
-import type { Point2D, NodeCanvasContext } from "@/shared/types/core";
+import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
 
 export interface TriangleStyle {
   fillColor: string;
@@ -12,7 +12,7 @@ export function drawTriangle(
   center: Point2D,
   size: number,
   rotation = 0,
-  style: TriangleStyle,
+  style: TriangleStyle
 ): void {
   ctx.save();
   ctx.translate(Math.round(center.x), Math.round(center.y));
@@ -35,7 +35,7 @@ export function drawEquilateralTriangle(
   center: Point2D,
   sideLength: number,
   rotation = 0,
-  style: TriangleStyle,
+  style: TriangleStyle
 ): void {
   const height = (sideLength * Math.sqrt(3)) / 2;
   const size = (height * 2) / 3; // Distance from center to vertex
@@ -47,7 +47,7 @@ export function drawTriangleFromPoints(
   p1: Point2D,
   p2: Point2D,
   p3: Point2D,
-  style: TriangleStyle,
+  style: TriangleStyle
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;
@@ -66,7 +66,7 @@ export function drawTriangleFromPoints(
 export function getTriangleVertices(
   center: Point2D,
   size: number,
-  rotation = 0,
+  rotation = 0
 ): [Point2D, Point2D, Point2D] {
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);

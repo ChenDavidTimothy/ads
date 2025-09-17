@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { SelectionList } from "@/components/ui/selection";
-import { Badge } from "@/components/ui/badge";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { Node } from "reactflow";
-import type { NodeData } from "@/shared/types";
+import { SelectionList } from '@/components/ui/selection';
+import { Badge } from '@/components/ui/badge';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { Node } from 'reactflow';
+import type { NodeData } from '@/shared/types';
 
 interface Props {
   sceneNodes: Node<NodeData>[];
@@ -35,13 +35,13 @@ export function GenerationSelector({
   const sceneItems = sceneNodes.map((node) => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition("scene")?.rendering.icon ?? "🎬",
+    icon: getNodeDefinition('scene')?.rendering.icon ?? '🎬',
   }));
 
   const frameItems = frameNodes.map((node) => ({
     id: node.data.identifier.id,
     label: node.data.identifier.displayName,
-    icon: getNodeDefinition("frame")?.rendering.icon ?? "🖼️",
+    icon: getNodeDefinition('frame')?.rendering.icon ?? '🖼️',
   }));
 
   const hasScenes = sceneNodes.length > 0;
@@ -56,13 +56,13 @@ export function GenerationSelector({
         {selectedSceneIds.length > 0 && (
           <Badge variant="result">
             {selectedSceneIds.length} scene
-            {selectedSceneIds.length !== 1 ? "s" : ""}
+            {selectedSceneIds.length !== 1 ? 's' : ''}
           </Badge>
         )}
         {selectedFrameIds.length > 0 && (
           <Badge variant="bound">
             {selectedFrameIds.length} frame
-            {selectedFrameIds.length !== 1 ? "s" : ""}
+            {selectedFrameIds.length !== 1 ? 's' : ''}
           </Badge>
         )}
       </div>

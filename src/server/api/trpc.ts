@@ -8,14 +8,14 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
-import superjson from "superjson";
-import { ZodError } from "zod";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
-import { ensureValidationOnce } from "@/shared/registry/validation";
+import { initTRPC } from '@trpc/server';
+import superjson from 'superjson';
+import { ZodError } from 'zod';
+import { createClient as createSupabaseServerClient } from '@/utils/supabase/server';
+import { ensureValidationOnce } from '@/shared/registry/validation';
 
 // Prevent EventEmitter memory leak warnings from multiple signal handlers
-if (typeof process !== "undefined") {
+if (typeof process !== 'undefined') {
   process.setMaxListeners(20);
 }
 
@@ -63,21 +63,18 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
  * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
-const t = initTRPC
-  .context<Awaited<ReturnType<typeof createTRPCContext>>>()
-  .create({
-    transformer: superjson,
-    errorFormatter({ shape, error }) {
-      return {
-        ...shape,
-        data: {
-          ...shape.data,
-          zodError:
-            error.cause instanceof ZodError ? error.cause.flatten() : null,
-        },
-      };
-    },
-  });
+const t = initTRPC.context<Awaited<ReturnType<typeof createTRPCContext>>>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+      },
+    };
+  },
+});
 
 /**
  * Create a server-side caller.
@@ -113,7 +110,7 @@ export const publicProcedure = t.procedure;
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) {
-    throw new Error("Unauthorized");
+    throw new Error('Unauthorized');
   }
   return next({
     ctx: {

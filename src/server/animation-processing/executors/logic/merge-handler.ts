@@ -3,27 +3,22 @@
   getConnectedInputs,
   type ExecutionContext,
   type ExecutionValue,
-} from "../../execution-context";
-import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
-import {
-  mergeCursorMaps,
-  isPerObjectCursorMap,
-} from "../../scene/scene-assembler";
-import type { NodeData } from "@/shared/types";
-import { logger } from "@/lib/logger";
+} from '../../execution-context';
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/graph';
+import { mergeCursorMaps, isPerObjectCursorMap } from '../../scene/scene-assembler';
+import type { NodeData } from '@/shared/types';
+import { logger } from '@/lib/logger';
 import {
   extractPerObjectAnimationsFromInputsWithPriority,
   extractPerObjectAssignmentsFromInputsWithPriority,
-} from "./shared/per-object";
+} from './shared/per-object';
 
 export async function executeMergeNode(
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ): Promise<void> {
-  logger.debug(
-    `Starting merge execution for node: ${node.data.identifier.displayName}`,
-  );
+  logger.debug(`Starting merge execution for node: ${node.data.identifier.displayName}`);
 
   const data = node.data as unknown as Record<string, unknown>;
   const portCount = Number(data.inputPortCount) || 2;
@@ -41,7 +36,7 @@ export async function executeMergeNode(
         sourceHandle: string;
       }>,
       node.data.identifier.id,
-      `input${i}`,
+      `input${i}`
     );
     portInputs.push(inputs);
     logger.debug(`Merge port ${i} inputs`, { connections: inputs.length });
@@ -50,9 +45,7 @@ export async function executeMergeNode(
   const mergedObjects = new Map<string, unknown>();
   const allCursorMaps: Record<string, number>[] = [];
 
-  logger.debug(
-    "Processing ports in reverse order for priority (Port 1 = highest priority)",
-  );
+  logger.debug('Processing ports in reverse order for priority (Port 1 = highest priority)');
 
   for (let portIndex = portCount - 1; portIndex >= 0; portIndex--) {
     const inputs = portInputs[portIndex];
@@ -67,15 +60,14 @@ export async function executeMergeNode(
         items: inputData.length,
       });
 
-      const maybeMap = (
-        input.metadata as { perObjectTimeCursor?: unknown } | undefined
-      )?.perObjectTimeCursor;
+      const maybeMap = (input.metadata as { perObjectTimeCursor?: unknown } | undefined)
+        ?.perObjectTimeCursor;
       if (isPerObjectCursorMap(maybeMap)) {
         allCursorMaps.push(maybeMap);
       }
 
       for (const obj of inputData) {
-        if (typeof obj === "object" && obj !== null && "id" in obj) {
+        if (typeof obj === 'object' && obj !== null && 'id' in obj) {
           const objectId = (obj as { id: string }).id;
 
           const existingObject = mergedObjects.get(objectId);
@@ -86,14 +78,12 @@ export async function executeMergeNode(
               resolution: `Port ${portIndex + 1} overwrites previous`,
             });
           } else {
-            logger.debug(
-              `Adding new object ID: ${objectId} from port ${portIndex + 1}`,
-            );
+            logger.debug(`Adding new object ID: ${objectId} from port ${portIndex + 1}`);
           }
 
           mergedObjects.set(objectId, obj);
         } else {
-          logger.debug("Non-object or object without ID", { obj });
+          logger.debug('Non-object or object without ID', { obj });
         }
       }
     }
@@ -103,17 +93,17 @@ export async function executeMergeNode(
   const mergedCursors = mergeCursorMaps(allCursorMaps);
   const mergedIds = mergedResult
     .map((obj) =>
-      typeof obj === "object" && obj !== null && "id" in obj
-        ? (obj as { id: string }).id
-        : null,
+      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null
     )
     .filter(Boolean) as string[];
   const propagatedAnimations = extractPerObjectAnimationsFromInputsWithPriority(
     portInputs,
-    mergedIds,
+    mergedIds
   );
-  const propagatedAssignments =
-    extractPerObjectAssignmentsFromInputsWithPriority(portInputs, mergedIds);
+  const propagatedAssignments = extractPerObjectAssignmentsFromInputsWithPriority(
+    portInputs,
+    mergedIds
+  );
 
   const inputObjectCount = portInputs.flat().reduce((acc, input) => {
     const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -121,82 +111,62 @@ export async function executeMergeNode(
   }, 0);
   const outputIds = mergedResult
     .map((obj) =>
-      typeof obj === "object" && obj !== null && "id" in obj
-        ? (obj as { id: string }).id
-        : null,
+      typeof obj === 'object' && obj !== null && 'id' in obj ? (obj as { id: string }).id : null
     )
     .filter((id) => id !== null);
-  logger.debug("Final merged result", {
+  logger.debug('Final merged result', {
     inputObjectCount,
     outputObjectCount: mergedResult.length,
     uniqueObjectIds: outputIds,
   });
 
   const uniqueOutputIds = new Set(outputIds);
-  logger.debug("Output verification", {
+  logger.debug('Output verification', {
     totalIds: outputIds.length,
     uniqueIds: uniqueOutputIds.size,
   });
 
   if (outputIds.length !== uniqueOutputIds.size) {
-    console.error(
-      `[MERGE] ERROR: Merge node is outputting duplicate object IDs!`,
-    );
+    console.error(`[MERGE] ERROR: Merge node is outputting duplicate object IDs!`);
     console.error(`[MERGE] All output IDs:`, outputIds);
     console.error(
       `[MERGE] Duplicate IDs:`,
-      outputIds.filter((id, index) => outputIds.indexOf(id) !== index),
+      outputIds.filter((id, index) => outputIds.indexOf(id) !== index)
     );
-    throw new Error(
-      `Merge node ${node.data.identifier.displayName} failed to deduplicate objects`,
-    );
+    throw new Error(`Merge node ${node.data.identifier.displayName} failed to deduplicate objects`);
   }
 
-  setNodeOutput(
-    context,
-    node.data.identifier.id,
-    "output",
-    "object_stream",
-    mergedResult,
-    {
-      perObjectTimeCursor: mergedCursors,
-      perObjectAnimations: propagatedAnimations,
-      perObjectAssignments: propagatedAssignments,
-      perObjectBatchOverrides: (() => {
-        const out: Record<string, Record<string, Record<string, unknown>>> = {};
-        for (
-          let portIndex = portInputs.length - 1;
-          portIndex >= 0;
-          portIndex--
-        ) {
-          const inputs = portInputs[portIndex];
-          if (!inputs) continue;
-          for (const input of inputs) {
-            const fromMeta = (
-              input.metadata as
-                | {
-                    perObjectBatchOverrides?: Record<
-                      string,
-                      Record<string, Record<string, unknown>>
-                    >;
-                  }
-                | undefined
-            )?.perObjectBatchOverrides;
-            if (!fromMeta) continue;
-            for (const [objectId, fields] of Object.entries(fromMeta)) {
-              const destFields = out[objectId] ?? {};
-              for (const [fieldPath, byKey] of Object.entries(fields)) {
-                const existing = destFields[fieldPath] ?? {};
-                destFields[fieldPath] = { ...existing, ...byKey };
-              }
-              out[objectId] = destFields;
+  setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', mergedResult, {
+    perObjectTimeCursor: mergedCursors,
+    perObjectAnimations: propagatedAnimations,
+    perObjectAssignments: propagatedAssignments,
+    perObjectBatchOverrides: (() => {
+      const out: Record<string, Record<string, Record<string, unknown>>> = {};
+      for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
+        const inputs = portInputs[portIndex];
+        if (!inputs) continue;
+        for (const input of inputs) {
+          const fromMeta = (
+            input.metadata as
+              | {
+                  perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
+                }
+              | undefined
+          )?.perObjectBatchOverrides;
+          if (!fromMeta) continue;
+          for (const [objectId, fields] of Object.entries(fromMeta)) {
+            const destFields = out[objectId] ?? {};
+            for (const [fieldPath, byKey] of Object.entries(fields)) {
+              const existing = destFields[fieldPath] ?? {};
+              destFields[fieldPath] = { ...existing, ...byKey };
             }
+            out[objectId] = destFields;
           }
         }
-        return Object.keys(out).length > 0 ? out : undefined;
-      })(),
-    },
-  );
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    })(),
+  });
 
-  logger.debug("Merge execution completed successfully");
+  logger.debug('Merge execution completed successfully');
 }

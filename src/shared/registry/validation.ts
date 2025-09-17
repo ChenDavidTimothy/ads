@@ -1,11 +1,11 @@
 // src/shared/registry/validation.ts - Enhanced with cross-worker caching
 
-import { NODE_DEFINITIONS, type NodeType } from "../types/definitions";
-import { getNodeComponentMapping } from "./registry-utils";
-import { EXECUTOR_NODE_MAPPINGS } from "../../server/animation-processing/executors/generated-mappings";
-import { logger } from "@/lib/logger";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
+import { NODE_DEFINITIONS, type NodeType } from '../types/definitions';
+import { getNodeComponentMapping } from './registry-utils';
+import { EXECUTOR_NODE_MAPPINGS } from '../../server/animation-processing/executors/generated-mappings';
+import { logger } from '@/lib/logger';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 
 // Type for component mapping return value
 type ComponentMapping = Record<string, unknown>;
@@ -20,7 +20,7 @@ function errorToString(error: unknown): string {
   if (isError(error)) {
     return error.message;
   }
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return error;
   }
   return String(error);
@@ -42,10 +42,7 @@ interface CrossWorkerValidationCache {
   pid: number; // Track which process created the cache for debugging
 }
 
-const VALIDATION_CACHE_FILE = join(
-  process.cwd(),
-  ".next/validation-cache.json",
-);
+const VALIDATION_CACHE_FILE = join(process.cwd(), '.next/validation-cache.json');
 const REGISTRY_VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Generate hash from generated mappings to detect code changes
@@ -56,10 +53,10 @@ function getGeneratedMappingsHash(): string {
     const nodeDefinitions = JSON.stringify(NODE_DEFINITIONS);
 
     const combined = componentMapping + executorMapping + nodeDefinitions;
-    return Buffer.from(combined).toString("base64").slice(0, 16);
+    return Buffer.from(combined).toString('base64').slice(0, 16);
   } catch (error) {
     // If we can't generate hash, force fresh validation
-    logger.warn("Failed to generate mappings hash, forcing fresh validation", {
+    logger.warn('Failed to generate mappings hash, forcing fresh validation', {
       error,
     });
     return `error-${Date.now()}`;
@@ -68,7 +65,7 @@ function getGeneratedMappingsHash(): string {
 
 // Cross-worker validation with file-based caching
 export async function ensureValidationOnce(): Promise<ValidationResult | null> {
-  if (process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== 'development') {
     return null;
   }
 
@@ -79,7 +76,7 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
   if (existsSync(VALIDATION_CACHE_FILE)) {
     try {
       const cached = JSON.parse(
-        readFileSync(VALIDATION_CACHE_FILE, "utf8"),
+        readFileSync(VALIDATION_CACHE_FILE, 'utf8')
       ) as CrossWorkerValidationCache;
       const age = now - cached.timestamp;
 
@@ -87,7 +84,7 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
       if (age < REGISTRY_VALIDATION_TTL) {
         if (cached.generatedMappingsHash === currentHash) {
           logger.debug(
-            `⚡ Using cached validation result (${Math.round(age / 1000)}s old, PID:${cached.pid})`,
+            `⚡ Using cached validation result (${Math.round(age / 1000)}s old, PID:${cached.pid})`
           );
           return {
             isValid: cached.isValid,
@@ -95,29 +92,22 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
             warnings: cached.warnings,
           };
         } else {
-          logger.debug(
-            "🔄 Validation cache invalidated due to mapping changes",
-          );
+          logger.debug('🔄 Validation cache invalidated due to mapping changes');
         }
       } else {
         logger.debug(
-          `🕐 Validation cache expired (${Math.round(age / 1000)}s old, TTL: ${REGISTRY_VALIDATION_TTL / 1000}s)`,
+          `🕐 Validation cache expired (${Math.round(age / 1000)}s old, TTL: ${REGISTRY_VALIDATION_TTL / 1000}s)`
         );
       }
     } catch (error) {
-      logger.debug(
-        "📁 Validation cache file corrupted, running fresh validation",
-        { error },
-      );
+      logger.debug('📁 Validation cache file corrupted, running fresh validation', { error });
     }
   } else {
-    logger.debug("📝 No validation cache found, running initial validation");
+    logger.debug('📝 No validation cache found, running initial validation');
   }
 
   // Run fresh validation
-  logger.debug(
-    `🔍 Running fresh node registration validation (PID:${process.pid})`,
-  );
+  logger.debug(`🔍 Running fresh node registration validation (PID:${process.pid})`);
   const result = validateNodeRegistration();
 
   // Save to file cache for other workers
@@ -137,15 +127,11 @@ export async function ensureValidationOnce(): Promise<ValidationResult | null> {
       mkdirSync(cacheDir, { recursive: true });
     }
 
-    writeFileSync(
-      VALIDATION_CACHE_FILE,
-      JSON.stringify(cacheData, null, 2),
-      "utf8",
-    );
+    writeFileSync(VALIDATION_CACHE_FILE, JSON.stringify(cacheData, null, 2), 'utf8');
     logger.debug(`💾 Saved validation cache for other workers`);
   } catch (error) {
     // File write failed, but validation still succeeded
-    logger.warn("Failed to write validation cache file", { error });
+    logger.warn('Failed to write validation cache file', { error });
   }
 
   return result;
@@ -162,7 +148,7 @@ let registryValidationCache: RegistryValidationCache | null = null;
 
 // Legacy function - deprecated in favor of ensureValidationOnce
 export function validateOnStartup(): ValidationResult | null {
-  if (process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== 'development') {
     return null;
   }
 
@@ -173,9 +159,7 @@ export function validateOnStartup(): ValidationResult | null {
     registryValidationCache &&
     now - registryValidationCache.timestamp < REGISTRY_VALIDATION_TTL
   ) {
-    logger.debug(
-      "⚡ Skipping node registration validation - recently validated",
-    );
+    logger.debug('⚡ Skipping node registration validation - recently validated');
     return registryValidationCache.result;
   }
 
@@ -191,7 +175,7 @@ export function validateOnStartup(): ValidationResult | null {
   };
 
   if (!result.isValid) {
-    logger.error("❌ Node registration validation failed on startup");
+    logger.error('❌ Node registration validation failed on startup');
     result.errors.forEach((error) => logger.error(`  • ${error}`));
     result.warnings.forEach((warning) => logger.warn(`  ⚠ ${warning}`));
 
@@ -213,17 +197,14 @@ export async function resetValidationCache(): Promise<void> {
   registryValidationCache = null;
 
   // Also remove file cache in development
-  if (
-    process.env.NODE_ENV === "development" &&
-    existsSync(VALIDATION_CACHE_FILE)
-  ) {
+  if (process.env.NODE_ENV === 'development' && existsSync(VALIDATION_CACHE_FILE)) {
     try {
       // Use proper import instead of require
-      const fs = await import("fs");
+      const fs = await import('fs');
       fs.unlinkSync(VALIDATION_CACHE_FILE);
-      logger.debug("🗑️ Cleared validation cache file");
+      logger.debug('🗑️ Cleared validation cache file');
     } catch (error) {
-      logger.warn("Failed to remove validation cache file", { error });
+      logger.warn('Failed to remove validation cache file', { error });
     }
   }
 }
@@ -252,9 +233,9 @@ export function validateNodeRegistration(): ValidationResult {
     const isValid = errors.length === 0;
 
     if (isValid) {
-      logger.info("✅ Node registration validation passed");
+      logger.info('✅ Node registration validation passed');
     } else {
-      logger.error("❌ Node registration validation failed", {
+      logger.error('❌ Node registration validation failed', {
         errors,
         warnings,
       });
@@ -283,31 +264,23 @@ function validateComponentMappings(): ValidationResult {
     const componentTypes = Object.keys(componentMapping);
 
     // Check for missing components
-    const missingComponents = nodeTypes.filter(
-      (type) => !componentTypes.includes(type),
-    );
+    const missingComponents = nodeTypes.filter((type) => !componentTypes.includes(type));
     if (missingComponents.length > 0) {
-      errors.push(
-        `Missing components for nodes: ${missingComponents.join(", ")}`,
-      );
+      errors.push(`Missing components for nodes: ${missingComponents.join(', ')}`);
     }
 
     // Check for extra components (not necessarily an error, but worth noting)
-    const extraComponents = componentTypes.filter(
-      (type) => !nodeTypes.includes(type as NodeType),
-    );
+    const extraComponents = componentTypes.filter((type) => !nodeTypes.includes(type as NodeType));
     if (extraComponents.length > 0) {
       warnings.push(
-        `Extra components found (not in NODE_DEFINITIONS): ${extraComponents.join(", ")}`,
+        `Extra components found (not in NODE_DEFINITIONS): ${extraComponents.join(', ')}`
       );
     }
 
     // Validate component references are not null/undefined
     for (const [nodeType, component] of Object.entries(componentMapping)) {
       if (!component) {
-        errors.push(
-          `Component for node type '${nodeType}' is null or undefined`,
-        );
+        errors.push(`Component for node type '${nodeType}' is null or undefined`);
       }
     }
 
@@ -331,13 +304,9 @@ function validateExecutorMappings(): ValidationResult {
     const allExecutorNodes = Object.values(EXECUTOR_NODE_MAPPINGS).flat();
 
     // Check that all nodes are covered by executors
-    const uncoveredNodes = nodeTypes.filter(
-      (type) => !allExecutorNodes.includes(type),
-    );
+    const uncoveredNodes = nodeTypes.filter((type) => !allExecutorNodes.includes(type));
     if (uncoveredNodes.length > 0) {
-      errors.push(
-        `Nodes not covered by any executor: ${uncoveredNodes.join(", ")}`,
-      );
+      errors.push(`Nodes not covered by any executor: ${uncoveredNodes.join(', ')}`);
     }
 
     // Check for duplicate node coverage
@@ -351,9 +320,7 @@ function validateExecutorMappings(): ValidationResult {
       .map(([nodeType, count]) => `${nodeType} (${count} executors)`);
 
     if (duplicateNodes.length > 0) {
-      warnings.push(
-        `Nodes handled by multiple executors: ${duplicateNodes.join(", ")}`,
-      );
+      warnings.push(`Nodes handled by multiple executors: ${duplicateNodes.join(', ')}`);
     }
 
     return { isValid: errors.length === 0, errors, warnings };
@@ -373,15 +340,11 @@ function validateSystemConsistency(): ValidationResult {
 
   try {
     // Validate that executor categories match NODE_DEFINITIONS
-    for (const [executorType, nodeTypes] of Object.entries(
-      EXECUTOR_NODE_MAPPINGS,
-    )) {
+    for (const [executorType, nodeTypes] of Object.entries(EXECUTOR_NODE_MAPPINGS)) {
       for (const nodeType of nodeTypes) {
         const nodeDefinition = NODE_DEFINITIONS[nodeType];
         if (!nodeDefinition) {
-          errors.push(
-            `Executor ${executorType} references unknown node type: ${nodeType}`,
-          );
+          errors.push(`Executor ${executorType} references unknown node type: ${nodeType}`);
           continue;
         }
 
@@ -389,7 +352,7 @@ function validateSystemConsistency(): ValidationResult {
         if (nodeDefinition.execution.executor !== executorType) {
           errors.push(
             `Inconsistent executor mapping: ${nodeType} is mapped to executor '${executorType}' ` +
-              `but NODE_DEFINITIONS specifies '${nodeDefinition.execution.executor}'`,
+              `but NODE_DEFINITIONS specifies '${nodeDefinition.execution.executor}'`
           );
         }
       }
@@ -407,7 +370,7 @@ function validateSystemConsistency(): ValidationResult {
       if (metadata?.supportsDynamicPorts) {
         if (!metadata.portGenerator) {
           warnings.push(
-            `Node ${nodeType} supports dynamic ports but has no portGenerator specified`,
+            `Node ${nodeType} supports dynamic ports but has no portGenerator specified`
           );
         }
       }
@@ -442,9 +405,7 @@ export function validateNodeType(nodeType: string): ValidationResult {
       errors.push(`No component mapping found for node type '${nodeType}'`);
     }
   } catch (error) {
-    errors.push(
-      `Failed to validate component for '${nodeType}': ${errorToString(error)}`,
-    );
+    errors.push(`Failed to validate component for '${nodeType}': ${errorToString(error)}`);
   }
 
   // Check executor mapping
@@ -452,14 +413,10 @@ export function validateNodeType(nodeType: string): ValidationResult {
   if (executorType in EXECUTOR_NODE_MAPPINGS) {
     const executorNodes = EXECUTOR_NODE_MAPPINGS[executorType];
     if (!executorNodes.includes(nodeType as never)) {
-      errors.push(
-        `Node type '${nodeType}' not found in executor '${executorType}' mappings`,
-      );
+      errors.push(`Node type '${nodeType}' not found in executor '${executorType}' mappings`);
     }
   } else {
-    errors.push(
-      `Unknown executor type '${executorType}' for node '${executorType}'`,
-    );
+    errors.push(`Unknown executor type '${executorType}' for node '${executorType}'`);
   }
 
   return { isValid: errors.length === 0, errors, warnings };

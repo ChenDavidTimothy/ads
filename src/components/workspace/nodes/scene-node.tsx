@@ -1,36 +1,33 @@
 // src/components/workspace/nodes/scene-node.tsx - Simplified single input port
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { SceneNodeData } from "@/shared/types/nodes";
-import { MonitorPlay } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { SceneNodeData } from '@/shared/types/nodes';
+import { MonitorPlay } from 'lucide-react';
 
 export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
-  const nodeDefinition = getNodeDefinition("scene");
+  const nodeDefinition = getNodeDefinition('scene');
 
   const getResolutionLabel = (width: number, height: number) => {
-    if (width === 1920 && height === 1080) return "FHD";
-    if (width === 1280 && height === 720) return "HD";
-    if (width === 3840 && height === 2160) return "4K";
-    if (width === 1080 && height === 1080) return "Square";
-    return "Custom";
+    if (width === 1920 && height === 1080) return 'FHD';
+    if (width === 1280 && height === 720) return 'HD';
+    if (width === 3840 && height === 2160) return '4K';
+    if (width === 1080 && height === 1080) return 'Square';
+    return 'Custom';
   };
 
   const getQualityLabel = (crf: number) => {
-    if (crf <= 18) return "High";
-    if (crf <= 28) return "Medium";
-    return "Low";
+    if (crf <= 18) return 'High';
+    if (crf <= 28) return 'Medium';
+    return 'Low';
   };
 
-  const handleClass = "bg-[var(--node-output)]";
+  const handleClass = 'bg-[var(--node-output)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -60,23 +57,18 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
         <div className="flex items-center justify-between">
           <span>Resolution</span>
           <span className="font-medium text-[var(--text-primary)]">
-            {getResolutionLabel(data.width, data.height)} ({data.width}×
-            {data.height})
+            {getResolutionLabel(data.width, data.height)} ({data.width}×{data.height})
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span>Frame Rate</span>
-          <span className="font-medium text-[var(--text-primary)]">
-            {data.fps} FPS
-          </span>
+          <span className="font-medium text-[var(--text-primary)]">{data.fps} FPS</span>
         </div>
 
         <div className="flex items-center justify-between">
           <span>Duration</span>
-          <span className="font-medium text-[var(--text-primary)]">
-            {data.duration}s
-          </span>
+          <span className="font-medium text-[var(--text-primary)]">{data.duration}s</span>
         </div>
 
         <div className="flex items-center justify-between">

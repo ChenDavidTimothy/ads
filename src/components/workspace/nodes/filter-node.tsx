@@ -1,25 +1,22 @@
 // src/components/workspace/nodes/filter-node.tsx - Confirmed single input/output ports
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { FilterNodeData } from "@/shared/types/nodes";
-import { Filter } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { FilterNodeData } from '@/shared/types/nodes';
+import { Filter } from 'lucide-react';
 
 export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
-  const nodeDefinition = getNodeDefinition("filter");
+  const nodeDefinition = getNodeDefinition('filter');
 
   const selectedCount = data.selectedObjectIds?.length || 0;
   const hasSelection = selectedCount > 0;
 
-  const handleClass = "bg-[var(--node-logic)]";
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {/* Single input port */}
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
@@ -45,23 +42,16 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
 
       <CardContent className="space-y-2 p-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">
-            Selected:
-          </span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">
-            {selectedCount}
-          </span>
+          <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
+          <span className="text-xs font-medium text-[var(--text-primary)]">{selectedCount}</span>
         </div>
 
         {hasSelection ? (
           <div className="text-xs text-[var(--success-500)]">
-            {selectedCount} object{selectedCount !== 1 ? "s" : ""} passing
-            through
+            {selectedCount} object{selectedCount !== 1 ? 's' : ''} passing through
           </div>
         ) : (
-          <div className="text-xs text-[var(--warning-600)]">
-            No objects selected
-          </div>
+          <div className="text-xs text-[var(--warning-600)]">No objects selected</div>
         )}
       </CardContent>
 

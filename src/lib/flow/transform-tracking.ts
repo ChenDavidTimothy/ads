@@ -1,14 +1,10 @@
 // src/lib/flow/transform-tracking.ts - Tracks transform lineage within an animation node
-import type { TransformLineage } from "@/shared/types/transforms";
+import type { TransformLineage } from '@/shared/types/transforms';
 
 export class TransformTracker {
   private readonly transformLineages = new Map<string, TransformLineage>();
 
-  trackTransformCreation(
-    transformId: string,
-    animationNodeId: string,
-    trackIndex: number,
-  ): void {
+  trackTransformCreation(transformId: string, animationNodeId: string, trackIndex: number): void {
     this.transformLineages.set(transformId, {
       animationNodeId,
       trackIndex,
@@ -23,10 +19,7 @@ export class TransformTracker {
     }
   }
 
-  updateTransformDependencies(
-    transformId: string,
-    dependencies: string[],
-  ): void {
+  updateTransformDependencies(transformId: string, dependencies: string[]): void {
     const lineage = this.transformLineages.get(transformId);
     if (lineage) {
       lineage.dependencies = [...dependencies];
@@ -37,9 +30,7 @@ export class TransformTracker {
     this.transformLineages.delete(transformId);
     // Remove from others' dependencies
     for (const lineage of this.transformLineages.values()) {
-      lineage.dependencies = lineage.dependencies.filter(
-        (d) => d !== transformId,
-      );
+      lineage.dependencies = lineage.dependencies.filter((d) => d !== transformId);
     }
   }
 

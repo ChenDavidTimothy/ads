@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import { Upload, File, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatFileSize } from "@/shared/types/assets";
+import { useRef } from 'react';
+import { Upload, File, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { formatFileSize } from '@/shared/types/assets';
 
 interface UploadProgress {
   file: File;
   progress: number;
-  status: "pending" | "uploading" | "completed" | "error";
+  status: 'pending' | 'uploading' | 'completed' | 'error';
   error?: string;
 }
 
@@ -36,7 +36,7 @@ export function FileUpload({
   onDrop,
   isDragOver,
   uploadProgress,
-  accept = "image/*,video/*",
+  accept = 'image/*,video/*',
   multiple = true,
   disabled = false,
   className,
@@ -55,11 +55,11 @@ export function FileUpload({
       onFilesSelected(files);
     }
     // Clear input for re-selection
-    e.target.value = "";
+    e.target.value = '';
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Upload Zone */}
       <div
         onDragOver={onDragOver}
@@ -69,12 +69,12 @@ export function FileUpload({
         onDrop={onDrop}
         onClick={handleClick}
         className={cn(
-          "relative cursor-pointer rounded-[var(--radius-md)] border-2 border-dashed p-[var(--space-5)] text-center transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
+          'relative cursor-pointer rounded-[var(--radius-md)] border-2 border-dashed p-[var(--space-5)] text-center transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]',
           isDragOver
-            ? "border-[var(--accent-primary)] bg-[var(--purple-shadow-subtle)] shadow-[0_0_5px_var(--purple-shadow-subtle)]"
-            : "border-[var(--border-secondary)] hover:border-[var(--accent-primary)] hover:bg-[var(--purple-shadow-subtle)] hover:shadow-[0_0_5px_var(--purple-shadow-subtle)]",
-          disabled && "cursor-not-allowed opacity-50",
-          "group",
+            ? 'border-[var(--accent-primary)] bg-[var(--purple-shadow-subtle)] shadow-[0_0_5px_var(--purple-shadow-subtle)]'
+            : 'border-[var(--border-secondary)] hover:border-[var(--accent-primary)] hover:bg-[var(--purple-shadow-subtle)] hover:shadow-[0_0_5px_var(--purple-shadow-subtle)]',
+          disabled && 'cursor-not-allowed opacity-50',
+          'group'
         )}
       >
         <input
@@ -90,10 +90,10 @@ export function FileUpload({
         <div className="flex flex-col items-center gap-[var(--space-3)]">
           <div
             className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-[var(--radius-full)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
+              'flex h-12 w-12 items-center justify-center rounded-[var(--radius-full)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)]',
               isDragOver
-                ? "bg-[var(--accent-primary)] text-[var(--text-primary)]"
-                : "bg-[var(--surface-2)] text-[var(--text-secondary)] group-hover:bg-[var(--purple-shadow-subtle)] group-hover:text-[var(--accent-primary)]",
+                ? 'bg-[var(--accent-primary)] text-[var(--text-primary)]'
+                : 'bg-[var(--surface-2)] text-[var(--text-secondary)] group-hover:bg-[var(--purple-shadow-subtle)] group-hover:text-[var(--accent-primary)]'
             )}
           >
             <Upload size={20} />
@@ -101,14 +101,10 @@ export function FileUpload({
 
           <div className="space-y-1">
             <p className="text-sm font-medium text-[var(--text-primary)] transition-all duration-200 group-hover:text-[var(--accent-primary)]">
-              {isDragOver
-                ? "🎯 Drop files here"
-                : "Drop files or click to upload"}
+              {isDragOver ? '🎯 Drop files here' : 'Drop files or click to upload'}
             </p>
             <p className="text-xs text-[var(--text-tertiary)] transition-all duration-200 group-hover:text-[var(--accent-primary)]">
-              {isDragOver
-                ? "Release to start uploading"
-                : "Images up to 50MB, videos up to 500MB"}
+              {isDragOver ? 'Release to start uploading' : 'Images up to 50MB, videos up to 500MB'}
             </p>
           </div>
         </div>
@@ -119,7 +115,7 @@ export function FileUpload({
         <div className="space-y-2">
           <div className="text-sm font-medium text-[var(--text-secondary)]">
             Uploading {uploadProgress.length} file
-            {uploadProgress.length > 1 ? "s" : ""}
+            {uploadProgress.length > 1 ? 's' : ''}
           </div>
 
           <div className="space-y-3">
@@ -140,17 +136,12 @@ interface UploadProgressItemProps {
 function UploadProgressItem({ progress }: UploadProgressItemProps) {
   const getStatusIcon = () => {
     switch (progress.status) {
-      case "pending":
-      case "uploading":
-        return (
-          <Loader2
-            size={16}
-            className="animate-spin text-[var(--accent-primary)]"
-          />
-        );
-      case "completed":
+      case 'pending':
+      case 'uploading':
+        return <Loader2 size={16} className="animate-spin text-[var(--accent-primary)]" />;
+      case 'completed':
         return <CheckCircle size={16} className="text-[var(--success-500)]" />;
-      case "error":
+      case 'error':
         return <AlertCircle size={16} className="text-[var(--danger-500)]" />;
       default:
         return <File size={16} className="text-[var(--text-tertiary)]" />;
@@ -159,14 +150,14 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
 
   const getStatusColor = () => {
     switch (progress.status) {
-      case "uploading":
-        return "bg-[var(--accent-primary)]";
-      case "completed":
-        return "bg-[var(--success-500)]";
-      case "error":
-        return "bg-[var(--danger-500)]";
+      case 'uploading':
+        return 'bg-[var(--accent-primary)]';
+      case 'completed':
+        return 'bg-[var(--success-500)]';
+      case 'error':
+        return 'bg-[var(--danger-500)]';
       default:
-        return "bg-[var(--surface-3)]";
+        return 'bg-[var(--surface-3)]';
     }
   };
 
@@ -185,7 +176,7 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
             </span>
           </div>
 
-          {progress.status === "error" && progress.error ? (
+          {progress.status === 'error' && progress.error ? (
             <p className="text-xs text-[var(--danger-500)]">{progress.error}</p>
           ) : (
             <>
@@ -193,8 +184,8 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
               <div className="mb-1 h-1.5 w-full rounded-full bg-[var(--surface-3)]">
                 <div
                   className={cn(
-                    "h-1.5 rounded-[var(--radius-full)] transition-all duration-[var(--duration-medium)] ease-[var(--easing-standard)]",
-                    getStatusColor(),
+                    'h-1.5 rounded-[var(--radius-full)] transition-all duration-[var(--duration-medium)] ease-[var(--easing-standard)]',
+                    getStatusColor()
                   )}
                   style={{ width: `${progress.progress}%` }}
                 />
@@ -202,15 +193,13 @@ function UploadProgressItem({ progress }: UploadProgressItemProps) {
 
               <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
                 <span>
-                  {progress.status === "completed"
-                    ? "Upload complete"
-                    : progress.status === "uploading"
+                  {progress.status === 'completed'
+                    ? 'Upload complete'
+                    : progress.status === 'uploading'
                       ? `${progress.progress}%`
-                      : "Preparing..."}
+                      : 'Preparing...'}
                 </span>
-                {progress.status === "uploading" && (
-                  <span>{progress.progress}%</span>
-                )}
+                {progress.status === 'uploading' && <span>{progress.progress}%</span>}
               </div>
             </>
           )}

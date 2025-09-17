@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest';
 
-describe("BatchModal", () => {
-  it("renders without crashing", () => {
+describe('BatchModal', () => {
+  it('renders without crashing', () => {
     expect(true).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 // src/animation/core/interpolation.ts
-import type { Point2D } from "@/shared/types/core";
+import type { Point2D } from '@/shared/types/core';
 
 // Linear interpolation
 export function lerp(start: number, end: number, t: number): number {
@@ -56,7 +56,7 @@ export function map(
   inMin: number,
   inMax: number,
   outMin: number,
-  outMax: number,
+  outMax: number
 ): number {
   return lerp(outMin, outMax, normalize(value, inMin, inMax));
 }

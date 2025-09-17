@@ -1,25 +1,22 @@
 // src/components/workspace/nodes/triangle-node.tsx - Simplified single output port
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { TriangleNodeData } from "@/shared/types/nodes";
-import { Triangle as TriangleIcon } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { TriangleNodeData } from '@/shared/types/nodes';
+import { Triangle as TriangleIcon } from 'lucide-react';
 
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
-  const nodeDefinition = getNodeDefinition("triangle");
+  const nodeDefinition = getNodeDefinition('triangle');
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div
             className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: "#4444ff" }} // Canvas default
+            style={{ backgroundColor: '#4444ff' }} // Canvas default
           >
             <TriangleIcon size={12} />
           </div>

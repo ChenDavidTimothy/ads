@@ -1,17 +1,17 @@
-import fs from "fs/promises";
-import { createWriteStream } from "fs";
-import path from "path";
-import { PassThrough } from "stream";
-import { pipeline } from "stream/promises";
-import { createHash } from "crypto";
-import pRetry from "p-retry";
-import { request } from "undici";
+import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
+import path from 'path';
+import { PassThrough } from 'stream';
+import { pipeline } from 'stream/promises';
+import { createHash } from 'crypto';
+import pRetry from 'p-retry';
+import { request } from 'undici';
 
-import { logger } from "@/lib/logger";
-import type { AssetMetadata } from "../bulk-asset-fetcher";
-import type { createServiceClient } from "@/utils/supabase/service";
-import type { LimitFunction } from "p-limit";
-import type { CacheMetrics } from "./types";
+import { logger } from '@/lib/logger';
+import type { AssetMetadata } from '../bulk-asset-fetcher';
+import type { createServiceClient } from '@/utils/supabase/service';
+import type { LimitFunction } from 'p-limit';
+import type { CacheMetrics } from './types';
 
 const httpConfig = {
   headersTimeout: 30000,
@@ -19,22 +19,22 @@ const httpConfig = {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+  typeof value === 'object' && value !== null;
 
 const getStatusCode = (value: unknown): number | undefined => {
   if (!isRecord(value)) {
     return undefined;
   }
   const statusCandidate = value.statusCode;
-  return typeof statusCandidate === "number" ? statusCandidate : undefined;
+  return typeof statusCandidate === 'number' ? statusCandidate : undefined;
 };
 
 const getErrorMessage = (value: unknown): string => {
   if (!isRecord(value)) {
-    return "";
+    return '';
   }
   const message = value.message;
-  return typeof message === "string" ? message : "";
+  return typeof message === 'string' ? message : '';
 };
 
 interface DownloadServiceDeps {
@@ -47,7 +47,7 @@ interface DownloadServiceDeps {
     asset: AssetMetadata,
     jobPath: string,
     contentHash: string,
-    fromCache: boolean,
+    fromCache: boolean
   ) => void;
 }
 
@@ -57,7 +57,7 @@ export class AssetDownloadService {
   private readonly supabase: ReturnType<typeof createServiceClient>;
   private readonly downloadLimit: LimitFunction;
   private readonly metrics: CacheMetrics;
-  private readonly cacheAsset: DownloadServiceDeps["cacheAsset"];
+  private readonly cacheAsset: DownloadServiceDeps['cacheAsset'];
 
   constructor(options: DownloadServiceDeps) {
     this.sharedCacheDir = options.sharedCacheDir;
@@ -72,7 +72,7 @@ export class AssetDownloadService {
     const downloads = assets.map((asset) =>
       this.downloadLimit(async () => {
         await this.downloadAndCacheAsset(asset);
-      }),
+      })
     );
 
     await Promise.all(downloads);
@@ -96,7 +96,7 @@ export class AssetDownloadService {
         this.metrics.copyFallbacks++;
       }
 
-      logger.debug("Shared cache hit for asset", {
+      logger.debug('Shared cache hit for asset', {
         assetId: asset.id,
         filename,
       });
@@ -113,7 +113,7 @@ export class AssetDownloadService {
     asset: AssetMetadata,
     sharedPath: string,
     jobPath: string,
-    _contentHash: string,
+    _contentHash: string
   ): Promise<void> {
     let signedUrl: string | null = null;
 
@@ -127,15 +127,14 @@ export class AssetDownloadService {
           if (urlError || !urlData) {
             this.metrics.presignFailures++;
             throw new Error(
-              `PRESIGN_FAILED: Failed to create signed URL for ${asset.id}: ${urlError?.message || "No URL"}`,
+              `PRESIGN_FAILED: Failed to create signed URL for ${asset.id}: ${urlError?.message || 'No URL'}`
             );
           }
 
           signedUrl = urlData.signedUrl;
         }
 
-        const tempPath =
-          sharedPath + "." + Math.random().toString(36).slice(2) + ".part";
+        const tempPath = sharedPath + '.' + Math.random().toString(36).slice(2) + '.part';
 
         try {
           if (asset.contentHash && asset.contentHash.length >= 32) {
@@ -149,18 +148,17 @@ export class AssetDownloadService {
           } catch (renameError: unknown) {
             if (
               renameError &&
-              typeof renameError === "object" &&
-              "code" in renameError &&
-              (renameError as NodeJS.ErrnoException).code === "EEXIST"
+              typeof renameError === 'object' &&
+              'code' in renameError &&
+              (renameError as NodeJS.ErrnoException).code === 'EEXIST'
             ) {
               await fs.unlink(tempPath).catch(() => {
                 // Ignore cleanup errors
               });
               this.metrics.raceLost++;
-              logger.debug(
-                "Race lost for asset - another process cached first",
-                { assetId: asset.id },
-              );
+              logger.debug('Race lost for asset - another process cached first', {
+                assetId: asset.id,
+              });
             } else {
               await fs.unlink(tempPath).catch(() => {
                 // Ignore cleanup errors
@@ -174,7 +172,7 @@ export class AssetDownloadService {
             this.metrics.copyFallbacks++;
           }
 
-          logger.info("Downloaded asset successfully", {
+          logger.info('Downloaded asset successfully', {
             assetId: asset.id,
             filename: path.basename(sharedPath),
             size: this.formatBytes(asset.fileSize),
@@ -187,20 +185,18 @@ export class AssetDownloadService {
           });
 
           const responseStatus =
-            isRecord(error) && "response" in error
-              ? getStatusCode(error.response)
-              : undefined;
+            isRecord(error) && 'response' in error ? getStatusCode(error.response) : undefined;
           const directStatus = getStatusCode(error);
           const message = getErrorMessage(error);
 
           const is403 =
             responseStatus === 403 ||
             directStatus === 403 ||
-            message.includes("403") ||
-            message.includes("Forbidden");
+            message.includes('403') ||
+            message.includes('Forbidden');
 
           if (is403) {
-            logger.warn("Signed URL expired for asset, will refresh on retry", {
+            logger.warn('Signed URL expired for asset, will refresh on retry', {
               assetId: asset.id,
               bucket: asset.bucketName,
               path: asset.storagePath,
@@ -223,25 +219,24 @@ export class AssetDownloadService {
           const errorMessage =
             error instanceof Error
               ? error.message
-              : typeof error === "string"
+              : typeof error === 'string'
                 ? error
-                : "Unknown error";
+                : 'Unknown error';
           const attemptNumber =
             error &&
-            typeof error === "object" &&
-            "attemptNumber" in error &&
-            typeof (error as { attemptNumber?: number }).attemptNumber ===
-              "number"
+            typeof error === 'object' &&
+            'attemptNumber' in error &&
+            typeof (error as { attemptNumber?: number }).attemptNumber === 'number'
               ? (error as { attemptNumber: number }).attemptNumber
               : 0;
           const retriesLeft =
             error &&
-            typeof error === "object" &&
-            "retriesLeft" in error &&
-            typeof (error as { retriesLeft?: number }).retriesLeft === "number"
+            typeof error === 'object' &&
+            'retriesLeft' in error &&
+            typeof (error as { retriesLeft?: number }).retriesLeft === 'number'
               ? (error as { retriesLeft: number }).retriesLeft
               : 0;
-          logger.warn("Download retry for asset", {
+          logger.warn('Download retry for asset', {
             assetId: asset.id,
             attempt: attemptNumber,
             retriesLeft,
@@ -250,20 +245,20 @@ export class AssetDownloadService {
             path: asset.storagePath,
           });
         },
-      },
+      }
     );
   }
 
   private async downloadWithHashVerification(
     url: string,
     tempPath: string,
-    asset: AssetMetadata,
+    asset: AssetMetadata
   ): Promise<void> {
-    const hasher = createHash("sha256");
+    const hasher = createHash('sha256');
     const passThrough = new PassThrough();
 
-    passThrough.on("data", (chunk) => {
-      if (Buffer.isBuffer(chunk) || typeof chunk === "string") {
+    passThrough.on('data', (chunk) => {
+      if (Buffer.isBuffer(chunk) || typeof chunk === 'string') {
         hasher.update(chunk);
       }
     });
@@ -277,15 +272,15 @@ export class AssetDownloadService {
     const stat = await fs.stat(tempPath);
     if (stat.size !== asset.fileSize) {
       throw new Error(
-        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`,
+        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`
       );
     }
 
-    const computedHash = hasher.digest("hex");
+    const computedHash = hasher.digest('hex');
     if (computedHash !== asset.contentHash) {
       this.metrics.integrityFailures++;
       throw new Error(
-        `INTEGRITY_FAILED: Content hash mismatch for ${asset.id}: expected ${asset.contentHash}, got ${computedHash}`,
+        `INTEGRITY_FAILED: Content hash mismatch for ${asset.id}: expected ${asset.contentHash}, got ${computedHash}`
       );
     }
   }
@@ -293,7 +288,7 @@ export class AssetDownloadService {
   private async downloadWithSizeVerification(
     url: string,
     tempPath: string,
-    asset: AssetMetadata,
+    asset: AssetMetadata
   ): Promise<void> {
     const { body: responseStream } = await request(url, httpConfig);
 
@@ -302,15 +297,12 @@ export class AssetDownloadService {
     const stat = await fs.stat(tempPath);
     if (stat.size !== asset.fileSize) {
       throw new Error(
-        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`,
+        `DOWNLOAD_FAILED: Size mismatch for ${asset.id}: expected ${asset.fileSize}, got ${stat.size}`
       );
     }
   }
 
-  private async validateCachedFile(
-    filePath: string,
-    expectedSize: number,
-  ): Promise<boolean> {
+  private async validateCachedFile(filePath: string, expectedSize: number): Promise<boolean> {
     try {
       const stat = await fs.stat(filePath);
       return stat.size === expectedSize;
@@ -326,19 +318,19 @@ export class AssetDownloadService {
     } catch (error: unknown) {
       if (
         error &&
-        typeof error === "object" &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "EEXIST"
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'EEXIST'
       ) {
         return true;
       }
 
       if (
         error &&
-        typeof error === "object" &&
-        "code" in error &&
-        ((error as NodeJS.ErrnoException).code === "EXDEV" ||
-          (error as NodeJS.ErrnoException).code === "EPERM")
+        typeof error === 'object' &&
+        'code' in error &&
+        ((error as NodeJS.ErrnoException).code === 'EXDEV' ||
+          (error as NodeJS.ErrnoException).code === 'EPERM')
       ) {
         try {
           await fs.copyFile(source, dest);
@@ -347,16 +339,14 @@ export class AssetDownloadService {
         } catch (copyError) {
           const errorMessage =
             error &&
-            typeof error === "object" &&
-            "message" in error &&
-            typeof (error as { message?: string }).message === "string"
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as { message?: string }).message === 'string'
               ? (error as { message?: string }).message
-              : "Unknown error";
+              : 'Unknown error';
           const copyErrorMessage =
             copyError instanceof Error ? copyError.message : String(copyError);
-          throw new Error(
-            `Both hard link and copy failed: ${errorMessage}, ${copyErrorMessage}`,
-          );
+          throw new Error(`Both hard link and copy failed: ${errorMessage}, ${copyErrorMessage}`);
         }
       }
 
@@ -370,7 +360,7 @@ export class AssetDownloadService {
     }
 
     const metadataContent = `${asset.id}:${asset.storagePath}:${asset.fileSize}:${asset.createdAt}`;
-    return createHash("sha256").update(metadataContent).digest("hex");
+    return createHash('sha256').update(metadataContent).digest('hex');
   }
 
   private getFileExtension(storagePath: string, mimeType: string): string {
@@ -378,21 +368,21 @@ export class AssetDownloadService {
     if (pathExt) return pathExt;
 
     const mimeToExt: Record<string, string> = {
-      "image/jpeg": ".jpg",
-      "image/png": ".png",
-      "image/gif": ".gif",
-      "image/webp": ".webp",
-      "image/svg+xml": ".svg",
-      "video/mp4": ".mp4",
-      "video/webm": ".webm",
-      "video/quicktime": ".mov",
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+      'video/mp4': '.mp4',
+      'video/webm': '.webm',
+      'video/quicktime': '.mov',
     };
 
-    return mimeToExt[mimeType] ?? ".bin";
+    return mimeToExt[mimeType] ?? '.bin';
   }
 
   private formatBytes(bytes: number): string {
-    const units = ["B", "KB", "MB", "GB"];
+    const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
     let unitIndex = 0;
 

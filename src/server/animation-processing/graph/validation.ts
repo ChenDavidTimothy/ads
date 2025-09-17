@@ -3,26 +3,24 @@ import {
   getNodesByCategory,
   getNodeDefinitionWithDynamicPorts,
   getNodeDefinition,
-} from "@/shared/registry/registry-utils";
-import { arePortsCompatible, type PortType } from "@/shared/types/ports";
+} from '@/shared/registry/registry-utils';
+import { arePortsCompatible, type PortType } from '@/shared/types/ports';
 import {
   MissingInsertConnectionError,
   MultipleInsertNodesInSeriesError,
   SceneRequiredError,
   TooManyScenesError,
   InvalidConnectionError,
-} from "@/shared/errors/domain";
-import type { NodeData } from "@/shared/types";
-import type { ReactFlowEdge, ReactFlowNode } from "../types/graph";
+} from '@/shared/errors/domain';
+import type { NodeData } from '@/shared/types';
+import type { ReactFlowEdge, ReactFlowNode } from '../types/graph';
 
 export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
-  const sceneNodes = nodes.filter((node) => node.type === "scene");
+  const sceneNodes = nodes.filter((node) => node.type === 'scene');
   if (sceneNodes.length === 0) throw new SceneRequiredError();
 
   // Allow multiple scenes but with reasonable limits for performance
-  const maxScenesPerExecution = Number(
-    process.env.MAX_SCENES_PER_EXECUTION ?? "8",
-  );
+  const maxScenesPerExecution = Number(process.env.MAX_SCENES_PER_EXECUTION ?? '8');
   if (sceneNodes.length > maxScenesPerExecution) {
     throw new TooManyScenesError(sceneNodes.length, maxScenesPerExecution);
   }
@@ -30,7 +28,7 @@ export function validateScene(nodes: ReactFlowNode<NodeData>[]): void {
 
 export function validateConnections(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Validate port compatibility for all connections
   validatePortCompatibility(nodes, edges);
@@ -39,7 +37,7 @@ export function validateConnections(
 
 export function validatePortCompatibility(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   for (const edge of edges) {
     const sourceNode = nodes.find((n) => n.data.identifier.id === edge.source);
@@ -52,7 +50,7 @@ export function validatePortCompatibility(
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
-        },
+        }
       );
     }
 
@@ -66,24 +64,24 @@ export function validatePortCompatibility(
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
-        },
+        }
       );
     }
 
     // Get dynamic definition for nodes with dynamic ports
     const actualTargetDefinition =
-      targetNode.type === "merge" || targetNode.type === "boolean_op"
+      targetNode.type === 'merge' || targetNode.type === 'boolean_op'
         ? getNodeDefinitionWithDynamicPorts(
             targetNode.type,
-            targetNode.data as unknown as Record<string, unknown>,
+            targetNode.data as unknown as Record<string, unknown>
           )
         : targetDefinition;
 
     const sourcePort = sourceDefinition.ports.outputs.find(
-      (p: { id: string }) => p.id === edge.sourceHandle,
+      (p: { id: string }) => p.id === edge.sourceHandle
     );
     const targetPort = actualTargetDefinition?.ports.inputs.find(
-      (p: { id: string }) => p.id === edge.targetHandle,
+      (p: { id: string }) => p.id === edge.targetHandle
     );
 
     if (!sourcePort) {
@@ -93,7 +91,7 @@ export function validatePortCompatibility(
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
-        },
+        }
       );
     }
 
@@ -104,14 +102,14 @@ export function validatePortCompatibility(
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
-        },
+        }
       );
     }
 
     if (
       !arePortsCompatible(
         (sourcePort as { type: PortType }).type,
-        (targetPort as { type: PortType }).type,
+        (targetPort as { type: PortType }).type
       )
     ) {
       throw new InvalidConnectionError(
@@ -120,7 +118,7 @@ export function validatePortCompatibility(
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
-        },
+        }
       );
     }
   }
@@ -133,26 +131,19 @@ export function validatePortCompatibility(
  */
 export function validateLogicNodePortConnections(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Get all logic node types (current and future)
-  const logicNodeTypes = getNodesByCategory("logic").map((def) => def.type);
-  const logicNodes = nodes.filter((node) =>
-    logicNodeTypes.includes(node.type!),
-  );
+  const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
+  const logicNodes = nodes.filter((node) => logicNodeTypes.includes(node.type!));
 
   for (const logicNode of logicNodes) {
     // Safety check for node data
-    if (
-      !logicNode.data?.identifier?.id ||
-      !logicNode.data?.identifier?.displayName
-    ) {
+    if (!logicNode.data?.identifier?.id || !logicNode.data?.identifier?.displayName) {
       continue; // Skip nodes with invalid data structure
     }
 
-    const incomingEdges = edges.filter(
-      (edge) => edge.target === logicNode.data.identifier.id,
-    );
+    const incomingEdges = edges.filter((edge) => edge.target === logicNode.data.identifier.id);
     const portConnections = new Map<string, ReactFlowEdge[]>();
 
     // Group edges by target port
@@ -170,19 +161,17 @@ export function validateLogicNodePortConnections(
     for (const [portId, connectedEdges] of portConnections.entries()) {
       if (connectedEdges.length > 1) {
         // Allow batch nodes to have multiple connections to their "input" port
-        if (logicNode.type === "batch" && portId === "input") {
+        if (logicNode.type === 'batch' && portId === 'input') {
           continue;
         }
 
         const sourceNodeNames = connectedEdges.map((edge) => {
-          const sourceNode = nodes.find(
-            (n) => n.data?.identifier?.id === edge.source,
-          );
+          const sourceNode = nodes.find((n) => n.data?.identifier?.id === edge.source);
           return sourceNode?.data?.identifier?.displayName ?? edge.source;
         });
 
         throw new InvalidConnectionError(
-          `Multiple connections to logic port "${portId}" on ${logicNode.data.identifier.displayName}. Each logic input port can only accept one connection to prevent logical contradictions. Connected from: ${sourceNodeNames.join(", ")}`,
+          `Multiple connections to logic port "${portId}" on ${logicNode.data.identifier.displayName}. Each logic input port can only accept one connection to prevent logical contradictions. Connected from: ${sourceNodeNames.join(', ')}`,
           {
             nodeId: logicNode.data.identifier.id,
             nodeName: logicNode.data.identifier.displayName,
@@ -191,7 +180,7 @@ export function validateLogicNodePortConnections(
               connectedEdges: connectedEdges.length,
               nodeType: logicNode.type,
             },
-          },
+          }
         );
       }
     }
@@ -200,34 +189,27 @@ export function validateLogicNodePortConnections(
 
 export function validateBooleanTypeConnections(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Validate boolean inputs for boolean operations and the condition input of if_else
   const booleanNodes = nodes.filter(
-    (node) => node.type === "boolean_op" || node.type === "if_else",
+    (node) => node.type === 'boolean_op' || node.type === 'if_else'
   );
 
   for (const booleanNode of booleanNodes) {
     // Safety check for node data
-    if (
-      !booleanNode.data?.identifier?.id ||
-      !booleanNode.data?.identifier?.displayName
-    ) {
+    if (!booleanNode.data?.identifier?.id || !booleanNode.data?.identifier?.displayName) {
       continue; // Skip nodes with invalid data structure
     }
 
-    const incomingEdges = edges.filter(
-      (edge) => edge.target === booleanNode.data.identifier.id,
-    );
+    const incomingEdges = edges.filter((edge) => edge.target === booleanNode.data.identifier.id);
 
     for (const edge of incomingEdges) {
       // For if_else nodes, only the 'condition' port must be boolean. Skip other ports.
-      if (booleanNode.type === "if_else" && edge.targetHandle !== "condition") {
+      if (booleanNode.type === 'if_else' && edge.targetHandle !== 'condition') {
         continue;
       }
-      const sourceNode = nodes.find(
-        (n) => n.data?.identifier?.id === edge.source,
-      );
+      const sourceNode = nodes.find((n) => n.data?.identifier?.id === edge.source);
       if (!sourceNode?.data?.identifier?.displayName) continue;
 
       // Infer effective logical type, resolving pass-through (e.g., if_else)
@@ -235,20 +217,19 @@ export function validateBooleanTypeConnections(
         edge.source,
         edge.sourceHandle!,
         nodes,
-        edges,
+        edges
       );
-      const isValidBooleanSource = effectiveType === "boolean";
+      const isValidBooleanSource = effectiveType === 'boolean';
 
       if (!isValidBooleanSource) {
-        const nodeTypeLabel =
-          booleanNode.type === "if_else" ? "If/Else" : "Boolean operation";
+        const nodeTypeLabel = booleanNode.type === 'if_else' ? 'If/Else' : 'Boolean operation';
         let errorMessage = `${nodeTypeLabel} "${booleanNode.data.identifier.displayName}" can only accept boolean inputs on port "${edge.targetHandle}". Connected from "${sourceNode.data.identifier.displayName}"`;
 
-        if (sourceNode.type === "constants") {
+        if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as {
             valueType?: string;
           };
-          errorMessage += ` which is configured to output ${constantsData.valueType ?? "unknown"} values. Set the Constants node to output boolean values instead.`;
+          errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output boolean values instead.`;
         } else {
           errorMessage += ` which is not inferred as boolean. Only boolean sources are allowed.`;
         }
@@ -258,9 +239,9 @@ export function validateBooleanTypeConnections(
           nodeName: booleanNode.data.identifier.displayName,
           sourceNodeId: sourceNode.data.identifier.id,
           info: {
-            expectedType: "boolean",
+            expectedType: 'boolean',
             actualType:
-              sourceNode.type === "constants"
+              sourceNode.type === 'constants'
                 ? (sourceNode.data as { valueType?: string }).valueType
                 : effectiveType,
           },
@@ -272,30 +253,21 @@ export function validateBooleanTypeConnections(
 
 export function validateNumberTypeConnections(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Validate both math operations and compare nodes - they all require number inputs
-  const mathNodes = nodes.filter(
-    (node) => node.type === "math_op" || node.type === "compare",
-  );
+  const mathNodes = nodes.filter((node) => node.type === 'math_op' || node.type === 'compare');
 
   for (const mathNode of mathNodes) {
     // Safety check for node data
-    if (
-      !mathNode.data?.identifier?.id ||
-      !mathNode.data?.identifier?.displayName
-    ) {
+    if (!mathNode.data?.identifier?.id || !mathNode.data?.identifier?.displayName) {
       continue; // Skip nodes with invalid data structure
     }
 
-    const incomingEdges = edges.filter(
-      (edge) => edge.target === mathNode.data.identifier.id,
-    );
+    const incomingEdges = edges.filter((edge) => edge.target === mathNode.data.identifier.id);
 
     for (const edge of incomingEdges) {
-      const sourceNode = nodes.find(
-        (n) => n.data?.identifier?.id === edge.source,
-      );
+      const sourceNode = nodes.find((n) => n.data?.identifier?.id === edge.source);
       if (!sourceNode?.data?.identifier?.displayName) continue;
 
       // Infer effective logical type, resolving pass-through (e.g., if_else)
@@ -303,20 +275,19 @@ export function validateNumberTypeConnections(
         edge.source,
         edge.sourceHandle!,
         nodes,
-        edges,
+        edges
       );
-      const isValidNumberSource = effectiveType === "number";
+      const isValidNumberSource = effectiveType === 'number';
 
       if (!isValidNumberSource) {
-        const nodeTypeLabel =
-          mathNode.type === "compare" ? "Compare operation" : "Math operation";
+        const nodeTypeLabel = mathNode.type === 'compare' ? 'Compare operation' : 'Math operation';
         let errorMessage = `${nodeTypeLabel} "${mathNode.data.identifier.displayName}" can only accept number inputs. Connected from "${sourceNode.data.identifier.displayName}"`;
 
-        if (sourceNode.type === "constants") {
+        if (sourceNode.type === 'constants') {
           const constantsData = sourceNode.data as unknown as {
             valueType?: string;
           };
-          errorMessage += ` which is configured to output ${constantsData.valueType ?? "unknown"} values. Set the Constants node to output number values instead.`;
+          errorMessage += ` which is configured to output ${constantsData.valueType ?? 'unknown'} values. Set the Constants node to output number values instead.`;
         } else {
           errorMessage += ` which is not inferred as number. Only number sources are allowed.`;
         }
@@ -326,9 +297,9 @@ export function validateNumberTypeConnections(
           nodeName: mathNode.data.identifier.displayName,
           sourceNodeId: sourceNode.data.identifier.id,
           info: {
-            expectedType: "number",
+            expectedType: 'number',
             actualType:
-              sourceNode.type === "constants"
+              sourceNode.type === 'constants'
                 ? (sourceNode.data as { valueType?: string }).valueType
                 : effectiveType,
           },
@@ -339,105 +310,77 @@ export function validateNumberTypeConnections(
 }
 
 // Helper: infer effective logical type of a node's output by tracing upstream
-type LogicalType = "number" | "boolean" | "string" | "color" | "unknown";
+type LogicalType = 'number' | 'boolean' | 'string' | 'color' | 'unknown';
 
 function inferEffectiveLogicalType(
   sourceNodeId: string,
   sourcePortId: string,
   nodes: ReactFlowNode<NodeData>[],
   edges: ReactFlowEdge[],
-  visited: Set<string> = new Set<string>(),
+  visited: Set<string> = new Set<string>()
 ): LogicalType {
   const visitKey = `${sourceNodeId}::${sourcePortId}`;
-  if (visited.has(visitKey)) return "unknown";
+  if (visited.has(visitKey)) return 'unknown';
   visited.add(visitKey);
 
   const node = nodes.find((n) => n.data?.identifier?.id === sourceNodeId);
-  if (!node) return "unknown";
+  if (!node) return 'unknown';
 
   switch (node.type) {
-    case "math_op":
-      return "number";
-    case "compare":
-    case "boolean_op":
-      return "boolean";
-    case "constants": {
+    case 'math_op':
+      return 'number';
+    case 'compare':
+    case 'boolean_op':
+      return 'boolean';
+    case 'constants': {
       const data = node.data as unknown as { valueType?: string };
-      const vt = (data.valueType ?? "unknown") as LogicalType;
-      return vt === "number" ||
-        vt === "boolean" ||
-        vt === "string" ||
-        vt === "color"
+      const vt = (data.valueType ?? 'unknown') as LogicalType;
+      return vt === 'number' || vt === 'boolean' || vt === 'string' || vt === 'color'
         ? vt
-        : "unknown";
+        : 'unknown';
     }
-    case "if_else": {
+    case 'if_else': {
       // Outputs inherit type of 'data' input
-      const incoming = edges.filter(
-        (e) => e.target === sourceNodeId && e.targetHandle === "data",
-      );
-      if (incoming.length !== 1) return "unknown";
+      const incoming = edges.filter((e) => e.target === sourceNodeId && e.targetHandle === 'data');
+      if (incoming.length !== 1) return 'unknown';
       const from = incoming[0];
-      if (!from?.source || !from?.sourceHandle) return "unknown";
-      return inferEffectiveLogicalType(
-        from.source,
-        from.sourceHandle,
-        nodes,
-        edges,
-        visited,
-      );
+      if (!from?.source || !from?.sourceHandle) return 'unknown';
+      return inferEffectiveLogicalType(from.source, from.sourceHandle, nodes, edges, visited);
     }
-    case "merge": {
+    case 'merge': {
       // Homogeneous type pass-through: all inputs must resolve to the same non-unknown type
-      const incoming = edges.filter(
-        (e) => e.target === sourceNodeId && !!e.targetHandle,
-      );
-      if (incoming.length === 0) return "unknown";
+      const incoming = edges.filter((e) => e.target === sourceNodeId && !!e.targetHandle);
+      if (incoming.length === 0) return 'unknown';
       const types = incoming.map((e) =>
         e.source && e.sourceHandle
-          ? inferEffectiveLogicalType(
-              e.source,
-              e.sourceHandle,
-              nodes,
-              edges,
-              visited,
-            )
-          : "unknown",
+          ? inferEffectiveLogicalType(e.source, e.sourceHandle, nodes, edges, visited)
+          : 'unknown'
       );
       const narrowed = types.filter(
-        (t): t is Exclude<LogicalType, "unknown"> =>
-          t === "number" || t === "boolean" || t === "string" || t === "color",
+        (t): t is Exclude<LogicalType, 'unknown'> =>
+          t === 'number' || t === 'boolean' || t === 'string' || t === 'color'
       );
-      if (narrowed.length === 0) return "unknown";
-      const unique = Array.from(
-        new Set<Exclude<LogicalType, "unknown">>(narrowed),
-      );
-      return unique.length === 1 ? (unique[0] as LogicalType) : "unknown";
+      if (narrowed.length === 0) return 'unknown';
+      const unique = Array.from(new Set<Exclude<LogicalType, 'unknown'>>(narrowed));
+      return unique.length === 1 ? (unique[0] as LogicalType) : 'unknown';
     }
     default:
-      return "unknown";
+      return 'unknown';
   }
 }
 
-export function validateProperFlow(
-  nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
-): void {
-  const geometryNodeTypes = getNodesByCategory("geometry").map(
-    (def) => def.type,
-  );
-  const geometryNodes = nodes.filter((n) =>
-    geometryNodeTypes.includes(n.type!),
-  );
+export function validateProperFlow(nodes: ReactFlowNode<NodeData>[], edges: ReactFlowEdge[]): void {
+  const geometryNodeTypes = getNodesByCategory('geometry').map((def) => def.type);
+  const geometryNodes = nodes.filter((n) => geometryNodeTypes.includes(n.type!));
 
   // Find all potential terminus nodes - nodes that can end a flow
-  const outputNodeTypes = getNodesByCategory("output").map((def) => def.type);
-  const logicNodeTypes = getNodesByCategory("logic").map((def) => def.type);
+  const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
+  const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
 
   // Include both output nodes (Scene) and terminal logic nodes (Result)
   const allTerminusTypes = [
     ...outputNodeTypes,
-    ...logicNodeTypes.filter((type) => type === "result"),
+    ...logicNodeTypes.filter((type) => type === 'result'),
   ];
 
   for (const geoNode of geometryNodes) {
@@ -445,35 +388,20 @@ export function validateProperFlow(
       geoNode.data.identifier.id,
       edges,
       nodes,
-      allTerminusTypes,
+      allTerminusTypes
     );
     if (isConnectedToAnyOutput) {
       // Skip Insert requirement if the only reachable output is the 'frame' image node (static image mode)
-      const reachesScene = canReachNodeType(
-        geoNode.data.identifier.id,
-        "scene",
-        edges,
-        nodes,
-      );
-      const reachesFrame = canReachNodeType(
-        geoNode.data.identifier.id,
-        "frame",
-        edges,
-        nodes,
-      );
+      const reachesScene = canReachNodeType(geoNode.data.identifier.id, 'scene', edges, nodes);
+      const reachesFrame = canReachNodeType(geoNode.data.identifier.id, 'frame', edges, nodes);
       const requiresInsert = reachesScene || (!reachesFrame && !reachesScene);
 
       if (requiresInsert) {
-        const canReachInsert = canReachNodeType(
-          geoNode.data.identifier.id,
-          "insert",
-          edges,
-          nodes,
-        );
+        const canReachInsert = canReachNodeType(geoNode.data.identifier.id, 'insert', edges, nodes);
         if (!canReachInsert) {
           throw new MissingInsertConnectionError(
             geoNode.data.identifier.displayName,
-            geoNode.data.identifier.id,
+            geoNode.data.identifier.id
           );
         }
       }
@@ -483,21 +411,19 @@ export function validateProperFlow(
 
 export function validateNoMultipleInsertNodesInSeries(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Find all potential terminus nodes - nodes that can end a flow
-  const outputNodeTypes = getNodesByCategory("output").map((def) => def.type);
-  const logicNodeTypes = getNodesByCategory("logic").map((def) => def.type);
+  const outputNodeTypes = getNodesByCategory('output').map((def) => def.type);
+  const logicNodeTypes = getNodesByCategory('logic').map((def) => def.type);
 
   // Include both output nodes (Scene) and terminal logic nodes (Result)
   const allTerminusTypes = [
     ...outputNodeTypes,
-    ...logicNodeTypes.filter((type) => type === "result"),
+    ...logicNodeTypes.filter((type) => type === 'result'),
   ];
 
-  const terminusNodes = nodes.filter((node) =>
-    allTerminusTypes.includes(node.type!),
-  );
+  const terminusNodes = nodes.filter((node) => allTerminusTypes.includes(node.type!));
 
   // If no terminus nodes, still validate all paths to catch Insert issues
   if (terminusNodes.length === 0) {
@@ -513,13 +439,13 @@ export function validateNoMultipleInsertNodesInSeries(
         startNode.data.identifier.id,
         terminusNode.data.identifier.id,
         edges,
-        nodes,
+        nodes
       );
 
       for (const path of pathsToOutput) {
         const insertNodesInPath = path.filter((nodeId) => {
           const node = nodes.find((n) => n.data.identifier.id === nodeId);
-          return node?.type === "insert";
+          return node?.type === 'insert';
         });
 
         if (insertNodesInPath.length > 1) {
@@ -533,12 +459,9 @@ export function validateNoMultipleInsertNodesInSeries(
               const node = nodes.find((n) => n.data.identifier.id === nodeId);
               return node?.data.identifier.displayName ?? nodeId;
             })
-            .join(" → ");
+            .join(' → ');
 
-          throw new MultipleInsertNodesInSeriesError(
-            insertNodeNames,
-            pathDescription,
-          );
+          throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
         }
       }
     }
@@ -549,7 +472,7 @@ function canReachNodeType(
   startNodeId: string,
   targetNodeType: string,
   edges: ReactFlowEdge[],
-  nodes: ReactFlowNode<NodeData>[],
+  nodes: ReactFlowNode<NodeData>[]
 ): boolean {
   const visited = new Set<string>();
 
@@ -580,7 +503,7 @@ function findAllPathsToNode(
   startNodeId: string,
   targetNodeId: string,
   edges: ReactFlowEdge[],
-  nodes: ReactFlowNode<NodeData>[],
+  nodes: ReactFlowNode<NodeData>[]
 ): string[][] {
   const allPaths: string[][] = [];
   const currentPath: string[] = [];
@@ -614,10 +537,10 @@ function findAllPathsToNode(
 
 function validateInsertConstraintsInAllPaths(
   nodes: ReactFlowNode<NodeData>[],
-  edges: ReactFlowEdge[],
+  edges: ReactFlowEdge[]
 ): void {
   // Find all Insert nodes
-  const insertNodes = nodes.filter((node) => node.type === "insert");
+  const insertNodes = nodes.filter((node) => node.type === 'insert');
   if (insertNodes.length <= 1) return; // No issue if 0 or 1 Insert nodes
 
   // Check all possible paths between nodes to find Insert chains
@@ -629,13 +552,13 @@ function validateInsertConstraintsInAllPaths(
         startNode.data.identifier.id,
         endNode.data.identifier.id,
         edges,
-        nodes,
+        nodes
       );
 
       for (const path of paths) {
         const insertNodesInPath = path.filter((nodeId) => {
           const node = nodes.find((n) => n.data.identifier.id === nodeId);
-          return node?.type === "insert";
+          return node?.type === 'insert';
         });
 
         if (insertNodesInPath.length > 1) {
@@ -649,12 +572,9 @@ function validateInsertConstraintsInAllPaths(
               const node = nodes.find((n) => n.data.identifier.id === nodeId);
               return node?.data.identifier.displayName ?? nodeId;
             })
-            .join(" → ");
+            .join(' → ');
 
-          throw new MultipleInsertNodesInSeriesError(
-            insertNodeNames,
-            pathDescription,
-          );
+          throw new MultipleInsertNodesInSeriesError(insertNodeNames, pathDescription);
         }
       }
     }
@@ -665,7 +585,7 @@ function isNodeConnectedToAnyOutputType(
   nodeId: string,
   edges: ReactFlowEdge[],
   nodes: ReactFlowNode<NodeData>[],
-  outputTypes: string[],
+  outputTypes: string[]
 ): boolean {
   const visited = new Set<string>();
 

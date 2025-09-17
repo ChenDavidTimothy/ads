@@ -1,5 +1,5 @@
 // src/animation/geometry/circle.ts
-import type { Point2D, NodeCanvasContext } from "@/shared/types/core";
+import type { Point2D, NodeCanvasContext } from '@/shared/types/core';
 
 export interface CircleStyle {
   fillColor: string;
@@ -11,7 +11,7 @@ export function drawCircle(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
   center: Point2D,
   radius: number,
-  style: CircleStyle,
+  style: CircleStyle
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;
@@ -30,7 +30,7 @@ export function drawEllipse(
   radiusX: number,
   radiusY: number,
   rotation = 0,
-  style: CircleStyle,
+  style: CircleStyle
 ): void {
   ctx.save();
   ctx.translate(center.x, center.y);
@@ -51,7 +51,7 @@ export function drawArc(
   radius: number,
   startAngle: number,
   endAngle: number,
-  style: CircleStyle,
+  style: CircleStyle
 ): void {
   ctx.save();
   ctx.strokeStyle = style.strokeColor;
@@ -67,7 +67,7 @@ export function drawRing(
   center: Point2D,
   innerRadius: number,
   outerRadius: number,
-  style: CircleStyle,
+  style: CircleStyle
 ): void {
   ctx.save();
   ctx.fillStyle = style.fillColor;

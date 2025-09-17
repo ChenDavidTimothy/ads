@@ -1,21 +1,17 @@
 // src/server/animation-processing/execution-context.ts - Future-proof execution context with ID consistency
-import type {
-  PortType,
-  SceneAnimationTrack,
-  GeometryProperties,
-} from "@/shared/types";
-import type { LogicDataType, TypedValue } from "@/shared/types/validation";
-import { validateAndCoerce } from "@/shared/types/validation";
+import type { PortType, SceneAnimationTrack, GeometryProperties } from '@/shared/types';
+import type { LogicDataType, TypedValue } from '@/shared/types/validation';
+import { validateAndCoerce } from '@/shared/types/validation';
 
 // Expanded data types for future logic nodes
 export type ExecutionDataType =
-  | "object_stream" // Current: geometry objects
-  | "boolean" // true/false for logic nodes
-  | "integer" // numbers for comparisons
-  | "string" // text data
-  | "array" // collections
-  | "trigger" // execution control
-  | "conditional"; // conditional execution paths
+  | 'object_stream' // Current: geometry objects
+  | 'boolean' // true/false for logic nodes
+  | 'integer' // numbers for comparisons
+  | 'string' // text data
+  | 'array' // collections
+  | 'trigger' // execution control
+  | 'conditional'; // conditional execution paths
 
 export interface ExecutionValue {
   type: PortType;
@@ -24,7 +20,7 @@ export interface ExecutionValue {
   portId: string;
   metadata?: {
     timestamp?: number;
-    conditionalPath?: "true" | "false" | "default";
+    conditionalPath?: 'true' | 'false' | 'default';
     priority?: number;
     [key: string]: unknown;
   };
@@ -52,7 +48,7 @@ export interface ExecutionContext {
   currentTime: number;
 
   // Conditional execution tracking (future-ready)
-  conditionalPaths: Map<string, "true" | "false" | "default">;
+  conditionalPaths: Map<string, 'true' | 'false' | 'default'>;
   executionStack: string[]; // For nested conditional execution
 
   // Scene building - per-scene storage to preserve path-specific properties
@@ -60,7 +56,7 @@ export interface ExecutionContext {
     string,
     Array<{
       id: string;
-      type: "triangle" | "circle" | "rectangle" | "text" | "image";
+      type: 'triangle' | 'circle' | 'rectangle' | 'text' | 'image';
       properties: GeometryProperties;
       initialPosition: { x: number; y: number };
       initialRotation?: number;
@@ -85,7 +81,7 @@ export interface ExecutionContext {
   executionLog?: Array<{
     nodeId: string;
     timestamp: number;
-    action: "execute" | "skip" | "branch";
+    action: 'execute' | 'skip' | 'branch';
     data?: unknown;
   }>;
 }
@@ -113,7 +109,7 @@ export function setNodeOutput(
   portId: string,
   type: PortType,
   data: unknown,
-  metadata?: ExecutionValue["metadata"],
+  metadata?: ExecutionValue['metadata']
 ): void {
   const key = `${nodeId}.${portId}`;
   context.nodeOutputs.set(key, {
@@ -132,7 +128,7 @@ export function setNodeOutput(
     context.executionLog.push({
       nodeId,
       timestamp: Date.now(),
-      action: "execute",
+      action: 'execute',
       data,
     });
   }
@@ -141,7 +137,7 @@ export function setNodeOutput(
 export function getNodeOutput(
   context: ExecutionContext,
   nodeId: string,
-  portId: string,
+  portId: string
 ): ExecutionValue | undefined {
   const key = `${nodeId}.${portId}`;
   return context.nodeOutputs.get(key);
@@ -156,11 +152,10 @@ export function getConnectedInput(
     sourceHandle: string;
   }>,
   targetNodeId: string,
-  targetPortId: string,
+  targetPortId: string
 ): ExecutionValue | undefined {
   const connection = connections.find(
-    (conn) =>
-      conn.target === targetNodeId && conn.targetHandle === targetPortId,
+    (conn) => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   if (!connection) return undefined;
   return getNodeOutput(context, connection.source, connection.sourceHandle);
@@ -175,37 +170,28 @@ export function getConnectedInputs(
     sourceHandle: string;
   }>,
   targetNodeId: string,
-  targetPortId: string,
+  targetPortId: string
 ): ExecutionValue[] {
   const matchingConnections = connections.filter(
-    (conn) =>
-      conn.target === targetNodeId && conn.targetHandle === targetPortId,
+    (conn) => conn.target === targetNodeId && conn.targetHandle === targetPortId
   );
   const inputs: ExecutionValue[] = [];
   for (const connection of matchingConnections) {
-    const input = getNodeOutput(
-      context,
-      connection.source,
-      connection.sourceHandle,
-    );
+    const input = getNodeOutput(context, connection.source, connection.sourceHandle);
     if (input) inputs.push(input);
   }
   return inputs;
 }
 
 // Variable management for future logic nodes
-export function setVariable(
-  context: ExecutionContext,
-  name: string,
-  value: unknown,
-): void {
+export function setVariable(context: ExecutionContext, name: string, value: unknown): void {
   context.variables.set(name, value);
 
   if (context.debugMode && context.executionLog) {
     context.executionLog.push({
-      nodeId: "system",
+      nodeId: 'system',
       timestamp: Date.now(),
-      action: "execute",
+      action: 'execute',
       data: { variableSet: name, value },
     });
   }
@@ -215,17 +201,11 @@ export function getVariable(context: ExecutionContext, name: string): unknown {
   return context.variables.get(name);
 }
 
-export function markNodeExecuted(
-  context: ExecutionContext,
-  nodeId: string,
-): void {
+export function markNodeExecuted(context: ExecutionContext, nodeId: string): void {
   context.executedNodes.add(nodeId);
 }
 
-export function isNodeExecuted(
-  context: ExecutionContext,
-  nodeId: string,
-): boolean {
+export function isNodeExecuted(context: ExecutionContext, nodeId: string): boolean {
   return context.executedNodes.has(nodeId);
 }
 
@@ -233,28 +213,23 @@ export function isNodeExecuted(
 export function setConditionalPath(
   context: ExecutionContext,
   nodeId: string,
-  path: "true" | "false" | "default",
+  path: 'true' | 'false' | 'default'
 ): void {
   context.conditionalPaths.set(nodeId, path);
 }
 
 export function getConditionalPath(
   context: ExecutionContext,
-  nodeId: string,
-): "true" | "false" | "default" | undefined {
+  nodeId: string
+): 'true' | 'false' | 'default' | undefined {
   return context.conditionalPaths.get(nodeId);
 }
 
-export function pushExecutionStack(
-  context: ExecutionContext,
-  nodeId: string,
-): void {
+export function pushExecutionStack(context: ExecutionContext, nodeId: string): void {
   context.executionStack.push(nodeId);
 }
 
-export function popExecutionStack(
-  context: ExecutionContext,
-): string | undefined {
+export function popExecutionStack(context: ExecutionContext): string | undefined {
   return context.executionStack.pop();
 }
 
@@ -264,54 +239,42 @@ export function enableDebugMode(context: ExecutionContext): void {
   context.executionLog ??= [];
 }
 
-export function getExecutionLog(
-  context: ExecutionContext,
-): typeof context.executionLog {
+export function getExecutionLog(context: ExecutionContext): typeof context.executionLog {
   return context.executionLog ?? [];
 }
 
 // Future: Type validation for logic nodes
-export function validateExecutionValue(
-  value: unknown,
-  expectedType: ExecutionDataType,
-): boolean {
+export function validateExecutionValue(value: unknown, expectedType: ExecutionDataType): boolean {
   switch (expectedType) {
-    case "boolean":
-      return typeof value === "boolean";
-    case "integer":
-      return typeof value === "number" && Number.isInteger(value);
-    case "string":
-      return typeof value === "string";
-    case "array":
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'integer':
+      return typeof value === 'number' && Number.isInteger(value);
+    case 'string':
+      return typeof value === 'string';
+    case 'array':
       return Array.isArray(value);
-    case "object_stream":
-      return (
-        Array.isArray(value) || (typeof value === "object" && value !== null)
-      );
-    case "trigger":
+    case 'object_stream':
+      return Array.isArray(value) || (typeof value === 'object' && value !== null);
+    case 'trigger':
       return value === true || value === null || value === undefined;
-    case "conditional":
-      return typeof value === "boolean" || typeof value === "string";
+    case 'conditional':
+      return typeof value === 'boolean' || typeof value === 'string';
     default:
       return true; // Unknown types pass through
   }
 }
 
 // Future: Convert execution value to specific type
-export function coerceExecutionValue(
-  value: unknown,
-  targetType: ExecutionDataType,
-): unknown {
+export function coerceExecutionValue(value: unknown, targetType: ExecutionDataType): unknown {
   switch (targetType) {
-    case "boolean":
+    case 'boolean':
       return Boolean(value);
-    case "integer":
-      return typeof value === "number"
-        ? Math.floor(value)
-        : parseInt(String(value), 10);
-    case "string":
+    case 'integer':
+      return typeof value === 'number' ? Math.floor(value) : parseInt(String(value), 10);
+    case 'string':
       return String(value);
-    case "array":
+    case 'array':
       return Array.isArray(value) ? value : [value];
     default:
       return value;
@@ -329,14 +292,9 @@ export function getTypedConnectedInput<T>(
   }>,
   targetNodeId: string,
   targetPortId: string,
-  expectedType: LogicDataType,
+  expectedType: LogicDataType
 ): TypedValue<T> | undefined {
-  const input = getConnectedInput(
-    context,
-    connections,
-    targetNodeId,
-    targetPortId,
-  );
+  const input = getConnectedInput(context, connections, targetNodeId, targetPortId);
   if (!input) return undefined;
 
   return validateAndCoerce<T>(input.data, expectedType, {
@@ -356,20 +314,15 @@ export function getTypedConnectedInputs<T>(
   }>,
   targetNodeId: string,
   targetPortId: string,
-  expectedType: LogicDataType,
+  expectedType: LogicDataType
 ): TypedValue<T>[] {
-  const inputs = getConnectedInputs(
-    context,
-    connections,
-    targetNodeId,
-    targetPortId,
-  );
+  const inputs = getConnectedInputs(context, connections, targetNodeId, targetPortId);
 
   return inputs.map((input) =>
     validateAndCoerce<T>(input.data, expectedType, {
       nodeId: targetNodeId,
       portId: targetPortId,
       sourceNodeId: input.nodeId,
-    }),
+    })
   );
 }

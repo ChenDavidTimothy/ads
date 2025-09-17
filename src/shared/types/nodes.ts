@@ -1,8 +1,8 @@
 // src/shared/types/nodes.ts
-import type { Point2D } from "./core";
-import type { TransformIdentifier, TransformLineage } from "./transforms";
-import type { NodeType } from "./definitions";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import type { Point2D } from './core';
+import type { TransformIdentifier, TransformLineage } from './transforms';
+import type { NodeType } from './definitions';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
 
 // Node identifier system
 export interface NodeIdentifier {
@@ -40,10 +40,7 @@ export interface RectangleNodeData extends BaseNodeData {
   height: number;
 }
 
-export type GeometryNodeData =
-  | TriangleNodeData
-  | CircleNodeData
-  | RectangleNodeData;
+export type GeometryNodeData = TriangleNodeData | CircleNodeData | RectangleNodeData;
 
 // Text node data types
 export interface TextNodeData extends BaseNodeData {
@@ -89,10 +86,7 @@ export interface TypographyNodeData extends BaseNodeData {
   shadowBlur: number;
   textOpacity: number;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  >;
+  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 // Insert node data
@@ -132,7 +126,7 @@ export interface MergeNodeData extends BaseNodeData {
 
 // Constants node data
 export interface ConstantsNodeData extends BaseNodeData {
-  valueType: "number" | "string" | "boolean" | "color";
+  valueType: 'number' | 'string' | 'boolean' | 'color';
   numberValue: number;
   stringValue: string;
   booleanValue: string; // 'true' | 'false' as string from select
@@ -170,7 +164,7 @@ export interface FadeTrackProperties {
 export interface ColorTrackProperties {
   from: string;
   to: string;
-  property: "fill" | "stroke";
+  property: 'fill' | 'stroke';
 }
 
 export interface SlideTrackProperties {
@@ -182,7 +176,7 @@ export interface SlideTrackProperties {
 export interface BaseAnimationTrack {
   startTime: number;
   duration: number;
-  easing: "linear" | "easeInOut" | "easeIn" | "easeOut";
+  easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
   // Required identifier
   identifier: TransformIdentifier;
   lineage?: TransformLineage;
@@ -190,32 +184,32 @@ export interface BaseAnimationTrack {
 
 // Individual track types - now generated from registry
 export interface MoveTrack extends BaseAnimationTrack {
-  type: "move";
+  type: 'move';
   properties: MoveTrackProperties;
 }
 
 export interface RotateTrack extends BaseAnimationTrack {
-  type: "rotate";
+  type: 'rotate';
   properties: RotateTrackProperties;
 }
 
 export interface ScaleTrack extends BaseAnimationTrack {
-  type: "scale";
+  type: 'scale';
   properties: ScaleTrackProperties;
 }
 
 export interface FadeTrack extends BaseAnimationTrack {
-  type: "fade";
+  type: 'fade';
   properties: FadeTrackProperties;
 }
 
 export interface ColorTrack extends BaseAnimationTrack {
-  type: "color";
+  type: 'color';
   properties: ColorTrackProperties;
 }
 
 export interface SlideTrack extends BaseAnimationTrack {
-  type: "slide";
+  type: 'slide';
   properties: SlideTrackProperties;
 }
 
@@ -229,19 +223,17 @@ export type AnimationTrack =
   | SlideTrack;
 
 // Type guard factory - generates type guards dynamically
-export function createTrackTypeGuard<T extends AnimationTrack>(
-  type: T["type"],
-) {
+export function createTrackTypeGuard<T extends AnimationTrack>(type: T['type']) {
   return (track: AnimationTrack): track is T => track.type === type;
 }
 
 // Pre-generated type guards for existing types
-export const isMoveTrack = createTrackTypeGuard<MoveTrack>("move");
-export const isRotateTrack = createTrackTypeGuard<RotateTrack>("rotate");
-export const isScaleTrack = createTrackTypeGuard<ScaleTrack>("scale");
-export const isFadeTrack = createTrackTypeGuard<FadeTrack>("fade");
-export const isColorTrack = createTrackTypeGuard<ColorTrack>("color");
-export const isSlideTrack = createTrackTypeGuard<SlideTrack>("slide");
+export const isMoveTrack = createTrackTypeGuard<MoveTrack>('move');
+export const isRotateTrack = createTrackTypeGuard<RotateTrack>('rotate');
+export const isScaleTrack = createTrackTypeGuard<ScaleTrack>('scale');
+export const isFadeTrack = createTrackTypeGuard<FadeTrack>('fade');
+export const isColorTrack = createTrackTypeGuard<ColorTrack>('color');
+export const isSlideTrack = createTrackTypeGuard<SlideTrack>('slide');
 
 // Animation node data
 export interface AnimationNodeData extends BaseNodeData {
@@ -249,10 +241,7 @@ export interface AnimationNodeData extends BaseNodeData {
   tracks: AnimationTrack[];
   perObjectAssignments?: PerObjectAssignments;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  >;
+  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
   // Node-level variable bindings (defaults) for transform properties
   variableBindings?: Record<
     string,
@@ -316,10 +305,7 @@ export interface CanvasNodeData extends BaseNodeData {
     >
   >;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  >;
+  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 // Frame node data (static image output configuration)
@@ -327,13 +313,13 @@ export interface FrameNodeData extends BaseNodeData {
   width: number;
   height: number;
   backgroundColor: string;
-  format: "png" | "jpeg";
+  format: 'png' | 'jpeg';
   quality: number; // 1-100 for JPEG; ignored for PNG
 }
 
 // Compare node data
 export interface CompareNodeData extends BaseNodeData {
-  operator: "gt" | "lt" | "eq" | "neq" | "gte" | "lte";
+  operator: 'gt' | 'lt' | 'eq' | 'neq' | 'gte' | 'lte';
 }
 
 // If/Else node data
@@ -345,22 +331,22 @@ export interface IfElseNodeData extends BaseNodeData {
 
 // Boolean Operation node data
 export interface BooleanOpNodeData extends BaseNodeData {
-  operator: "and" | "or" | "not" | "xor";
+  operator: 'and' | 'or' | 'not' | 'xor';
 }
 
 // Math Operation node data
 export interface MathOpNodeData extends BaseNodeData {
   operator:
-    | "add"
-    | "subtract"
-    | "multiply"
-    | "divide"
-    | "modulo"
-    | "power"
-    | "sqrt"
-    | "abs"
-    | "min"
-    | "max";
+    | 'add'
+    | 'subtract'
+    | 'multiply'
+    | 'divide'
+    | 'modulo'
+    | 'power'
+    | 'sqrt'
+    | 'abs'
+    | 'min'
+    | 'max';
 }
 
 // Duplicate node data
@@ -402,20 +388,14 @@ export interface MediaNodeData extends BaseNodeData {
   displayHeight: number;
 
   // Binding System Support
-  variableBindings?: Record<
-    string,
-    { target?: string; boundResultNodeId?: string }
-  >;
+  variableBindings?: Record<string, { target?: string; boundResultNodeId?: string }>;
   variableBindingsByObject?: Record<
     string,
     Record<string, { target?: string; boundResultNodeId?: string }>
   >;
   perObjectAssignments?: PerObjectAssignments;
   // Batch overrides: field -> objectId -> batchKey -> value
-  batchOverridesByField?: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  >;
+  batchOverridesByField?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 // Union type for all node data

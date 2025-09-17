@@ -1,7 +1,7 @@
 // src/server/services/service-registry.ts
 // Clean service registry for managing background services
 
-import { cleanupService } from "../storage/cleanup-service";
+import { cleanupService } from '../storage/cleanup-service';
 
 export interface ServiceRegistry {
   initialize(): Promise<void>;
@@ -19,21 +19,21 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
   constructor() {
     // Register services
-    this.services.set("cleanup", cleanupService);
+    this.services.set('cleanup', cleanupService);
   }
 
   private ensureListenersAdded(): void {
     if (this.listenersAdded) return;
 
     // Graceful shutdown handling - only add once per process
-    process.once("SIGINT", () => {
-      console.log("🛑 Received SIGINT - shutting down gracefully...");
+    process.once('SIGINT', () => {
+      console.log('🛑 Received SIGINT - shutting down gracefully...');
       void this.shutdown();
       process.exit(0);
     });
 
-    process.once("SIGTERM", () => {
-      console.log("🛑 Received SIGTERM - shutting down gracefully...");
+    process.once('SIGTERM', () => {
+      console.log('🛑 Received SIGTERM - shutting down gracefully...');
       void this.shutdown();
       process.exit(0);
     });
@@ -43,14 +43,14 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log("✅ Services already initialized - skipping");
+      console.log('✅ Services already initialized - skipping');
       return;
     }
 
     // Ensure event listeners are added (only once per process)
     this.ensureListenersAdded();
 
-    console.log("🚀 Initializing background services...");
+    console.log('🚀 Initializing background services...');
 
     // Start all registered services
     for (const [name, service] of this.services) {
@@ -63,7 +63,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
     }
 
     this.isInitialized = true;
-    console.log("✅ All background services initialized successfully");
+    console.log('✅ All background services initialized successfully');
   }
 
   async shutdown(): Promise<void> {
@@ -71,7 +71,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
       return;
     }
 
-    console.log("🛑 Shutting down background services...");
+    console.log('🛑 Shutting down background services...');
 
     // Stop all registered services
     for (const [name, service] of this.services) {
@@ -84,7 +84,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
     }
 
     this.isInitialized = false;
-    console.log("✅ All background services shut down");
+    console.log('✅ All background services shut down');
   }
 
   getStatus(): Record<string, { isRunning: boolean; status: string }> {
@@ -95,17 +95,17 @@ class ServiceRegistryImpl implements ServiceRegistry {
         const serviceStatus = service.getStatus();
         const isRunning =
           serviceStatus &&
-          typeof serviceStatus === "object" &&
-          "isRunning" in serviceStatus &&
-          typeof serviceStatus.isRunning === "boolean"
+          typeof serviceStatus === 'object' &&
+          'isRunning' in serviceStatus &&
+          typeof serviceStatus.isRunning === 'boolean'
             ? serviceStatus.isRunning
             : false;
         status[name] = {
           isRunning,
-          status: isRunning ? "Running" : "Stopped",
+          status: isRunning ? 'Running' : 'Stopped',
         };
       } catch {
-        status[name] = { isRunning: false, status: "Error" };
+        status[name] = { isRunning: false, status: 'Error' };
       }
     }
 

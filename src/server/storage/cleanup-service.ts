@@ -1,9 +1,9 @@
 // src/server/storage/cleanup-service.ts
-import os from "os";
-import * as fs from "fs";
-import * as path from "path";
-import { createServiceClient } from "@/utils/supabase/service";
-import { StorageCleanupRunner } from "./cleanup-runner";
+import os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
+import { createServiceClient } from '@/utils/supabase/service';
+import { StorageCleanupRunner } from './cleanup-runner';
 
 class CleanupService {
   private cleanupRunner: StorageCleanupRunner | null = null;
@@ -16,16 +16,16 @@ class CleanupService {
 
   constructor() {
     this.processId = `${process.pid}-${Date.now()}`;
-    this.lockFile = path.join(process.cwd(), ".cleanup-service.lock");
+    this.lockFile = path.join(process.cwd(), '.cleanup-service.lock');
   }
 
   private ensureListenersAdded(): void {
     if (this.listenersAdded) return;
 
-    process.once("exit", () => this.releaseLock());
-    process.once("SIGINT", () => this.releaseLock());
-    process.once("SIGTERM", () => this.releaseLock());
-    process.once("SIGUSR2", () => this.releaseLock());
+    process.once('exit', () => this.releaseLock());
+    process.once('SIGINT', () => this.releaseLock());
+    process.once('SIGTERM', () => this.releaseLock());
+    process.once('SIGUSR2', () => this.releaseLock());
 
     this.listenersAdded = true;
   }
@@ -33,16 +33,12 @@ class CleanupService {
   private ensureCleanupRunner(): StorageCleanupRunner {
     if (!this.cleanupRunner) {
       const tempDir =
-        this.cleanupTempDir ??
-        path.join(os.tmpdir(), `storage-${process.pid}-${Date.now()}`);
+        this.cleanupTempDir ?? path.join(os.tmpdir(), `storage-${process.pid}-${Date.now()}`);
 
       try {
         fs.mkdirSync(tempDir, { recursive: true });
       } catch (error) {
-        console.error(
-          "[cleanup-service] Failed to initialize cleanup temp directory:",
-          error,
-        );
+        console.error('[cleanup-service] Failed to initialize cleanup temp directory:', error);
         throw error;
       }
 
@@ -60,8 +56,8 @@ class CleanupService {
   private acquireLock(): boolean {
     try {
       if (fs.existsSync(this.lockFile)) {
-        const lockData = fs.readFileSync(this.lockFile, "utf8");
-        const [lockPid] = lockData.split("-");
+        const lockData = fs.readFileSync(this.lockFile, 'utf8');
+        const [lockPid] = lockData.split('-');
 
         try {
           if (lockPid) {
@@ -70,7 +66,7 @@ class CleanupService {
           }
         } catch {
           console.log(
-            `[cleanup-service] Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`,
+            `[cleanup-service] Previous cleanup service (PID: ${lockPid}) is not running, acquiring lock`
           );
         }
       }
@@ -78,10 +74,7 @@ class CleanupService {
       fs.writeFileSync(this.lockFile, this.processId);
       return true;
     } catch (error) {
-      console.error(
-        "[cleanup-service] Failed to acquire cleanup service lock:",
-        error,
-      );
+      console.error('[cleanup-service] Failed to acquire cleanup service lock:', error);
       return false;
     }
   }
@@ -89,24 +82,21 @@ class CleanupService {
   private releaseLock(): void {
     try {
       if (fs.existsSync(this.lockFile)) {
-        const lockData = fs.readFileSync(this.lockFile, "utf8");
+        const lockData = fs.readFileSync(this.lockFile, 'utf8');
         if (lockData === this.processId) {
           fs.unlinkSync(this.lockFile);
-          console.log("[cleanup-service] Cleanup service lock released");
+          console.log('[cleanup-service] Cleanup service lock released');
         }
       }
     } catch (error) {
-      console.error(
-        "[cleanup-service] Failed to release cleanup service lock:",
-        error,
-      );
+      console.error('[cleanup-service] Failed to release cleanup service lock:', error);
     }
   }
 
   start(): void {
     if (this.isRunning) {
       console.log(
-        "[cleanup-service] Cleanup service is already running - skipping duplicate start",
+        '[cleanup-service] Cleanup service is already running - skipping duplicate start'
       );
       return;
     }
@@ -114,32 +104,30 @@ class CleanupService {
     this.ensureListenersAdded();
 
     if (!this.acquireLock()) {
-      console.log(
-        "[cleanup-service] Another cleanup service is already running - skipping start",
-      );
+      console.log('[cleanup-service] Another cleanup service is already running - skipping start');
       return;
     }
 
-    console.log("[cleanup-service] Starting background cleanup service...");
+    console.log('[cleanup-service] Starting background cleanup service...');
     this.isRunning = true;
 
     this.cleanupInterval = setInterval(
       () => {
         void this.runCleanup();
       },
-      10 * 60 * 1000,
+      10 * 60 * 1000
     );
 
-    console.log("[cleanup-service] Background cleanup service started");
+    console.log('[cleanup-service] Background cleanup service started');
   }
 
   stop(): void {
     if (!this.isRunning) {
-      console.log("[cleanup-service] Cleanup service is not running");
+      console.log('[cleanup-service] Cleanup service is not running');
       return;
     }
 
-    console.log("[cleanup-service] Stopping background cleanup service...");
+    console.log('[cleanup-service] Stopping background cleanup service...');
     this.isRunning = false;
 
     if (this.cleanupInterval) {
@@ -148,22 +136,19 @@ class CleanupService {
     }
 
     this.releaseLock();
-    console.log("[cleanup-service] Background cleanup service stopped");
+    console.log('[cleanup-service] Background cleanup service stopped');
   }
 
   private async runCleanup(): Promise<void> {
     try {
-      console.log("[cleanup-service] Background cleanup cycle starting...");
+      console.log('[cleanup-service] Background cleanup cycle starting...');
 
       const cleanupRunner = this.ensureCleanupRunner();
       await cleanupRunner.performComprehensiveCleanup();
 
-      console.log("[cleanup-service] Background cleanup cycle completed");
+      console.log('[cleanup-service] Background cleanup cycle completed');
     } catch (error) {
-      console.error(
-        "[cleanup-service] Background cleanup cycle failed:",
-        error,
-      );
+      console.error('[cleanup-service] Background cleanup cycle failed:', error);
     }
   }
 

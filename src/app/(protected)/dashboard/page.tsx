@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { api } from "@/trpc/react";
-import { Button } from "@/components/ui/button";
-import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { Input } from "@/components/ui/input";
-import { SelectField } from "@/components/ui/form-fields";
-import { PageHeader } from "@/components/ui/page-header";
-import { cn } from "@/lib/utils";
-import { useNotifications } from "@/hooks/use-notifications";
-import { useWorkspaceOperations } from "@/hooks/use-workspace-operations";
-import type { RouterOutputs } from "@/trpc/react";
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/trpc/react';
+import { Button } from '@/components/ui/button';
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
+import { Input } from '@/components/ui/input';
+import { SelectField } from '@/components/ui/form-fields';
+import { PageHeader } from '@/components/ui/page-header';
+import { cn } from '@/lib/utils';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useWorkspaceOperations } from '@/hooks/use-workspace-operations';
+import type { RouterOutputs } from '@/trpc/react';
 import {
   Plus,
   Search,
@@ -35,9 +35,9 @@ import {
   Archive,
   Eye,
   AlertCircle,
-} from "lucide-react";
+} from 'lucide-react';
 
-type Workspace = RouterOutputs["workspace"]["list"][number];
+type Workspace = RouterOutputs['workspace']['list'][number];
 
 interface WorkspaceTemplate {
   id: string;
@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const createWorkspace = api.workspace.create.useMutation({
     onSuccess: async (ws) => {
       await utils.workspace.list.invalidate();
-      setNewWorkspaceName("");
+      setNewWorkspaceName('');
       setSelectedTemplate(null);
       setShowCreateForm(false);
       router.push(`/workspace?workspace=${ws.id}`);
@@ -78,92 +78,82 @@ export default function DashboardPage() {
   });
 
   // State management
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(
-    null,
-  );
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<WorkspaceTemplate | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedTemplate, setSelectedTemplate] = useState<WorkspaceTemplate | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
   // Rename modal state
   const [showRenameModal, setShowRenameModal] = useState(false);
-  const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(
-    null,
-  );
-  const [renameWorkspaceName, setRenameWorkspaceName] = useState("");
+  const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null);
+  const [renameWorkspaceName, setRenameWorkspaceName] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  const [sortBy, setSortBy] = useState<"name" | "updated" | "created">(
-    "updated",
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<'name' | 'updated' | 'created'>('updated');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Workspace templates
   const workspaceTemplates: WorkspaceTemplate[] = [
     {
-      id: "social-media",
-      name: "Social Media Ad",
-      description: "Perfect for Instagram, Facebook, and TikTok campaigns",
+      id: 'social-media',
+      name: 'Social Media Ad',
+      description: 'Perfect for Instagram, Facebook, and TikTok campaigns',
       icon: <Video className="h-5 w-5" />,
-      category: "marketing",
+      category: 'marketing',
     },
     {
-      id: "product-demo",
-      name: "Product Demo",
-      description: "Showcase your product features and benefits",
+      id: 'product-demo',
+      name: 'Product Demo',
+      description: 'Showcase your product features and benefits',
       icon: <Play className="h-5 w-5" />,
-      category: "sales",
+      category: 'sales',
     },
     {
-      id: "educational",
-      name: "Educational Content",
-      description: "Create tutorials and explainer videos",
+      id: 'educational',
+      name: 'Educational Content',
+      description: 'Create tutorials and explainer videos',
       icon: <Users className="h-5 w-5" />,
-      category: "content",
+      category: 'content',
     },
     {
-      id: "brand-story",
-      name: "Brand Story",
+      id: 'brand-story',
+      name: 'Brand Story',
       description: "Tell your company's story and mission",
       icon: <Star className="h-5 w-5" />,
-      category: "branding",
+      category: 'branding',
     },
     {
-      id: "data-visualization",
-      name: "Data Visualization",
-      description: "Transform data into compelling visual stories",
+      id: 'data-visualization',
+      name: 'Data Visualization',
+      description: 'Transform data into compelling visual stories',
       icon: <TrendingUp className="h-5 w-5" />,
-      category: "analytics",
+      category: 'analytics',
     },
     {
-      id: "custom",
-      name: "Custom Template",
-      description: "Start with a blank canvas",
+      id: 'custom',
+      name: 'Custom Template',
+      description: 'Start with a blank canvas',
       icon: <Plus className="h-5 w-5" />,
-      category: "custom",
+      category: 'custom',
     },
   ];
 
   // Click outside to close menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        showWorkspaceMenu &&
-        !(event.target as Element).closest(".workspace-menu")
-      ) {
+      if (showWorkspaceMenu && !(event.target as Element).closest('.workspace-menu')) {
         setShowWorkspaceMenu(false);
         setSelectedWorkspace(null);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showWorkspaceMenu]);
 
   // Close menu on scroll
@@ -176,8 +166,8 @@ export default function DashboardPage() {
     };
 
     if (showWorkspaceMenu) {
-      window.addEventListener("scroll", handleScroll, true);
-      return () => window.removeEventListener("scroll", handleScroll, true);
+      window.addEventListener('scroll', handleScroll, true);
+      return () => window.removeEventListener('scroll', handleScroll, true);
     }
   }, [showWorkspaceMenu]);
 
@@ -194,35 +184,33 @@ export default function DashboardPage() {
     if (!workspaces) return [];
 
     const allCount = workspaces.length;
-    const recentCount = workspaces.filter((ws) =>
-      isRecent(ws.updated_at),
-    ).length;
+    const recentCount = workspaces.filter((ws) => isRecent(ws.updated_at)).length;
     // Remove status-based filtering since status property doesn't exist
     const activeCount = workspaces.length; // All workspaces are considered active
     const archivedCount = 0; // No archived workspaces in current schema
 
     return [
       {
-        id: "all",
-        name: "All Workspaces",
+        id: 'all',
+        name: 'All Workspaces',
         count: allCount,
         icon: <FolderOpen className="h-4 w-4" />,
       },
       {
-        id: "recent",
-        name: "Recently Updated",
+        id: 'recent',
+        name: 'Recently Updated',
         count: recentCount,
         icon: <Clock className="h-4 w-4" />,
       },
       {
-        id: "active",
-        name: "Active Projects",
+        id: 'active',
+        name: 'Active Projects',
         count: activeCount,
         icon: <Activity className="h-4 w-4" />,
       },
       {
-        id: "archived",
-        name: "Archived",
+        id: 'archived',
+        name: 'Archived',
         count: archivedCount,
         icon: <Archive className="h-4 w-4" />,
       },
@@ -234,14 +222,12 @@ export default function DashboardPage() {
     if (!workspaces) return [];
 
     const filtered = workspaces.filter((ws: Workspace) => {
-      const matchesSearch = ws.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      const matchesSearch = ws.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory =
-        selectedCategory === "all" ||
-        (selectedCategory === "recent" && isRecent(ws.updated_at)) ||
-        (selectedCategory === "active" && true) || // All workspaces are active
-        (selectedCategory === "archived" && false); // No archived workspaces
+        selectedCategory === 'all' ||
+        (selectedCategory === 'recent' && isRecent(ws.updated_at)) ||
+        (selectedCategory === 'active' && true) || // All workspaces are active
+        (selectedCategory === 'archived' && false); // No archived workspaces
 
       return matchesSearch && matchesCategory;
     });
@@ -252,24 +238,24 @@ export default function DashboardPage() {
       let bValue: string | Date;
 
       switch (sortBy) {
-        case "name":
+        case 'name':
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
           break;
-        case "created":
+        case 'created':
           // Use updated_at since created_at doesn't exist in list schema
           aValue = new Date(a.updated_at);
           bValue = new Date(b.updated_at);
           break;
-        case "updated":
+        case 'updated':
         default:
           aValue = new Date(a.updated_at);
           bValue = new Date(b.updated_at);
           break;
       }
 
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -287,7 +273,7 @@ export default function DashboardPage() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffHours < 1) return "Just now";
+    if (diffHours < 1) return 'Just now';
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
@@ -313,36 +299,36 @@ export default function DashboardPage() {
 
   const handleWorkspaceAction = async (action: string, workspaceId: string) => {
     switch (action) {
-      case "open":
+      case 'open':
         router.push(`/workspace?workspace=${workspaceId}`);
         break;
 
-      case "duplicate":
+      case 'duplicate':
         duplicate.mutate(workspaceId);
         break;
 
-      case "delete":
+      case 'delete':
         // Get workspace name for confirmation
         const workspace = workspaces?.find((ws) => ws.id === workspaceId);
-        const workspaceName = workspace?.name ?? "this workspace";
+        const workspaceName = workspace?.name ?? 'this workspace';
 
         if (
           window.confirm(
-            `Are you sure you want to delete "${workspaceName}"?\n\nThis action cannot be undone and all data will be permanently lost.`,
+            `Are you sure you want to delete "${workspaceName}"?\n\nThis action cannot be undone and all data will be permanently lost.`
           )
         ) {
           deleteOp.mutate(workspaceId);
         }
         break;
 
-      case "rename":
+      case 'rename':
         openRenameModal(workspaceId);
         break;
 
-      case "archive":
+      case 'archive':
         // TODO: Implement archive functionality
-        console.log("Archive workspace:", workspaceId);
-        toast.info("Archive functionality coming soon");
+        console.log('Archive workspace:', workspaceId);
+        toast.info('Archive functionality coming soon');
         break;
     }
 
@@ -369,7 +355,7 @@ export default function DashboardPage() {
   const closeRenameModal = () => {
     setShowRenameModal(false);
     setRenameWorkspaceId(null);
-    setRenameWorkspaceName("");
+    setRenameWorkspaceName('');
   };
 
   const handleRenameWorkspace = (e: React.FormEvent) => {
@@ -405,9 +391,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-[var(--text-primary)]">
-            Welcome back
-          </h1>
+          <h1 className="mb-2 text-3xl font-bold text-[var(--text-primary)]">Welcome back</h1>
           <p className="text-[var(--text-secondary)]">
             Manage your animation workspaces and create stunning video content.
           </p>
@@ -430,11 +414,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
+            <Button variant="secondary" onClick={() => refetch()} disabled={isLoading}>
               Refresh
             </Button>
 
@@ -457,7 +437,7 @@ export default function DashboardPage() {
                 size="sm"
                 onClick={() => {
                   setShowCreateForm(false);
-                  setNewWorkspaceName("");
+                  setNewWorkspaceName('');
                   setSelectedTemplate(null);
                 }}
               >
@@ -474,20 +454,14 @@ export default function DashboardPage() {
                 {workspaceTemplates.map((template) => (
                   <Button
                     key={template.id}
-                    variant={
-                      selectedTemplate?.id === template.id ? "primary" : "ghost"
-                    }
+                    variant={selectedTemplate?.id === template.id ? 'primary' : 'ghost'}
                     size="lg"
                     className="h-auto justify-start p-4 text-left"
                     onClick={() => selectTemplate(template)}
                   >
                     <div className="mb-2 flex items-center gap-2">
-                      <div className="text-[var(--accent-primary)]">
-                        {template.icon}
-                      </div>
-                      <div className="font-medium text-[var(--text-primary)]">
-                        {template.name}
-                      </div>
+                      <div className="text-[var(--accent-primary)]">{template.icon}</div>
+                      <div className="font-medium text-[var(--text-primary)]">{template.name}</div>
                     </div>
                     <div className="text-xs text-[var(--text-tertiary)]">
                       {template.description}
@@ -515,7 +489,7 @@ export default function DashboardPage() {
                 {createWorkspace.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Create"
+                  'Create'
                 )}
               </Button>
               <Button
@@ -523,7 +497,7 @@ export default function DashboardPage() {
                 variant="secondary"
                 onClick={() => {
                   setShowCreateForm(false);
-                  setNewWorkspaceName("");
+                  setNewWorkspaceName('');
                   setSelectedTemplate(null);
                 }}
               >
@@ -538,13 +512,13 @@ export default function DashboardPage() {
           {categories.map((category) => (
             <Button
               key={category.id}
-              variant={selectedCategory === category.id ? "primary" : "ghost"}
+              variant={selectedCategory === category.id ? 'primary' : 'ghost'}
               size="sm"
               className={cn(
-                "rounded-none border-b-2",
+                'rounded-none border-b-2',
                 selectedCategory === category.id
-                  ? "border-[var(--accent-primary)]"
-                  : "border-transparent",
+                  ? 'border-[var(--accent-primary)]'
+                  : 'border-transparent'
               )}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -560,17 +534,17 @@ export default function DashboardPage() {
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-2)] p-1">
               <Button
-                variant={viewMode === "grid" ? "primary" : "ghost"}
+                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
                 size="sm"
-                onClick={() => setViewMode("grid")}
+                onClick={() => setViewMode('grid')}
                 className="rounded-md"
               >
                 <Grid className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === "list" ? "primary" : "ghost"}
+                variant={viewMode === 'list' ? 'primary' : 'ghost'}
                 size="sm"
-                onClick={() => setViewMode("list")}
+                onClick={() => setViewMode('list')}
                 className="rounded-md"
               >
                 <List className="h-4 w-4" />
@@ -579,39 +553,33 @@ export default function DashboardPage() {
 
             {/* Sort Controls */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--text-secondary)]">
-                Sort by:
-              </span>
+              <span className="text-sm text-[var(--text-secondary)]">Sort by:</span>
               <div className="w-48">
                 <SelectField
                   label={<span className="sr-only">Sort by</span>}
                   value={sortBy}
-                  onChange={(v) =>
-                    setSortBy(v as "name" | "updated" | "created")
-                  }
+                  onChange={(v) => setSortBy(v as 'name' | 'updated' | 'created')}
                   options={[
-                    { value: "updated", label: "Last Updated" },
-                    { value: "created", label: "Date Created" },
-                    { value: "name", label: "Name" },
+                    { value: 'updated', label: 'Last Updated' },
+                    { value: 'created', label: 'Date Created' },
+                    { value: 'name', label: 'Name' },
                   ]}
                   required={false}
                   className="!space-y-0"
                 />
               </div>
               <button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 className="cursor-pointer rounded p-1 transition-colors hover:bg-[var(--surface-interactive)]"
               >
-                {sortOrder === "asc" ? "↑" : "↓"}
+                {sortOrder === 'asc' ? '↑' : '↓'}
               </button>
             </div>
           </div>
 
           <div className="text-sm text-[var(--text-tertiary)]">
             {filteredWorkspaces.length} workspace
-            {filteredWorkspaces.length !== 1 ? "s" : ""}
+            {filteredWorkspaces.length !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -620,9 +588,7 @@ export default function DashboardPage() {
           <div className="py-12 text-center">
             <div className="inline-block rounded-lg border border-[var(--danger-500)]/20 bg-[var(--danger-500)]/10 p-6">
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[var(--danger-500)]" />
-              <p className="mb-4 font-medium text-[var(--danger-500)]">
-                Failed to load workspaces
-              </p>
+              <p className="mb-4 font-medium text-[var(--danger-500)]">Failed to load workspaces</p>
               <Button onClick={() => refetch()} variant="secondary">
                 Try Again
               </Button>
@@ -630,7 +596,7 @@ export default function DashboardPage() {
           </div>
         ) : filteredWorkspaces.length === 0 ? (
           <div className="py-12 text-center">
-            {searchQuery || selectedCategory !== "all" ? (
+            {searchQuery || selectedCategory !== 'all' ? (
               <div className="inline-block rounded-lg border border-[var(--border-primary)] bg-[var(--surface-1)] p-8">
                 <Search className="mx-auto mb-4 h-12 w-12 text-[var(--text-tertiary)]" />
                 <h3 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">
@@ -641,8 +607,8 @@ export default function DashboardPage() {
                 </p>
                 <Button
                   onClick={() => {
-                    setSearchQuery("");
-                    setSelectedCategory("all");
+                    setSearchQuery('');
+                    setSelectedCategory('all');
                   }}
                   variant="secondary"
                 >
@@ -658,10 +624,7 @@ export default function DashboardPage() {
                 <p className="mb-4 text-[var(--text-secondary)]">
                   Create your first workspace to start building animations.
                 </p>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowCreateForm(true)}
-                >
+                <Button variant="primary" onClick={() => setShowCreateForm(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Workspace
                 </Button>
@@ -671,81 +634,67 @@ export default function DashboardPage() {
         ) : (
           <div>
             {/* Recent Workspaces */}
-            {!searchQuery &&
-              selectedCategory === "all" &&
-              recentWorkspaces.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
-                    Recent Workspaces
-                  </h2>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    {recentWorkspaces.map((workspace) => (
-                      <div
-                        key={workspace.id}
-                        className="group cursor-pointer rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm transition-all hover:border-[var(--accent-primary)]"
-                        onClick={() =>
-                          router.push(`/workspace?workspace=${workspace.id}`)
-                        }
-                      >
-                        <div className="mb-4 flex items-start justify-between">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            className="h-10 w-10 rounded-lg p-0"
-                          >
-                            <Play className="h-5 w-5" />
-                          </Button>
-                          <button
-                            className="cursor-pointer rounded p-1 opacity-100 hover:bg-[var(--surface-2)]"
-                            onClick={(e) => openWorkspaceMenu(e, workspace.id)}
-                          >
-                            <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
-                          </button>
-                        </div>
-
-                        <h3 className="mb-2 font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-primary)]">
-                          {workspace.name}
-                        </h3>
-
-                        <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDate(workspace.updated_at)}
-                          </div>
-                          {/* Removed video_count and size as they don't exist */}
-                        </div>
+            {!searchQuery && selectedCategory === 'all' && recentWorkspaces.length > 0 && (
+              <div className="mb-8">
+                <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
+                  Recent Workspaces
+                </h2>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  {recentWorkspaces.map((workspace) => (
+                    <div
+                      key={workspace.id}
+                      className="group cursor-pointer rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm transition-all hover:border-[var(--accent-primary)]"
+                      onClick={() => router.push(`/workspace?workspace=${workspace.id}`)}
+                    >
+                      <div className="mb-4 flex items-start justify-between">
+                        <Button variant="primary" size="sm" className="h-10 w-10 rounded-lg p-0">
+                          <Play className="h-5 w-5" />
+                        </Button>
+                        <button
+                          className="cursor-pointer rounded p-1 opacity-100 hover:bg-[var(--surface-2)]"
+                          onClick={(e) => openWorkspaceMenu(e, workspace.id)}
+                        >
+                          <MoreVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
+                        </button>
                       </div>
-                    ))}
-                  </div>
+
+                      <h3 className="mb-2 font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-primary)]">
+                        {workspace.name}
+                      </h3>
+
+                      <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDate(workspace.updated_at)}
+                        </div>
+                        {/* Removed video_count and size as they don't exist */}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
             {/* All Workspaces */}
             <div>
               <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
                 {searchQuery
                   ? `Search Results (${filteredWorkspaces.length})`
-                  : selectedCategory !== "all"
+                  : selectedCategory !== 'all'
                     ? `${categories.find((c) => c.id === selectedCategory)?.name} (${filteredWorkspaces.length})`
-                    : "All Workspaces"}
+                    : 'All Workspaces'}
               </h2>
 
-              {viewMode === "grid" ? (
+              {viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {filteredWorkspaces.map((workspace) => (
                     <div
                       key={workspace.id}
                       className="group cursor-pointer rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm transition-all hover:border-[var(--accent-primary)]"
-                      onClick={() =>
-                        router.push(`/workspace?workspace=${workspace.id}`)
-                      }
+                      onClick={() => router.push(`/workspace?workspace=${workspace.id}`)}
                     >
                       <div className="mb-4 flex items-start justify-between">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="h-10 w-10 rounded-lg p-0"
-                        >
+                        <Button variant="primary" size="sm" className="h-10 w-10 rounded-lg p-0">
                           <Play className="h-5 w-5" />
                         </Button>
                         <button
@@ -777,12 +726,10 @@ export default function DashboardPage() {
                       key={workspace.id}
                       className={`group flex cursor-pointer items-center justify-between p-4 transition-colors hover:bg-[var(--surface-interactive)] ${
                         index !== filteredWorkspaces.length - 1
-                          ? "border-b border-[var(--border-primary)]"
-                          : ""
+                          ? 'border-b border-[var(--border-primary)]'
+                          : ''
                       }`}
-                      onClick={() =>
-                        router.push(`/workspace?workspace=${workspace.id}`)
-                      }
+                      onClick={() => router.push(`/workspace?workspace=${workspace.id}`)}
                     >
                       <div className="flex flex-1 items-center gap-4">
                         <Button
@@ -840,15 +787,8 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-6 backdrop-blur-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                Rename Workspace
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closeRenameModal}
-                className="h-8 w-8 p-0"
-              >
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Rename Workspace</h3>
+              <Button variant="ghost" size="sm" onClick={closeRenameModal} className="h-8 w-8 p-0">
                 ×
               </Button>
             </div>
@@ -883,9 +823,7 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    !renameWorkspaceName.trim() || rename.result.isLoading
-                  }
+                  disabled={!renameWorkspaceName.trim() || rename.result.isLoading}
                   className="flex-1"
                 >
                   {rename.result.isLoading ? (
@@ -894,7 +832,7 @@ export default function DashboardPage() {
                       Renaming...
                     </>
                   ) : (
-                    "Rename"
+                    'Rename'
                   )}
                 </Button>
               </div>
@@ -910,21 +848,19 @@ export default function DashboardPage() {
           style={{
             left: menuPosition.x,
             top: menuPosition.y,
-            transform: "translate(-50%, 10px)",
+            transform: 'translate(-50%, 10px)',
           }}
         >
           <div className="py-2">
             <button
-              onClick={() => handleWorkspaceAction("open", selectedWorkspace)}
+              onClick={() => handleWorkspaceAction('open', selectedWorkspace)}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Eye className="h-4 w-4" />
               Open
             </button>
             <button
-              onClick={() =>
-                handleWorkspaceAction("duplicate", selectedWorkspace)
-              }
+              onClick={() => handleWorkspaceAction('duplicate', selectedWorkspace)}
               disabled={duplicate.result.isLoading}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -933,10 +869,10 @@ export default function DashboardPage() {
               ) : (
                 <Copy className="h-4 w-4" />
               )}
-              {duplicate.result.isLoading ? "Duplicating..." : "Duplicate"}
+              {duplicate.result.isLoading ? 'Duplicating...' : 'Duplicate'}
             </button>
             <button
-              onClick={() => handleWorkspaceAction("rename", selectedWorkspace)}
+              onClick={() => handleWorkspaceAction('rename', selectedWorkspace)}
               disabled={rename.result.isLoading}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -945,19 +881,17 @@ export default function DashboardPage() {
               ) : (
                 <Edit3 className="h-4 w-4" />
               )}
-              {rename.result.isLoading ? "Renaming..." : "Rename"}
+              {rename.result.isLoading ? 'Renaming...' : 'Rename'}
             </button>
             <button
-              onClick={() => handleWorkspaceAction("share", selectedWorkspace)}
+              onClick={() => handleWorkspaceAction('share', selectedWorkspace)}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Share2 className="h-4 w-4" />
               Share
             </button>
             <button
-              onClick={() =>
-                handleWorkspaceAction("download", selectedWorkspace)
-              }
+              onClick={() => handleWorkspaceAction('download', selectedWorkspace)}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Download className="h-4 w-4" />
@@ -965,16 +899,14 @@ export default function DashboardPage() {
             </button>
             <div className="my-1 border-t border-[var(--border-primary)]"></div>
             <button
-              onClick={() =>
-                handleWorkspaceAction("archive", selectedWorkspace)
-              }
+              onClick={() => handleWorkspaceAction('archive', selectedWorkspace)}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)]"
             >
               <Archive className="h-4 w-4" />
               Archive
             </button>
             <button
-              onClick={() => handleWorkspaceAction("delete", selectedWorkspace)}
+              onClick={() => handleWorkspaceAction('delete', selectedWorkspace)}
               disabled={deleteOp.result.isLoading}
               className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -983,7 +915,7 @@ export default function DashboardPage() {
               ) : (
                 <Trash2 className="h-4 w-4" />
               )}
-              {deleteOp.result.isLoading ? "Deleting..." : "Delete"}
+              {deleteOp.result.isLoading ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         </div>

@@ -1,30 +1,27 @@
 // src/components/workspace/nodes/frame-node.tsx
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { FrameNodeData } from "@/shared/types/nodes";
-import { Image as ImageIcon } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { FrameNodeData } from '@/shared/types/nodes';
+import { Image as ImageIcon } from 'lucide-react';
 
 export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
-  const nodeDefinition = getNodeDefinition("frame");
+  const nodeDefinition = getNodeDefinition('frame');
 
   const getResolutionLabel = (width: number, height: number) => {
-    if (width === 1920 && height === 1080) return "FHD";
-    if (width === 1280 && height === 720) return "HD";
-    if (width === 3840 && height === 2160) return "4K";
-    if (width === 1080 && height === 1080) return "Square";
-    return "Custom";
+    if (width === 1920 && height === 1080) return 'FHD';
+    if (width === 1280 && height === 720) return 'HD';
+    if (width === 3840 && height === 2160) return '4K';
+    if (width === 1080 && height === 1080) return 'Square';
+    return 'Custom';
   };
 
-  const handleClass = "bg-[var(--node-output)]";
+  const handleClass = 'bg-[var(--node-output)]';
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       {nodeDefinition?.ports.inputs.map((port) => (
         <Handle
           key={port.id}
@@ -53,8 +50,8 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
         <div className="flex items-center justify-between">
           <span>Resolution:</span>
           <span className="font-medium text-[var(--text-primary)]">
-            {getResolutionLabel(data.width || 1920, data.height || 1080)} (
-            {data.width || 1920}×{data.height || 1080})
+            {getResolutionLabel(data.width || 1920, data.height || 1080)} ({data.width || 1920}×
+            {data.height || 1080})
           </span>
         </div>
 
@@ -63,10 +60,10 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
           <div className="flex items-center gap-[var(--space-2)]">
             <div
               className="h-4 w-4 rounded border border-[var(--border-primary)]"
-              style={{ backgroundColor: data.backgroundColor || "#000000" }}
+              style={{ backgroundColor: data.backgroundColor || '#000000' }}
             />
             <span className="text-xs font-medium text-[var(--text-primary)]">
-              {data.backgroundColor?.toUpperCase() || "#000000"}
+              {data.backgroundColor?.toUpperCase() || '#000000'}
             </span>
           </div>
         </div>
@@ -74,16 +71,14 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
         <div className="flex items-center justify-between">
           <span>Format:</span>
           <span className="font-medium text-[var(--text-primary)] uppercase">
-            {data.format || "png"}
+            {data.format || 'png'}
           </span>
         </div>
 
-        {(data.format || "png") === "jpeg" && (
+        {(data.format || 'png') === 'jpeg' && (
           <div className="flex items-center justify-between">
             <span>Quality:</span>
-            <span className="font-medium text-[var(--text-primary)]">
-              {data.quality || 90}
-            </span>
+            <span className="font-medium text-[var(--text-primary)]">{data.quality || 90}</span>
           </div>
         )}
 

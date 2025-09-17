@@ -1,31 +1,29 @@
-import { Client } from "pg";
-import { pgPool } from "@/server/db/pool";
-import { logger } from "@/lib/logger";
+import { Client } from 'pg';
+import { pgPool } from '@/server/db/pool';
+import { logger } from '@/lib/logger';
 
 // Event types for different notification channels
 export interface RenderJobEventPayload {
   jobId: string;
-  status: "completed" | "failed";
+  status: 'completed' | 'failed';
   publicUrl?: string;
   error?: string;
 }
 
 // Type guard for RenderJobEventPayload
-function isValidRenderJobEventPayload(
-  payload: unknown,
-): payload is RenderJobEventPayload {
-  if (typeof payload !== "object" || payload === null) return false;
+function isValidRenderJobEventPayload(payload: unknown): payload is RenderJobEventPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
   const obj = payload as Record<string, unknown>;
   return (
-    typeof obj.jobId === "string" &&
-    (obj.status === "completed" || obj.status === "failed") &&
-    (obj.publicUrl === undefined || typeof obj.publicUrl === "string") &&
-    (obj.error === undefined || typeof obj.error === "string")
+    typeof obj.jobId === 'string' &&
+    (obj.status === 'completed' || obj.status === 'failed') &&
+    (obj.publicUrl === undefined || typeof obj.publicUrl === 'string') &&
+    (obj.error === undefined || typeof obj.error === 'string')
   );
 }
 
 // Notification channels
-const RENDER_COMPLETION_CHANNEL = "render_job_events";
+const RENDER_COMPLETION_CHANNEL = 'render_job_events';
 
 // Handler types
 type RenderJobEventHandler = (payload: RenderJobEventPayload) => void;
@@ -44,7 +42,7 @@ const renderJobHandlers: RenderJobEventHandler[] = [];
 function createPgClient(): Client {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set");
+    throw new Error('DATABASE_URL is not set');
   }
   return new Client({ connectionString });
 }
@@ -52,7 +50,7 @@ function createPgClient(): Client {
 // Robust connection with automatic reconnection
 async function connectListener(): Promise<void> {
   if (listenerConnected) return listenerConnected;
-  if (isShuttingDown) throw new Error("Event system is shutting down");
+  if (isShuttingDown) throw new Error('Event system is shutting down');
 
   listenerConnected = (async () => {
     try {
@@ -71,21 +69,21 @@ async function connectListener(): Promise<void> {
       listenerClient = createPgClient();
 
       // Enhanced error handling for production reliability
-      listenerClient.on("error", (err) => {
-        logger.errorWithStack("PostgreSQL listener connection error", err);
+      listenerClient.on('error', (err) => {
+        logger.errorWithStack('PostgreSQL listener connection error', err);
         scheduleReconnect();
       });
 
-      listenerClient.on("end", () => {
+      listenerClient.on('end', () => {
         if (!isShuttingDown) {
-          logger.warn("PostgreSQL listener connection ended unexpectedly");
+          logger.warn('PostgreSQL listener connection ended unexpectedly');
           scheduleReconnect();
         }
       });
 
-      listenerClient.on("notice", (notice) => {
-        if (process.env.PG_EVENTS_DEBUG === "1") {
-          logger.info("PostgreSQL notice", { notice: notice.message });
+      listenerClient.on('notice', (notice) => {
+        if (process.env.PG_EVENTS_DEBUG === '1') {
+          logger.info('PostgreSQL notice', { notice: notice.message });
         }
       });
 
@@ -95,7 +93,7 @@ async function connectListener(): Promise<void> {
       await listenerClient.query(`LISTEN ${RENDER_COMPLETION_CHANNEL}`);
 
       // Set up notification handler
-      listenerClient.on("notification", (msg) => {
+      listenerClient.on('notification', (msg) => {
         try {
           if (!msg.payload) return;
 
@@ -106,20 +104,20 @@ async function connectListener(): Promise<void> {
               if (isValidRenderJobEventPayload(payload)) {
                 handleRenderJobEvent(payload);
               } else {
-                logger.warn("Invalid render job event payload received", {
+                logger.warn('Invalid render job event payload received', {
                   payload,
                 });
               }
               break;
             default:
-              if (process.env.PG_EVENTS_DEBUG === "1") {
-                logger.info("Unknown notification channel", {
+              if (process.env.PG_EVENTS_DEBUG === '1') {
+                logger.info('Unknown notification channel', {
                   channel: msg.channel,
                 });
               }
           }
         } catch (error) {
-          logger.errorWithStack("Error processing notification", error, {
+          logger.errorWithStack('Error processing notification', error, {
             channel: msg.channel,
             payload: msg.payload,
           });
@@ -132,20 +130,20 @@ async function connectListener(): Promise<void> {
         // Use void to explicitly ignore the promise
         void (async () => {
           try {
-            await listenerClient.query("SELECT 1");
+            await listenerClient.query('SELECT 1');
           } catch (err) {
-            logger.errorWithStack("PostgreSQL listener ping failed", err);
+            logger.errorWithStack('PostgreSQL listener ping failed', err);
             scheduleReconnect();
           }
         })();
       }, 15000);
 
-      logger.info("PostgreSQL event listener connected and subscribed", {
+      logger.info('PostgreSQL event listener connected and subscribed', {
         channels: [RENDER_COMPLETION_CHANNEL],
       });
     } catch (error) {
       listenerConnected = null;
-      logger.errorWithStack("Failed to connect PostgreSQL listener", error);
+      logger.errorWithStack('Failed to connect PostgreSQL listener', error);
       scheduleReconnect();
       throw error;
     }
@@ -160,14 +158,11 @@ function scheduleReconnect(): void {
 
   listenerConnected = null;
 
-  const baseDelay = Math.min(
-    1000 * Math.pow(2, Math.floor(Math.random() * 5)),
-    30000,
-  );
+  const baseDelay = Math.min(1000 * Math.pow(2, Math.floor(Math.random() * 5)), 30000);
   const jitter = Math.random() * 1000; // Add up to 1s jitter
   const delay = baseDelay + jitter;
 
-  logger.info("Scheduling PostgreSQL listener reconnection", {
+  logger.info('Scheduling PostgreSQL listener reconnection', {
     delayMs: Math.round(delay),
   });
 
@@ -175,7 +170,7 @@ function scheduleReconnect(): void {
     reconnectTimer = null;
     if (!isShuttingDown) {
       connectListener().catch((error) => {
-        logger.errorWithStack("Reconnection failed", error);
+        logger.errorWithStack('Reconnection failed', error);
       });
     }
   }, delay);
@@ -183,15 +178,15 @@ function scheduleReconnect(): void {
 
 // Event handlers
 function handleRenderJobEvent(payload: RenderJobEventPayload): void {
-  if (process.env.PG_EVENTS_DEBUG === "1") {
-    logger.info("Render job event received", { payload });
+  if (process.env.PG_EVENTS_DEBUG === '1') {
+    logger.info('Render job event received', { payload });
   }
 
   for (const handler of renderJobHandlers) {
     try {
       handler(payload);
     } catch (error) {
-      logger.errorWithStack("Error in render job event handler", error, {
+      logger.errorWithStack('Error in render job event handler', error, {
         payload,
       });
     }
@@ -199,9 +194,7 @@ function handleRenderJobEvent(payload: RenderJobEventPayload): void {
 }
 
 // Public API for subscribing to render job completion events
-export async function listenRenderJobEvents(
-  handler: RenderJobEventHandler,
-): Promise<void> {
+export async function listenRenderJobEvents(handler: RenderJobEventHandler): Promise<void> {
   await connectListener();
   renderJobHandlers.push(handler);
 }
@@ -239,7 +232,7 @@ export async function waitForRenderJobEvent(params: {
       resolve(null);
     }, timeoutMs);
 
-    if (typeof process !== "undefined") {
+    if (typeof process !== 'undefined') {
       const onExit = () => {
         if (settled) return;
         settled = true;
@@ -251,28 +244,23 @@ export async function waitForRenderJobEvent(params: {
         resolve(null);
       };
 
-      process.once("SIGINT", onExit);
-      process.once("SIGTERM", onExit);
+      process.once('SIGINT', onExit);
+      process.once('SIGTERM', onExit);
     }
   });
 }
 
 // Publish render job completion events
-export async function notifyRenderJobEvent(
-  payload: RenderJobEventPayload,
-): Promise<void> {
+export async function notifyRenderJobEvent(payload: RenderJobEventPayload): Promise<void> {
   try {
     const text = JSON.stringify(payload);
-    await pgPool.query("SELECT pg_notify($1, $2)", [
-      RENDER_COMPLETION_CHANNEL,
-      text,
-    ]);
+    await pgPool.query('SELECT pg_notify($1, $2)', [RENDER_COMPLETION_CHANNEL, text]);
 
-    if (process.env.PG_EVENTS_DEBUG === "1") {
-      logger.info("Render job event published", { payload });
+    if (process.env.PG_EVENTS_DEBUG === '1') {
+      logger.info('Render job event published', { payload });
     }
   } catch (error) {
-    logger.errorWithStack("Failed to publish render job event", error, {
+    logger.errorWithStack('Failed to publish render job event', error, {
       payload,
     });
     throw error;
@@ -294,7 +282,7 @@ export async function checkEventSystemHealth(): Promise<{
   // Check listener connection
   try {
     if (listenerClient && listenerConnected) {
-      await listenerClient.query("SELECT 1");
+      await listenerClient.query('SELECT 1');
       health.listenerConnected = true;
       health.subscribedChannels = [RENDER_COMPLETION_CHANNEL];
     }
@@ -304,7 +292,7 @@ export async function checkEventSystemHealth(): Promise<{
 
   // Check publisher connection (via pool)
   try {
-    await pgPool.query("SELECT 1");
+    await pgPool.query('SELECT 1');
     health.publisherConnected = true;
   } catch {
     health.publisherConnected = false;
@@ -334,11 +322,11 @@ export async function shutdownPgEvents(): Promise<void> {
       await listenerClient.end();
     }
   } catch (error) {
-    logger.errorWithStack("Error closing listener client", error);
+    logger.errorWithStack('Error closing listener client', error);
   } finally {
     listenerClient = null;
     listenerConnected = null;
   }
 
-  logger.info("PostgreSQL event system shutdown complete");
+  logger.info('PostgreSQL event system shutdown complete');
 }

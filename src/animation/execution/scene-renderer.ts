@@ -1,9 +1,5 @@
 // src/animation/execution/scene-renderer.ts
-import type {
-  NodeCanvasContext,
-  Point2D,
-  Transform,
-} from "@/shared/types/core";
+import type { NodeCanvasContext, Point2D, Transform } from '@/shared/types/core';
 import type {
   AnimationScene,
   SceneObject,
@@ -13,16 +9,16 @@ import type {
   RectangleProperties,
   ImageProperties,
   TextProperties,
-} from "@/shared/types/scene";
-import { Timeline } from "../scene/timeline";
-import { drawTriangle, type TriangleStyle } from "../geometry/triangle";
-import { drawCircle, type CircleStyle } from "../geometry/circle";
-import { drawRectangle, type RectangleStyle } from "../geometry/rectangle";
-import { drawText, type Typography } from "../geometry/text";
-import { loadImage, type Image } from "canvas";
+} from '@/shared/types/scene';
+import { Timeline } from '../scene/timeline';
+import { drawTriangle, type TriangleStyle } from '../geometry/triangle';
+import { drawCircle, type CircleStyle } from '../geometry/circle';
+import { drawRectangle, type RectangleStyle } from '../geometry/rectangle';
+import { drawText, type Typography } from '../geometry/text';
+import { loadImage, type Image } from 'canvas';
 // ADD this import after the existing canvas import
-import { withTimeout } from "@/server/utils/timeout-utils";
-import { logger } from "@/lib/logger";
+import { withTimeout } from '@/server/utils/timeout-utils';
+import { logger } from '@/lib/logger';
 
 /**
  * Extract a concise identifier from an image URL for logging purposes
@@ -31,19 +27,16 @@ import { logger } from "@/lib/logger";
 function getImageIdentifier(url: string): string {
   try {
     // Try to extract filename from URL path
-    const urlPath = url?.split("?")[0]; // Remove query params
-    if (!urlPath) return "unknown";
+    const urlPath = url?.split('?')[0]; // Remove query params
+    if (!urlPath) return 'unknown';
 
-    const filename = urlPath.split("/").pop();
-    if (filename?.includes(".")) {
+    const filename = urlPath.split('/').pop();
+    if (filename?.includes('.')) {
       return filename;
     }
 
     // Fallback: extract UUID from path if present
-    const uuidMatch =
-      /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/.exec(
-        urlPath,
-      );
+    const uuidMatch = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/.exec(urlPath);
     if (uuidMatch) {
       return uuidMatch[0].substring(0, 8); // First 8 chars of UUID
     }
@@ -57,34 +50,28 @@ function getImageIdentifier(url: string): string {
     }
     return Math.abs(hash).toString(16);
   } catch {
-    return "unknown";
+    return 'unknown';
   }
 }
 
 function applyTranslation(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  translation: Point2D,
+  translation: Point2D
 ): void {
   ctx.translate(Math.round(translation.x), Math.round(translation.y));
 }
 
-function applyRotation(
-  ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  rotation: number,
-): void {
+function applyRotation(ctx: NodeCanvasContext | CanvasRenderingContext2D, rotation: number): void {
   ctx.rotate(rotation);
 }
 
-function applyScale(
-  ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  scale: Point2D,
-): void {
+function applyScale(ctx: NodeCanvasContext | CanvasRenderingContext2D, scale: Point2D): void {
   ctx.scale(scale.x, scale.y);
 }
 
 function applyTransform(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
-  transform: Transform,
+  transform: Transform
 ): void {
   applyTranslation(ctx, transform.translate);
   applyRotation(ctx, transform.rotate);
@@ -94,7 +81,7 @@ function applyTransform(
 function saveAndTransform(
   ctx: NodeCanvasContext | CanvasRenderingContext2D,
   transform: Transform,
-  drawCallback: () => void | Promise<void>,
+  drawCallback: () => void | Promise<void>
 ): void | Promise<void> {
   ctx.save();
   applyTransform(ctx, transform);
@@ -134,7 +121,7 @@ export class SceneRenderer {
     try {
       this.preloadPromise = this.preloadImages();
     } catch (error) {
-      console.error("[SCENE RENDERER] Preload initialization failed:", error);
+      console.error('[SCENE RENDERER] Preload initialization failed:', error);
       // Create a resolved promise so renderFrame doesn't hang
       this.preloadPromise = Promise.resolve();
     }
@@ -146,7 +133,7 @@ export class SceneRenderer {
       try {
         await this.preloadPromise;
       } catch (error) {
-        console.error("[SCENE RENDERER] Preload failed during render:", error);
+        console.error('[SCENE RENDERER] Preload failed during render:', error);
       }
       this.preloadPromise = null;
     }
@@ -172,7 +159,7 @@ export class SceneRenderer {
     ctx: NodeCanvasContext,
     object: SceneObject,
     state: ObjectState,
-    time: number,
+    time: number
   ): Promise<void> {
     const transform = {
       translate: state.position,
@@ -186,30 +173,18 @@ export class SceneRenderer {
 
     const result = saveAndTransform(ctx, transform, () => {
       switch (object.type) {
-        case "triangle":
-          this.renderTriangle(
-            ctx,
-            object.properties as TriangleProperties,
-            state,
-          );
+        case 'triangle':
+          this.renderTriangle(ctx, object.properties as TriangleProperties, state);
           break;
-        case "circle":
+        case 'circle':
           this.renderCircle(ctx, object.properties as CircleProperties, state);
           break;
-        case "rectangle":
-          this.renderRectangle(
-            ctx,
-            object.properties as RectangleProperties,
-            state,
-          );
+        case 'rectangle':
+          this.renderRectangle(ctx, object.properties as RectangleProperties, state);
           break;
-        case "image":
-          return this.renderImage(
-            ctx,
-            object.properties as ImageProperties,
-            state,
-          );
-        case "text":
+        case 'image':
+          return this.renderImage(ctx, object.properties as ImageProperties, state);
+        case 'text':
           this.renderText(ctx, object, state, time);
           break;
       }
@@ -225,29 +200,24 @@ export class SceneRenderer {
   }
 
   // Determine if a color animation exists for a specific property on an object
-  private hasColorAnimationFor(
-    objectId: string,
-    property: "fill" | "stroke",
-  ): boolean {
+  private hasColorAnimationFor(objectId: string, property: 'fill' | 'stroke'): boolean {
     return this.scene.animations.some(
       (a) =>
         a.objectId === objectId &&
-        a.type === "color" &&
-        (a as unknown as { properties?: { property?: string } }).properties
-          ?.property === property,
+        a.type === 'color' &&
+        (a as unknown as { properties?: { property?: string } }).properties?.property === property
     );
   }
 
   // Get the earliest start time for a color animation on a property
   private getEarliestColorAnimationStart(
     objectId: string,
-    property: "fill" | "stroke",
+    property: 'fill' | 'stroke'
   ): number | null {
     let earliest: number | null = null;
     for (const a of this.scene.animations) {
-      if (a.objectId !== objectId || a.type !== "color") continue;
-      const prop = (a as unknown as { properties?: { property?: string } })
-        .properties?.property;
+      if (a.objectId !== objectId || a.type !== 'color') continue;
+      const prop = (a as unknown as { properties?: { property?: string } }).properties?.property;
       if (prop !== property) continue;
       if (earliest == null || a.startTime < earliest) earliest = a.startTime;
     }
@@ -257,12 +227,12 @@ export class SceneRenderer {
   private renderTriangle(
     ctx: NodeCanvasContext,
     props: TriangleProperties,
-    state: ObjectState,
+    state: ObjectState
   ): void {
     const style: TriangleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeColor: state.colors.stroke ?? '#ffffff',
       strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
@@ -270,15 +240,11 @@ export class SceneRenderer {
     drawTriangle(ctx, { x: 0, y: 0 }, props.size, 0, style);
   }
 
-  private renderCircle(
-    ctx: NodeCanvasContext,
-    props: CircleProperties,
-    state: ObjectState,
-  ): void {
+  private renderCircle(ctx: NodeCanvasContext, props: CircleProperties, state: ObjectState): void {
     const style: CircleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeColor: state.colors.stroke ?? '#ffffff',
       strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
@@ -288,12 +254,12 @@ export class SceneRenderer {
   private renderRectangle(
     ctx: NodeCanvasContext,
     props: RectangleProperties,
-    state: ObjectState,
+    state: ObjectState
   ): void {
     const style: RectangleStyle = {
       fillColor: state.colors.fill,
       // Canvas/Animation must provide these - no fallback to props
-      strokeColor: state.colors.stroke ?? "#ffffff",
+      strokeColor: state.colors.stroke ?? '#ffffff',
       strokeWidth: state.strokeWidth, // ✅ CHANGE - Use ObjectState instead of hardcode
     };
 
@@ -303,7 +269,7 @@ export class SceneRenderer {
       { x: -props.width / 2, y: -props.height / 2 },
       props.width,
       props.height,
-      style,
+      style
     );
   }
 
@@ -313,7 +279,7 @@ export class SceneRenderer {
 
     // Collect all image URLs
     for (const object of this.scene.objects) {
-      if (object.type === "image") {
+      if (object.type === 'image') {
         const props = object.properties as ImageProperties;
         if (props.imageUrl) {
           imageUrls.add(props.imageUrl);
@@ -322,12 +288,12 @@ export class SceneRenderer {
           // Objects without assetId are intentionally unconfigured and should preload silently
           if (props.assetId) {
             logger.warn(
-              `[PRELOAD] Missing imageUrl for asset ${props.assetId} - cache resolution failed, will render placeholder`,
+              `[PRELOAD] Missing imageUrl for asset ${props.assetId} - cache resolution failed, will render placeholder`
             );
           } else {
             // Object has no assetId - this is intentional (unconfigured media node)
             logger.debug(
-              `[PRELOAD] Object has no assetId configured - skipping preload, will render placeholder`,
+              `[PRELOAD] Object has no assetId configured - skipping preload, will render placeholder`
             );
           }
         }
@@ -347,14 +313,12 @@ export class SceneRenderer {
         const img = await withTimeout(
           loadImage(imageUrl),
           30000,
-          `Image preload timeout for: ${imageUrl}`,
+          `Image preload timeout for: ${imageUrl}`
         );
         this.loadedImages.set(imageUrl, img);
         return { success: true, url: imageUrl };
       } catch (error) {
-        logger.warn(
-          `[PRELOAD] Failed to load ${getImageIdentifier(imageUrl)}: ${String(error)}`,
-        );
+        logger.warn(`[PRELOAD] Failed to load ${getImageIdentifier(imageUrl)}: ${String(error)}`);
         return { success: false, url: imageUrl, error };
       }
     });
@@ -362,49 +326,37 @@ export class SceneRenderer {
     // Use Promise.allSettled so failures don't break scene creation
     const results = await Promise.allSettled(loadPromises);
 
-    const successful = results.filter(
-      (r) => r.status === "fulfilled" && r.value?.success,
-    ).length;
-    const failed = results.filter(
-      (r) => r.status === "fulfilled" && !r.value?.success,
-    ).length;
+    const successful = results.filter((r) => r.status === 'fulfilled' && r.value?.success).length;
+    const failed = results.filter((r) => r.status === 'fulfilled' && !r.value?.success).length;
 
-    logger.info(
-      `[PRELOAD] Image preload completed - ${successful} successful, ${failed} failed`,
-    );
+    logger.info(`[PRELOAD] Image preload completed - ${successful} successful, ${failed} failed`);
 
     // Scene can proceed even if some images failed to preload
     if (failed > 0) {
-      logger.warn(
-        `[PRELOAD] ${failed} images failed to preload, but scene will continue`,
-      );
+      logger.warn(`[PRELOAD] ${failed} images failed to preload, but scene will continue`);
     }
   }
 
   private async renderImage(
     ctx: NodeCanvasContext,
     props: ImageProperties,
-    _state: ObjectState,
+    _state: ObjectState
   ): Promise<void> {
     if (!props.imageUrl) {
       // Only warn if object has an assetId but no imageUrl (cache resolution failed)
       // Objects without assetId are intentionally unconfigured and should render placeholders silently
       if (props.assetId) {
         logger.warn(
-          `[RENDER] Missing imageUrl for asset ${props.assetId} - cache resolution failed, rendering placeholder`,
+          `[RENDER] Missing imageUrl for asset ${props.assetId} - cache resolution failed, rendering placeholder`
         );
       } else {
         // Object has no assetId - this is intentional (unconfigured media node)
         logger.debug(
-          `[RENDER] Object has no assetId configured - rendering placeholder as expected`,
+          `[RENDER] Object has no assetId configured - rendering placeholder as expected`
         );
       }
 
-      this.drawImagePlaceholder(
-        ctx,
-        props.displayWidth ?? 100,
-        props.displayHeight ?? 100,
-      );
+      this.drawImagePlaceholder(ctx, props.displayWidth ?? 100, props.displayHeight ?? 100);
       return;
     }
 
@@ -412,13 +364,9 @@ export class SceneRenderer {
 
     if (!img) {
       logger.warn(
-        `[RENDER] Image not preloaded: ${getImageIdentifier(props.imageUrl)} - rendering placeholder`,
+        `[RENDER] Image not preloaded: ${getImageIdentifier(props.imageUrl)} - rendering placeholder`
       );
-      this.drawImagePlaceholder(
-        ctx,
-        props.displayWidth ?? 100,
-        props.displayHeight ?? 100,
-      );
+      this.drawImagePlaceholder(ctx, props.displayWidth ?? 100, props.displayHeight ?? 100);
       return;
     }
 
@@ -432,20 +380,12 @@ export class SceneRenderer {
     // Existing crop/display logic (unchanged)
     const srcX = props.cropX ?? 0;
     const srcY = props.cropY ?? 0;
-    const srcWidth =
-      props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
-    const srcHeight =
-      props.cropHeight && props.cropHeight !== 0
-        ? props.cropHeight
-        : img.height;
+    const srcWidth = props.cropWidth && props.cropWidth !== 0 ? props.cropWidth : img.width;
+    const srcHeight = props.cropHeight && props.cropHeight !== 0 ? props.cropHeight : img.height;
     const destWidth =
-      props.displayWidth && props.displayWidth !== 0
-        ? props.displayWidth
-        : srcWidth;
+      props.displayWidth && props.displayWidth !== 0 ? props.displayWidth : srcWidth;
     const destHeight =
-      props.displayHeight && props.displayHeight !== 0
-        ? props.displayHeight
-        : srcHeight;
+      props.displayHeight && props.displayHeight !== 0 ? props.displayHeight : srcHeight;
 
     ctx.drawImage(
       img,
@@ -456,35 +396,31 @@ export class SceneRenderer {
       -destWidth / 2,
       -destHeight / 2,
       destWidth,
-      destHeight,
+      destHeight
     );
   }
 
-  private drawImagePlaceholder(
-    ctx: NodeCanvasContext,
-    width: number,
-    height: number,
-  ): void {
+  private drawImagePlaceholder(ctx: NodeCanvasContext, width: number, height: number): void {
     // Draw placeholder rectangle
-    ctx.fillStyle = "#cccccc";
-    ctx.strokeStyle = "#999999";
+    ctx.fillStyle = '#cccccc';
+    ctx.strokeStyle = '#999999';
     ctx.lineWidth = 2;
     ctx.fillRect(-width / 2, -height / 2, width, height);
     ctx.strokeRect(-width / 2, -height / 2, width, height);
 
     // Add text to indicate it's a placeholder
-    ctx.fillStyle = "#666666";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("IMAGE PLACEHOLDER", 0, 0);
+    ctx.fillStyle = '#666666';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('IMAGE PLACEHOLDER', 0, 0);
   }
 
   private renderText(
     ctx: NodeCanvasContext,
     object: SceneObject,
     state: ObjectState,
-    time: number,
+    time: number
   ): void {
     const props = object.properties as TextProperties;
     const typography = object.typography; // Applied by Typography node
@@ -492,33 +428,31 @@ export class SceneRenderer {
     // Determine per-property precedence for colors:
     // - Before first color animation starts: use Typography color if provided
     // - From the first color animation start onward: use animated state color (persists after end)
-    const hasFillAnim = this.hasColorAnimationFor(object.id, "fill");
-    const hasStrokeAnim = this.hasColorAnimationFor(object.id, "stroke");
+    const hasFillAnim = this.hasColorAnimationFor(object.id, 'fill');
+    const hasStrokeAnim = this.hasColorAnimationFor(object.id, 'stroke');
     const earliestFillStart = hasFillAnim
-      ? this.getEarliestColorAnimationStart(object.id, "fill")
+      ? this.getEarliestColorAnimationStart(object.id, 'fill')
       : null;
     const earliestStrokeStart = hasStrokeAnim
-      ? this.getEarliestColorAnimationStart(object.id, "stroke")
+      ? this.getEarliestColorAnimationStart(object.id, 'stroke')
       : null;
 
-    const useAnimatedFill =
-      earliestFillStart != null ? time >= earliestFillStart : false;
-    const useAnimatedStroke =
-      earliestStrokeStart != null ? time >= earliestStrokeStart : false;
+    const useAnimatedFill = earliestFillStart != null ? time >= earliestFillStart : false;
+    const useAnimatedStroke = earliestStrokeStart != null ? time >= earliestStrokeStart : false;
 
     const resolvedFillColor = useAnimatedFill
       ? state.colors.fill
       : (typography?.fillColor ?? state.colors.fill);
     const resolvedStrokeColor = useAnimatedStroke
       ? state.colors.stroke
-      : (typography?.strokeColor ?? state.colors.stroke ?? "#ffffff");
+      : (typography?.strokeColor ?? state.colors.stroke ?? '#ffffff');
 
     const style: Typography = {
       // Typography Core (FROM TYPOGRAPHY) - Keep unchanged
-      fontFamily: typography?.fontFamily ?? "Arial",
+      fontFamily: typography?.fontFamily ?? 'Arial',
       fontSize: props.fontSize, // Always use Text node fontSize
-      fontWeight: typography?.fontWeight ?? "normal",
-      fontStyle: typography?.fontStyle ?? "normal",
+      fontWeight: typography?.fontWeight ?? 'normal',
+      fontStyle: typography?.fontStyle ?? 'normal',
       // Colors with animation-aware precedence
       fillColor: resolvedFillColor,
       strokeColor: resolvedStrokeColor,
@@ -526,12 +460,7 @@ export class SceneRenderer {
     };
 
     // Cast to CanvasRenderingContext2D for text rendering
-    drawText(
-      ctx as unknown as CanvasRenderingContext2D,
-      { x: 0, y: 0 },
-      props.content,
-      style,
-    );
+    drawText(ctx as unknown as CanvasRenderingContext2D, { x: 0, y: 0 }, props.content, style);
   }
 
   // ✅ CLEANUP: Clear preloaded images
@@ -551,7 +480,7 @@ export function createSimpleScene(duration: number): AnimationScene {
     objects: [],
     animations: [],
     background: {
-      color: "#000000",
+      color: '#000000',
     },
   };
 }
@@ -561,11 +490,11 @@ export function addTriangleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  size: number,
+  size: number
 ): void {
   scene.objects.push({
     id,
-    type: "triangle",
+    type: 'triangle',
     properties: {
       size,
     },
@@ -580,11 +509,11 @@ export function addCircleToScene(
   scene: AnimationScene,
   id: string,
   position: Point2D,
-  radius: number,
+  radius: number
 ): void {
   scene.objects.push({
     id,
-    type: "circle",
+    type: 'circle',
     properties: {
       radius,
     },
@@ -600,11 +529,11 @@ export function addRectangleToScene(
   id: string,
   position: Point2D,
   width: number,
-  height: number,
+  height: number
 ): void {
   scene.objects.push({
     id,
-    type: "rectangle",
+    type: 'rectangle',
     properties: {
       width,
       height,

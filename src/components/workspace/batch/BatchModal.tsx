@@ -1,68 +1,63 @@
-"use client";
+'use client';
 
-import React, { useMemo, useState } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useBatchOverrides } from "@/hooks/use-batch-overrides";
-import { useBatchKeysForField } from "@/hooks/use-batch-keys";
-import {
-  NumberField,
-  ColorField,
-  TextareaField,
-  TextField,
-} from "@/components/ui/form-fields";
-import { AssetSelectionModal } from "@/components/workspace/media/asset-selection-modal";
-import { api } from "@/trpc/react";
-import { RobustImage } from "@/components/ui/robust-image";
+import React, { useMemo, useState } from 'react';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useBatchOverrides } from '@/hooks/use-batch-overrides';
+import { useBatchKeysForField } from '@/hooks/use-batch-keys';
+import { NumberField, ColorField, TextareaField, TextField } from '@/components/ui/form-fields';
+import { AssetSelectionModal } from '@/components/workspace/media/asset-selection-modal';
+import { api } from '@/trpc/react';
+import { RobustImage } from '@/components/ui/robust-image';
 
-type ValueType = "number" | "string";
+type ValueType = 'number' | 'string';
 
-type FieldKind = "media-asset" | "color" | "textarea" | "number" | "string";
+type FieldKind = 'media-asset' | 'color' | 'textarea' | 'number' | 'string';
 
 function classifyField(fieldPath: string, fallback: ValueType): FieldKind {
   // Media asset id
-  if (fieldPath === "Media.imageAssetId") return "media-asset";
+  if (fieldPath === 'Media.imageAssetId') return 'media-asset';
 
   // Colors (Canvas, Typography, and Timeline)
   const colorFields = new Set([
-    "Canvas.fillColor",
-    "Canvas.strokeColor",
-    "Typography.fillColor",
-    "Typography.strokeColor",
-    "Timeline.color.from",
-    "Timeline.color.to",
+    'Canvas.fillColor',
+    'Canvas.strokeColor',
+    'Typography.fillColor',
+    'Typography.strokeColor',
+    'Timeline.color.from',
+    'Timeline.color.to',
   ]);
-  if (colorFields.has(fieldPath)) return "color";
+  if (colorFields.has(fieldPath)) return 'color';
 
   // Typography content
-  if (fieldPath === "Typography.content") return "textarea";
+  if (fieldPath === 'Typography.content') return 'textarea';
 
   // Numeric fields across editors
   const numberFields = new Set([
     // Canvas
-    "Canvas.position.x",
-    "Canvas.position.y",
-    "Canvas.scale.x",
-    "Canvas.scale.y",
-    "Canvas.rotation",
-    "Canvas.opacity",
-    "Canvas.strokeWidth",
+    'Canvas.position.x',
+    'Canvas.position.y',
+    'Canvas.scale.x',
+    'Canvas.scale.y',
+    'Canvas.rotation',
+    'Canvas.opacity',
+    'Canvas.strokeWidth',
     // Typography
-    "Typography.fontSize",
-    "Typography.strokeWidth",
+    'Typography.fontSize',
+    'Typography.strokeWidth',
     // Media
-    "Media.cropX",
-    "Media.cropY",
-    "Media.cropWidth",
-    "Media.cropHeight",
-    "Media.displayWidth",
-    "Media.displayHeight",
+    'Media.cropX',
+    'Media.cropY',
+    'Media.cropWidth',
+    'Media.cropHeight',
+    'Media.displayWidth',
+    'Media.displayHeight',
   ]);
-  if (numberFields.has(fieldPath)) return "number";
+  if (numberFields.has(fieldPath)) return 'number';
 
   // Fallback to provided valueType
-  return fallback === "number" ? "number" : "string";
+  return fallback === 'number' ? 'number' : 'string';
 }
 
 function AssetThumb({ assetId }: { assetId?: string }) {
@@ -70,13 +65,12 @@ function AssetThumb({ assetId }: { assetId?: string }) {
     {
       limit: 100,
       offset: 0,
-      bucketName: "images",
+      bucketName: 'images',
     },
     {
       enabled: !!assetId,
-      select: (response) =>
-        response.assets.find((asset) => asset.id === assetId),
-    },
+      select: (response) => response.assets.find((asset) => asset.id === assetId),
+    }
   );
 
   if (!assetId) {
@@ -129,12 +123,15 @@ export function BatchModal({
   objectId?: string;
   valueType: ValueType;
 }) {
-  const { data, setPerObjectDefault, setPerKeyOverride, clearOverride } =
-    useBatchOverrides(nodeId, fieldPath, objectId);
+  const { data, setPerObjectDefault, setPerKeyOverride, clearOverride } = useBatchOverrides(
+    nodeId,
+    fieldPath,
+    objectId
+  );
   const { keys } = useBatchKeysForField(nodeId, fieldPath, objectId);
   const kind = classifyField(fieldPath, valueType);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const filteredKeys = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return keys;
@@ -149,7 +146,7 @@ export function BatchModal({
 
   // Media asset picker state
   const [assetPicker, setAssetPicker] = useState<
-    { scope: "default" } | { scope: "key"; key: string } | null
+    { scope: 'default' } | { scope: 'key'; key: string } | null
   >(null);
 
   return (
@@ -157,8 +154,7 @@ export function BatchModal({
       <div className="p-[var(--space-4)]">
         <div className="mb-[var(--space-3)] flex items-center justify-between gap-[var(--space-2)]">
           <div className="text-sm text-[var(--text-secondary)]">
-            Field:{" "}
-            <span className="text-[var(--text-primary)]">{fieldPath}</span>
+            Field: <span className="text-[var(--text-primary)]">{fieldPath}</span>
           </div>
           <input
             className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs"
@@ -175,9 +171,8 @@ export function BatchModal({
             </div>
             {(() => {
               switch (kind) {
-                case "media-asset": {
-                  const assetId =
-                    (data.perObjectDefault as string | undefined) ?? "";
+                case 'media-asset': {
+                  const assetId = (data.perObjectDefault as string | undefined) ?? '';
                   return (
                     <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2">
                       <div className="flex items-center gap-[var(--space-2)]">
@@ -186,100 +181,78 @@ export function BatchModal({
                         <Button
                           variant="secondary"
                           size="xs"
-                          onClick={() => setAssetPicker({ scope: "default" })}
+                          onClick={() => setAssetPicker({ scope: 'default' })}
                         >
-                          {assetId ? "Change Image" : "Select Image"}
+                          {assetId ? 'Change Image' : 'Select Image'}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => clearOverride()}
-                        >
+                        <Button variant="ghost" size="xs" onClick={() => clearOverride()}>
                           Clear
                         </Button>
                       </div>
                     </div>
                   );
                 }
-                case "color": {
+                case 'color': {
                   return (
                     <div className="flex items-center gap-[var(--space-2)]">
                       <ColorField
                         label="Value"
-                        value={(data.perObjectDefault as string) || "#000000"}
+                        value={(data.perObjectDefault as string) || '#000000'}
                         onChange={(v) => setPerObjectDefault(v)}
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => clearOverride()}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
                         Clear
                       </Button>
                     </div>
                   );
                 }
-                case "textarea": {
+                case 'textarea': {
                   return (
                     <div className="space-y-[var(--space-1)]">
                       <TextareaField
                         label="Value"
-                        value={(data.perObjectDefault as string) || ""}
+                        value={(data.perObjectDefault as string) || ''}
                         onChange={(v) => setPerObjectDefault(v)}
                         rows={4}
                       />
                       <div className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => clearOverride()}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
                           Clear
                         </Button>
                       </div>
                     </div>
                   );
                 }
-                case "number": {
+                case 'number': {
                   return (
                     <div className="flex items-center gap-[var(--space-2)]">
                       <NumberField
                         label="Value"
                         value={
-                          typeof data.perObjectDefault === "number"
+                          typeof data.perObjectDefault === 'number'
                             ? data.perObjectDefault
                             : undefined
                         }
                         onChange={(n) => setPerObjectDefault(n)}
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => clearOverride()}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
                         Clear
                       </Button>
                     </div>
                   );
                 }
-                case "string":
+                case 'string':
                 default: {
                   return (
                     <div className="flex items-center gap-[var(--space-2)]">
                       <TextField
                         label="Value"
                         value={
-                          typeof data.perObjectDefault === "string"
-                            ? data.perObjectDefault
-                            : ""
+                          typeof data.perObjectDefault === 'string' ? data.perObjectDefault : ''
                         }
                         onChange={(v) => setPerObjectDefault(v)}
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => clearOverride()}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => clearOverride()}>
                         Clear
                       </Button>
                     </div>
@@ -293,9 +266,7 @@ export function BatchModal({
             </div>
             <div className="max-h-64 overflow-auto border border-[var(--border-primary)]">
               {filteredKeys.length === 0 ? (
-                <div className="p-2 text-xs text-[var(--text-tertiary)]">
-                  No keys match.
-                </div>
+                <div className="p-2 text-xs text-[var(--text-tertiary)]">No keys match.</div>
               ) : (
                 filteredKeys.map((k) => {
                   const current = data.perKeyOverrides[k];
@@ -304,57 +275,40 @@ export function BatchModal({
                       key={k}
                       className="flex items-center justify-between gap-[var(--space-2)] border-b border-[var(--border-primary)] p-2 last:border-b-0"
                     >
-                      <div className="text-xs text-[var(--text-secondary)]">
-                        {k}
-                      </div>
+                      <div className="text-xs text-[var(--text-secondary)]">{k}</div>
                       <div className="flex items-center gap-[var(--space-2)]">
-                        {kind === "media-asset" ? (
+                        {kind === 'media-asset' ? (
                           <>
-                            <AssetThumb
-                              assetId={(current as string | undefined) ?? ""}
-                            />
+                            <AssetThumb assetId={(current as string | undefined) ?? ''} />
                             <Button
                               variant="secondary"
                               size="xs"
-                              onClick={() =>
-                                setAssetPicker({ scope: "key", key: k })
-                              }
+                              onClick={() => setAssetPicker({ scope: 'key', key: k })}
                             >
-                              {(current as string | undefined)
-                                ? "Change"
-                                : "Select"}
+                              {(current as string | undefined) ? 'Change' : 'Select'}
                             </Button>
                           </>
-                        ) : kind === "color" ? (
+                        ) : kind === 'color' ? (
                           <input
                             type="color"
-                            value={
-                              typeof current === "string" && current
-                                ? current
-                                : "#000000"
-                            }
-                            onChange={(e) =>
-                              setPerKeyOverride(k, e.target.value)
-                            }
+                            value={typeof current === 'string' && current ? current : '#000000'}
+                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
                             className="h-8 w-10 cursor-pointer rounded border border-[var(--border-primary)] bg-[var(--surface-2)]"
                           />
-                        ) : kind === "textarea" ? (
+                        ) : kind === 'textarea' ? (
                           <textarea
-                            value={typeof current === "string" ? current : ""}
-                            onChange={(e) =>
-                              setPerKeyOverride(k, e.target.value)
-                            }
+                            value={typeof current === 'string' ? current : ''}
+                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
                             rows={2}
                             className="min-w-[180px] resize-y rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-2 py-1 text-xs"
                           />
-                        ) : kind === "number" ? (
+                        ) : kind === 'number' ? (
                           <Input
                             type="number"
                             value={
-                              typeof current === "number" ||
-                              typeof current === "string"
+                              typeof current === 'number' || typeof current === 'string'
                                 ? String(current)
-                                : ""
+                                : ''
                             }
                             onChange={(e) => {
                               const n = Number(e.target.value);
@@ -364,17 +318,11 @@ export function BatchModal({
                           />
                         ) : (
                           <Input
-                            value={typeof current === "string" ? current : ""}
-                            onChange={(e) =>
-                              setPerKeyOverride(k, e.target.value)
-                            }
+                            value={typeof current === 'string' ? current : ''}
+                            onChange={(e) => setPerKeyOverride(k, e.target.value)}
                           />
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => clearOverride(k)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => clearOverride(k)}>
                           Clear
                         </Button>
                       </div>
@@ -387,8 +335,8 @@ export function BatchModal({
 
           <div className="space-y-[var(--space-2)]">
             <div className="text-xs text-[var(--text-tertiary)]">
-              Overrides apply only when the field is not bound for the target
-              object. Bound fields take precedence per resolver.
+              Overrides apply only when the field is not bound for the target object. Bound fields
+              take precedence per resolver.
             </div>
             <div className="text-xs text-[var(--text-tertiary)]">
               Changes are saved immediately.
@@ -397,15 +345,11 @@ export function BatchModal({
               <div className="rounded border border-[var(--warning-600)] bg-[var(--warning-950)] p-2 text-xs text-[var(--warning-300)]">
                 <div className="mb-1 font-semibold">Orphaned overrides</div>
                 <div className="mb-2">
-                  {orphaned.length} key{orphaned.length > 1 ? "s" : ""} no
-                  longer present upstream
+                  {orphaned.length} key{orphaned.length > 1 ? 's' : ''} no longer present upstream
                 </div>
                 <div className="flex flex-wrap gap-[var(--space-1)]">
                   {orphaned.slice(0, 6).map((k) => (
-                    <span
-                      key={k}
-                      className="rounded bg-[var(--warning-800)] px-1 py-0.5"
-                    >
+                    <span key={k} className="rounded bg-[var(--warning-800)] px-1 py-0.5">
                       {k}
                     </span>
                   ))}
@@ -432,23 +376,21 @@ export function BatchModal({
         </div>
 
         {/* Media asset selection modal */}
-        {kind === "media-asset" && assetPicker ? (
+        {kind === 'media-asset' && assetPicker ? (
           <AssetSelectionModal
             isOpen={true}
             onClose={() => setAssetPicker(null)}
             onSelect={(asset) => {
-              if (assetPicker.scope === "default") {
+              if (assetPicker.scope === 'default') {
                 setPerObjectDefault(asset.id);
-              } else if (assetPicker.scope === "key") {
+              } else if (assetPicker.scope === 'key') {
                 setPerKeyOverride(assetPicker.key, asset.id);
               }
               setAssetPicker(null);
             }}
             selectedAssetId={(() => {
-              if (assetPicker.scope === "default") {
-                return (
-                  (data.perObjectDefault as string | undefined) ?? undefined
-                );
+              if (assetPicker.scope === 'default') {
+                return (data.perObjectDefault as string | undefined) ?? undefined;
               }
               const cur = data.perKeyOverrides[assetPicker.key];
               return (cur as string | undefined) ?? undefined;

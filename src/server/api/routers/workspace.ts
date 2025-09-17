@@ -1,37 +1,30 @@
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Workspace operation utilities
 const generateUniqueWorkspaceName = async (
   supabase: SupabaseClient,
   userId: string,
   baseName: string,
-  copyPrefix = "Copy of ",
+  copyPrefix = 'Copy of '
 ): Promise<string> => {
   // If it's already a copy, don't add another prefix
-  const newName = baseName.startsWith(copyPrefix)
-    ? baseName
-    : `${copyPrefix}${baseName}`;
+  const newName = baseName.startsWith(copyPrefix) ? baseName : `${copyPrefix}${baseName}`;
 
   // Get all existing workspace names for this user
   const { data: existingWorkspaces, error } = await supabase
-    .from("workspaces")
-    .select("name")
-    .eq("user_id", userId);
+    .from('workspaces')
+    .select('name')
+    .eq('user_id', userId);
 
   if (error) {
-    console.warn(
-      "[WorkspaceRouter] Could not check for name conflicts:",
-      error,
-    );
+    console.warn('[WorkspaceRouter] Could not check for name conflicts:', error);
     return newName; // Fall back to generated name
   }
 
-  const existingNames = new Set(
-    existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? [],
-  );
+  const existingNames = new Set(existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? []);
 
   // If the generated name doesn't conflict, use it
   if (!existingNames.has(newName)) {
@@ -58,19 +51,19 @@ const generateUniqueWorkspaceName = async (
 const validateWorkspaceAccess = async (
   supabase: SupabaseClient,
   workspaceId: string,
-  userId: string,
+  userId: string
 ) => {
   const { data, error } = await supabase
-    .from("workspaces")
-    .select("id, name")
-    .eq("id", workspaceId)
-    .eq("user_id", userId)
+    .from('workspaces')
+    .select('id, name')
+    .eq('id', workspaceId)
+    .eq('user_id', userId)
     .single();
 
   if (error || !data) {
     throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Workspace not found or access denied.",
+      code: 'NOT_FOUND',
+      message: 'Workspace not found or access denied.',
       cause: error,
     });
   }
@@ -117,10 +110,10 @@ export const workspaceRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
     const { supabase, user } = ctx;
     const { data, error } = await supabase
-      .from("workspaces")
-      .select("id, name, updated_at")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
+      .from('workspaces')
+      .select('id, name, updated_at')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
     if (error) throw error;
     return workspaceListRowSchema.array().parse(data);
   }),
@@ -130,32 +123,28 @@ export const workspaceRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
       const { data, error } = await supabase
-        .from("workspaces")
-        .select("id, name, flow_data, version, updated_at, created_at")
-        .eq("id", input.id)
-        .eq("user_id", user.id)
+        .from('workspaces')
+        .select('id, name, flow_data, version, updated_at, created_at')
+        .eq('id', input.id)
+        .eq('user_id', user.id)
         .single();
       if (error) throw error;
       return workspaceRowSchema.parse(data);
     }),
 
   create: protectedProcedure
-    .input(
-      z
-        .object({ name: z.string().min(1).max(100).default("Untitled") })
-        .optional(),
-    )
+    .input(z.object({ name: z.string().min(1).max(100).default('Untitled') }).optional())
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
       const payload = {
         user_id: user.id,
-        name: input?.name ?? "Untitled",
+        name: input?.name ?? 'Untitled',
         flow_data: { nodes: [], edges: [] },
       };
       const { data, error } = await supabase
-        .from("workspaces")
+        .from('workspaces')
         .insert(payload)
-        .select("id, name, flow_data, version, updated_at, created_at")
+        .select('id, name, flow_data, version, updated_at, created_at')
         .single();
       if (error) throw error;
       return workspaceRowSchema.parse(data);
@@ -168,24 +157,20 @@ export const workspaceRouter = createTRPCRouter({
 
       try {
         // Validate workspace access and get basic info
-        const originalWorkspace = await validateWorkspaceAccess(
-          supabase,
-          input.id,
-          user.id,
-        );
+        const originalWorkspace = await validateWorkspaceAccess(supabase, input.id, user.id);
 
         // Fetch the full workspace data for duplication
         const { data: fullWorkspace, error: fetchError } = await supabase
-          .from("workspaces")
-          .select("flow_data, version")
-          .eq("id", input.id)
-          .eq("user_id", user.id)
+          .from('workspaces')
+          .select('flow_data, version')
+          .eq('id', input.id)
+          .eq('user_id', user.id)
           .single();
 
         if (fetchError || !fullWorkspace) {
           throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Failed to fetch workspace data for duplication.",
+            code: 'NOT_FOUND',
+            message: 'Failed to fetch workspace data for duplication.',
             cause: fetchError,
           });
         }
@@ -194,45 +179,39 @@ export const workspaceRouter = createTRPCRouter({
         const newName = await generateUniqueWorkspaceName(
           supabase,
           user.id,
-          (originalWorkspace as { name: string }).name,
+          (originalWorkspace as { name: string }).name
         );
 
         // Deep clone the flow data to ensure complete isolation
-        const clonedFlowData: Record<string, unknown> = (
-          fullWorkspace as { flow_data: unknown }
-        ).flow_data
+        const clonedFlowData: Record<string, unknown> = (fullWorkspace as { flow_data: unknown })
+          .flow_data
           ? (JSON.parse(
-              JSON.stringify(
-                (fullWorkspace as { flow_data: unknown }).flow_data,
-              ),
+              JSON.stringify((fullWorkspace as { flow_data: unknown }).flow_data)
             ) as Record<string, unknown>)
           : { nodes: [], edges: [] };
 
         // Create the duplicate workspace
         const { data: newWorkspace, error: createError } = await supabase
-          .from("workspaces")
+          .from('workspaces')
           .insert({
             user_id: user.id,
             name: newName,
             flow_data: clonedFlowData,
           })
-          .select("id, name, flow_data, version, updated_at, created_at")
+          .select('id, name, flow_data, version, updated_at, created_at')
           .single();
 
         if (createError || !newWorkspace) {
-          console.error(
-            "[WorkspaceRouter] Failed to create duplicate workspace:",
-            createError,
-          );
+          console.error('[WorkspaceRouter] Failed to create duplicate workspace:', createError);
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to create duplicate workspace. Please try again.",
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to create duplicate workspace. Please try again.',
             cause: createError,
           });
         }
 
         console.log(
-          `[WorkspaceRouter] Successfully duplicated workspace "${originalWorkspace.name}" to "${newName}"`,
+          `[WorkspaceRouter] Successfully duplicated workspace "${originalWorkspace.name}" to "${newName}"`
         );
         return workspaceRowSchema.parse(newWorkspace);
       } catch (error) {
@@ -240,13 +219,10 @@ export const workspaceRouter = createTRPCRouter({
           throw error;
         }
 
-        console.error(
-          "[WorkspaceRouter] Unexpected error during duplication:",
-          error,
-        );
+        console.error('[WorkspaceRouter] Unexpected error during duplication:', error);
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred during workspace duplication.",
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred during workspace duplication.',
           cause: error,
         });
       }
@@ -259,47 +235,35 @@ export const workspaceRouter = createTRPCRouter({
 
       try {
         // Validate workspace access before deletion
-        const workspace = await validateWorkspaceAccess(
-          supabase,
-          input.id,
-          user.id,
-        );
+        const workspace = await validateWorkspaceAccess(supabase, input.id, user.id);
 
         // Perform the deletion
         const { error: deleteError } = await supabase
-          .from("workspaces")
+          .from('workspaces')
           .delete()
-          .eq("id", input.id)
-          .eq("user_id", user.id);
+          .eq('id', input.id)
+          .eq('user_id', user.id);
 
         if (deleteError) {
-          console.error(
-            "[WorkspaceRouter] Failed to delete workspace:",
-            deleteError,
-          );
+          console.error('[WorkspaceRouter] Failed to delete workspace:', deleteError);
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to delete workspace. Please try again.",
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to delete workspace. Please try again.',
             cause: deleteError,
           });
         }
 
-        console.log(
-          `[WorkspaceRouter] Successfully deleted workspace "${workspace.name}"`,
-        );
+        console.log(`[WorkspaceRouter] Successfully deleted workspace "${workspace.name}"`);
         return { success: true, deletedWorkspaceId: input.id };
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
 
-        console.error(
-          "[WorkspaceRouter] Unexpected error during deletion:",
-          error,
-        );
+        console.error('[WorkspaceRouter] Unexpected error during deletion:', error);
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred during workspace deletion.",
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred during workspace deletion.',
           cause: error,
         });
       }
@@ -310,43 +274,39 @@ export const workspaceRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         newName: z.string().min(1).max(100).trim(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
 
       try {
         // Validate workspace access
-        const workspace = await validateWorkspaceAccess(
-          supabase,
-          input.id,
-          user.id,
-        );
+        const workspace = await validateWorkspaceAccess(supabase, input.id, user.id);
 
         // Don't allow renaming to the same name
         if (workspace.name === input.newName) {
           throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Workspace is already named that.",
+            code: 'BAD_REQUEST',
+            message: 'Workspace is already named that.',
           });
         }
 
         // Check if the requested name conflicts with existing workspaces
         const { data: existingWorkspaces, error: checkError } = await supabase
-          .from("workspaces")
-          .select("name")
-          .eq("user_id", user.id)
-          .neq("id", input.id); // Exclude current workspace
+          .from('workspaces')
+          .select('name')
+          .eq('user_id', user.id)
+          .neq('id', input.id); // Exclude current workspace
 
         if (checkError) {
           console.warn(
-            "[WorkspaceRouter] Could not check for name conflicts during rename:",
-            checkError,
+            '[WorkspaceRouter] Could not check for name conflicts during rename:',
+            checkError
           );
         }
 
         const existingNames = new Set(
-          existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? [],
+          existingWorkspaces?.map((ws: { name: string }) => ws.name) ?? []
         );
 
         let finalName = input.newName;
@@ -363,9 +323,8 @@ export const workspaceRouter = createTRPCRouter({
             // Safety check to prevent infinite loops
             if (counter > 100) {
               throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message:
-                  "Unable to generate a unique name. Please try a different name.",
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Unable to generate a unique name. Please try a different name.',
               });
             }
           }
@@ -374,27 +333,24 @@ export const workspaceRouter = createTRPCRouter({
 
         // Perform the rename
         const { data: renamedWorkspace, error: renameError } = await supabase
-          .from("workspaces")
+          .from('workspaces')
           .update({ name: finalName })
-          .eq("id", input.id)
-          .eq("user_id", user.id)
-          .select("id, name, updated_at")
+          .eq('id', input.id)
+          .eq('user_id', user.id)
+          .select('id, name, updated_at')
           .single();
 
         if (renameError || !renamedWorkspace) {
-          console.error(
-            "[WorkspaceRouter] Failed to rename workspace:",
-            renameError,
-          );
+          console.error('[WorkspaceRouter] Failed to rename workspace:', renameError);
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to rename workspace. Please try again.",
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to rename workspace. Please try again.',
             cause: renameError,
           });
         }
 
         console.log(
-          `[WorkspaceRouter] Successfully renamed workspace from "${(workspace as { name: string }).name}" to "${finalName}"`,
+          `[WorkspaceRouter] Successfully renamed workspace from "${(workspace as { name: string }).name}" to "${finalName}"`
         );
         return {
           success: true,
@@ -406,13 +362,10 @@ export const workspaceRouter = createTRPCRouter({
           throw error;
         }
 
-        console.error(
-          "[WorkspaceRouter] Unexpected error during rename:",
-          error,
-        );
+        console.error('[WorkspaceRouter] Unexpected error during rename:', error);
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred during workspace rename.",
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred during workspace rename.',
           cause: error,
         });
       }
@@ -427,7 +380,7 @@ export const workspaceRouter = createTRPCRouter({
           edges: z.unknown().array(),
         }),
         version: z.number().int().nonnegative(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const { supabase, user } = ctx;
@@ -437,23 +390,19 @@ export const workspaceRouter = createTRPCRouter({
 
       // Check if the flow data has actually changed to avoid unnecessary updates
       const { data: currentWorkspaceRaw, error: fetchError } = await supabase
-        .from("workspaces")
-        .select("flow_data, version")
-        .eq("id", input.id)
-        .eq("user_id", user.id)
+        .from('workspaces')
+        .select('flow_data, version')
+        .eq('id', input.id)
+        .eq('user_id', user.id)
         .single();
 
-      const currentWorkspace =
-        currentWorkspaceRaw as DatabaseWorkspaceRow | null;
+      const currentWorkspace = currentWorkspaceRaw as DatabaseWorkspaceRow | null;
 
       if (fetchError) {
-        console.error(
-          "[WorkspaceRouter] Failed to fetch current workspace:",
-          fetchError,
-        );
+        console.error('[WorkspaceRouter] Failed to fetch current workspace:', fetchError);
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Workspace not found or access denied.",
+          code: 'NOT_FOUND',
+          message: 'Workspace not found or access denied.',
           cause: fetchError,
         });
       }
@@ -472,26 +421,26 @@ export const workspaceRouter = createTRPCRouter({
 
       // Optimistic concurrency: version must match
       const { data, error } = await supabase
-        .from("workspaces")
+        .from('workspaces')
         .update({ flow_data: flowData, version: input.version + 1 })
-        .eq("id", input.id)
-        .eq("user_id", user.id)
-        .eq("version", input.version)
-        .select("version, updated_at")
+        .eq('id', input.id)
+        .eq('user_id', user.id)
+        .eq('version', input.version)
+        .select('version, updated_at')
         .maybeSingle();
 
       if (error) {
-        console.error("[WorkspaceRouter] Save failed:", error);
+        console.error('[WorkspaceRouter] Save failed:', error);
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to save workspace. Please try again.",
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to save workspace. Please try again.',
           cause: error,
         });
       }
       if (!data) {
         throw new TRPCError({
-          code: "CONFLICT",
-          message: "Workspace has changed since last load. Please reload.",
+          code: 'CONFLICT',
+          message: 'Workspace has changed since last load. Please reload.',
         });
       }
 

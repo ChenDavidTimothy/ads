@@ -1,8 +1,8 @@
 // src/animation/renderer/frame-generator.ts
-import { createCanvas } from "canvas";
-import type { NodeCanvasContext, EasingFunction } from "@/shared/types/core";
-import { VideoEncoder, type VideoConfig } from "./video-encoder";
-import { linear } from "../core/interpolation";
+import { createCanvas } from 'canvas';
+import type { NodeCanvasContext, EasingFunction } from '@/shared/types/core';
+import { VideoEncoder, type VideoConfig } from './video-encoder';
+import { linear } from '../core/interpolation';
 
 // Extend global object to include custom properties
 declare global {
@@ -27,7 +27,7 @@ export interface AnimationFrame {
 export type RenderCallback = (
   ctx: NodeCanvasContext,
   frame: AnimationFrame,
-  config: FrameConfig,
+  config: FrameConfig
 ) => void | Promise<void>;
 
 interface WatchdogConfig {
@@ -36,7 +36,7 @@ interface WatchdogConfig {
   sampleIntervalMs: number;
 }
 
-import { RENDER_WATCHDOG as GLOBAL_WATCHDOG } from "@/server/rendering/config";
+import { RENDER_WATCHDOG as GLOBAL_WATCHDOG } from '@/server/rendering/config';
 
 const DEFAULT_WATCHDOG: WatchdogConfig = GLOBAL_WATCHDOG;
 
@@ -52,13 +52,13 @@ export class FrameGenerator {
     this.config = config;
     this.easingFunction = easingFunction;
     this.canvas = createCanvas(config.width, config.height);
-    this.ctx = this.canvas.getContext("2d") as unknown as NodeCanvasContext;
+    this.ctx = this.canvas.getContext('2d') as unknown as NodeCanvasContext;
   }
 
   async generateAnimation(
     outputPath: string,
     renderCallback: RenderCallback,
-    videoConfig?: Partial<VideoConfig>,
+    videoConfig?: Partial<VideoConfig>
   ): Promise<string> {
     const totalFrames = this.config.fps * this.config.duration;
 
@@ -66,10 +66,10 @@ export class FrameGenerator {
       width: this.config.width,
       height: this.config.height,
       fps: this.config.fps,
-      preset: videoConfig?.preset ?? "medium",
+      preset: videoConfig?.preset ?? 'medium',
       crf: videoConfig?.crf ?? 18,
       // node-canvas raw buffer is BGRA; feed that directly to ffmpeg
-      inputPixelFormat: "bgra",
+      inputPixelFormat: 'bgra',
     });
 
     const startedAt = Date.now();
@@ -85,35 +85,24 @@ export class FrameGenerator {
         if (!this.watchdogError && elapsed > watchdogCfg.maxRenderMs) {
           const elapsedSec = Math.round(elapsed / 1000);
           const limitSec = Math.round(watchdogCfg.maxRenderMs / 1000);
-          console.log(
-            `⏰ WATCHDOG TRIGGERED: Time limit exceeded! ${elapsedSec}s > ${limitSec}s`,
-          );
+          console.log(`⏰ WATCHDOG TRIGGERED: Time limit exceeded! ${elapsedSec}s > ${limitSec}s`);
           this.watchdogError = new Error(
-            `Render exceeded max duration ${watchdogCfg.maxRenderMs}ms`,
+            `Render exceeded max duration ${watchdogCfg.maxRenderMs}ms`
           );
         }
-        if (
-          !this.watchdogError &&
-          mem.heapUsed > watchdogCfg.maxHeapUsedBytes
-        ) {
+        if (!this.watchdogError && mem.heapUsed > watchdogCfg.maxHeapUsedBytes) {
           const currentMB = Math.round(mem.heapUsed / 1024 / 1024);
-          const limitMB = Math.round(
-            watchdogCfg.maxHeapUsedBytes / 1024 / 1024,
-          );
+          const limitMB = Math.round(watchdogCfg.maxHeapUsedBytes / 1024 / 1024);
           console.log(
-            `🚨 WATCHDOG TRIGGERED: Memory limit exceeded! ${currentMB}MB > ${limitMB}MB`,
+            `🚨 WATCHDOG TRIGGERED: Memory limit exceeded! ${currentMB}MB > ${limitMB}MB`
           );
-          this.watchdogError = new Error(
-            `Render exceeded heap usage ${limitMB}MB`,
-          );
+          this.watchdogError = new Error(`Render exceeded heap usage ${limitMB}MB`);
         }
       }, watchdogCfg.sampleIntervalMs);
 
       for (let frameNumber = 0; frameNumber < totalFrames; frameNumber++) {
         if (this.watchdogError) {
-          console.log(
-            `💥 WATCHDOG ERROR THROWN: ${this.watchdogError.message}`,
-          );
+          console.log(`💥 WATCHDOG ERROR THROWN: ${this.watchdogError.message}`);
           encoder.kill();
           throw this.watchdogError;
         }
@@ -133,7 +122,7 @@ export class FrameGenerator {
         await renderCallback(this.ctx, frame, this.config);
 
         // Write raw RGBA directly
-        const rgbaBuffer = this.canvas.toBuffer("raw");
+        const rgbaBuffer = this.canvas.toBuffer('raw');
         await encoder.writeFrame(rgbaBuffer);
 
         // 🐕 WATCHDOG DEBUG: Log comprehensive memory every 30 frames
@@ -147,22 +136,20 @@ export class FrameGenerator {
           const progressPercent = Math.round(progress * 100);
 
           console.log(
-            `🐕 WATCHDOG: Frame ${frameNumber}/${totalFrames} (${progressPercent}%) | V8 Heap: ${heapUsedMB}MB/${heapTotalMB}MB | RSS: ${rssMB}MB | External: ${externalMB}MB | Time: ${Math.round(elapsed / 1000)}s`,
+            `🐕 WATCHDOG: Frame ${frameNumber}/${totalFrames} (${progressPercent}%) | V8 Heap: ${heapUsedMB}MB/${heapTotalMB}MB | RSS: ${rssMB}MB | External: ${externalMB}MB | Time: ${Math.round(elapsed / 1000)}s`
           );
 
           // Log peak RSS for tracking
           if (!global.peakRSS || rssMB > global.peakRSS) {
             global.peakRSS = rssMB;
-            console.log(
-              `📊 PEAK RSS UPDATED: ${rssMB}MB (frame ${frameNumber})`,
-            );
+            console.log(`📊 PEAK RSS UPDATED: ${rssMB}MB (frame ${frameNumber})`);
           }
         }
 
         // Reset canvas context for next frame to prevent state corruption
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.globalAlpha = 1;
-        this.ctx.globalCompositeOperation = "source-over";
+        this.ctx.globalCompositeOperation = 'source-over';
       }
 
       if (this.watchdogError) {
@@ -200,12 +187,7 @@ export class FrameGenerator {
       // SceneRenderer handles its own canvas clearing
       await renderCallback(this.ctx, frame, this.config);
 
-      const imageData = this.ctx.getImageData(
-        0,
-        0,
-        this.config.width,
-        this.config.height,
-      );
+      const imageData = this.ctx.getImageData(0, 0, this.config.width, this.config.height);
       frames.push(imageData as ImageData);
     }
 
@@ -219,8 +201,7 @@ export class FrameGenerator {
         check();
       } catch (err) {
         // Do not throw beyond the interval; rely on flag and outer loop checks
-        this.watchdogError ??=
-          err instanceof Error ? err : new Error(String(err));
+        this.watchdogError ??= err instanceof Error ? err : new Error(String(err));
       }
     }, intervalMs);
   }

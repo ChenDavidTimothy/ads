@@ -1,25 +1,13 @@
 // src/components/workspace/node-palette.tsx - Registry-driven node palette
-"use client";
+'use client';
 
-import { useState, useMemo, useCallback } from "react";
-import { type XYPosition } from "reactflow";
-import {
-  Search,
-  Shapes,
-  Clock,
-  Cpu,
-  Monitor,
-  Database,
-  Type,
-  Edit,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CollapsibleSection } from "./flow/components/collapsible-section";
-import {
-  generateNodeColors,
-  generateNodePalette,
-} from "@/shared/registry/registry-utils";
+import { useState, useMemo, useCallback } from 'react';
+import { type XYPosition } from 'reactflow';
+import { Search, Shapes, Clock, Cpu, Monitor, Database, Type, Edit } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { CollapsibleSection } from './flow/components/collapsible-section';
+import { generateNodeColors, generateNodePalette } from '@/shared/registry/registry-utils';
 
 interface NodePaletteProps {
   onAddNode: (nodeType: string, position: XYPosition) => void;
@@ -31,7 +19,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
   const nodeColors = generateNodeColors();
 
   // Search state
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const isSearching = query.trim().length > 0;
 
   // All nodes for search
@@ -47,7 +35,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       ...palette.inputNodes,
       ...palette.outputNodes,
     ],
-    [palette],
+    [palette]
   );
 
   // Filtered search results
@@ -73,21 +61,21 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         >
           {/* Category color indicator */}
           <span
-            className={`inline-block h-4 w-1.5 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? "bg-[var(--accent-primary)]"}`}
+            className={`inline-block h-4 w-1.5 rounded-[var(--radius-sm)] ${nodeColors[node.type]?.primary ?? 'bg-[var(--accent-primary)]'}`}
           />
           {/* Placeholder for future icon system; keep label tight */}
           <span className="text-[13px]">{node.label}</span>
         </Button>
       );
     },
-    [onAddNode, nodeColors],
+    [onAddNode, nodeColors]
   );
 
   // Category section renderer using CollapsibleSection
   const renderCategorySection = (
     title: string,
     nodes: Array<{ type: string; label: string; icon: string }>,
-    iconComponent: React.ReactNode,
+    iconComponent: React.ReactNode
   ) => {
     if (nodes.length === 0) return null;
 
@@ -98,9 +86,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         defaultExpanded={true}
         persistKey={`nodes-${title.toLowerCase()}`}
       >
-        <div className="space-y-[var(--space-2)]">
-          {nodes.map(renderNodeButton)}
-        </div>
+        <div className="space-y-[var(--space-2)]">{nodes.map(renderNodeButton)}</div>
       </CollapsibleSection>
     );
   };
@@ -136,9 +122,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
               No nodes found
             </div>
           ) : (
-            <div className="space-y-[var(--space-2)]">
-              {filtered.map(renderNodeButton)}
-            </div>
+            <div className="space-y-[var(--space-2)]">{filtered.map(renderNodeButton)}</div>
           )}
         </div>
       )}
@@ -146,47 +130,15 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       {/* Category Sections - Hidden When Searching */}
       {!isSearching && (
         <>
-          {renderCategorySection(
-            "Image",
-            palette.imageNodes,
-            <Database size={16} />,
-          )}
-          {renderCategorySection(
-            "Input",
-            palette.inputNodes,
-            <Database size={16} />,
-          )}
-          {renderCategorySection(
-            "Geometry",
-            palette.geometryNodes,
-            <Shapes size={16} />,
-          )}
-          {renderCategorySection("Text", palette.textNodes, <Type size={16} />)}
-          {renderCategorySection(
-            "Data",
-            palette.dataNodes,
-            <Database size={16} />,
-          )}
-          {renderCategorySection(
-            "Timing",
-            palette.timingNodes,
-            <Clock size={16} />,
-          )}
-          {renderCategorySection(
-            "Logic",
-            palette.logicNodes,
-            <Cpu size={16} />,
-          )}
-          {renderCategorySection(
-            "Editor",
-            palette.animationNodes,
-            <Edit size={16} />,
-          )}
-          {renderCategorySection(
-            "Output",
-            palette.outputNodes,
-            <Monitor size={16} />,
-          )}
+          {renderCategorySection('Image', palette.imageNodes, <Database size={16} />)}
+          {renderCategorySection('Input', palette.inputNodes, <Database size={16} />)}
+          {renderCategorySection('Geometry', palette.geometryNodes, <Shapes size={16} />)}
+          {renderCategorySection('Text', palette.textNodes, <Type size={16} />)}
+          {renderCategorySection('Data', palette.dataNodes, <Database size={16} />)}
+          {renderCategorySection('Timing', palette.timingNodes, <Clock size={16} />)}
+          {renderCategorySection('Logic', palette.logicNodes, <Cpu size={16} />)}
+          {renderCategorySection('Editor', palette.animationNodes, <Edit size={16} />)}
+          {renderCategorySection('Output', palette.outputNodes, <Monitor size={16} />)}
         </>
       )}
     </div>

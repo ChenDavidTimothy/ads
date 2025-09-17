@@ -1,17 +1,17 @@
 // src/shared/types/properties.ts
-import type { Point2D } from "./core";
-import { z } from "zod";
+import type { Point2D } from './core';
+import { z } from 'zod';
 
 export type PropertyType =
-  | "textarea"
-  | "number"
-  | "string"
-  | "color"
-  | "boolean"
-  | "point2d"
-  | "array"
-  | "select"
-  | "range";
+  | 'textarea'
+  | 'number'
+  | 'string'
+  | 'color'
+  | 'boolean'
+  | 'point2d'
+  | 'array'
+  | 'select'
+  | 'range';
 
 export interface BasePropertySchema {
   key: string;
@@ -22,7 +22,7 @@ export interface BasePropertySchema {
 }
 
 export interface NumberPropertySchema extends BasePropertySchema {
-  type: "number";
+  type: 'number';
   min?: number;
   max?: number;
   step?: number;
@@ -30,45 +30,45 @@ export interface NumberPropertySchema extends BasePropertySchema {
 }
 
 export interface StringPropertySchema extends BasePropertySchema {
-  type: "string";
+  type: 'string';
   defaultValue?: string;
 }
 
 export interface TextareaPropertySchema extends BasePropertySchema {
-  type: "textarea";
+  type: 'textarea';
   rows?: number;
   defaultValue?: string;
 }
 
 export interface ColorPropertySchema extends BasePropertySchema {
-  type: "color";
+  type: 'color';
   defaultValue?: string;
 }
 
 export interface BooleanPropertySchema extends BasePropertySchema {
-  type: "boolean";
+  type: 'boolean';
   defaultValue?: boolean;
 }
 
 export interface Point2DPropertySchema extends BasePropertySchema {
-  type: "point2d";
+  type: 'point2d';
   defaultValue?: Point2D;
 }
 
 export interface ArrayPropertySchema extends BasePropertySchema {
-  type: "array";
+  type: 'array';
   itemType: string;
   defaultValue?: readonly unknown[];
 }
 
 export interface SelectPropertySchema extends BasePropertySchema {
-  type: "select";
+  type: 'select';
   options: Array<{ value: string; label: string }>;
   defaultValue?: string;
 }
 
 export interface RangePropertySchema extends BasePropertySchema {
-  type: "range";
+  type: 'range';
   min: number;
   max: number;
   step?: number;
@@ -92,21 +92,13 @@ export interface NodePropertyConfig {
 
 // Helper to get default values from schema
 export function getDefaultPropertiesFromSchema(
-  schemas: PropertySchema[],
+  schemas: PropertySchema[]
 ): Record<string, string | number | boolean | Point2D | unknown[]> {
-  const defaults: Record<
-    string,
-    string | number | boolean | Point2D | unknown[]
-  > = {};
+  const defaults: Record<string, string | number | boolean | Point2D | unknown[]> = {};
 
   for (const schema of schemas) {
     if (schema.defaultValue !== undefined) {
-      defaults[schema.key] = schema.defaultValue as
-        | string
-        | number
-        | boolean
-        | Point2D
-        | unknown[];
+      defaults[schema.key] = schema.defaultValue as string | number | boolean | Point2D | unknown[];
     }
   }
 
@@ -115,35 +107,35 @@ export function getDefaultPropertiesFromSchema(
 
 // Generate a Zod schema from PropertySchema for robust runtime validation
 export function buildZodSchemaFromProperties(
-  schemas: PropertySchema[],
+  schemas: PropertySchema[]
 ): z.ZodObject<z.ZodRawShape> {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const schema of schemas) {
     switch (schema.type) {
-      case "number": {
+      case 'number': {
         let validator = z.number();
         if (schema.min !== undefined) validator = validator.min(schema.min);
         if (schema.max !== undefined) validator = validator.max(schema.max);
         shape[schema.key] = validator;
         break;
       }
-      case "string":
+      case 'string':
         shape[schema.key] = z.string();
         break;
-      case "color":
+      case 'color':
         shape[schema.key] = z.string().regex(/^#([0-9a-fA-F]{3}){1,2}$/);
         break;
-      case "boolean":
+      case 'boolean':
         shape[schema.key] = z.boolean();
         break;
-      case "point2d":
+      case 'point2d':
         shape[schema.key] = z.object({ x: z.number(), y: z.number() });
         break;
-      case "select":
+      case 'select':
         // Accept string or number to accommodate selects that conceptually represent numeric enums (e.g., fps)
         shape[schema.key] = z.union([z.string(), z.number()]);
         break;
-      case "range": {
+      case 'range': {
         let validator = z.number();
         validator = validator.min(schema.min).max(schema.max);
         if (schema.step !== undefined) {

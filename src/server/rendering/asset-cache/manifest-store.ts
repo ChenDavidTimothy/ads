@@ -1,7 +1,7 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from 'fs/promises';
+import path from 'path';
 
-import type { JobManifest } from "./types";
+import type { JobManifest } from './types';
 
 export class ManifestStore {
   private readonly jobCacheDir: string;
@@ -11,26 +11,23 @@ export class ManifestStore {
   }
 
   getManifestPath(): string {
-    return path.join(this.jobCacheDir, "manifest.json");
+    return path.join(this.jobCacheDir, 'manifest.json');
   }
 
   async save(manifest: JobManifest): Promise<void> {
-    await fs.writeFile(
-      this.getManifestPath(),
-      JSON.stringify(manifest, null, 2),
-    );
+    await fs.writeFile(this.getManifestPath(), JSON.stringify(manifest, null, 2));
   }
 
   async load(): Promise<JobManifest | null> {
     try {
-      const raw = await fs.readFile(this.getManifestPath(), "utf8");
+      const raw = await fs.readFile(this.getManifestPath(), 'utf8');
       return JSON.parse(raw) as JobManifest;
     } catch (error) {
       if (
         error &&
-        typeof error === "object" &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "ENOENT"
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
       ) {
         return null;
       }

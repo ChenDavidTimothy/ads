@@ -4,9 +4,9 @@
   StorageFileInfo,
   StorageResponse,
   SupabaseClientLike,
-} from "./types";
-import { AssetsServiceError } from "./errors";
-import type { ListAssetsInput, AssetResponse } from "@/shared/types/assets";
+} from './types';
+import { AssetsServiceError } from './errors';
+import type { ListAssetsInput, AssetResponse } from '@/shared/types/assets';
 
 interface LoggerLike {
   warn?: (message: string, meta?: Record<string, unknown>) => void;
@@ -28,45 +28,44 @@ export interface ListAssetsResult {
   hasMore: boolean;
 }
 
-export function createAssetCatalogService({
-  supabase,
-  logger,
-}: AssetCatalogServiceDeps) {
+export function createAssetCatalogService({ supabase, logger }: AssetCatalogServiceDeps) {
   const log = logger ?? console;
 
   async function listAssets({ userId, input }: ListAssetsParams): Promise<ListAssetsResult> {
     let query = supabase
-      .from("user_assets")
-      .select("*", { count: "exact" })
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
+      .from('user_assets')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
       .range(input.offset, input.offset + input.limit - 1);
 
-    if (input.assetType && input.assetType !== "all") {
-      query = query.eq("asset_type", input.assetType);
+    if (input.assetType && input.assetType !== 'all') {
+      query = query.eq('asset_type', input.assetType);
     }
 
     if (input.bucketName) {
-      query = query.eq("bucket_name", input.bucketName);
+      query = query.eq('bucket_name', input.bucketName);
     }
 
     if (input.search) {
-      query = query.ilike("original_name", `%${input.search}%`);
+      query = query.ilike('original_name', `%${input.search}%`);
     }
 
     const result = await query;
-    const { data: assets, error, count } = result as {
+    const {
+      data: assets,
+      error,
+      count,
+    } = result as {
       data: DatabaseUserAsset[] | null;
       error: unknown;
       count: number | null;
     };
 
     if (error) {
-      throw new AssetsServiceError(
-        "INTERNAL_SERVER_ERROR",
-        "Failed to fetch assets",
-        { cause: error },
-      );
+      throw new AssetsServiceError('INTERNAL_SERVER_ERROR', 'Failed to fetch assets', {
+        cause: error,
+      });
     }
 
     const typedAssets: DatabaseUserAsset[] = assets ?? [];
@@ -74,14 +73,12 @@ export function createAssetCatalogService({
     const maybeAssets: Array<AssetResponse | null> = await Promise.all(
       typedAssets.map(async (asset: DatabaseUserAsset) => {
         try {
-          const filename = asset.storage_path.split("/").pop();
-          const parentDir = asset.storage_path.includes("/")
-            ? asset.storage_path.slice(0, asset.storage_path.lastIndexOf("/"))
-            : "";
+          const filename = asset.storage_path.split('/').pop();
+          const parentDir = asset.storage_path.includes('/')
+            ? asset.storage_path.slice(0, asset.storage_path.lastIndexOf('/'))
+            : '';
 
-          const listResult = await supabase.storage
-            .from(asset.bucket_name)
-            .list(parentDir);
+          const listResult = await supabase.storage.from(asset.bucket_name).list(parentDir);
           const { data: entries, error: listError } = listResult as {
             data: StorageFileInfo[] | null;
             error: unknown;
@@ -98,9 +95,10 @@ export function createAssetCatalogService({
 
           const signedUrlResult = (await supabase.storage
             .from(asset.bucket_name)
-            .createSignedUrl(asset.storage_path, 60 * 60 * 24)) as DatabaseResponse<
-            StorageResponse
-          >;
+            .createSignedUrl(
+              asset.storage_path,
+              60 * 60 * 24
+            )) as DatabaseResponse<StorageResponse>;
 
           const assetWithUrl: AssetResponse = {
             id: asset.id,
@@ -120,17 +118,16 @@ export function createAssetCatalogService({
 
           return assetWithUrl;
         } catch (error) {
-          log.warn?.(
-            `Asset ${asset.id} reconciliation failed`,
-            { error: error instanceof Error ? error.message : String(error) },
-          );
+          log.warn?.(`Asset ${asset.id} reconciliation failed`, {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return null;
         }
-      }),
+      })
     );
 
     const assetsWithUrls: AssetResponse[] = maybeAssets.filter(
-      (asset): asset is AssetResponse => asset !== null,
+      (asset): asset is AssetResponse => asset !== null
     );
 
     return {

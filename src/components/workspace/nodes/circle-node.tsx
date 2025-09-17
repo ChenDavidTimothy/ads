@@ -1,25 +1,22 @@
 // src/components/workspace/nodes/circle-node.tsx - Simplified single output port
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { CircleNodeData } from "@/shared/types/nodes";
-import { Circle as CircleIcon } from "lucide-react";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { CircleNodeData } from '@/shared/types/nodes';
+import { Circle as CircleIcon } from 'lucide-react';
 
 export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
-  const nodeDefinition = getNodeDefinition("circle");
+  const nodeDefinition = getNodeDefinition('circle');
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] p-[var(--card-padding)]"
-    >
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
       <CardHeader className="p-0 pb-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <div
             className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: "#4444ff" }} // Canvas default
+            style={{ backgroundColor: '#4444ff' }} // Canvas default
           >
             <CircleIcon size={12} />
           </div>

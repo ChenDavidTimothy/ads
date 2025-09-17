@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
+import { useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -9,19 +9,16 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  restrictToVerticalAxis,
-  restrictToFirstScrollableAncestor,
-} from "@dnd-kit/modifiers";
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import {
   SortableContext,
   verticalListSortingStrategy,
   arrayMove,
   useSortable,
   sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface SceneObjectInfo {
   id: string;
@@ -35,21 +32,10 @@ interface Props {
   onReorder: (newOrder: string[]) => void;
 }
 
-function SortableItem({
-  item,
-  index,
-}: {
-  item: SceneObjectInfo;
-  index: number;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+function SortableItem({ item, index }: { item: SceneObjectInfo; index: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -63,7 +49,7 @@ function SortableItem({
       {...attributes}
       {...listeners}
       className={
-        "flex cursor-move items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] p-3 text-[var(--text-primary)] transition-all hover:border-[var(--border-secondary)] hover:bg-[var(--surface-interactive)]"
+        'flex cursor-move items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] p-3 text-[var(--text-primary)] transition-all hover:border-[var(--border-secondary)] hover:bg-[var(--surface-interactive)]'
       }
     >
       <div className="text-[var(--text-tertiary)]">≡</div>
@@ -77,31 +63,24 @@ function SortableItem({
   );
 }
 
-export function DraggableObjectList({
-  objects,
-  currentOrder,
-  onReorder,
-}: Props) {
+export function DraggableObjectList({ objects, currentOrder, onReorder }: Props) {
   // Compute the ordered list (back-to-front) from the persisted order
   const orderedBackToFront = useMemo(
     () =>
       currentOrder
         .map((id) => objects.find((o) => o.id === id))
         .filter((x): x is SceneObjectInfo => !!x),
-    [currentOrder, objects],
+    [currentOrder, objects]
   );
 
   // Display list front-to-back so the top visually corresponds to the front
-  const orderedFrontToBack = useMemo(
-    () => [...orderedBackToFront].reverse(),
-    [orderedBackToFront],
-  );
+  const orderedFrontToBack = useMemo(() => [...orderedBackToFront].reverse(), [orderedBackToFront]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -125,9 +104,7 @@ export function DraggableObjectList({
       <div className="flex h-32 items-center justify-center text-center text-[var(--text-tertiary)]">
         <div>
           <div className="mb-2">No objects in this scene yet</div>
-          <div className="text-xs">
-            Connect shapes, text, or images to see them here
-          </div>
+          <div className="text-xs">Connect shapes, text, or images to see them here</div>
         </div>
       </div>
     );
@@ -139,7 +116,7 @@ export function DraggableObjectList({
         <span>↑ Front (renders on top)</span>
         <span>
           {orderedFrontToBack.length} object
-          {orderedFrontToBack.length !== 1 ? "s" : ""}
+          {orderedFrontToBack.length !== 1 ? 's' : ''}
         </span>
       </div>
 

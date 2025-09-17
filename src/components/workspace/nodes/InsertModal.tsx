@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useMemo } from "react";
-import { Modal } from "@/components/ui/modal";
-import { NumberField } from "@/components/ui/form-fields";
-import { Button } from "@/components/ui/button";
-import { BindButton } from "@/components/workspace/binding/bindings";
-import { useWorkspace } from "@/components/workspace/workspace-context";
-import { FlowTracker } from "@/lib/flow/flow-tracking";
-import type { NodeData, InsertNodeData } from "@/shared/types/nodes";
+import React, { useMemo } from 'react';
+import { Modal } from '@/components/ui/modal';
+import { NumberField } from '@/components/ui/form-fields';
+import { Button } from '@/components/ui/button';
+import { BindButton } from '@/components/workspace/binding/bindings';
+import { useWorkspace } from '@/components/workspace/workspace-context';
+import { FlowTracker } from '@/lib/flow/flow-tracking';
+import type { NodeData, InsertNodeData } from '@/shared/types/nodes';
 
 export function InsertModal({
   isOpen,
@@ -23,16 +23,11 @@ export function InsertModal({
   const data = (node?.data ?? {}) as InsertNodeData;
 
   const defaultTime = Number(data.appearanceTime ?? 0);
-  const isDefaultBound =
-    !!data.variableBindings?.appearanceTime?.boundResultNodeId;
+  const isDefaultBound = !!data.variableBindings?.appearanceTime?.boundResultNodeId;
 
   const objects = useMemo(() => {
     const tracker = new FlowTracker();
-    return tracker.getUpstreamObjects(
-      nodeId,
-      state.flow.nodes,
-      state.flow.edges,
-    );
+    return tracker.getUpstreamObjects(nodeId, state.flow.nodes, state.flow.edges);
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
   const emitInsertUpdate = (detail: {
@@ -41,11 +36,11 @@ export function InsertModal({
     time?: number;
     clear?: boolean;
   }) => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     window.dispatchEvent(
-      new CustomEvent("insert-appearance-time-updated", {
+      new CustomEvent('insert-appearance-time-updated', {
         detail: { nodeIdentifierId: nodeId, ...detail },
-      }),
+      })
     );
   };
 
@@ -57,7 +52,7 @@ export function InsertModal({
           : ({
               ...n,
               data: { ...n.data, appearanceTime: value } as NodeData,
-            } as typeof n),
+            } as typeof n)
       ),
     });
     // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
@@ -89,7 +84,7 @@ export function InsertModal({
       nodes: state.flow.nodes.map((n) => {
         if (n.data?.identifier?.id !== nodeId) return n;
         // Type guard to ensure this is an InsertNode
-        if (n.data.identifier.type !== "insert") return n;
+        if (n.data.identifier.type !== 'insert') return n;
         const insertData = n.data as InsertNodeData;
         const prev = insertData.appearanceTimeByObject ?? {};
         const next = { ...prev };
@@ -110,12 +105,7 @@ export function InsertModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Insert: Appearance Time"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Insert: Appearance Time" size="lg">
       <div className="p-[var(--space-4)]">
         <div className="mb-[var(--space-4)] grid grid-cols-2 gap-[var(--space-4)]">
           <div>
@@ -125,9 +115,7 @@ export function InsertModal({
               onChange={(v) => setDefaultTime(v)}
               min={0}
               step={0.1}
-              bindAdornment={
-                <BindButton nodeId={nodeId} bindingKey="appearanceTime" />
-              }
+              bindAdornment={<BindButton nodeId={nodeId} bindingKey="appearanceTime" />}
               disabled={isDefaultBound}
             />
             <div className="mt-[var(--space-2)] text-right">
@@ -137,9 +125,8 @@ export function InsertModal({
             </div>
           </div>
           <div className="text-xs text-[var(--text-secondary)]">
-            Set when objects become visible. Default applies to all objects
-            unless a per-object value or binding is set. Bound values come from
-            Result nodes.
+            Set when objects become visible. Default applies to all objects unless a per-object
+            value or binding is set. Bound values come from Result nodes.
           </div>
         </div>
 
@@ -160,8 +147,7 @@ export function InsertModal({
           ) : (
             objects.map((obj) => {
               const perObjectBindingId =
-                data.variableBindingsByObject?.[obj.id]?.appearanceTime
-                  ?.boundResultNodeId;
+                data.variableBindingsByObject?.[obj.id]?.appearanceTime?.boundResultNodeId;
               const isBound = !!perObjectBindingId;
               const value = data.appearanceTimeByObject?.[obj.id];
               return (
@@ -194,11 +180,7 @@ export function InsertModal({
                       />
                     </div>
                     {value !== undefined && (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => clearPerObjectTime(obj.id)}
-                      >
+                      <Button variant="ghost" size="xs" onClick={() => clearPerObjectTime(obj.id)}>
                         Clear
                       </Button>
                     )}

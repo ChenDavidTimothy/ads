@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { WorkspaceState } from "@/types/workspace-state";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { WorkspaceState } from '@/types/workspace-state';
 
-const BACKUP_PREFIX = "workspace-emergency-backup-";
+const BACKUP_PREFIX = 'workspace-emergency-backup-';
 
 export function useCrashBackup(
   workspaceId: string,
   getState: () => WorkspaceState | null,
-  options?: { intervalMs?: number; maxAgeMs?: number },
+  options?: { intervalMs?: number; maxAgeMs?: number }
 ) {
   const [hasBackup, setHasBackup] = useState(false);
   const intervalMs = options?.intervalMs ?? 15000; // 15s periodic backup
@@ -40,16 +40,13 @@ export function useCrashBackup(
     const key = BACKUP_PREFIX + workspaceId;
     const tick = () => {
       // Skip backup if nodes are being dragged
-      const isDragging = document.querySelector(".react-flow__node-dragging");
+      const isDragging = document.querySelector('.react-flow__node-dragging');
       if (isDragging) return;
 
       const state = getState();
       if (!state) return;
       try {
-        localStorage.setItem(
-          key,
-          JSON.stringify({ state, timestamp: Date.now() }),
-        );
+        localStorage.setItem(key, JSON.stringify({ state, timestamp: Date.now() }));
         setHasBackup(true);
       } catch {
         // Best-effort; ignore quota errors

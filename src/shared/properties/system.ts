@@ -1,12 +1,11 @@
 // src/shared/properties/system.ts
 
-import { transformFactory } from "@/shared/registry/transforms";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
+import { transformFactory } from '@/shared/registry/transforms';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
 
 export const propertySystem = {
   getTransformTargetProperty(type: string): string | undefined {
-    return transformFactory.getTransformDefinition(type)?.metadata
-      ?.targetProperty;
+    return transformFactory.getTransformDefinition(type)?.metadata?.targetProperty;
   },
   getTransformDefinition(type: string) {
     return transformFactory.getTransformDefinition(type);

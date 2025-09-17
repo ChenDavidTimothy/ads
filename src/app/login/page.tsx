@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { createBrowserClient } from "@/utils/supabase/client";
-import { Loader2, AlertCircle } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { createBrowserClient } from '@/utils/supabase/client';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
 
 // Google icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -41,7 +41,7 @@ function LoginForm() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Get redirect URL from search params
-  const redirectTo = searchParams?.get("redirectTo");
+  const redirectTo = searchParams?.get('redirectTo');
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -52,14 +52,12 @@ function LoginForm() {
         } = await supabase.auth.getSession();
         if (session) {
           // Redirect to the originally requested page or dashboard
-          const destination = redirectTo?.startsWith("/")
-            ? redirectTo
-            : "/dashboard";
+          const destination = redirectTo?.startsWith('/') ? redirectTo : '/dashboard';
           router.push(destination);
           return;
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error('Auth check error:', error);
       } finally {
         setIsCheckingAuth(false);
       }
@@ -74,12 +72,12 @@ function LoginForm() {
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+        provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`,
+          redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`,
           queryParams: {
-            access_type: "offline",
-            prompt: "consent",
+            access_type: 'offline',
+            prompt: 'consent',
           },
         },
       });
@@ -90,10 +88,8 @@ function LoginForm() {
       }
       // If successful, user will be redirected to Google
     } catch (err) {
-      console.error("Google sign in error:", err);
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
+      console.error('Google sign in error:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setLoading(false);
     }
   };
@@ -150,23 +146,17 @@ function LoginForm() {
               ) : (
                 <GoogleIcon className="h-5 w-5" />
               )}
-              {loading ? "Signing in..." : "Sign in with Google"}
+              {loading ? 'Signing in...' : 'Sign in with Google'}
             </button>
 
             {/* Terms and Privacy */}
             <p className="mt-6 text-center text-xs text-[var(--text-tertiary)]">
-              By signing in, you agree to our{" "}
-              <Link
-                href="/terms"
-                className="text-[var(--accent-primary)] hover:underline"
-              >
+              By signing in, you agree to our{' '}
+              <Link href="/terms" className="text-[var(--accent-primary)] hover:underline">
                 Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="text-[var(--accent-primary)] hover:underline"
-              >
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="text-[var(--accent-primary)] hover:underline">
                 Privacy Policy
               </Link>
               .

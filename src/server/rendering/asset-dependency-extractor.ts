@@ -1,7 +1,7 @@
 // src/server/rendering/asset-dependency-extractor.ts
-import type { BatchedScenePartition } from "@/server/animation-processing/scene/scene-partitioner";
-import type { ImageProperties } from "@/shared/types/scene";
-import { applyOverridesToObject } from "@/server/animation-processing/scene/batch-overrides-resolver";
+import type { BatchedScenePartition } from '@/server/animation-processing/scene/scene-partitioner';
+import type { ImageProperties } from '@/shared/types/scene';
+import { applyOverridesToObject } from '@/server/animation-processing/scene/batch-overrides-resolver';
 
 export interface AssetDependency {
   assetId: string;
@@ -14,7 +14,7 @@ export interface AssetDependency {
  * This ensures that dynamically overridden asset IDs (from batch processing) are included.
  */
 export function extractAssetDependenciesFromBatchedPartitions(
-  batchedPartitions: BatchedScenePartition[],
+  batchedPartitions: BatchedScenePartition[]
 ): AssetDependency[] {
   const dependencies = new Map<string, AssetDependency>();
 
@@ -28,11 +28,11 @@ export function extractAssetDependenciesFromBatchedPartitions(
         batchKey: partition.batchKey,
         perObjectBatchOverrides: partition.batchOverrides,
         perObjectBoundFields: partition.boundFieldsByObject,
-      }),
+      })
     );
 
     for (const obj of overriddenObjects) {
-      if (obj.type === "image") {
+      if (obj.type === 'image') {
         const props = obj.properties as ImageProperties;
 
         if (props.assetId) {

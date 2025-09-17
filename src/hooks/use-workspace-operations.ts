@@ -1,6 +1,6 @@
-import { useRouter } from "next/navigation";
-import { api } from "@/trpc/react";
-import { useNotifications } from "@/hooks/use-notifications";
+import { useRouter } from 'next/navigation';
+import { api } from '@/trpc/react';
+import { useNotifications } from '@/hooks/use-notifications';
 
 export interface WorkspaceOperationResult {
   isLoading: boolean;
@@ -36,17 +36,14 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
   const duplicateWorkspace = api.workspace.duplicate.useMutation({
     onSuccess: async (ws) => {
       await utils.workspace.list.invalidate();
-      toast.success(
-        "Workspace duplicated successfully!",
-        `Created "${ws.name}"`,
-      );
+      toast.success('Workspace duplicated successfully!', `Created "${ws.name}"`);
       router.push(`/workspace?workspace=${ws.id}`);
     },
     onError: (error) => {
-      console.error("Failed to duplicate workspace:", error);
+      console.error('Failed to duplicate workspace:', error);
       toast.error(
-        "Failed to duplicate workspace",
-        "Please try again or contact support if the problem persists.",
+        'Failed to duplicate workspace',
+        'Please try again or contact support if the problem persists.'
       );
     },
   });
@@ -55,15 +52,15 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
     onSuccess: async (_result) => {
       await utils.workspace.list.invalidate();
       toast.success(
-        "Workspace deleted successfully",
-        "The workspace has been permanently removed.",
+        'Workspace deleted successfully',
+        'The workspace has been permanently removed.'
       );
     },
     onError: (error) => {
-      console.error("Failed to delete workspace:", error);
+      console.error('Failed to delete workspace:', error);
       toast.error(
-        "Failed to delete workspace",
-        "Please try again or contact support if the problem persists.",
+        'Failed to delete workspace',
+        'Please try again or contact support if the problem persists.'
       );
     },
   });
@@ -71,40 +68,34 @@ export function useWorkspaceOperations(): UseWorkspaceOperationsReturn {
   const renameWorkspace = api.workspace.rename.useMutation({
     onSuccess: async (result) => {
       await utils.workspace.list.invalidate();
-      const finalName = (
-        result as { workspace: { name: string }; originalName: string }
-      ).workspace.name;
-      const originalName = (
-        result as { workspace: { name: string }; originalName: string }
-      ).originalName;
+      const finalName = (result as { workspace: { name: string }; originalName: string }).workspace
+        .name;
+      const originalName = (result as { workspace: { name: string }; originalName: string })
+        .originalName;
       const message =
-        finalName !== originalName
-          ? `Renamed to "${finalName}"`
-          : "Workspace renamed successfully";
+        finalName !== originalName ? `Renamed to "${finalName}"` : 'Workspace renamed successfully';
 
-      toast.success("Workspace renamed successfully", message);
+      toast.success('Workspace renamed successfully', message);
     },
     onError: (error) => {
-      console.error("Failed to rename workspace:", error);
+      console.error('Failed to rename workspace:', error);
       toast.error(
-        "Failed to rename workspace",
-        "Please try again or contact support if the problem persists.",
+        'Failed to rename workspace',
+        'Please try again or contact support if the problem persists.'
       );
     },
   });
 
   return {
     duplicate: {
-      mutate: (workspaceId: string) =>
-        duplicateWorkspace.mutate({ id: workspaceId }),
+      mutate: (workspaceId: string) => duplicateWorkspace.mutate({ id: workspaceId }),
       result: {
         isLoading: duplicateWorkspace.isPending,
         error: duplicateWorkspace.error,
       },
     },
     delete: {
-      mutate: (workspaceId: string) =>
-        deleteWorkspace.mutate({ id: workspaceId }),
+      mutate: (workspaceId: string) => deleteWorkspace.mutate({ id: workspaceId }),
       result: {
         isLoading: deleteWorkspace.isPending,
         error: deleteWorkspace.error,

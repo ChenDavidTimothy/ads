@@ -1,12 +1,12 @@
-import { postRouter } from "@/server/api/routers/post";
-import { animationRouter } from "@/server/api/routers/animation";
-import { assetsRouter } from "@/server/api/routers/assets";
-import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
-import { workspaceRouter } from "./routers/workspace";
-import { cleanupRouter } from "./routers/cleanup";
+import { postRouter } from '@/server/api/routers/post';
+import { animationRouter } from '@/server/api/routers/animation';
+import { assetsRouter } from '@/server/api/routers/assets';
+import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
+import { workspaceRouter } from './routers/workspace';
+import { cleanupRouter } from './routers/cleanup';
 
 // Initialize background services
-import "../startup";
+import '../startup';
 
 /**
  * This is the primary router for your server.

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Image,
   Video,
@@ -11,13 +11,13 @@ import {
   Info,
   Calendar,
   HardDrive,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { cn } from "@/lib/utils";
-import type { AssetResponse } from "@/shared/types/assets";
-import { formatFileSize, isImage, isVideo } from "@/shared/types/assets";
-import { useNotifications } from "@/hooks/use-notifications";
-import { RobustImage } from "@/components/ui/robust-image";
+import { cn } from '@/lib/utils';
+import type { AssetResponse } from '@/shared/types/assets';
+import { formatFileSize, isImage, isVideo } from '@/shared/types/assets';
+import { useNotifications } from '@/hooks/use-notifications';
+import { RobustImage } from '@/components/ui/robust-image';
 
 interface AssetGridProps {
   assets: AssetResponse[];
@@ -44,20 +44,14 @@ export function AssetGrid({
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center py-[var(--space-8)] text-center",
-          className,
+          'flex flex-col items-center justify-center py-[var(--space-8)] text-center',
+          className
         )}
       >
         <div className="mb-[var(--space-4)] flex h-16 w-16 items-center justify-center rounded-[var(--radius-full)] bg-[var(--surface-2)]">
-          <Image
-            size={24}
-            className="text-[var(--text-tertiary)]"
-            aria-label="No assets"
-          />
+          <Image size={24} className="text-[var(--text-tertiary)]" aria-label="No assets" />
         </div>
-        <h3 className="mb-1 text-sm font-medium text-[var(--text-primary)]">
-          No assets yet
-        </h3>
+        <h3 className="mb-1 text-sm font-medium text-[var(--text-primary)]">No assets yet</h3>
         <p className="text-xs text-[var(--text-tertiary)]">
           Upload images and videos to get started
         </p>
@@ -66,7 +60,7 @@ export function AssetGrid({
   }
 
   return (
-    <div className={cn("grid grid-cols-2 gap-3", className)}>
+    <div className={cn('grid grid-cols-2 gap-3', className)}>
       {assets.map((asset) => (
         <AssetCard
           key={asset.id}
@@ -75,9 +69,7 @@ export function AssetGrid({
           isExpanded={expandedAsset === asset.id}
           onSelect={() => onAssetSelect?.(asset)}
           onDelete={() => onAssetDelete?.(asset.id)}
-          onToggleExpanded={() =>
-            setExpandedAsset(expandedAsset === asset.id ? null : asset.id)
-          }
+          onToggleExpanded={() => setExpandedAsset(expandedAsset === asset.id ? null : asset.id)}
           isDeleting={isDeleting}
           selectionMode={selectionMode}
         />
@@ -123,7 +115,7 @@ function AssetCard({
     e.stopPropagation();
 
     if (!asset.public_url) {
-      toast.error("Download Failed", "Asset URL not available");
+      toast.error('Download Failed', 'Asset URL not available');
       return;
     }
 
@@ -135,10 +127,10 @@ function AssetCard({
       const blob = await response.blob();
 
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
       link.download = asset.original_name;
-      link.style.display = "none";
+      link.style.display = 'none';
 
       document.body.appendChild(link);
       link.click();
@@ -146,13 +138,10 @@ function AssetCard({
 
       URL.revokeObjectURL(url);
 
-      toast.success(
-        "Download Complete",
-        `${asset.original_name} has been downloaded`,
-      );
+      toast.success('Download Complete', `${asset.original_name} has been downloaded`);
     } catch (error) {
-      console.error("Download failed:", error);
-      toast.error("Download Failed", "Unable to download file");
+      console.error('Download failed:', error);
+      toast.error('Download Failed', 'Unable to download file');
     } finally {
       setIsDownloading(false);
     }
@@ -160,9 +149,7 @@ function AssetCard({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (
-      confirm(`Delete "${asset.original_name}"? This action cannot be undone.`)
-    ) {
+    if (confirm(`Delete "${asset.original_name}"? This action cannot be undone.`)) {
       onDelete();
     }
   };
@@ -172,11 +159,11 @@ function AssetCard({
   return (
     <div
       className={cn(
-        "cursor-pointer overflow-hidden rounded-[var(--radius-md)] border bg-[var(--surface-1)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)] hover:border-[var(--border-primary)]",
+        'cursor-pointer overflow-hidden rounded-[var(--radius-md)] border bg-[var(--surface-1)] transition-all duration-[var(--duration-fast)] ease-[var(--easing-standard)] hover:border-[var(--border-primary)]',
         isSelected
-          ? "border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/20"
-          : "border-[var(--border-secondary)]",
-        selectionMode && "hover:border-[var(--accent-primary)]",
+          ? 'border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/20'
+          : 'border-[var(--border-secondary)]',
+        selectionMode && 'hover:border-[var(--accent-primary)]'
       )}
       onClick={handleCardClick}
     >
@@ -204,23 +191,11 @@ function AssetCard({
         <div className="absolute top-[var(--space-2)] left-[var(--space-2)]">
           <div className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-0)]/60">
             {isImage(asset) ? (
-              <Image
-                size={12}
-                className="text-[var(--text-primary)]"
-                aria-label="Image file"
-              />
+              <Image size={12} className="text-[var(--text-primary)]" aria-label="Image file" />
             ) : isVideo(asset) ? (
-              <Video
-                size={12}
-                className="text-[var(--text-primary)]"
-                aria-label="Video file"
-              />
+              <Video size={12} className="text-[var(--text-primary)]" aria-label="Video file" />
             ) : (
-              <HardDrive
-                size={12}
-                className="text-[var(--text-primary)]"
-                aria-label="File"
-              />
+              <HardDrive size={12} className="text-[var(--text-primary)]" aria-label="File" />
             )}
           </div>
         </div>
@@ -279,7 +254,7 @@ function AssetCard({
                 className="flex-1"
               >
                 <Download size={12} className="mr-1" />
-                {isDownloading ? "Downloading..." : "Download"}
+                {isDownloading ? 'Downloading...' : 'Download'}
               </Button>
 
               <Button

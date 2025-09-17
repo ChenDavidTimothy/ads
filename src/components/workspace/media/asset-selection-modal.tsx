@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { AssetGrid } from "@/components/workspace/flow/components/asset-grid";
-import { api } from "@/trpc/react";
-import { Search } from "lucide-react";
-import type { AssetResponse } from "@/shared/types/assets";
+import { useState } from 'react';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { AssetGrid } from '@/components/workspace/flow/components/asset-grid';
+import { api } from '@/trpc/react';
+import { Search } from 'lucide-react';
+import type { AssetResponse } from '@/shared/types/assets';
 
 interface AssetSelectionModalProps {
   isOpen: boolean;
@@ -22,12 +22,12 @@ export function AssetSelectionModal({
   onSelect,
   selectedAssetId,
 }: AssetSelectionModalProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: assetsData, isLoading } = api.assets.list.useQuery({
     limit: 50,
     offset: 0,
-    bucketName: "images", // Only show images
+    bucketName: 'images', // Only show images
     search: searchQuery.trim() || undefined,
   });
 
@@ -39,13 +39,7 @@ export function AssetSelectionModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Select Image Asset"
-      size="lg"
-      variant="glass"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Select Image Asset" size="lg" variant="glass">
       <div className="flex h-full flex-col space-y-[var(--space-4)] p-[var(--space-4)]">
         {/* Search */}
         <div className="relative">
@@ -65,9 +59,7 @@ export function AssetSelectionModal({
         <div className="scrollbar-elegant flex-1 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-[var(--space-6)]">
-              <div className="text-sm text-[var(--text-tertiary)]">
-                Loading assets...
-              </div>
+              <div className="text-sm text-[var(--text-tertiary)]">Loading assets...</div>
             </div>
           ) : (
             <AssetGrid
@@ -83,7 +75,7 @@ export function AssetSelectionModal({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-[var(--border-primary)] pt-[var(--space-2)]">
           <div className="text-xs text-[var(--text-tertiary)]">
-            {assets.length} image{assets.length !== 1 ? "s" : ""} available
+            {assets.length} image{assets.length !== 1 ? 's' : ''} available
           </div>
           <Button variant="secondary" size="sm" onClick={onClose}>
             Cancel

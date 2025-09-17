@@ -1,18 +1,14 @@
-"use client";
+'use client';
 
-import { useCallback, useState, useEffect, useRef } from "react";
-import { api } from "@/trpc/react";
-import type { AssetResponse } from "@/shared/types/assets";
-import {
-  validateMimeType,
-  validateFileSize,
-  formatFileSize,
-} from "@/shared/types/assets";
+import { useCallback, useState, useEffect, useRef } from 'react';
+import { api } from '@/trpc/react';
+import type { AssetResponse } from '@/shared/types/assets';
+import { validateMimeType, validateFileSize, formatFileSize } from '@/shared/types/assets';
 
 interface UploadProgress {
   file: File;
   progress: number;
-  status: "pending" | "uploading" | "completed" | "error";
+  status: 'pending' | 'uploading' | 'completed' | 'error';
   error?: string;
   assetId?: string;
 }
@@ -25,9 +21,7 @@ interface UseAssetManagementOptions {
 }
 
 export function useAssetManagement(options: UseAssetManagementOptions = {}) {
-  const [uploadProgress, setUploadProgress] = useState<
-    Map<string, UploadProgress>
-  >(new Map());
+  const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
   const [isDragOver, setIsDragOver] = useState(false);
 
   const utils = api.useUtils();
@@ -58,29 +52,26 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   });
 
   // File validation
-  const validateFile = useCallback(
-    (file: File): { valid: boolean; error?: string } => {
-      if (!validateMimeType(file.type)) {
-        return {
-          valid: false,
-          error: `Unsupported file type: ${file.type}. Please upload images or videos only.`,
-        };
-      }
+  const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
+    if (!validateMimeType(file.type)) {
+      return {
+        valid: false,
+        error: `Unsupported file type: ${file.type}. Please upload images or videos only.`,
+      };
+    }
 
-      if (!validateFileSize(file.size, file.type)) {
-        const maxSize = formatFileSize(
-          file.type.startsWith("image/") ? 50 * 1024 * 1024 : 500 * 1024 * 1024,
-        );
-        return {
-          valid: false,
-          error: `File size ${formatFileSize(file.size)} exceeds maximum allowed size of ${maxSize}.`,
-        };
-      }
+    if (!validateFileSize(file.size, file.type)) {
+      const maxSize = formatFileSize(
+        file.type.startsWith('image/') ? 50 * 1024 * 1024 : 500 * 1024 * 1024
+      );
+      return {
+        valid: false,
+        error: `File size ${formatFileSize(file.size)} exceeds maximum allowed size of ${maxSize}.`,
+      };
+    }
 
-      return { valid: true };
-    },
-    [],
-  );
+    return { valid: true };
+  }, []);
 
   // Upload a single file
   const uploadFile = useCallback(
@@ -101,9 +92,9 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
             prev.set(fileId, {
               file,
               progress: 0,
-              status: "pending",
-            }),
-          ),
+              status: 'pending',
+            })
+          )
       );
 
       try {
@@ -113,10 +104,10 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
             new Map(
               prev.set(fileId, {
                 ...prev.get(fileId)!,
-                status: "uploading",
+                status: 'uploading',
                 progress: 10,
-              }),
-            ),
+              })
+            )
         );
 
         const uploadUrlData = await getUploadUrlMutation.mutateAsync({
@@ -133,15 +124,15 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
                 ...prev.get(fileId)!,
                 progress: 30,
                 assetId: uploadUrlData.assetId,
-              }),
-            ),
+              })
+            )
         );
 
         const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
-          method: "PUT",
+          method: 'PUT',
           body: file,
           headers: {
-            "Content-Type": file.type,
+            'Content-Type': file.type,
           },
         });
 
@@ -155,8 +146,8 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
               prev.set(fileId, {
                 ...prev.get(fileId)!,
                 progress: 80,
-              }),
-            ),
+              })
+            )
         );
 
         // Confirm upload completion
@@ -165,7 +156,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
           originalName: file.name,
           fileSize: file.size,
           mimeType: file.type,
-          assetType: "uploaded",
+          assetType: 'uploaded',
         });
 
         setUploadProgress(
@@ -174,9 +165,9 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
               prev.set(fileId, {
                 ...prev.get(fileId)!,
                 progress: 100,
-                status: "completed",
-              }),
-            ),
+                status: 'completed',
+              })
+            )
         );
 
         // Invalidate queries to refresh the list
@@ -188,9 +179,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
           limit: 1,
           offset: 0,
         });
-        const uploadedAsset = assetsData.assets.find(
-          (asset) => asset.id === uploadUrlData.assetId,
-        );
+        const uploadedAsset = assetsData.assets.find((asset) => asset.id === uploadUrlData.assetId);
 
         if (uploadedAsset) {
           options.onUploadSuccess?.(uploadedAsset);
@@ -207,18 +196,17 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
 
         return uploadedAsset ?? null;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Upload failed";
+        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
 
         setUploadProgress(
           (prev) =>
             new Map(
               prev.set(fileId, {
                 ...prev.get(fileId)!,
-                status: "error",
+                status: 'error',
                 error: errorMessage,
-              }),
-            ),
+              })
+            )
         );
 
         options.onUploadError?.(errorMessage, file);
@@ -235,24 +223,22 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         return null;
       }
     },
-    [validateFile, getUploadUrlMutation, confirmUploadMutation, utils, options],
+    [validateFile, getUploadUrlMutation, confirmUploadMutation, utils, options]
   );
 
   // Upload multiple files
   const uploadFiles = useCallback(
     async (files: File[]): Promise<AssetResponse[]> => {
-      const results = await Promise.allSettled(
-        files.map((file) => uploadFile(file)),
-      );
+      const results = await Promise.allSettled(files.map((file) => uploadFile(file)));
 
       return results
         .filter(
           (result): result is PromiseFulfilledResult<AssetResponse | null> =>
-            result.status === "fulfilled" && result.value !== null,
+            result.status === 'fulfilled' && result.value !== null
         )
         .map((result) => result.value!);
     },
-    [uploadFile],
+    [uploadFile]
   );
 
   // Delete asset
@@ -260,7 +246,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
     async (assetId: string) => {
       return deleteAssetMutation.mutateAsync({ assetId });
     },
-    [deleteAssetMutation],
+    [deleteAssetMutation]
   );
 
   // Drag state management with proper debouncing
@@ -304,12 +290,12 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
             }, 5000); // Reset after 5 seconds if still stuck
           }
         },
-        isDragging ? 0 : 50,
+        isDragging ? 0 : 50
       ); // Immediate for enter, delayed for leave to prevent false positives
 
       dragTimeoutRef.current = timeout;
     },
-    [resetStuckDragState],
+    [resetStuckDragState]
   );
 
   // Drag and drop handlers with proper event handling
@@ -319,14 +305,14 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
       e.stopPropagation();
 
       // Show drag feedback if any files are being dragged (validate on drop)
-      if (e.dataTransfer.types.includes("Files")) {
+      if (e.dataTransfer.types.includes('Files')) {
         // Only update state if it's not already true to prevent unnecessary re-renders
         if (!isDragOver) {
           setDragState(true);
         }
       }
     },
-    [setDragState, isDragOver],
+    [setDragState, isDragOver]
   );
 
   const handleDragEnter = useCallback(
@@ -334,14 +320,14 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
       e.preventDefault();
       e.stopPropagation();
 
-      if (e.dataTransfer.types.includes("Files")) {
+      if (e.dataTransfer.types.includes('Files')) {
         // Only update state if it's not already true
         if (!isDragOver) {
           setDragState(true);
         }
       }
     },
-    [setDragState, isDragOver],
+    [setDragState, isDragOver]
   );
 
   const handleDragLeave = useCallback(
@@ -366,7 +352,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         setDragState(false);
       }
     },
-    [setDragState],
+    [setDragState]
   );
 
   // Fallback mouse leave handler to catch stuck states
@@ -383,7 +369,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         }, 100);
       }
     },
-    [isDragOver, resetStuckDragState],
+    [isDragOver, resetStuckDragState]
   );
 
   const handleDrop = useCallback(
@@ -422,7 +408,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         }
       }
     },
-    [uploadFiles, setDragState, validateFile, options],
+    [uploadFiles, setDragState, validateFile, options]
   );
 
   // File input handler
@@ -433,9 +419,9 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
         void uploadFiles(selectedFiles);
       }
       // Clear the input so the same file can be selected again
-      e.target.value = "";
+      e.target.value = '';
     },
-    [uploadFiles],
+    [uploadFiles]
   );
 
   // Reset drag state function
@@ -454,9 +440,7 @@ export function useAssetManagement(options: UseAssetManagementOptions = {}) {
   return {
     // Upload state
     uploadProgress: Array.from(uploadProgress.values()),
-    isUploading: Array.from(uploadProgress.values()).some(
-      (p) => p.status === "uploading",
-    ),
+    isUploading: Array.from(uploadProgress.values()).some((p) => p.status === 'uploading'),
 
     // Drag state
     isDragOver,

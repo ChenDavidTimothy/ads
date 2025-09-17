@@ -1,9 +1,6 @@
-﻿import type { SceneAnimationTrack } from "@/shared/types/scene";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import {
-  mergeObjectAssignments,
-  isObjectAssignments,
-} from "@/shared/properties/assignments";
+﻿import type { SceneAnimationTrack } from '@/shared/types/scene';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
+import { mergeObjectAssignments, isObjectAssignments } from '@/shared/properties/assignments';
 
 type ExecutionMetadata = {
   perObjectTimeCursor?: Record<string, number>;
@@ -12,29 +9,29 @@ type ExecutionMetadata = {
 } & Record<string, unknown>;
 
 function isExecutionMetadata(value: unknown): value is ExecutionMetadata {
-  return Boolean(value && typeof value === "object");
+  return Boolean(value && typeof value === 'object');
 }
 
 function toSceneAnimationTrackArray(value: unknown): SceneAnimationTrack[] {
   if (!Array.isArray(value)) return [];
   return value.filter((track): track is SceneAnimationTrack => {
-    if (!track || typeof track !== "object") return false;
+    if (!track || typeof track !== 'object') return false;
     const maybe = track as { type?: unknown };
-    return typeof maybe.type === "string";
+    return typeof maybe.type === 'string';
   });
 }
 
 export function extractCursorsFromInputs(
-  inputs: Array<{ metadata?: unknown }>,
+  inputs: Array<{ metadata?: unknown }>
 ): Record<string, number> {
   const merged: Record<string, number> = {};
   for (const { metadata } of inputs) {
     if (!isExecutionMetadata(metadata)) continue;
     const cursorMap = metadata.perObjectTimeCursor;
-    if (!cursorMap || typeof cursorMap !== "object") continue;
+    if (!cursorMap || typeof cursorMap !== 'object') continue;
     let valid = true;
     for (const value of Object.values(cursorMap)) {
-      if (typeof value !== "number") {
+      if (typeof value !== 'number') {
         valid = false;
         break;
       }
@@ -42,8 +39,7 @@ export function extractCursorsFromInputs(
     if (!valid) continue;
     for (const [objectId, time] of Object.entries(cursorMap)) {
       const existing = merged[objectId];
-      const nextTime =
-        typeof existing === "number" && existing > time ? existing : time;
+      const nextTime = typeof existing === 'number' && existing > time ? existing : time;
       merged[objectId] = nextTime;
     }
   }
@@ -52,13 +48,13 @@ export function extractCursorsFromInputs(
 
 export function extractPerObjectAnimationsFromInputs(
   inputs: Array<{ metadata?: unknown }>,
-  allowIds: string[],
+  allowIds: string[]
 ): Record<string, SceneAnimationTrack[]> {
   const merged: Record<string, SceneAnimationTrack[]> = {};
   for (const { metadata } of inputs) {
     if (!isExecutionMetadata(metadata)) continue;
     const fromMeta = metadata.perObjectAnimations;
-    if (!fromMeta || typeof fromMeta !== "object") continue;
+    if (!fromMeta || typeof fromMeta !== 'object') continue;
     for (const [objectId, animations] of Object.entries(fromMeta)) {
       if (!allowIds.includes(objectId)) continue;
       const typedAnimations = toSceneAnimationTrackArray(animations);
@@ -71,7 +67,7 @@ export function extractPerObjectAnimationsFromInputs(
 
 export function extractPerObjectAnimationsFromInputsWithPriority(
   portInputs: Array<Array<{ metadata?: unknown } | undefined>>,
-  allowIds: string[],
+  allowIds: string[]
 ): Record<string, SceneAnimationTrack[]> {
   const merged: Record<string, SceneAnimationTrack[]> = {};
 
@@ -83,7 +79,7 @@ export function extractPerObjectAnimationsFromInputsWithPriority(
       const { metadata } = input ?? {};
       if (!isExecutionMetadata(metadata)) continue;
       const fromMeta = metadata.perObjectAnimations;
-      if (!fromMeta || typeof fromMeta !== "object") continue;
+      if (!fromMeta || typeof fromMeta !== 'object') continue;
 
       for (const [objectId, animations] of Object.entries(fromMeta)) {
         if (!allowIds.includes(objectId)) continue;
@@ -92,11 +88,11 @@ export function extractPerObjectAnimationsFromInputsWithPriority(
         if (typedAnimations.length === 0) continue;
         const clonedAnimations = typedAnimations.map((anim) => {
           switch (anim.type) {
-            case "move":
-            case "rotate":
-            case "scale":
-            case "fade":
-            case "color":
+            case 'move':
+            case 'rotate':
+            case 'scale':
+            case 'fade':
+            case 'color':
               return {
                 ...anim,
                 properties: { ...anim.properties },
@@ -111,7 +107,7 @@ export function extractPerObjectAnimationsFromInputsWithPriority(
 
         for (const newAnim of clonedAnimations) {
           const conflictingAnimations = existingAnimations.filter(
-            (existingAnim) => existingAnim.type === newAnim.type,
+            (existingAnim) => existingAnim.type === newAnim.type
           );
 
           if (conflictingAnimations.length === 0) {
@@ -123,10 +119,7 @@ export function extractPerObjectAnimationsFromInputsWithPriority(
 
         const currentAnimations = merged[objectId] ?? [];
         const nonConflictingExisting = currentAnimations.filter(
-          (existingAnim) =>
-            !newAnimations.some(
-              (newAnim) => newAnim.type === existingAnim.type,
-            ),
+          (existingAnim) => !newAnimations.some((newAnim) => newAnim.type === existingAnim.type)
         );
         merged[objectId] = [...nonConflictingExisting, ...newAnimations];
       }
@@ -138,13 +131,13 @@ export function extractPerObjectAnimationsFromInputsWithPriority(
 
 export function extractPerObjectAssignmentsFromInputs(
   inputs: Array<{ metadata?: unknown }>,
-  allowIds: string[],
+  allowIds: string[]
 ): PerObjectAssignments {
   const merged: PerObjectAssignments = {};
   for (const { metadata } of inputs) {
     if (!isExecutionMetadata(metadata)) continue;
     const fromMeta = metadata.perObjectAssignments;
-    if (!fromMeta || typeof fromMeta !== "object") continue;
+    if (!fromMeta || typeof fromMeta !== 'object') continue;
     for (const [objectId, assignment] of Object.entries(fromMeta)) {
       if (!allowIds.includes(objectId)) continue;
       const base = merged[objectId];
@@ -158,7 +151,7 @@ export function extractPerObjectAssignmentsFromInputs(
 
 export function extractPerObjectAssignmentsFromInputsWithPriority(
   portInputs: Array<Array<{ metadata?: unknown } | undefined>>,
-  allowIds: string[],
+  allowIds: string[]
 ): PerObjectAssignments {
   const merged: PerObjectAssignments = {};
   for (let portIndex = portInputs.length - 1; portIndex >= 0; portIndex--) {
@@ -168,7 +161,7 @@ export function extractPerObjectAssignmentsFromInputsWithPriority(
       const { metadata } = input ?? {};
       if (!isExecutionMetadata(metadata)) continue;
       const fromMeta = metadata.perObjectAssignments;
-      if (!fromMeta || typeof fromMeta !== "object") continue;
+      if (!fromMeta || typeof fromMeta !== 'object') continue;
       for (const [objectId, assignment] of Object.entries(fromMeta)) {
         if (!allowIds.includes(objectId)) continue;
         const base = merged[objectId];

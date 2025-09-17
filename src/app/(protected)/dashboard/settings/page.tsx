@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/utils/supabase/client";
-import { useNotifications } from "@/hooks/use-notifications";
-import { PageHeader } from "@/components/ui/page-header";
-import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBrowserClient } from '@/utils/supabase/client';
+import { useNotifications } from '@/hooks/use-notifications';
+import { PageHeader } from '@/components/ui/page-header';
+import { SettingsSkeleton } from '@/components/skeletons/SettingsSkeleton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import {
   User,
   Lock,
@@ -21,7 +21,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -57,11 +57,11 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form states
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -71,9 +71,9 @@ export default function SettingsPage() {
   const [marketingEmails, setMarketingEmails] = useState(false);
 
   // Active tab
-  const [activeTab, setActiveTab] = useState<
-    "profile" | "password" | "notifications" | "danger"
-  >("profile");
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'danger'>(
+    'profile'
+  );
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -84,7 +84,7 @@ export default function SettingsPage() {
         } = await supabase.auth.getUser();
 
         if (authError || !authUser) {
-          router.push("/login");
+          router.push('/login');
           return;
         }
 
@@ -98,10 +98,10 @@ export default function SettingsPage() {
         };
 
         setUser(profile);
-        setFirstName(profile.first_name ?? "");
-        setLastName(profile.last_name ?? "");
+        setFirstName(profile.first_name ?? '');
+        setLastName(profile.last_name ?? '');
       } catch {
-        setError("Failed to load user profile");
+        setError('Failed to load user profile');
       } finally {
         setLoading(false);
       }
@@ -130,7 +130,7 @@ export default function SettingsPage() {
         return;
       }
 
-      setSuccess("Profile updated successfully");
+      setSuccess('Profile updated successfully');
 
       // Update local state
       if (user) {
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -154,22 +154,22 @@ export default function SettingsPage() {
     setSuccess(null);
 
     if (!currentPassword) {
-      setError("Current password is required");
+      setError('Current password is required');
       return;
     }
 
     if (!newPassword) {
-      setError("New password is required");
+      setError('New password is required');
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters");
+      setError('New password must be at least 6 characters');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match");
+      setError('New passwords do not match');
       return;
     }
 
@@ -183,7 +183,7 @@ export default function SettingsPage() {
       });
 
       if (signInError) {
-        setError("Current password is incorrect");
+        setError('Current password is incorrect');
         return;
       }
 
@@ -197,49 +197,43 @@ export default function SettingsPage() {
         return;
       }
 
-      setSuccess("Password updated successfully");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setSuccess('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to update password",
-      );
+      setError(err instanceof Error ? err.message : 'Failed to update password');
     } finally {
       setSaving(false);
     }
   };
 
   const handleLogout = async () => {
-    if (!confirm("Are you sure you want to sign out?")) {
+    if (!confirm('Are you sure you want to sign out?')) {
       return;
     }
 
     try {
       setSaving(true);
       await supabase.auth.signOut();
-      toast.success("Signed out successfully", "Come back soon!");
-      router.push("/login");
+      toast.success('Signed out successfully', 'Come back soon!');
+      router.push('/login');
     } catch (error) {
-      console.error("[SETTINGS] Logout error:", error);
-      toast.error("Logout failed", "Please try again");
+      console.error('[SETTINGS] Logout error:', error);
+      toast.error('Logout failed', 'Please try again');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to delete your account? This action cannot be undone.",
-      )
-    ) {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       return;
     }
 
     if (
       !confirm(
-        "This will permanently delete all your workspaces and data. Type 'DELETE' to confirm.",
+        "This will permanently delete all your workspaces and data. Type 'DELETE' to confirm."
       )
     ) {
       return;
@@ -248,7 +242,7 @@ export default function SettingsPage() {
     // Note: Account deletion would need to be implemented on the backend
     // This is just a placeholder for the UI
     alert(
-      "Account deletion is not yet implemented. Please contact support to delete your account.",
+      'Account deletion is not yet implemented. Please contact support to delete your account.'
     );
   };
 
@@ -257,10 +251,10 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "password", label: "Password", icon: Lock },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "danger", label: "Danger Zone", icon: Shield },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'password', label: 'Password', icon: Lock },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'danger', label: 'Danger Zone', icon: Shield },
   ] as const;
 
   return (
@@ -279,13 +273,11 @@ export default function SettingsPage() {
                 return (
                   <Button
                     key={tab.id}
-                    variant={activeTab === tab.id ? "primary" : "ghost"}
+                    variant={activeTab === tab.id ? 'primary' : 'ghost'}
                     size="sm"
                     className={cn(
-                      "w-full justify-start rounded-none border-b-2",
-                      activeTab === tab.id
-                        ? "border-[var(--accent-primary)]"
-                        : "border-transparent",
+                      'w-full justify-start rounded-none border-b-2',
+                      activeTab === tab.id ? 'border-[var(--accent-primary)]' : 'border-transparent'
                     )}
                     onClick={() => setActiveTab(tab.id)}
                   >
@@ -304,23 +296,19 @@ export default function SettingsPage() {
               {error && (
                 <div className="mb-6 flex items-center gap-2 rounded-lg border border-[var(--danger-500)]/20 bg-[var(--danger-500)]/10 p-3">
                   <AlertTriangle className="h-4 w-4 text-[var(--danger-500)]" />
-                  <p className="text-sm font-medium text-[var(--danger-500)]">
-                    {error}
-                  </p>
+                  <p className="text-sm font-medium text-[var(--danger-500)]">{error}</p>
                 </div>
               )}
 
               {success && (
                 <div className="mb-6 flex items-center gap-2 rounded-lg border border-[var(--success-500)]/20 bg-[var(--success-500)]/10 p-3">
                   <CheckCircle2 className="h-4 w-4 text-[var(--success-500)]" />
-                  <p className="text-sm font-medium text-[var(--success-500)]">
-                    {success}
-                  </p>
+                  <p className="text-sm font-medium text-[var(--success-500)]">{success}</p>
                 </div>
               )}
 
               {/* Profile Tab */}
-              {activeTab === "profile" && (
+              {activeTab === 'profile' && (
                 <div>
                   <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
                     Profile Information
@@ -367,13 +355,13 @@ export default function SettingsPage() {
                       </label>
                       <Input
                         type="email"
-                        value={user?.email ?? ""}
+                        value={user?.email ?? ''}
                         disabled
                         className="cursor-not-allowed bg-[var(--surface-2)]"
                       />
                       <p className="text-xs text-[var(--text-tertiary)]">
-                        Email address cannot be changed. Contact support if you
-                        need to update your email.
+                        Email address cannot be changed. Contact support if you need to update your
+                        email.
                       </p>
                     </div>
 
@@ -383,11 +371,7 @@ export default function SettingsPage() {
                       </label>
                       <Input
                         type="text"
-                        value={
-                          user
-                            ? new Date(user.created_at).toLocaleDateString()
-                            : ""
-                        }
+                        value={user ? new Date(user.created_at).toLocaleDateString() : ''}
                         disabled
                         className="cursor-not-allowed bg-[var(--surface-2)]"
                       />
@@ -415,18 +399,12 @@ export default function SettingsPage() {
                     </h3>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                          Sign Out
-                        </h4>
+                        <h4 className="text-sm font-medium text-[var(--text-primary)]">Sign Out</h4>
                         <p className="text-sm text-[var(--text-secondary)]">
                           Sign out of your account and return to the login page
                         </p>
                       </div>
-                      <Button
-                        onClick={handleLogout}
-                        disabled={saving}
-                        variant="secondary"
-                      >
+                      <Button onClick={handleLogout} disabled={saving} variant="secondary">
                         {saving ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -442,7 +420,7 @@ export default function SettingsPage() {
               )}
 
               {/* Password Tab */}
-              {activeTab === "password" && (
+              {activeTab === 'password' && (
                 <div>
                   <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
                     Change Password
@@ -459,7 +437,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Input
                           id="currentPassword"
-                          type={showCurrentPassword ? "text" : "password"}
+                          type={showCurrentPassword ? 'text' : 'password'}
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           placeholder="Enter your current password"
@@ -468,9 +446,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
-                          onClick={() =>
-                            setShowCurrentPassword(!showCurrentPassword)
-                          }
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                         >
                           {showCurrentPassword ? (
                             <EyeOff className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -491,7 +467,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Input
                           id="newPassword"
-                          type={showNewPassword ? "text" : "password"}
+                          type={showNewPassword ? 'text' : 'password'}
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="Enter your new password"
@@ -521,7 +497,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Input
                           id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
+                          type={showConfirmPassword ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Confirm your new password"
@@ -530,9 +506,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -561,7 +535,7 @@ export default function SettingsPage() {
               )}
 
               {/* Notifications Tab */}
-              {activeTab === "notifications" && (
+              {activeTab === 'notifications' && (
                 <div>
                   <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
                     Notification Preferences
@@ -582,9 +556,7 @@ export default function SettingsPage() {
                           type="checkbox"
                           className="peer sr-only"
                           checked={emailNotifications}
-                          onChange={(e) =>
-                            setEmailNotifications(e.target.checked)
-                          }
+                          onChange={(e) => setEmailNotifications(e.target.checked)}
                         />
                         <div className="peer h-6 w-11 rounded-full bg-[var(--surface-2)] peer-checked:bg-[var(--accent-primary)] peer-focus:ring-4 peer-focus:ring-[var(--accent-primary)]/20 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                       </label>
@@ -619,7 +591,7 @@ export default function SettingsPage() {
               )}
 
               {/* Danger Zone Tab */}
-              {activeTab === "danger" && (
+              {activeTab === 'danger' && (
                 <div>
                   <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">
                     Danger Zone
@@ -633,8 +605,8 @@ export default function SettingsPage() {
                           Delete Account
                         </h3>
                         <p className="mb-4 text-[var(--text-secondary)]">
-                          Once you delete your account, there is no going back.
-                          Please be certain. This will permanently delete:
+                          Once you delete your account, there is no going back. Please be certain.
+                          This will permanently delete:
                         </p>
                         <ul className="mb-6 space-y-1 text-sm text-[var(--text-secondary)]">
                           <li>• All of your workspaces and projects</li>

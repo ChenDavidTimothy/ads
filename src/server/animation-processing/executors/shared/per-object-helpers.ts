@@ -1,12 +1,12 @@
-﻿import type { SceneAnimationTrack } from "@/shared/types";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
-import { mergeObjectAssignments } from "@/shared/properties/assignments";
-import type { ExecutionValue } from "../../execution-context";
-import { mergeCursorMaps } from "../../scene/scene-assembler";
-import { deepClone } from "./common";
+﻿import type { SceneAnimationTrack } from '@/shared/types';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
+import { mergeObjectAssignments } from '@/shared/properties/assignments';
+import type { ExecutionValue } from '../../execution-context';
+import { mergeCursorMaps } from '../../scene/scene-assembler';
+import { deepClone } from './common';
 
 export function clonePerObjectAnimations(
-  map: Record<string, SceneAnimationTrack[]>,
+  map: Record<string, SceneAnimationTrack[]>
 ): Record<string, SceneAnimationTrack[]> {
   const cloned: Record<string, SceneAnimationTrack[]> = {};
   for (const [k, v] of Object.entries(map)) {
@@ -19,14 +19,12 @@ export function clonePerObjectAnimations(
 }
 
 export function extractPerObjectAnimationsFromInputs(
-  inputs: ExecutionValue[],
+  inputs: ExecutionValue[]
 ): Record<string, SceneAnimationTrack[]> {
   const merged: Record<string, SceneAnimationTrack[]> = {};
   for (const input of inputs) {
     const perObj = (
-      input.metadata as
-        | { perObjectAnimations?: Record<string, SceneAnimationTrack[]> }
-        | undefined
+      input.metadata as { perObjectAnimations?: Record<string, SceneAnimationTrack[]> } | undefined
     )?.perObjectAnimations;
     if (!perObj) continue;
     for (const [objectId, tracks] of Object.entries(perObj)) {
@@ -37,16 +35,11 @@ export function extractPerObjectAnimationsFromInputs(
   return merged;
 }
 
-export function extractCursorsFromInputs(
-  inputs: ExecutionValue[],
-): Record<string, number> {
+export function extractCursorsFromInputs(inputs: ExecutionValue[]): Record<string, number> {
   const maps: Record<string, number>[] = [];
   for (const input of inputs) {
-    const cursors = (
-      input.metadata as
-        | { perObjectTimeCursor?: Record<string, number> }
-        | undefined
-    )?.perObjectTimeCursor;
+    const cursors = (input.metadata as { perObjectTimeCursor?: Record<string, number> } | undefined)
+      ?.perObjectTimeCursor;
     if (cursors) maps.push(cursors);
   }
   if (maps.length === 0) return {};
@@ -54,16 +47,13 @@ export function extractCursorsFromInputs(
 }
 
 export function extractPerObjectAssignmentsFromInputs(
-  inputs: ExecutionValue[],
+  inputs: ExecutionValue[]
 ): PerObjectAssignments | undefined {
   const merged: PerObjectAssignments = {};
   let found = false;
   for (const input of inputs) {
-    const fromMeta = (
-      input.metadata as
-        | { perObjectAssignments?: PerObjectAssignments }
-        | undefined
-    )?.perObjectAssignments;
+    const fromMeta = (input.metadata as { perObjectAssignments?: PerObjectAssignments } | undefined)
+      ?.perObjectAssignments;
     if (!fromMeta) continue;
     for (const [objectId, assignment] of Object.entries(fromMeta)) {
       found = true;
@@ -76,7 +66,7 @@ export function extractPerObjectAssignmentsFromInputs(
 }
 
 export function extractPerObjectBatchOverridesFromInputs(
-  inputs: ExecutionValue[],
+  inputs: ExecutionValue[]
 ): Record<string, Record<string, Record<string, unknown>>> | undefined {
   const merged: Record<string, Record<string, Record<string, unknown>>> = {};
   let found = false;
@@ -84,10 +74,7 @@ export function extractPerObjectBatchOverridesFromInputs(
     const fromMeta = (
       input.metadata as
         | {
-            perObjectBatchOverrides?: Record<
-              string,
-              Record<string, Record<string, unknown>>
-            >;
+            perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
           }
         | undefined
     )?.perObjectBatchOverrides;

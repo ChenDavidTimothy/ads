@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { useVariableBinding } from "@/components/workspace/binding/bindings";
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { useVariableBinding } from '@/components/workspace/binding/bindings';
 
 export function BindingBadge({
   nodeId,
@@ -37,7 +37,7 @@ export function BindingBadge({
           : globalBinding.resetToDefault(bindingKey)
       }
     >
-      {name ? `Bound: ${name}` : "Bound"}
+      {name ? `Bound: ${name}` : 'Bound'}
     </Badge>
   );
 }

@@ -1,20 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  NumberField,
-  SelectField,
-  ColorField,
-} from "@/components/ui/form-fields";
-import { cn } from "@/lib/utils";
-import { transformFactory } from "@/shared/registry/transforms";
-import {
-  generateTransformIdentifier,
-  getTransformDisplayLabel,
-} from "@/lib/defaults/transforms";
-import { TransformTracker } from "@/lib/flow/transform-tracking";
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { NumberField, SelectField, ColorField } from '@/components/ui/form-fields';
+import { cn } from '@/lib/utils';
+import { transformFactory } from '@/shared/registry/transforms';
+import { generateTransformIdentifier, getTransformDisplayLabel } from '@/lib/defaults/transforms';
+import { TransformTracker } from '@/lib/flow/transform-tracking';
 import type {
   AnimationTrack,
   MoveTrackProperties,
@@ -24,8 +17,8 @@ import type {
   ColorTrackProperties,
   SlideTrackProperties,
   AnimationNodeData,
-} from "@/shared/types/nodes";
-import { deepMerge } from "@/shared/utils/object-path";
+} from '@/shared/types/nodes';
+import { deepMerge } from '@/shared/utils/object-path';
 import {
   isMoveTrack,
   isRotateTrack,
@@ -33,19 +26,16 @@ import {
   isFadeTrack,
   isColorTrack,
   isSlideTrack,
-} from "@/shared/types/nodes";
-import type {
-  PerObjectAssignments,
-  TrackOverride,
-} from "@/shared/properties/assignments";
-import { useWorkspace } from "./workspace-context";
-import { BindButton } from "@/components/workspace/binding/bindings";
+} from '@/shared/types/nodes';
+import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
+import { useWorkspace } from './workspace-context';
+import { BindButton } from '@/components/workspace/binding/bindings';
 import {
   BindingBadge as UnifiedBindingBadge,
   OverrideBadge as UnifiedOverrideBadge,
-} from "@/components/workspace/binding/badges";
-import { BindingAndBatchControls } from "@/components/workspace/batch/BindingAndBatchControls";
-import { getResolverFieldPath } from "@/shared/properties/field-paths";
+} from '@/components/workspace/binding/badges';
+import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
+import { getResolverFieldPath } from '@/shared/properties/field-paths';
 
 // Use unified badges consistent with Canvas editor
 
@@ -53,23 +43,18 @@ interface TimelineEditorCoreProps {
   animationNodeId: string;
   duration: number;
   tracks: AnimationTrack[];
-  onChange: (
-    updates: Partial<{ duration: number; tracks: AnimationTrack[] }>,
-  ) => void;
+  onChange: (updates: Partial<{ duration: number; tracks: AnimationTrack[] }>) => void;
   // Optional per-object assignment editing
   selectedObjectId?: string;
   perObjectAssignments?: PerObjectAssignments;
-  onUpdateTrackOverride?: (
-    trackId: string,
-    updates: Partial<TrackOverride>,
-  ) => void;
+  onUpdateTrackOverride?: (trackId: string, updates: Partial<TrackOverride>) => void;
   // Allow parent to control/render right panel externally
   onSelectedTrackChange?: (track: AnimationTrack | null) => void;
 }
 
 interface DragState {
   trackId: string;
-  type: "move" | "resize-start" | "resize-end";
+  type: 'move' | 'resize-start' | 'resize-end';
   startX: number;
   startTime: number;
   startDuration: number;
@@ -80,10 +65,10 @@ const HANDLE_HITBOX_PX = 12; // Wide invisible hitbox (w-3)
 
 function isPoint2D(value: unknown): value is { x: number; y: number } {
   return (
-    typeof value === "object" &&
+    typeof value === 'object' &&
     value !== null &&
-    typeof (value as Record<string, unknown>).x === "number" &&
-    typeof (value as Record<string, unknown>).y === "number"
+    typeof (value as Record<string, unknown>).x === 'number' &&
+    typeof (value as Record<string, unknown>).y === 'number'
   );
 }
 
@@ -94,7 +79,7 @@ function isMoveDefaults(value: unknown): value is MoveTrackProperties {
 
 function isRotateDefaults(value: unknown): value is RotateTrackProperties {
   const v = value as Partial<RotateTrackProperties>;
-  return !!v && typeof v.from === "number" && typeof v.to === "number";
+  return !!v && typeof v.from === 'number' && typeof v.to === 'number';
 }
 
 function isScaleDefaults(value: unknown): value is ScaleTrackProperties {
@@ -104,31 +89,22 @@ function isScaleDefaults(value: unknown): value is ScaleTrackProperties {
 
 function isFadeDefaults(value: unknown): value is FadeTrackProperties {
   const v = value as Partial<FadeTrackProperties>;
-  return !!v && typeof v.from === "number" && typeof v.to === "number";
+  return !!v && typeof v.from === 'number' && typeof v.to === 'number';
 }
 
 function isColorDefaults(value: unknown): value is ColorTrackProperties {
   const v = value as Partial<ColorTrackProperties>;
   return (
-    !!v &&
-    typeof v.property === "string" &&
-    typeof v.from === "string" &&
-    typeof v.to === "string"
+    !!v && typeof v.property === 'string' && typeof v.from === 'string' && typeof v.to === 'string'
   );
 }
 
 function isSlideDefaults(value: unknown): value is SlideTrackProperties {
   const v = value as Partial<SlideTrackProperties>;
-  return (
-    !!v &&
-    typeof v.orientationDeg === "number" &&
-    typeof v.velocity === "number"
-  );
+  return !!v && typeof v.orientationDeg === 'number' && typeof v.velocity === 'number';
 }
 
-function getDefaultTrackProperties(
-  trackType: AnimationTrack["type"],
-): Record<string, unknown> {
+function getDefaultTrackProperties(trackType: AnimationTrack['type']): Record<string, unknown> {
   // Use the registry system to get default properties
   const defaults = transformFactory.getDefaultProperties(trackType);
   if (!defaults) {
@@ -139,26 +115,24 @@ function getDefaultTrackProperties(
 
 // Normalize legacy track property shapes to current schema
 function normalizeTrack(t: AnimationTrack): AnimationTrack {
-  if (t.type === "scale") {
+  if (t.type === 'scale') {
     const props = t.properties as unknown as {
       from?: number | { x?: number; y?: number };
       to?: number | { x?: number; y?: number };
     };
     const fromObj =
-      typeof props.from === "number"
+      typeof props.from === 'number'
         ? { x: props.from, y: props.from }
         : (props.from ?? { x: 1, y: 1 });
     const toObj =
-      typeof props.to === "number"
-        ? { x: props.to, y: props.to }
-        : (props.to ?? { x: 1, y: 1 });
+      typeof props.to === 'number' ? { x: props.to, y: props.to } : (props.to ?? { x: 1, y: 1 });
     const from = {
-      x: typeof fromObj.x === "number" ? fromObj.x : 1,
-      y: typeof fromObj.y === "number" ? fromObj.y : 1,
+      x: typeof fromObj.x === 'number' ? fromObj.x : 1,
+      y: typeof fromObj.y === 'number' ? fromObj.y : 1,
     };
     const to = {
-      x: typeof toObj.x === "number" ? toObj.x : 1,
-      y: typeof toObj.y === "number" ? toObj.y : 1,
+      x: typeof toObj.x === 'number' ? toObj.x : 1,
+      y: typeof toObj.y === 'number' ? toObj.y : 1,
     };
     return { ...t, properties: { from, to } as unknown } as AnimationTrack;
   }
@@ -176,9 +150,7 @@ export function TimelineEditorCore({
   onSelectedTrackChange,
 }: TimelineEditorCoreProps) {
   const [duration, setDuration] = useState(controlledDuration);
-  const [tracks, setTracks] = useState<AnimationTrack[]>(
-    controlledTracks.map(normalizeTrack),
-  );
+  const [tracks, setTracks] = useState<AnimationTrack[]>(controlledTracks.map(normalizeTrack));
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [localDragTracks, setLocalDragTracks] = useState<AnimationTrack[]>([]); // Local state for smooth dragging
@@ -187,9 +159,7 @@ export function TimelineEditorCore({
   const timelineRef = useRef<HTMLDivElement>(null);
   const trackerRef = useRef<TransformTracker>(new TransformTracker());
   const prevNodeIdRef = useRef<string>(animationNodeId);
-  const [timelineWidth, setTimelineWidth] = useState<number>(
-    DEFAULT_TIMELINE_WIDTH,
-  );
+  const [timelineWidth, setTimelineWidth] = useState<number>(DEFAULT_TIMELINE_WIDTH);
 
   // Initialize only when the animation node changes; preserve interaction state otherwise
   useEffect(() => {
@@ -217,7 +187,7 @@ export function TimelineEditorCore({
     };
     measure();
     const ro =
-      typeof ResizeObserver !== "undefined"
+      typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver((entries) => {
             for (const entry of entries) {
               const cr = entry.contentRect;
@@ -226,9 +196,9 @@ export function TimelineEditorCore({
           })
         : undefined;
     if (ro) ro.observe(el);
-    window.addEventListener("resize", measure);
+    window.addEventListener('resize', measure);
     return () => {
-      window.removeEventListener("resize", measure);
+      window.removeEventListener('resize', measure);
       if (ro) ro.disconnect();
     };
   }, []);
@@ -244,71 +214,70 @@ export function TimelineEditorCore({
   }, [tracks]);
 
   useEffect(() => {
-    if (typeof onSelectedTrackChange === "function") {
+    if (typeof onSelectedTrackChange === 'function') {
       setDuration(controlledDuration);
       setTracks(controlledTracks.map(normalizeTrack));
     }
   }, [controlledDuration, controlledTracks, onSelectedTrackChange]);
 
   const addTrack = useCallback(
-    (type: AnimationTrack["type"]) => {
+    (type: AnimationTrack['type']) => {
       const definition = transformFactory.getTransformDefinition(type);
       const identifier = generateTransformIdentifier(type, tracks);
       const baseTrack = {
         id: identifier.id,
         startTime: 0,
         duration: Math.min(2, duration),
-        easing: definition?.metadata?.defaultEasing ?? "easeInOut",
+        easing: definition?.metadata?.defaultEasing ?? 'easeInOut',
         properties: getDefaultTrackProperties(type),
         identifier,
       };
       let newTrack: AnimationTrack;
       switch (type) {
-        case "move": {
+        case 'move': {
           const props = isMoveDefaults(baseTrack.properties)
             ? baseTrack.properties
             : { from: { x: 0, y: 0 }, to: { x: 100, y: 100 } };
-          newTrack = { ...baseTrack, type: "move", properties: props };
+          newTrack = { ...baseTrack, type: 'move', properties: props };
           break;
         }
-        case "slide": {
+        case 'slide': {
           const props = isSlideDefaults(baseTrack.properties)
             ? baseTrack.properties
             : { orientationDeg: 0, velocity: 100 };
           newTrack = {
             ...baseTrack,
-            type: "slide",
+            type: 'slide',
             properties: props as SlideTrackProperties,
           } as unknown as AnimationTrack;
           break;
         }
-        case "rotate": {
+        case 'rotate': {
           const props = isRotateDefaults(baseTrack.properties)
             ? baseTrack.properties
             : { from: 0, to: 1 };
-          newTrack = { ...baseTrack, type: "rotate", properties: props };
+          newTrack = { ...baseTrack, type: 'rotate', properties: props };
           break;
         }
-        case "scale": {
+        case 'scale': {
           const props = isScaleDefaults(baseTrack.properties)
             ? baseTrack.properties
             : { from: { x: 1, y: 1 }, to: { x: 1.5, y: 1.5 } };
-          newTrack = { ...baseTrack, type: "scale", properties: props };
+          newTrack = { ...baseTrack, type: 'scale', properties: props };
           break;
         }
-        case "fade": {
+        case 'fade': {
           const props = isFadeDefaults(baseTrack.properties)
             ? baseTrack.properties
             : { from: 1, to: 0.5 };
-          newTrack = { ...baseTrack, type: "fade", properties: props };
+          newTrack = { ...baseTrack, type: 'fade', properties: props };
           break;
         }
-        case "color": {
+        case 'color': {
           let props: ColorTrackProperties;
-          if (isColorDefaults(baseTrack.properties))
-            props = baseTrack.properties;
-          else props = { from: "#ff0000", to: "#00ff00", property: "fill" };
-          newTrack = { ...baseTrack, type: "color", properties: props };
+          if (isColorDefaults(baseTrack.properties)) props = baseTrack.properties;
+          else props = { from: '#ff0000', to: '#00ff00', property: 'fill' };
+          newTrack = { ...baseTrack, type: 'color', properties: props };
           break;
         }
       }
@@ -318,7 +287,7 @@ export function TimelineEditorCore({
         return next;
       });
     },
-    [duration, tracks, onChange],
+    [duration, tracks, onChange]
   );
 
   const deleteTrack = useCallback(
@@ -331,7 +300,7 @@ export function TimelineEditorCore({
         return next;
       });
     },
-    [selectedTrackId, onChange],
+    [selectedTrackId, onChange]
   );
 
   const handleDurationImmediate = useCallback(
@@ -343,11 +312,11 @@ export function TimelineEditorCore({
       });
       onChange({ duration: Math.max(0.1, newDuration), tracks });
     },
-    [onChange, tracks],
+    [onChange, tracks]
   );
 
   const handlePointerDown = useCallback(
-    (e: React.PointerEvent, trackId: string, type: DragState["type"]) => {
+    (e: React.PointerEvent, trackId: string, type: DragState['type']) => {
       e.preventDefault();
       const track = tracks.find((t) => t.identifier.id === trackId);
       if (!track) return;
@@ -364,15 +333,13 @@ export function TimelineEditorCore({
       // Initialize local drag state for smooth updates
       setLocalDragTracks(tracks.map(normalizeTrack));
     },
-    [tracks],
+    [tracks]
   );
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
       if (!dragState || !localDragTracks.length) return;
-      const track = localDragTracks.find(
-        (t) => t.identifier.id === dragState.trackId,
-      );
+      const track = localDragTracks.find((t) => t.identifier.id === dragState.trackId);
       if (!track) return;
 
       const deltaX = e.clientX - dragState.startX;
@@ -385,49 +352,42 @@ export function TimelineEditorCore({
           if (t.identifier.id !== dragState.trackId) return t;
 
           switch (dragState.type) {
-            case "move": {
+            case 'move': {
               const newStartTime = Math.max(
                 0,
-                Math.min(
-                  duration - t.duration,
-                  dragState.startTime + deltaTime,
-                ),
+                Math.min(duration - t.duration, dragState.startTime + deltaTime)
               );
               return { ...t, startTime: newStartTime };
             }
-            case "resize-start": {
+            case 'resize-start': {
               const newStart = Math.max(
                 0,
                 Math.min(
                   dragState.startTime + dragState.startDuration - 0.1,
-                  dragState.startTime + deltaTime,
-                ),
+                  dragState.startTime + deltaTime
+                )
               );
-              const newDuration =
-                dragState.startDuration - (newStart - dragState.startTime);
+              const newDuration = dragState.startDuration - (newStart - dragState.startTime);
               return {
                 ...t,
                 startTime: newStart,
                 duration: Math.max(0.1, newDuration),
               };
             }
-            case "resize-end": {
+            case 'resize-end': {
               const newDur = Math.max(
                 0.1,
-                Math.min(
-                  duration - dragState.startTime,
-                  dragState.startDuration + deltaTime,
-                ),
+                Math.min(duration - dragState.startTime, dragState.startDuration + deltaTime)
               );
               return { ...t, duration: newDur };
             }
             default:
               return t;
           }
-        }),
+        })
       );
     },
-    [dragState, localDragTracks, duration, timelineWidth],
+    [dragState, localDragTracks, duration, timelineWidth]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -442,13 +402,13 @@ export function TimelineEditorCore({
 
   useEffect(() => {
     if (dragState) {
-      document.addEventListener("pointermove", handlePointerMove);
-      document.addEventListener("pointerup", handlePointerUp);
-      document.addEventListener("pointercancel", handlePointerUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
       return () => {
-        document.removeEventListener("pointermove", handlePointerMove);
-        document.removeEventListener("pointerup", handlePointerUp);
-        document.removeEventListener("pointercancel", handlePointerUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
+        document.removeEventListener('pointercancel', handlePointerUp);
       };
     }
   }, [dragState, handlePointerMove, handlePointerUp]);
@@ -457,7 +417,7 @@ export function TimelineEditorCore({
 
   // Notify parent of selection changes when requested
   useEffect(() => {
-    if (typeof onSelectedTrackChange === "function") {
+    if (typeof onSelectedTrackChange === 'function') {
       onSelectedTrackChange(selectedTrack ?? null);
     }
   }, [selectedTrack, onSelectedTrackChange]);
@@ -475,12 +435,10 @@ export function TimelineEditorCore({
               step={0.1}
               defaultValue={3}
               className="w-32"
-              bindAdornment={
-                <BindButton nodeId={animationNodeId} bindingKey="duration" />
-              }
+              bindAdornment={<BindButton nodeId={animationNodeId} bindingKey="duration" />}
               disabled={(() => {
                 const node = state.flow.nodes.find(
-                  (n) => n.data?.identifier?.id === animationNodeId,
+                  (n) => n.data?.identifier?.id === animationNodeId
                 );
                 if (!node) return false;
                 const animationData = node.data as AnimationNodeData;
@@ -494,24 +452,22 @@ export function TimelineEditorCore({
 
         <div className="mb-[var(--space-4)]">
           <div className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)]">
-            <span className="text-sm font-medium text-[var(--text-secondary)]">
-              Add Track:
-            </span>
+            <span className="text-sm font-medium text-[var(--text-secondary)]">Add Track:</span>
             {transformFactory.getAllTransformTypes().map((type) => {
               const trackColors = transformFactory.getTrackColors();
               const trackIcons = transformFactory.getTrackIcons();
               return (
                 <Button
                   key={type}
-                  onClick={() => addTrack(type as AnimationTrack["type"])}
+                  onClick={() => addTrack(type as AnimationTrack['type'])}
                   className={cn(
-                    "border border-[var(--border-primary)] text-xs font-medium transition-all",
+                    'border border-[var(--border-primary)] text-xs font-medium transition-all',
                     trackColors[type] ??
-                      "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]",
+                      'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-interactive)]'
                   )}
                   size="sm"
                 >
-                  {trackIcons[type] ?? "●"} {type}
+                  {trackIcons[type] ?? '●'} {type}
                 </Button>
               );
             })}
@@ -530,16 +486,14 @@ export function TimelineEditorCore({
                 style={{ left: `${(i / duration) * 100}%` }}
               >
                 <div className="h-4 w-px bg-[var(--border-secondary)]" />
-                <span className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  {i}s
-                </span>
+                <span className="mt-1 text-xs text-[var(--text-tertiary)]">{i}s</span>
               </div>
             ))}
           </div>
 
           <div
             className="timeline-tracks-container scrollbar-elegant overflow-y-auto pr-[var(--space-2)]"
-            style={{ maxHeight: "40vh" }}
+            style={{ maxHeight: '40vh' }}
           >
             <div className="space-y-[var(--space-3)]">
               {displayTracks.map((track) => (
@@ -549,8 +503,8 @@ export function TimelineEditorCore({
                       <span className="w-16 text-sm font-medium text-[var(--text-primary)]">
                         {(() => {
                           const trackIcons = transformFactory.getTrackIcons();
-                          return trackIcons[track.type] ?? "●";
-                        })()}{" "}
+                          return trackIcons[track.type] ?? '●';
+                        })()}{' '}
                         {track.type}
                       </span>
                       {selectedTrackId === track.identifier.id && (
@@ -570,29 +524,22 @@ export function TimelineEditorCore({
                   <div className="glass-panel relative h-8 rounded-[var(--radius-sm)] border border-[var(--border-secondary)] bg-[var(--surface-2)]">
                     <div
                       className={cn(
-                        "absolute h-6 cursor-move touch-none rounded-[var(--radius-sm)] border border-transparent text-[var(--text-primary)] select-none",
+                        'absolute h-6 cursor-move touch-none rounded-[var(--radius-sm)] border border-transparent text-[var(--text-primary)] select-none',
                         (() => {
                           const trackColors = transformFactory.getTrackColors();
-                          return (
-                            trackColors[track.type] ??
-                            "bg-[var(--surface-interactive)]"
-                          );
+                          return trackColors[track.type] ?? 'bg-[var(--surface-interactive)]';
                         })(),
                         selectedTrackId === track.identifier.id
-                          ? "border-[var(--accent-primary)] shadow-[0_0_20px_var(--purple-shadow-medium),0_4px_12px_var(--purple-shadow-subtle)]"
-                          : "hover:border-[var(--border-accent)] hover:brightness-110",
-                        dragState?.trackId === track.identifier.id
-                          ? "opacity-80"
-                          : "",
+                          ? 'border-[var(--accent-primary)] shadow-[0_0_20px_var(--purple-shadow-medium),0_4px_12px_var(--purple-shadow-subtle)]'
+                          : 'hover:border-[var(--border-accent)] hover:brightness-110',
+                        dragState?.trackId === track.identifier.id ? 'opacity-80' : ''
                       )}
                       style={{
                         left: `${(track.startTime / duration) * 100}%`,
                         width: `${(track.duration / duration) * 100}%`,
-                        top: "1px",
+                        top: '1px',
                       }}
-                      onPointerDown={(e) =>
-                        handlePointerDown(e, track.identifier.id, "move")
-                      }
+                      onPointerDown={(e) => handlePointerDown(e, track.identifier.id, 'move')}
                       onClick={() => setSelectedTrackId(track.identifier.id)}
                     >
                       <div className="flex h-full items-center justify-between px-[var(--space-2)]">
@@ -609,19 +556,15 @@ export function TimelineEditorCore({
                       className="absolute z-10 h-6 w-3 cursor-w-resize touch-none select-none"
                       style={{
                         left: `${(track.startTime / duration) * 100}%`,
-                        top: "1px",
+                        top: '1px',
                       }}
                       onPointerDown={(e) =>
-                        handlePointerDown(
-                          e,
-                          track.identifier.id,
-                          "resize-start",
-                        )
+                        handlePointerDown(e, track.identifier.id, 'resize-start')
                       }
                     >
                       <div
                         className={cn(
-                          "absolute inset-y-0 left-0 w-1 rounded-l-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]",
+                          'absolute inset-y-0 left-0 w-1 rounded-l-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]'
                         )}
                       />
                     </div>
@@ -629,23 +572,20 @@ export function TimelineEditorCore({
                       className="absolute z-10 h-6 w-3 cursor-e-resize touch-none select-none"
                       style={{
                         left: `${((track.startTime + track.duration) / duration) * 100 - (HANDLE_HITBOX_PX / (timelineWidth || DEFAULT_TIMELINE_WIDTH)) * 100}%`,
-                        top: "1px",
+                        top: '1px',
                       }}
-                      onPointerDown={(e) =>
-                        handlePointerDown(e, track.identifier.id, "resize-end")
-                      }
+                      onPointerDown={(e) => handlePointerDown(e, track.identifier.id, 'resize-end')}
                     >
                       <div
                         className={cn(
-                          "absolute inset-y-0 right-0 w-1 rounded-r-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]",
+                          'absolute inset-y-0 right-0 w-1 rounded-r-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)] transition-colors hover:border-[var(--accent-primary)] hover:bg-[var(--surface-interactive)]'
                         )}
                       />
                     </div>
                   </div>
 
                   <div className="mt-1 text-xs text-[var(--text-tertiary)]">
-                    {track.startTime.toFixed(1)}s -{" "}
-                    {(track.startTime + track.duration).toFixed(1)}s
+                    {track.startTime.toFixed(1)}s - {(track.startTime + track.duration).toFixed(1)}s
                   </div>
                 </div>
               ))}
@@ -686,15 +626,13 @@ export function TrackProperties({
   selectedObjectId,
 }: TrackPropertiesProps) {
   const [editingName, setEditingName] = useState(false);
-  const [tempDisplayName, setTempDisplayName] = useState(
-    track.identifier.displayName,
-  );
+  const [tempDisplayName, setTempDisplayName] = useState(track.identifier.displayName);
 
   const easingOptions = [
-    { value: "linear", label: "Linear" },
-    { value: "easeInOut", label: "Ease In Out" },
-    { value: "easeIn", label: "Ease In" },
-    { value: "easeOut", label: "Ease Out" },
+    { value: 'linear', label: 'Linear' },
+    { value: 'easeInOut', label: 'Ease In Out' },
+    { value: 'easeIn', label: 'Ease In' },
+    { value: 'easeOut', label: 'Ease Out' },
   ];
 
   const updateProperties = useCallback(
@@ -706,77 +644,59 @@ export function TrackProperties({
         | FadeTrackProperties
         | ColorTrackProperties
         | SlideTrackProperties
-      >,
+      >
     ) => {
       switch (track.type) {
-        case "move": {
+        case 'move': {
           if (selectedObjectId) {
             onChange({ properties: updates as MoveTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as MoveTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as MoveTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
-        case "slide": {
+        case 'slide': {
           if (selectedObjectId) {
             onChange({ properties: updates as SlideTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as SlideTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as SlideTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
-        case "rotate": {
+        case 'rotate': {
           if (selectedObjectId) {
             onChange({ properties: updates as RotateTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as RotateTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as RotateTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
-        case "scale": {
+        case 'scale': {
           if (selectedObjectId) {
             onChange({ properties: updates as ScaleTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as ScaleTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as ScaleTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
-        case "fade": {
+        case 'fade': {
           if (selectedObjectId) {
             onChange({ properties: updates as FadeTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as FadeTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as FadeTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
         }
-        case "color": {
+        case 'color': {
           if (selectedObjectId) {
             onChange({ properties: updates as ColorTrackProperties });
           } else {
-            const mergedProps = deepMerge(
-              track.properties,
-              updates,
-            ) as ColorTrackProperties;
+            const mergedProps = deepMerge(track.properties, updates) as ColorTrackProperties;
             onChange({ properties: mergedProps });
           }
           break;
@@ -785,7 +705,7 @@ export function TrackProperties({
           break;
       }
     },
-    [track.type, track.properties, onChange, selectedObjectId],
+    [track.type, track.properties, onChange, selectedObjectId]
   );
 
   // Variable discovery uses animationNodeId to mirror object discovery behavior
@@ -793,23 +713,17 @@ export function TrackProperties({
 
   const bindButton = (fieldKey: string) => {
     // Use the field path for batch controls
-    const fieldPath = getResolverFieldPath("timeline", fieldKey);
+    const fieldPath = getResolverFieldPath('timeline', fieldKey);
     if (!fieldPath) {
       // Fallback to old binding system if no field path mapping
       const specific = `track.${track.identifier.id}.${fieldKey}`;
       return (
-        <BindButton
-          nodeId={animationNodeId}
-          bindingKey={specific}
-          objectId={selectedObjectId}
-        />
+        <BindButton nodeId={animationNodeId} bindingKey={specific} objectId={selectedObjectId} />
       );
     }
 
     // Determine value type based on field
-    const valueType: "number" | "string" = fieldKey.includes("color")
-      ? "string"
-      : "number";
+    const valueType: 'number' | 'string' = fieldKey.includes('color') ? 'string' : 'number';
 
     return (
       <BindingAndBatchControls
@@ -829,36 +743,30 @@ export function TrackProperties({
   };
 
   const isBound = (fieldKey: string): boolean => {
-    const node = state.flow.nodes.find(
-      (n) => n.data?.identifier?.id === animationNodeId,
-    );
+    const node = state.flow.nodes.find((n) => n.data?.identifier?.id === animationNodeId);
     if (!node) return false;
 
     const animationData = node.data as AnimationNodeData;
     const scoped = `track.${track.identifier.id}.${fieldKey}`;
     if (selectedObjectId) {
-      const vbObj = (animationData.variableBindingsByObject?.[
-        selectedObjectId
-      ] ?? {}) as Record<string, { boundResultNodeId?: string }>;
-      return !!(
-        vbObj?.[scoped]?.boundResultNodeId ??
-        vbObj?.[fieldKey]?.boundResultNodeId
-      );
+      const vbObj = (animationData.variableBindingsByObject?.[selectedObjectId] ?? {}) as Record<
+        string,
+        { boundResultNodeId?: string }
+      >;
+      return !!(vbObj?.[scoped]?.boundResultNodeId ?? vbObj?.[fieldKey]?.boundResultNodeId);
     }
     const vb = (animationData.variableBindings ?? {}) as Record<
       string,
       { boundResultNodeId?: string }
     >;
-    return !!(
-      vb?.[scoped]?.boundResultNodeId ?? vb?.[fieldKey]?.boundResultNodeId
-    );
+    return !!(vb?.[scoped]?.boundResultNodeId ?? vb?.[fieldKey]?.boundResultNodeId);
   };
 
   // Helper to get value for bound fields - blank if bound, normal value if not
   const getTrackFieldValue = function <T>(
     fieldKey: string,
     overrideValue: T | undefined,
-    defaultValue: T,
+    defaultValue: T
   ): T | undefined {
     if (isBound(fieldKey)) return undefined; // Blank when bound
     return overrideValue ?? defaultValue;
@@ -869,11 +777,11 @@ export function TrackProperties({
     if (!override?.properties) return undefined;
     const props = override.properties;
 
-    const parts = path.split(".");
+    const parts = path.split('.');
     let current: unknown = props;
 
     for (const part of parts) {
-      if (current && typeof current === "object" && current !== null) {
+      if (current && typeof current === 'object' && current !== null) {
         current = (current as Record<string, unknown>)[part];
       } else {
         return undefined;
@@ -887,44 +795,42 @@ export function TrackProperties({
   const isFieldOverridden = (key: string): boolean => {
     const p = override?.properties ?? {};
     switch (key) {
-      case "move.from.x":
+      case 'move.from.x':
         return (p?.from as { x?: number })?.x !== undefined;
-      case "move.from.y":
+      case 'move.from.y':
         return (p?.from as { y?: number })?.y !== undefined;
-      case "move.to.x":
+      case 'move.to.x':
         return (p?.to as { x?: number })?.x !== undefined;
-      case "move.to.y":
+      case 'move.to.y':
         return (p?.to as { y?: number })?.y !== undefined;
-      case "rotate.from":
+      case 'rotate.from':
         return (p?.from as number) !== undefined;
-      case "rotate.to":
+      case 'rotate.to':
         return (p?.to as number) !== undefined;
-      case "scale.from.x":
+      case 'scale.from.x':
         return (p?.from as { x?: number })?.x !== undefined;
-      case "scale.from.y":
+      case 'scale.from.y':
         return (p?.from as { y?: number })?.y !== undefined;
-      case "scale.to.x":
+      case 'scale.to.x':
         return (p?.to as { x?: number })?.x !== undefined;
-      case "scale.to.y":
+      case 'scale.to.y':
         return (p?.to as { y?: number })?.y !== undefined;
-      case "fade.from":
+      case 'fade.from':
         return (p?.from as number) !== undefined;
-      case "fade.to":
+      case 'fade.to':
         return (p?.to as number) !== undefined;
-      case "color.property":
+      case 'color.property':
         return (p?.property as string) !== undefined;
-      case "color.from":
+      case 'color.from':
         return (p?.from as string) !== undefined;
-      case "color.to":
+      case 'color.to':
         return (p?.to as string) !== undefined;
       default:
         return false;
     }
   };
   const isFieldBound = (key: string): boolean => {
-    const node = state.flow.nodes.find(
-      (n) => n.data?.identifier?.id === animationNodeId,
-    );
+    const node = state.flow.nodes.find((n) => n.data?.identifier?.id === animationNodeId);
     if (!node) return false;
 
     const animationData = node.data as AnimationNodeData;
@@ -937,17 +843,12 @@ export function TrackProperties({
       { boundResultNodeId?: string }
     >;
     const direct = !!(
-      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[scopedKey]
-        ?.boundResultNodeId ??
-      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[key]
-        ?.boundResultNodeId
+      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[scopedKey]?.boundResultNodeId ??
+      (vbObj as Record<string, { boundResultNodeId?: string }>)?.[key]?.boundResultNodeId
     );
     if (direct) return true;
     // Inherited: only if not directly bound and not overridden at the field
-    return !!(
-      vbGlobal?.[scopedKey]?.boundResultNodeId ??
-      vbGlobal?.[key]?.boundResultNodeId
-    );
+    return !!(vbGlobal?.[scopedKey]?.boundResultNodeId ?? vbGlobal?.[key]?.boundResultNodeId);
   };
   const labelWithOverride = (base: string) => {
     return base;
@@ -974,10 +875,10 @@ export function TrackProperties({
 
   const leftBorderClass = (keyName: string) =>
     isFieldBound(keyName)
-      ? "border-l-2 border-[var(--accent-secondary)]"
+      ? 'border-l-2 border-[var(--accent-secondary)]'
       : isFieldOverridden(keyName)
-        ? "border-l-2 border-[var(--warning-600)]"
-        : "";
+        ? 'border-l-2 border-[var(--warning-600)]'
+        : '';
 
   // Legacy ToggleBinding UI removed in favor of centralized reset in Bind menu
 
@@ -1003,9 +904,7 @@ export function TrackProperties({
       {track.identifier && (
         <div className="space-y-[var(--space-2)] border-b border-[var(--border-primary)] pb-[var(--space-3)]">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-[var(--text-secondary)]">
-              Transform Name
-            </div>
+            <div className="text-sm text-[var(--text-secondary)]">Transform Name</div>
             <div className="text-xs text-[var(--text-tertiary)]">
               {getTransformDisplayLabel(track.type)}
             </div>
@@ -1019,18 +918,16 @@ export function TrackProperties({
                   onChange={(e) => setTempDisplayName(e.target.value)}
                   placeholder="Enter transform name"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !currentError) {
+                    if (e.key === 'Enter' && !currentError) {
                       handleSaveDisplayName();
-                    } else if (e.key === "Escape") {
+                    } else if (e.key === 'Escape') {
                       handleCancelEdit();
                     }
                   }}
                   autoFocus
                 />
                 {currentError && (
-                  <div className="text-xs text-[var(--danger-500)]">
-                    {currentError}
-                  </div>
+                  <div className="text-xs text-[var(--danger-500)]">{currentError}</div>
                 )}
                 <div className="flex gap-[var(--space-2)]">
                   <Button
@@ -1041,11 +938,7 @@ export function TrackProperties({
                   >
                     Save
                   </Button>
-                  <Button
-                    onClick={handleCancelEdit}
-                    variant="secondary"
-                    size="sm"
-                  >
+                  <Button onClick={handleCancelEdit} variant="secondary" size="sm">
                     Cancel
                   </Button>
                 </div>
@@ -1055,11 +948,7 @@ export function TrackProperties({
                 <span className="font-medium text-[var(--text-primary)]">
                   {track.identifier.displayName}
                 </span>
-                <Button
-                  onClick={() => setEditingName(true)}
-                  variant="minimal"
-                  size="sm"
-                >
+                <Button onClick={() => setEditingName(true)} variant="minimal" size="sm">
                   Edit
                 </Button>
               </div>
@@ -1071,17 +960,13 @@ export function TrackProperties({
       {/* Easing and Timing - Two Column Layout */}
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
         <SelectField
-          label={labelWithOverride("Easing")}
+          label={labelWithOverride('Easing')}
           value={override?.easing ?? track.easing}
-          onChange={(easing) =>
-            onChange({ easing: easing as AnimationTrack["easing"] })
-          }
+          onChange={(easing) => onChange({ easing: easing as AnimationTrack['easing'] })}
           options={easingOptions}
         />
         <div className="space-y-[var(--space-2)]">
-          <label className="block text-xs text-[var(--text-tertiary)]">
-            Track Duration
-          </label>
+          <label className="block text-xs text-[var(--text-tertiary)]">Track Duration</label>
           <div className="text-sm font-medium text-[var(--text-primary)]">
             {track.duration.toFixed(1)}s
           </div>
@@ -1096,17 +981,15 @@ export function TrackProperties({
 
           {/* From Position - Two Column */}
           <div className="space-y-[var(--space-2)]">
-            <div className="text-xs font-medium text-[var(--text-secondary)]">
-              From Position
-            </div>
+            <div className="text-xs font-medium text-[var(--text-secondary)]">From Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
                 <NumberField
-                  label={labelWithOverride("X")}
+                  label={labelWithOverride('X')}
                   value={getTrackFieldValue(
-                    "move.from.x",
-                    getOverrideProperty<number>("from.x"),
-                    track.properties.from.x,
+                    'move.from.x',
+                    getOverrideProperty<number>('from.x'),
+                    track.properties.from.x
                   )}
                   onChange={(x) =>
                     updateProperties({
@@ -1115,13 +998,12 @@ export function TrackProperties({
                   }
                   defaultValue={0}
                   bindAdornment={bindButton(`move.from.x`)}
-                  disabled={isBound("move.from.x")}
-                  inputClassName={leftBorderClass("move.from.x")}
+                  disabled={isBound('move.from.x')}
+                  inputClassName={leftBorderClass('move.from.x')}
                   className=""
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("move.from.x") ||
-                  isFieldBound("move.from.x")) && (
+                {(isFieldOverridden('move.from.x') || isFieldBound('move.from.x')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="move.from.x" />
                   </div>
@@ -1129,11 +1011,11 @@ export function TrackProperties({
               </div>
               <div>
                 <NumberField
-                  label={labelWithOverride("Y")}
+                  label={labelWithOverride('Y')}
                   value={getTrackFieldValue(
-                    "move.from.y",
-                    getOverrideProperty<number>("from.y"),
-                    track.properties.from.y,
+                    'move.from.y',
+                    getOverrideProperty<number>('from.y'),
+                    track.properties.from.y
                   )}
                   onChange={(y) =>
                     updateProperties({
@@ -1142,12 +1024,11 @@ export function TrackProperties({
                   }
                   defaultValue={0}
                   bindAdornment={bindButton(`move.from.y`)}
-                  disabled={isBound("move.from.y")}
-                  inputClassName={leftBorderClass("move.from.y")}
+                  disabled={isBound('move.from.y')}
+                  inputClassName={leftBorderClass('move.from.y')}
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("move.from.y") ||
-                  isFieldBound("move.from.y")) && (
+                {(isFieldOverridden('move.from.y') || isFieldBound('move.from.y')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="move.from.y" />
                   </div>
@@ -1158,17 +1039,15 @@ export function TrackProperties({
 
           {/* To Position - Two Column */}
           <div className="space-y-[var(--space-2)]">
-            <div className="text-xs font-medium text-[var(--text-secondary)]">
-              To Position
-            </div>
+            <div className="text-xs font-medium text-[var(--text-secondary)]">To Position</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
                 <NumberField
-                  label={labelWithOverride("X")}
+                  label={labelWithOverride('X')}
                   value={getTrackFieldValue(
-                    "move.to.x",
-                    getOverrideProperty<number>("to.x"),
-                    track.properties.to.x,
+                    'move.to.x',
+                    getOverrideProperty<number>('to.x'),
+                    track.properties.to.x
                   )}
                   onChange={(x) =>
                     updateProperties({
@@ -1177,12 +1056,11 @@ export function TrackProperties({
                   }
                   defaultValue={100}
                   bindAdornment={bindButton(`move.to.x`)}
-                  disabled={isBound("move.to.x")}
-                  inputClassName={leftBorderClass("move.to.x")}
+                  disabled={isBound('move.to.x')}
+                  inputClassName={leftBorderClass('move.to.x')}
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("move.to.x") ||
-                  isFieldBound("move.to.x")) && (
+                {(isFieldOverridden('move.to.x') || isFieldBound('move.to.x')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="move.to.x" />
                   </div>
@@ -1190,11 +1068,11 @@ export function TrackProperties({
               </div>
               <div>
                 <NumberField
-                  label={labelWithOverride("Y")}
+                  label={labelWithOverride('Y')}
                   value={getTrackFieldValue(
-                    "move.to.y",
-                    getOverrideProperty<number>("to.y"),
-                    track.properties.to.y,
+                    'move.to.y',
+                    getOverrideProperty<number>('to.y'),
+                    track.properties.to.y
                   )}
                   onChange={(y) =>
                     updateProperties({
@@ -1203,12 +1081,11 @@ export function TrackProperties({
                   }
                   defaultValue={100}
                   bindAdornment={bindButton(`move.to.y`)}
-                  disabled={isBound("move.to.y")}
-                  inputClassName={leftBorderClass("move.to.y")}
+                  disabled={isBound('move.to.y')}
+                  inputClassName={leftBorderClass('move.to.y')}
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("move.to.y") ||
-                  isFieldBound("move.to.y")) && (
+                {(isFieldOverridden('move.to.y') || isFieldBound('move.to.y')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="move.to.y" />
                   </div>
@@ -1227,11 +1104,11 @@ export function TrackProperties({
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
               <NumberField
-                label={labelWithOverride("Orientation (deg)")}
+                label={labelWithOverride('Orientation (deg)')}
                 value={getTrackFieldValue(
-                  "slide.orientationDeg",
-                  getOverrideProperty<number>("orientationDeg"),
-                  track.properties.orientationDeg,
+                  'slide.orientationDeg',
+                  getOverrideProperty<number>('orientationDeg'),
+                  track.properties.orientationDeg
                 )}
                 onChange={(orientationDeg) =>
                   updateProperties({
@@ -1241,11 +1118,11 @@ export function TrackProperties({
                 step={1}
                 defaultValue={0}
                 bindAdornment={bindButton(`slide.orientationDeg`)}
-                disabled={isBound("slide.orientationDeg")}
-                inputClassName={leftBorderClass("slide.orientationDeg")}
+                disabled={isBound('slide.orientationDeg')}
+                inputClassName={leftBorderClass('slide.orientationDeg')}
               />
-              {(isFieldOverridden("slide.orientationDeg") ||
-                isFieldBound("slide.orientationDeg")) && (
+              {(isFieldOverridden('slide.orientationDeg') ||
+                isFieldBound('slide.orientationDeg')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="slide.orientationDeg" />
                 </div>
@@ -1253,11 +1130,11 @@ export function TrackProperties({
             </div>
             <div>
               <NumberField
-                label={labelWithOverride("Velocity (px/s)")}
+                label={labelWithOverride('Velocity (px/s)')}
                 value={getTrackFieldValue(
-                  "slide.velocity",
-                  getOverrideProperty<number>("velocity"),
-                  track.properties.velocity,
+                  'slide.velocity',
+                  getOverrideProperty<number>('velocity'),
+                  track.properties.velocity
                 )}
                 onChange={(velocity) =>
                   updateProperties({
@@ -1267,11 +1144,10 @@ export function TrackProperties({
                 step={1}
                 defaultValue={100}
                 bindAdornment={bindButton(`slide.velocity`)}
-                disabled={isBound("slide.velocity")}
-                inputClassName={leftBorderClass("slide.velocity")}
+                disabled={isBound('slide.velocity')}
+                inputClassName={leftBorderClass('slide.velocity')}
               />
-              {(isFieldOverridden("slide.velocity") ||
-                isFieldBound("slide.velocity")) && (
+              {(isFieldOverridden('slide.velocity') || isFieldBound('slide.velocity')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="slide.velocity" />
                 </div>
@@ -1292,22 +1168,21 @@ export function TrackProperties({
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
               <NumberField
-                label={labelWithOverride("From")}
+                label={labelWithOverride('From')}
                 value={getTrackFieldValue(
-                  "rotate.from",
-                  getOverrideProperty<number>("from"),
-                  track.properties.from,
+                  'rotate.from',
+                  getOverrideProperty<number>('from'),
+                  track.properties.from
                 )}
                 onChange={(from) => updateProperties({ from })}
                 step={0.1}
                 defaultValue={0}
                 bindAdornment={bindButton(`rotate.from`)}
-                disabled={isBound("rotate.from")}
-                inputClassName={leftBorderClass("rotate.from")}
+                disabled={isBound('rotate.from')}
+                inputClassName={leftBorderClass('rotate.from')}
               />
               {/* Badge - Only show when needed */}
-              {(isFieldOverridden("rotate.from") ||
-                isFieldBound("rotate.from")) && (
+              {(isFieldOverridden('rotate.from') || isFieldBound('rotate.from')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="rotate.from" />
                 </div>
@@ -1315,22 +1190,21 @@ export function TrackProperties({
             </div>
             <div>
               <NumberField
-                label={labelWithOverride("To")}
+                label={labelWithOverride('To')}
                 value={getTrackFieldValue(
-                  "rotate.to",
-                  getOverrideProperty<number>("to"),
-                  track.properties.to,
+                  'rotate.to',
+                  getOverrideProperty<number>('to'),
+                  track.properties.to
                 )}
                 onChange={(to) => updateProperties({ to })}
                 step={0.1}
                 defaultValue={1}
                 bindAdornment={bindButton(`rotate.to`)}
-                disabled={isBound("rotate.to")}
-                inputClassName={leftBorderClass("rotate.to")}
+                disabled={isBound('rotate.to')}
+                inputClassName={leftBorderClass('rotate.to')}
               />
               {/* Badge - Only show when needed */}
-              {(isFieldOverridden("rotate.to") ||
-                isFieldBound("rotate.to")) && (
+              {(isFieldOverridden('rotate.to') || isFieldBound('rotate.to')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="rotate.to" />
                 </div>
@@ -1346,17 +1220,15 @@ export function TrackProperties({
             Scale Properties
           </div>
           <div className="space-y-[var(--space-2)]">
-            <div className="text-xs font-medium text-[var(--text-secondary)]">
-              From
-            </div>
+            <div className="text-xs font-medium text-[var(--text-secondary)]">From</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
                 <NumberField
-                  label={labelWithOverride("X")}
+                  label={labelWithOverride('X')}
                   value={getTrackFieldValue(
-                    "scale.from.x",
-                    getOverrideProperty<number>("from.x"),
-                    track.properties.from.x,
+                    'scale.from.x',
+                    getOverrideProperty<number>('from.x'),
+                    track.properties.from.x
                   )}
                   onChange={(x) =>
                     updateProperties({
@@ -1366,11 +1238,10 @@ export function TrackProperties({
                   step={0.1}
                   defaultValue={1}
                   bindAdornment={bindButton(`scale.from.x`)}
-                  disabled={isBound("scale.from.x")}
-                  inputClassName={leftBorderClass("scale.from.x")}
+                  disabled={isBound('scale.from.x')}
+                  inputClassName={leftBorderClass('scale.from.x')}
                 />
-                {(isFieldOverridden("scale.from.x") ||
-                  isFieldBound("scale.from.x")) && (
+                {(isFieldOverridden('scale.from.x') || isFieldBound('scale.from.x')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="scale.from.x" />
                   </div>
@@ -1378,11 +1249,11 @@ export function TrackProperties({
               </div>
               <div>
                 <NumberField
-                  label={labelWithOverride("Y")}
+                  label={labelWithOverride('Y')}
                   value={getTrackFieldValue(
-                    "scale.from.y",
-                    getOverrideProperty<number>("from.y"),
-                    track.properties.from.y,
+                    'scale.from.y',
+                    getOverrideProperty<number>('from.y'),
+                    track.properties.from.y
                   )}
                   onChange={(y) =>
                     updateProperties({
@@ -1392,11 +1263,10 @@ export function TrackProperties({
                   step={0.1}
                   defaultValue={1}
                   bindAdornment={bindButton(`scale.from.y`)}
-                  disabled={isBound("scale.from.y")}
-                  inputClassName={leftBorderClass("scale.from.y")}
+                  disabled={isBound('scale.from.y')}
+                  inputClassName={leftBorderClass('scale.from.y')}
                 />
-                {(isFieldOverridden("scale.from.y") ||
-                  isFieldBound("scale.from.y")) && (
+                {(isFieldOverridden('scale.from.y') || isFieldBound('scale.from.y')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="scale.from.y" />
                   </div>
@@ -1404,17 +1274,15 @@ export function TrackProperties({
               </div>
             </div>
 
-            <div className="text-xs font-medium text-[var(--text-secondary)]">
-              To
-            </div>
+            <div className="text-xs font-medium text-[var(--text-secondary)]">To</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
                 <NumberField
-                  label={labelWithOverride("X")}
+                  label={labelWithOverride('X')}
                   value={getTrackFieldValue(
-                    "scale.to.x",
-                    getOverrideProperty<number>("to.x"),
-                    track.properties.to.x,
+                    'scale.to.x',
+                    getOverrideProperty<number>('to.x'),
+                    track.properties.to.x
                   )}
                   onChange={(x) =>
                     updateProperties({
@@ -1424,11 +1292,10 @@ export function TrackProperties({
                   step={0.1}
                   defaultValue={1.5}
                   bindAdornment={bindButton(`scale.to.x`)}
-                  disabled={isBound("scale.to.x")}
-                  inputClassName={leftBorderClass("scale.to.x")}
+                  disabled={isBound('scale.to.x')}
+                  inputClassName={leftBorderClass('scale.to.x')}
                 />
-                {(isFieldOverridden("scale.to.x") ||
-                  isFieldBound("scale.to.x")) && (
+                {(isFieldOverridden('scale.to.x') || isFieldBound('scale.to.x')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="scale.to.x" />
                   </div>
@@ -1436,11 +1303,11 @@ export function TrackProperties({
               </div>
               <div>
                 <NumberField
-                  label={labelWithOverride("Y")}
+                  label={labelWithOverride('Y')}
                   value={getTrackFieldValue(
-                    "scale.to.y",
-                    getOverrideProperty<number>("to.y"),
-                    track.properties.to.y,
+                    'scale.to.y',
+                    getOverrideProperty<number>('to.y'),
+                    track.properties.to.y
                   )}
                   onChange={(y) =>
                     updateProperties({
@@ -1450,11 +1317,10 @@ export function TrackProperties({
                   step={0.1}
                   defaultValue={1.5}
                   bindAdornment={bindButton(`scale.to.y`)}
-                  disabled={isBound("scale.to.y")}
-                  inputClassName={leftBorderClass("scale.to.y")}
+                  disabled={isBound('scale.to.y')}
+                  inputClassName={leftBorderClass('scale.to.y')}
                 />
-                {(isFieldOverridden("scale.to.y") ||
-                  isFieldBound("scale.to.y")) && (
+                {(isFieldOverridden('scale.to.y') || isFieldBound('scale.to.y')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="scale.to.y" />
                   </div>
@@ -1473,22 +1339,21 @@ export function TrackProperties({
           <div className="grid grid-cols-2 gap-[var(--space-2)]">
             <div>
               <NumberField
-                label={labelWithOverride("From")}
+                label={labelWithOverride('From')}
                 value={getTrackFieldValue(
-                  "fade.from",
-                  getOverrideProperty<number>("from"),
-                  track.properties.from,
+                  'fade.from',
+                  getOverrideProperty<number>('from'),
+                  track.properties.from
                 )}
                 onChange={(from) => updateProperties({ from })}
                 step={0.05}
                 defaultValue={1}
                 bindAdornment={bindButton(`fade.from`)}
-                disabled={isBound("fade.from")}
-                inputClassName={leftBorderClass("fade.from")}
+                disabled={isBound('fade.from')}
+                inputClassName={leftBorderClass('fade.from')}
               />
               {/* Badge - Only show when needed */}
-              {(isFieldOverridden("fade.from") ||
-                isFieldBound("fade.from")) && (
+              {(isFieldOverridden('fade.from') || isFieldBound('fade.from')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="fade.from" />
                 </div>
@@ -1496,21 +1361,21 @@ export function TrackProperties({
             </div>
             <div>
               <NumberField
-                label={labelWithOverride("To")}
+                label={labelWithOverride('To')}
                 value={getTrackFieldValue(
-                  "fade.to",
-                  getOverrideProperty<number>("to"),
-                  track.properties.to,
+                  'fade.to',
+                  getOverrideProperty<number>('to'),
+                  track.properties.to
                 )}
                 onChange={(to) => updateProperties({ to })}
                 step={0.05}
                 defaultValue={0}
                 bindAdornment={bindButton(`fade.to`)}
-                disabled={isBound("fade.to")}
-                inputClassName={leftBorderClass("fade.to")}
+                disabled={isBound('fade.to')}
+                inputClassName={leftBorderClass('fade.to')}
               />
               {/* Badge - Only show when needed */}
-              {(isFieldOverridden("fade.to") || isFieldBound("fade.to")) && (
+              {(isFieldOverridden('fade.to') || isFieldBound('fade.to')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <FieldBadges keyName="fade.to" />
                 </div>
@@ -1528,47 +1393,42 @@ export function TrackProperties({
 
           {/* Property Selection - Full Width */}
           <SelectField
-            label={labelWithOverride("Property")}
+            label={labelWithOverride('Property')}
             value={
               getTrackFieldValue(
-                "color.property",
-                getOverrideProperty<string>("property"),
-                track.properties.property,
+                'color.property',
+                getOverrideProperty<string>('property'),
+                track.properties.property
               ) ?? track.properties.property
             }
-            onChange={(property) =>
-              updateProperties({ property: property as "fill" | "stroke" })
-            }
+            onChange={(property) => updateProperties({ property: property as 'fill' | 'stroke' })}
             options={[
-              { value: "fill", label: "Fill" },
-              { value: "stroke", label: "Stroke" },
+              { value: 'fill', label: 'Fill' },
+              { value: 'stroke', label: 'Stroke' },
             ]}
           />
 
           {/* Color Fields - Two Column */}
           <div className="space-y-[var(--space-2)]">
-            <div className="text-xs font-medium text-[var(--text-secondary)]">
-              Color Values
-            </div>
+            <div className="text-xs font-medium text-[var(--text-secondary)]">Color Values</div>
             <div className="grid grid-cols-2 gap-[var(--space-2)]">
               <div>
                 <ColorField
-                  label={labelWithOverride("From")}
+                  label={labelWithOverride('From')}
                   value={
                     getTrackFieldValue(
-                      "color.from",
-                      getOverrideProperty<string>("from"),
-                      track.properties.from,
+                      'color.from',
+                      getOverrideProperty<string>('from'),
+                      track.properties.from
                     ) ?? track.properties.from
                   }
                   onChange={(from) => updateProperties({ from })}
                   bindAdornment={bindButton(`color.from`)}
-                  disabled={isBound("color.from")}
-                  inputClassName={leftBorderClass("color.from")}
+                  disabled={isBound('color.from')}
+                  inputClassName={leftBorderClass('color.from')}
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("color.from") ||
-                  isFieldBound("color.from")) && (
+                {(isFieldOverridden('color.from') || isFieldBound('color.from')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="color.from" />
                   </div>
@@ -1576,22 +1436,21 @@ export function TrackProperties({
               </div>
               <div>
                 <ColorField
-                  label={labelWithOverride("To")}
+                  label={labelWithOverride('To')}
                   value={
                     getTrackFieldValue(
-                      "color.to",
-                      getOverrideProperty<string>("to"),
-                      track.properties.to,
+                      'color.to',
+                      getOverrideProperty<string>('to'),
+                      track.properties.to
                     ) ?? track.properties.to
                   }
                   onChange={(to) => updateProperties({ to })}
                   bindAdornment={bindButton(`color.to`)}
-                  disabled={isBound("color.to")}
-                  inputClassName={leftBorderClass("color.to")}
+                  disabled={isBound('color.to')}
+                  inputClassName={leftBorderClass('color.to')}
                 />
                 {/* Badge - Only show when needed */}
-                {(isFieldOverridden("color.to") ||
-                  isFieldBound("color.to")) && (
+                {(isFieldOverridden('color.to') || isFieldBound('color.to')) && (
                   <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                     <FieldBadges keyName="color.to" />
                   </div>

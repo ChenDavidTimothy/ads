@@ -29,17 +29,11 @@ export function buildIdMap(nodes: MinimalNode[]): Map<string, CanonicalId> {
   return map;
 }
 
-export function toCanonicalId(
-  id: string,
-  idMap: Map<string, CanonicalId>,
-): CanonicalId {
+export function toCanonicalId(id: string, idMap: Map<string, CanonicalId>): CanonicalId {
   return idMap.get(id) ?? id;
 }
 
-export function canonicalizeEdges<T extends MinimalEdge>(
-  nodes: MinimalNode[],
-  edges: T[],
-): T[] {
+export function canonicalizeEdges<T extends MinimalEdge>(nodes: MinimalNode[], edges: T[]): T[] {
   const idMap = buildIdMap(nodes);
   return edges.map((edge) => ({
     ...edge,

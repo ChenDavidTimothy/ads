@@ -1,6 +1,6 @@
 // src/server/animation-processing/scene/batch-overrides-resolver.ts
-import { logger } from "@/lib/logger";
-import type { SceneObject } from "@/shared/types/scene";
+import { logger } from '@/lib/logger';
+import type { SceneObject } from '@/shared/types/scene';
 
 export type PerObjectBatchOverrides = Record<
   string, // objectId
@@ -32,11 +32,9 @@ export function resolveFieldValue<T = unknown>(
     ok: boolean;
     value?: T;
     warn?: string;
-  },
+  }
 ): T {
-  const boundSet = new Set(
-    (ctx.perObjectBoundFields?.[objectId] ?? []).map(String),
-  );
+  const boundSet = new Set((ctx.perObjectBoundFields?.[objectId] ?? []).map(String));
   if (boundSet.has(fieldPath)) {
     return currentValue;
   }
@@ -48,7 +46,7 @@ export function resolveFieldValue<T = unknown>(
   if (byField) {
     const keyCount = Object.keys(byField).length;
     if (keyCount > 200) {
-      logger.warn("Excessive per-key overrides for field", {
+      logger.warn('Excessive per-key overrides for field', {
         objectId,
         fieldPath,
         keys: keyCount,
@@ -60,47 +58,40 @@ export function resolveFieldValue<T = unknown>(
     const res = validateAndCoerce(raw);
     if (res.ok) return res.value as T;
     if (raw !== undefined) {
-      logger.warn("Invalid override value, falling back", {
+      logger.warn('Invalid override value, falling back', {
         objectId,
         fieldPath,
         tier,
         rawType: typeof raw,
-        warn: res.warn ?? "invalid",
+        warn: res.warn ?? 'invalid',
       });
     }
     return undefined;
   };
 
   // 1) per-key override (only if batchKey present)
-  if (
-    ctx.batchKey &&
-    byField &&
-    Object.prototype.hasOwnProperty.call(byField, ctx.batchKey)
-  ) {
-    const v = tryValue(byField[ctx.batchKey], "perKey");
+  if (ctx.batchKey && byField && Object.prototype.hasOwnProperty.call(byField, ctx.batchKey)) {
+    const v = tryValue(byField[ctx.batchKey], 'perKey');
     if (v !== undefined) return v;
   }
 
   // 2) per-object default (check both "__default__" and "default" for compatibility)
   if (byField) {
     let defaultValue: unknown;
-    if (Object.prototype.hasOwnProperty.call(byField, "__default__")) {
+    if (Object.prototype.hasOwnProperty.call(byField, '__default__')) {
       defaultValue = byField.__default__;
-    } else if (Object.prototype.hasOwnProperty.call(byField, "default")) {
+    } else if (Object.prototype.hasOwnProperty.call(byField, 'default')) {
       defaultValue = byField.default;
     }
     if (defaultValue !== undefined) {
-      logger.warn(
-        `DEBUG Batch resolver applying per-object default for ${fieldPath}:`,
-        {
-          objectId,
-          fieldPath,
-          defaultValue,
-          availableKeys: Object.keys(byField),
-          batchKey: ctx.batchKey,
-        },
-      );
-      const v = tryValue(defaultValue, "perObjectDefault");
+      logger.warn(`DEBUG Batch resolver applying per-object default for ${fieldPath}:`, {
+        objectId,
+        fieldPath,
+        defaultValue,
+        availableKeys: Object.keys(byField),
+        batchKey: ctx.batchKey,
+      });
+      const v = tryValue(defaultValue, 'perObjectDefault');
       if (v !== undefined) return v;
     }
   }
@@ -113,202 +104,176 @@ export function resolveFieldValue<T = unknown>(
  * Produce a new SceneObject with overrides applied per supported field paths.
  * Does NOT mutate the input object.
  */
-export function applyOverridesToObject(
-  obj: SceneObject,
-  ctx: BatchResolveContext,
-): SceneObject {
+export function applyOverridesToObject(obj: SceneObject, ctx: BatchResolveContext): SceneObject {
   // Clone shallowly to avoid mutation
   const next = JSON.parse(JSON.stringify(obj)) as SceneObject;
 
   const numberCoerce = (value: unknown) => {
-    if (typeof value === "number" && Number.isFinite(value))
-      return { ok: true, value };
-    if (
-      typeof value === "string" &&
-      value.trim() !== "" &&
-      !Number.isNaN(Number(value))
-    ) {
+    if (typeof value === 'number' && Number.isFinite(value)) return { ok: true, value };
+    if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
       return { ok: true, value: Number(value) };
     }
-    return { ok: false, warn: "expected number" };
+    return { ok: false, warn: 'expected number' };
   };
 
   const stringCoerce = (value: unknown) => {
-    if (typeof value === "string") return { ok: true, value };
-    return { ok: false, warn: "expected string" };
+    if (typeof value === 'string') return { ok: true, value };
+    return { ok: false, warn: 'expected string' };
   };
 
   // Canvas.position.x/y
   next.initialPosition = {
     x: resolveFieldValue(
       obj.id,
-      "Canvas.position.x",
+      'Canvas.position.x',
       next.initialPosition?.x ?? 0,
       ctx,
-      numberCoerce,
+      numberCoerce
     ),
     y: resolveFieldValue(
       obj.id,
-      "Canvas.position.y",
+      'Canvas.position.y',
       next.initialPosition?.y ?? 0,
       ctx,
-      numberCoerce,
+      numberCoerce
     ),
   };
 
   // Canvas.scale.x/y
   next.initialScale = {
-    x: resolveFieldValue(
-      obj.id,
-      "Canvas.scale.x",
-      next.initialScale?.x ?? 1,
-      ctx,
-      numberCoerce,
-    ),
-    y: resolveFieldValue(
-      obj.id,
-      "Canvas.scale.y",
-      next.initialScale?.y ?? 1,
-      ctx,
-      numberCoerce,
-    ),
+    x: resolveFieldValue(obj.id, 'Canvas.scale.x', next.initialScale?.x ?? 1, ctx, numberCoerce),
+    y: resolveFieldValue(obj.id, 'Canvas.scale.y', next.initialScale?.y ?? 1, ctx, numberCoerce),
   };
 
   // Canvas.rotation
   next.initialRotation = resolveFieldValue(
     obj.id,
-    "Canvas.rotation",
+    'Canvas.rotation',
     next.initialRotation ?? 0,
     ctx,
-    numberCoerce,
+    numberCoerce
   );
 
   // Canvas.opacity
   next.initialOpacity = resolveFieldValue(
     obj.id,
-    "Canvas.opacity",
+    'Canvas.opacity',
     next.initialOpacity ?? 1,
     ctx,
-    numberCoerce,
+    numberCoerce
   );
 
   // Colors
   next.initialFillColor = resolveFieldValue(
     obj.id,
-    "Canvas.fillColor",
-    next.initialFillColor ?? "#000000",
+    'Canvas.fillColor',
+    next.initialFillColor ?? '#000000',
     ctx,
-    stringCoerce,
+    stringCoerce
   );
   next.initialStrokeColor = resolveFieldValue(
     obj.id,
-    "Canvas.strokeColor",
-    next.initialStrokeColor ?? "#000000",
+    'Canvas.strokeColor',
+    next.initialStrokeColor ?? '#000000',
     ctx,
-    stringCoerce,
+    stringCoerce
   );
   next.initialStrokeWidth = resolveFieldValue(
     obj.id,
-    "Canvas.strokeWidth",
+    'Canvas.strokeWidth',
     next.initialStrokeWidth ?? 0,
     ctx,
-    numberCoerce,
+    numberCoerce
   );
 
   // Typography.content → text properties.content
-  if (obj.type === "text") {
-    const currentContent =
-      (next.properties as { content?: string })?.content ?? "";
+  if (obj.type === 'text') {
+    const currentContent = (next.properties as { content?: string })?.content ?? '';
     const content = resolveFieldValue(
       obj.id,
-      "Typography.content",
+      'Typography.content',
       currentContent,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     (next.properties as { content?: string }).content = content;
 
     // Apply Typography style fields to object.typography (non-destructive)
-    const currentTypography = (next.typography ?? {}) as Record<
-      string,
-      unknown
-    >;
+    const currentTypography = (next.typography ?? {}) as Record<string, unknown>;
     const withTypography: Record<string, unknown> = { ...currentTypography };
 
     const fontFamily = resolveFieldValue(
       obj.id,
-      "Typography.fontFamily",
+      'Typography.fontFamily',
       (currentTypography.fontFamily as string | undefined) ?? undefined,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     if (fontFamily !== undefined) withTypography.fontFamily = fontFamily;
 
     const fontWeight = resolveFieldValue(
       obj.id,
-      "Typography.fontWeight",
+      'Typography.fontWeight',
       (currentTypography.fontWeight as string | undefined) ?? undefined,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     if (fontWeight !== undefined) withTypography.fontWeight = fontWeight;
 
     const fontStyle = resolveFieldValue(
       obj.id,
-      "Typography.fontStyle",
+      'Typography.fontStyle',
       (currentTypography.fontStyle as string | undefined) ?? undefined,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     if (fontStyle !== undefined) withTypography.fontStyle = fontStyle;
 
     const fillColor = resolveFieldValue(
       obj.id,
-      "Typography.fillColor",
+      'Typography.fillColor',
       (currentTypography.fillColor as string | undefined) ?? undefined,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     if (fillColor !== undefined) withTypography.fillColor = fillColor;
 
     const strokeColor = resolveFieldValue(
       obj.id,
-      "Typography.strokeColor",
+      'Typography.strokeColor',
       (currentTypography.strokeColor as string | undefined) ?? undefined,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
     if (strokeColor !== undefined) withTypography.strokeColor = strokeColor;
 
     const strokeWidth = resolveFieldValue(
       obj.id,
-      "Typography.strokeWidth",
+      'Typography.strokeWidth',
       (currentTypography.strokeWidth as number | undefined) ?? undefined,
       ctx,
-      numberCoerce,
+      numberCoerce
     );
     if (strokeWidth !== undefined) withTypography.strokeWidth = strokeWidth;
 
     if (Object.keys(withTypography).length > 0) {
       // Ensure typography block exists
-      (next as { typography?: Record<string, unknown> }).typography =
-        withTypography;
+      (next as { typography?: Record<string, unknown> }).typography = withTypography;
     }
   }
 
   // Apply Media.imageAssetId batch overrides
-  if (obj.type === "image") {
-    const currentAssetId =
-      (next.properties as { assetId?: string })?.assetId ?? undefined;
+  if (obj.type === 'image') {
+    const currentAssetId = (next.properties as { assetId?: string })?.assetId ?? undefined;
 
     const assetId = resolveFieldValue(
       obj.id,
-      "Media.imageAssetId",
+      'Media.imageAssetId',
       currentAssetId,
       ctx,
-      stringCoerce,
+      stringCoerce
     );
-    if (typeof assetId === "string") {
+    if (typeof assetId === 'string') {
       (next.properties as { assetId?: string }).assetId = assetId;
     }
 
@@ -317,50 +282,50 @@ export function applyOverridesToObject(
     const props = next.properties as unknown as Record<string, unknown>;
     const cropX = resolveFieldValue(
       obj.id,
-      "Media.cropX",
+      'Media.cropX',
       (props.cropX as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.cropX = cropX;
     const cropY = resolveFieldValue(
       obj.id,
-      "Media.cropY",
+      'Media.cropY',
       (props.cropY as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.cropY = cropY;
     const cropWidth = resolveFieldValue(
       obj.id,
-      "Media.cropWidth",
+      'Media.cropWidth',
       (props.cropWidth as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.cropWidth = cropWidth;
     const cropHeight = resolveFieldValue(
       obj.id,
-      "Media.cropHeight",
+      'Media.cropHeight',
       (props.cropHeight as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.cropHeight = cropHeight;
     const displayWidth = resolveFieldValue(
       obj.id,
-      "Media.displayWidth",
+      'Media.displayWidth',
       (props.displayWidth as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.displayWidth = displayWidth;
     const displayHeight = resolveFieldValue(
       obj.id,
-      "Media.displayHeight",
+      'Media.displayHeight',
       (props.displayHeight as number | undefined) ?? 0,
       ctx,
-      coerceNum,
+      coerceNum
     );
     props.displayHeight = displayHeight;
   }

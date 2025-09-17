@@ -1,7 +1,7 @@
 // src/components/workspace/flow/hooks/use-result-log-viewer.ts
-import { useState, useCallback, useMemo } from "react";
-import type { Node } from "reactflow";
-import type { NodeData } from "@/shared/types";
+import { useState, useCallback, useMemo } from 'react';
+import type { Node } from 'reactflow';
+import type { NodeData } from '@/shared/types';
 
 export interface ResultLogModalState {
   isOpen: boolean;
@@ -9,11 +9,10 @@ export interface ResultLogModalState {
 }
 
 export function useResultLogViewer(nodes: Node<NodeData>[]) {
-  const [resultLogModalState, setResultLogModalState] =
-    useState<ResultLogModalState>({
-      isOpen: false,
-      nodeId: null,
-    });
+  const [resultLogModalState, setResultLogModalState] = useState<ResultLogModalState>({
+    isOpen: false,
+    nodeId: null,
+  });
 
   const handleOpenResultLogViewer = useCallback((nodeId: string) => {
     setResultLogModalState({ isOpen: true, nodeId });
@@ -26,18 +25,16 @@ export function useResultLogViewer(nodes: Node<NodeData>[]) {
   const resultNode = useMemo(
     () =>
       resultLogModalState.nodeId
-        ? (nodes.find(
-            (n) => n.data.identifier.id === resultLogModalState.nodeId,
-          ) ?? null)
+        ? (nodes.find((n) => n.data.identifier.id === resultLogModalState.nodeId) ?? null)
         : null,
-    [nodes, resultLogModalState.nodeId],
+    [nodes, resultLogModalState.nodeId]
   );
 
   const getResultNodeData = useCallback(() => {
     if (!resultNode)
       return {
-        name: "Unknown Result Node",
-        label: "Debug Output",
+        name: 'Unknown Result Node',
+        label: 'Debug Output',
       };
 
     const data = resultNode.data as unknown as Partial<{
@@ -46,9 +43,8 @@ export function useResultLogViewer(nodes: Node<NodeData>[]) {
     }>;
 
     return {
-      name: (data as { identifier: { displayName: string } }).identifier
-        .displayName,
-      label: typeof data.label === "string" ? data.label : "Debug Output",
+      name: (data as { identifier: { displayName: string } }).identifier.displayName,
+      label: typeof data.label === 'string' ? data.label : 'Debug Output',
     };
   }, [resultNode]);
 

@@ -1,71 +1,69 @@
-"use client";
+'use client';
 
-import { forwardRef } from "react";
-import { cn } from "@/lib/utils";
+import { forwardRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
-  variant?: "default" | "glass" | "minimal";
+  variant?: 'default' | 'glass' | 'minimal';
   endAdornment?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, error, variant = "default", endAdornment, ...props }, ref) => {
+  ({ className, error, variant = 'default', endAdornment, ...props }, ref) => {
     const inputElement = (
       <input
         ref={ref}
         className={cn(
-          "text-refined w-full cursor-text text-[12px] text-[var(--text-primary)] transition-all",
-          "duration-[var(--duration-fast)] ease-[var(--easing-standard)]",
-          "placeholder:text-[var(--text-muted)]",
+          'text-refined w-full cursor-text text-[12px] text-[var(--text-primary)] transition-all',
+          'duration-[var(--duration-fast)] ease-[var(--easing-standard)]',
+          'placeholder:text-[var(--text-muted)]',
           {
             default:
-              "rounded-[var(--radius-sm)] border border-[rgba(255,255,255,0.1)] px-[var(--space-3)] py-[var(--space-2)] backdrop-blur-[12px]",
-            glass:
-              "glass-input rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]",
+              'rounded-[var(--radius-sm)] border border-[rgba(255,255,255,0.1)] px-[var(--space-3)] py-[var(--space-2)] backdrop-blur-[12px]',
+            glass: 'glass-input rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)]',
             minimal:
-              "rounded-none border-0 border-b border-[var(--border-primary)] bg-transparent px-0 py-[var(--space-1)]",
+              'rounded-none border-0 border-b border-[var(--border-primary)] bg-transparent px-0 py-[var(--space-1)]',
           }[variant],
           error
-            ? "border-[var(--danger-500)] focus:ring-1 focus:ring-[var(--danger-500)] focus:outline-none"
-            : "focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none",
-          props.disabled ? "opacity-60" : undefined,
-          endAdornment ? "rounded-r-none border-r-0" : undefined,
-          className,
+            ? 'border-[var(--danger-500)] focus:ring-1 focus:ring-[var(--danger-500)] focus:outline-none'
+            : 'focus:ring-1 focus:ring-[var(--ring-color)] focus:outline-none',
+          props.disabled ? 'opacity-60' : undefined,
+          endAdornment ? 'rounded-r-none border-r-0' : undefined,
+          className
         )}
         style={{
-          ...(variant === "default" && {
+          ...(variant === 'default' && {
             background: `
               linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%, rgba(59, 130, 246, 0.01) 100%),
               linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
               rgba(8, 8, 15, 0.85)
             `,
-            boxShadow:
-              "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)",
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)',
           }),
         }}
         onFocus={(e) => {
-          if (variant === "default" && !error) {
+          if (variant === 'default' && !error) {
             e.currentTarget.style.background = `
               linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 35%, rgba(139, 92, 246, 0.02) 100%),
               linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
               rgba(12, 12, 22, 0.9)
             `;
-            e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.4)";
+            e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
             e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.15), 0 0 24px rgba(139, 92, 246, 0.08)";
+              'inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.15), 0 0 24px rgba(139, 92, 246, 0.08)';
           }
         }}
         onBlur={(e) => {
-          if (variant === "default" && !error) {
+          if (variant === 'default' && !error) {
             e.currentTarget.style.background = `
               linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%, rgba(59, 130, 246, 0.01) 100%),
               linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
               rgba(8, 8, 15, 0.85)
             `;
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
             e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)";
+              'inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)';
           }
         }}
         {...props}
@@ -78,26 +76,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {inputElement}
           <div
             className={cn(
-              "flex items-center border border-l-0 px-2",
+              'flex items-center border border-l-0 px-2',
               {
                 default:
-                  "rounded-r-[var(--radius-sm)] border-[rgba(255,255,255,0.1)] bg-[rgba(8,8,15,0.85)] backdrop-blur-[12px]",
-                glass: "glass-input rounded-r-[var(--radius-sm)]",
-                minimal:
-                  "border-0 border-l border-[var(--border-primary)] bg-transparent",
+                  'rounded-r-[var(--radius-sm)] border-[rgba(255,255,255,0.1)] bg-[rgba(8,8,15,0.85)] backdrop-blur-[12px]',
+                glass: 'glass-input rounded-r-[var(--radius-sm)]',
+                minimal: 'border-0 border-l border-[var(--border-primary)] bg-transparent',
               }[variant],
-              error ? "border-[var(--danger-500)]" : undefined,
-              props.disabled ? "opacity-60" : undefined,
+              error ? 'border-[var(--danger-500)]' : undefined,
+              props.disabled ? 'opacity-60' : undefined
             )}
             style={{
-              ...(variant === "default" && {
+              ...(variant === 'default' && {
                 background: `
                 linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%, rgba(59, 130, 246, 0.01) 100%),
                 linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
                 rgba(8, 8, 15, 0.85)
               `,
-                boxShadow:
-                  "inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)",
+                boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4)',
               }),
             }}
           >
@@ -108,7 +104,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     }
 
     return inputElement;
-  },
+  }
 );
 
-Input.displayName = "Input";
+Input.displayName = 'Input';

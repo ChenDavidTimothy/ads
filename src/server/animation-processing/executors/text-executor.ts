@@ -1,19 +1,19 @@
-import type { NodeExecutor } from "./node-executor";
-import type { ExecutionContext } from "../execution-context";
-import type { ReactFlowNode, ReactFlowEdge } from "../types/graph";
-import type { NodeData, TextNodeData } from "@/shared/types";
-import { setNodeOutput } from "../execution-context";
-import { logger } from "@/lib/logger";
+import type { NodeExecutor } from './node-executor';
+import type { ExecutionContext } from '../execution-context';
+import type { ReactFlowNode, ReactFlowEdge } from '../types/graph';
+import type { NodeData, TextNodeData } from '@/shared/types';
+import { setNodeOutput } from '../execution-context';
+import { logger } from '@/lib/logger';
 
 export class TextNodeExecutor implements NodeExecutor {
   canHandle(nodeType: string): boolean {
-    return nodeType === "text";
+    return nodeType === 'text';
   }
 
   async execute(
     node: ReactFlowNode<NodeData>,
     context: ExecutionContext,
-    _connections: ReactFlowEdge[],
+    _connections: ReactFlowEdge[]
   ): Promise<void> {
     if (!this.canHandle(node.type!)) {
       throw new Error(`TextNodeExecutor cannot handle node type: ${node.type}`);
@@ -25,7 +25,7 @@ export class TextNodeExecutor implements NodeExecutor {
 
     const textObject = {
       id: data.identifier.id,
-      type: "text" as const,
+      type: 'text' as const,
       properties: {
         content: data.content,
         fontSize: data.fontSize,
@@ -36,9 +36,7 @@ export class TextNodeExecutor implements NodeExecutor {
       initialOpacity: 1,
     };
 
-    setNodeOutput(context, data.identifier.id, "output", "object_stream", [
-      textObject,
-    ]);
+    setNodeOutput(context, data.identifier.id, 'output', 'object_stream', [textObject]);
 
     logger.info(`Text object created: ${data.identifier.displayName}`);
   }

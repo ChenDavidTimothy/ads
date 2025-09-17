@@ -1,20 +1,16 @@
-import fs from "fs/promises";
-import path from "path";
-import pLimit from "p-limit";
+import fs from 'fs/promises';
+import path from 'path';
+import pLimit from 'p-limit';
 
-import { createServiceClient } from "@/utils/supabase/service";
-import { logger } from "@/lib/logger";
-import { BulkAssetFetcher, type AssetMetadata } from "./bulk-asset-fetcher";
-import type {
-  CachedAsset,
-  CacheMetrics,
-  JobManifest,
-} from "./asset-cache/types";
-import { AssetDownloadService } from "./asset-cache/download-service";
-import { ManifestStore } from "./asset-cache/manifest-store";
-import { CacheMaintenance } from "./asset-cache/maintenance";
-import type { SharedCacheJanitor, JanitorConfig } from "./shared-cache-janitor";
-import { getDefaultCacheDirs, normalizeDir } from "./path-utils";
+import { createServiceClient } from '@/utils/supabase/service';
+import { logger } from '@/lib/logger';
+import { BulkAssetFetcher, type AssetMetadata } from './bulk-asset-fetcher';
+import type { CachedAsset, CacheMetrics, JobManifest } from './asset-cache/types';
+import { AssetDownloadService } from './asset-cache/download-service';
+import { ManifestStore } from './asset-cache/manifest-store';
+import { CacheMaintenance } from './asset-cache/maintenance';
+import type { SharedCacheJanitor, JanitorConfig } from './shared-cache-janitor';
+import { getDefaultCacheDirs, normalizeDir } from './path-utils';
 
 export class AssetCacheManager {
   private readonly jobId: string;
@@ -41,7 +37,7 @@ export class AssetCacheManager {
       jobCacheDir?: string;
       enableJanitor?: boolean;
       janitorConfig?: Partial<JanitorConfig>;
-    } = {},
+    } = {}
   ) {
     this.jobId = jobId;
     this.userId = userId;
@@ -49,13 +45,10 @@ export class AssetCacheManager {
 
     const defaults = getDefaultCacheDirs();
     this.jobCacheDir = normalizeDir(
-      options.jobCacheDir ??
-        path.join(process.env.JOB_CACHE_DIR ?? defaults.jobCacheDir, jobId),
+      options.jobCacheDir ?? path.join(process.env.JOB_CACHE_DIR ?? defaults.jobCacheDir, jobId)
     );
     this.sharedCacheDir = normalizeDir(
-      options.sharedCacheDir ??
-        process.env.SHARED_CACHE_DIR ??
-        defaults.sharedCacheDir,
+      options.sharedCacheDir ?? process.env.SHARED_CACHE_DIR ?? defaults.sharedCacheDir
     );
 
     this.supabase = createServiceClient();
@@ -80,10 +73,7 @@ export class AssetCacheManager {
       integrityFailures: 0,
     };
 
-    this.maintenance = new CacheMaintenance(
-      this.sharedCacheDir,
-      this.jobCacheDir,
-    );
+    this.maintenance = new CacheMaintenance(this.sharedCacheDir, this.jobCacheDir);
     this.manifestStore = new ManifestStore(this.jobCacheDir);
     this.downloadService = new AssetDownloadService({
       sharedCacheDir: this.sharedCacheDir,
@@ -130,21 +120,16 @@ export class AssetCacheManager {
     try {
       const assetsMetadata = await this.bulkFetcher.bulkFetchAssetMetadata(
         uniqueAssetIds,
-        this.userId,
+        this.userId
       );
 
-      const validation = this.bulkFetcher.validateJobAssets(
-        assetsMetadata,
-        this.maxJobSizeBytes,
-      );
+      const validation = this.bulkFetcher.validateJobAssets(assetsMetadata, this.maxJobSizeBytes);
       if (!validation.valid) {
-        throw new Error(
-          `Asset validation failed: ${validation.errors.join("; ")}`,
-        );
+        throw new Error(`Asset validation failed: ${validation.errors.join('; ')}`);
       }
 
       if (validation.warnings.length > 0) {
-        logger.warn("Asset validation warnings", {
+        logger.warn('Asset validation warnings', {
           jobId: this.jobId,
           warnings: validation.warnings,
         });
@@ -157,14 +142,14 @@ export class AssetCacheManager {
       const missingAssets = uniqueAssetIds.filter((id) => !this.assets.has(id));
       if (missingAssets.length > 0) {
         throw new Error(
-          `ASSETS_FAILED: Failed to prepare assets: ${missingAssets.join(", ")}. ` +
-            `Requested: ${uniqueAssetIds.length}, Prepared: ${this.assets.size}`,
+          `ASSETS_FAILED: Failed to prepare assets: ${missingAssets.join(', ')}. ` +
+            `Requested: ${uniqueAssetIds.length}, Prepared: ${this.assets.size}`
         );
       }
 
       const manifest: JobManifest = {
         jobId: this.jobId,
-        version: "1.0",
+        version: '1.0',
         totalBytes: validation.totalBytes,
         createdAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
@@ -192,7 +177,7 @@ export class AssetCacheManager {
     asset: AssetMetadata,
     localPath: string,
     contentHash: string,
-    fromCache: boolean,
+    fromCache: boolean
   ): void {
     this.assets.set(asset.id, {
       assetId: asset.id,
@@ -209,7 +194,7 @@ export class AssetCacheManager {
   private createEmptyManifest(): JobManifest {
     return {
       jobId: this.jobId,
-      version: "1.0",
+      version: '1.0',
       totalBytes: 0,
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
@@ -224,27 +209,18 @@ export class AssetCacheManager {
   private logMetrics(): void {
     const hitRate =
       this.metrics.assetsRequested > 0
-        ? (
-            (this.metrics.cacheHits / this.metrics.assetsRequested) *
-            100
-          ).toFixed(1)
-        : "0";
+        ? ((this.metrics.cacheHits / this.metrics.assetsRequested) * 100).toFixed(1)
+        : '0';
 
     const sharedHitRate =
       this.metrics.cacheHits > 0
-        ? (
-            (this.metrics.sharedCacheHits / this.metrics.cacheHits) *
-            100
-          ).toFixed(1)
-        : "0";
+        ? ((this.metrics.sharedCacheHits / this.metrics.cacheHits) * 100).toFixed(1)
+        : '0';
 
     const copyRate =
       this.metrics.hardLinkFallbacks > 0
-        ? (
-            (this.metrics.copyFallbacks / this.metrics.hardLinkFallbacks) *
-            100
-          ).toFixed(1)
-        : "0";
+        ? ((this.metrics.copyFallbacks / this.metrics.hardLinkFallbacks) * 100).toFixed(1)
+        : '0';
 
     logger.info(`Asset cache metrics for job`, {
       jobId: this.jobId,
@@ -270,7 +246,7 @@ export class AssetCacheManager {
           jobId: this.jobId,
           copyFallbacks: this.metrics.copyFallbacks,
           hardLinkFallbacks: this.metrics.hardLinkFallbacks,
-        },
+        }
       );
     }
 
@@ -284,7 +260,7 @@ export class AssetCacheManager {
   }
 
   private formatBytes(bytes: number): string {
-    const units = ["B", "KB", "MB", "GB"];
+    const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
     let unitIndex = 0;
 
@@ -320,8 +296,4 @@ export class AssetCacheManager {
     return { ...this.metrics };
   }
 }
-export type {
-  CachedAsset,
-  JobManifest,
-  CacheMetrics,
-} from "./asset-cache/types";
+export type { CachedAsset, JobManifest, CacheMetrics } from './asset-cache/types';

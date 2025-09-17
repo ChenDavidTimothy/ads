@@ -1,18 +1,18 @@
 // src/components/workspace/nodes/insert-node.tsx - Simplified single input/output ports
-"use client";
+'use client';
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { getNodeDefinition } from "@/shared/registry/registry-utils";
-import type { InsertNodeData } from "@/shared/types/nodes";
-import React from "react";
-import { InsertModal } from "./InsertModal";
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { InsertNodeData } from '@/shared/types/nodes';
+import React from 'react';
+import { InsertModal } from './InsertModal';
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
-  const nodeDefinition = getNodeDefinition("insert");
+  const nodeDefinition = getNodeDefinition('insert');
   const [open, setOpen] = React.useState(false);
 
-  const handleClass = "bg-[var(--node-data)]";
+  const handleClass = 'bg-[var(--node-data)]';
 
   return (
     <Card
@@ -62,11 +62,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         />
       ))}
       {open ? (
-        <InsertModal
-          isOpen={open}
-          onClose={() => setOpen(false)}
-          nodeId={data.identifier.id}
-        />
+        <InsertModal isOpen={open} onClose={() => setOpen(false)} nodeId={data.identifier.id} />
       ) : null}
     </Card>
   );

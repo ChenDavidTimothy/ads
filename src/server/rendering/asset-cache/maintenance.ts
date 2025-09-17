@@ -1,12 +1,9 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from 'fs/promises';
+import path from 'path';
 
-import { logger } from "@/lib/logger";
-import { ensureDir } from "../path-utils";
-import {
-  SharedCacheJanitor,
-  type JanitorConfig,
-} from "../shared-cache-janitor";
+import { logger } from '@/lib/logger';
+import { ensureDir } from '../path-utils';
+import { SharedCacheJanitor, type JanitorConfig } from '../shared-cache-janitor';
 
 export class CacheMaintenance {
   private static hardLinkTestCompleted = false;
@@ -20,20 +17,18 @@ export class CacheMaintenance {
     this.jobCacheDir = jobCacheDir;
   }
 
-  async ensureDirectories(
-    options: { logOnSuccess?: boolean } = {},
-  ): Promise<void> {
+  async ensureDirectories(options: { logOnSuccess?: boolean } = {}): Promise<void> {
     try {
       await ensureDir(this.sharedCacheDir);
       await ensureDir(this.jobCacheDir);
       if (options.logOnSuccess ?? true) {
-        logger.debug("Cache directories initialized", {
+        logger.debug('Cache directories initialized', {
           sharedCacheDir: this.sharedCacheDir,
           jobCacheDir: this.jobCacheDir,
         });
       }
     } catch (error) {
-      logger.error("Failed to initialize cache directories", {
+      logger.error('Failed to initialize cache directories', {
         sharedCacheDir: this.sharedCacheDir,
         jobCacheDir: this.jobCacheDir,
         error: error instanceof Error ? error.message : String(error),
@@ -42,9 +37,7 @@ export class CacheMaintenance {
     }
   }
 
-  async startJanitor(
-    config?: Partial<JanitorConfig>,
-  ): Promise<SharedCacheJanitor> {
+  async startJanitor(config?: Partial<JanitorConfig>): Promise<SharedCacheJanitor> {
     await this.ensureDirectories();
     const janitor = new SharedCacheJanitor(this.sharedCacheDir, config);
     await janitor.start();
@@ -64,9 +57,8 @@ export class CacheMaintenance {
 
     CacheMaintenance.hardLinkTestPromise ??= this.performStartupHardLinkTest()
       .catch((error) => {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        logger.warn("Failed to perform hard link startup test", {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('Failed to perform hard link startup test', {
           error: errorMessage,
         });
       })
@@ -82,31 +74,25 @@ export class CacheMaintenance {
     await this.ensureDirectories({ logOnSuccess: false });
 
     const testContent = `hardlink-test-${Date.now()}`;
-    const testSource = path.join(this.sharedCacheDir, ".hardlink-test");
-    const testTarget = path.join(this.jobCacheDir, ".hardlink-test");
+    const testSource = path.join(this.sharedCacheDir, '.hardlink-test');
+    const testTarget = path.join(this.jobCacheDir, '.hardlink-test');
 
     await fs.writeFile(testSource, testContent);
 
     try {
       await fs.link(testSource, testTarget);
 
-      const targetContent = await fs.readFile(testTarget, "utf8");
+      const targetContent = await fs.readFile(testTarget, 'utf8');
       const sourceStats = await fs.stat(testSource);
       const targetStats = await fs.stat(testTarget);
 
-      if (
-        targetContent === testContent &&
-        sourceStats.ino === targetStats.ino
-      ) {
-        logger.info(
-          "Hard link test passed - optimal cache performance enabled",
-          {
-            sharedCacheDir: this.sharedCacheDir,
-            jobCacheDir: this.jobCacheDir,
-          },
-        );
+      if (targetContent === testContent && sourceStats.ino === targetStats.ino) {
+        logger.info('Hard link test passed - optimal cache performance enabled', {
+          sharedCacheDir: this.sharedCacheDir,
+          jobCacheDir: this.jobCacheDir,
+        });
       } else {
-        logger.warn("Hard link test inconclusive - may use copy fallbacks");
+        logger.warn('Hard link test inconclusive - may use copy fallbacks');
       }
 
       await Promise.all([
@@ -120,30 +106,30 @@ export class CacheMaintenance {
     } catch (linkError: unknown) {
       if (
         linkError &&
-        typeof linkError === "object" &&
-        "code" in linkError &&
-        (linkError as NodeJS.ErrnoException).code === "EXDEV"
+        typeof linkError === 'object' &&
+        'code' in linkError &&
+        (linkError as NodeJS.ErrnoException).code === 'EXDEV'
       ) {
         logger.warn(
-          "Hard links not supported between cache directories - will use copy fallbacks",
+          'Hard links not supported between cache directories - will use copy fallbacks',
           {
-            reason: "Cross-filesystem",
+            reason: 'Cross-filesystem',
             sharedCacheDir: this.sharedCacheDir,
             jobCacheDir: this.jobCacheDir,
-            impact: "Doubled disk usage expected",
-          },
+            impact: 'Doubled disk usage expected',
+          }
         );
       } else {
         const errorMessage =
           linkError &&
-          typeof linkError === "object" &&
-          "message" in linkError &&
-          typeof (linkError as { message?: string }).message === "string"
+          typeof linkError === 'object' &&
+          'message' in linkError &&
+          typeof (linkError as { message?: string }).message === 'string'
             ? (linkError as { message?: string }).message
             : String(linkError);
-        logger.warn("Hard link test failed - will use copy fallbacks", {
+        logger.warn('Hard link test failed - will use copy fallbacks', {
           error: errorMessage,
-          impact: "Doubled disk usage expected",
+          impact: 'Doubled disk usage expected',
         });
       }
 

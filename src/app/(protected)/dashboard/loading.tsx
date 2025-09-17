@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 
 export default function DashboardLoading() {
   return <DashboardSkeleton />;

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { WorkspaceProvider } from "./workspace-context";
-import { WorkspaceHeader } from "./workspace-header";
-import { WorkspaceTabContent } from "./workspace-tab-content";
+import { WorkspaceProvider } from './workspace-context';
+import { WorkspaceHeader } from './workspace-header';
+import { WorkspaceTabContent } from './workspace-tab-content';
 
 export function WorkspaceLayout({ workspaceId }: { workspaceId: string }) {
   return (

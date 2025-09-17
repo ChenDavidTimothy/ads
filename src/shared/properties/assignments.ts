@@ -1,7 +1,7 @@
 // src/shared/properties/assignments.ts
 
-import type { Point2D } from "@/shared/types/core";
-import { deepMerge, isPlainObject } from "@/shared/utils/object-path";
+import type { Point2D } from '@/shared/types/core';
+import { deepMerge, isPlainObject } from '@/shared/utils/object-path';
 
 // Initial/static overrides applied before animation evaluation
 export interface ObjectInitialOverrides {
@@ -26,7 +26,7 @@ export interface TrackOverride {
   // Optional timeline overrides (still relative to baseline/time cursor)
   startTime?: number;
   duration?: number;
-  easing?: "linear" | "easeInOut" | "easeIn" | "easeOut";
+  easing?: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut';
   [key: string]: unknown;
 }
 
@@ -40,52 +40,42 @@ export type PerObjectAssignments = Record<string, ObjectAssignments>;
 
 export function isPoint2D(value: unknown): value is Point2D {
   return (
-    typeof value === "object" &&
+    typeof value === 'object' &&
     value !== null &&
-    typeof (value as Record<string, unknown>).x === "number" &&
-    typeof (value as Record<string, unknown>).y === "number"
+    typeof (value as Record<string, unknown>).x === 'number' &&
+    typeof (value as Record<string, unknown>).y === 'number'
   );
 }
 
-export function isObjectInitialOverrides(
-  value: unknown,
-): value is ObjectInitialOverrides {
-  if (typeof value !== "object" || value === null) return false;
+export function isObjectInitialOverrides(value: unknown): value is ObjectInitialOverrides {
+  if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   if (v.position !== undefined && !isPoint2D(v.position)) return false;
   if (v.scale !== undefined && !isPoint2D(v.scale)) return false;
-  if (v.rotation !== undefined && typeof v.rotation !== "number") return false;
-  if (v.opacity !== undefined && typeof v.opacity !== "number") return false;
-  if (v.fillColor !== undefined && typeof v.fillColor !== "string")
-    return false;
-  if (v.strokeColor !== undefined && typeof v.strokeColor !== "string")
-    return false;
-  if (v.strokeWidth !== undefined && typeof v.strokeWidth !== "number")
-    return false;
+  if (v.rotation !== undefined && typeof v.rotation !== 'number') return false;
+  if (v.opacity !== undefined && typeof v.opacity !== 'number') return false;
+  if (v.fillColor !== undefined && typeof v.fillColor !== 'string') return false;
+  if (v.strokeColor !== undefined && typeof v.strokeColor !== 'string') return false;
+  if (v.strokeWidth !== undefined && typeof v.strokeWidth !== 'number') return false;
   return true;
 }
 
 export function isTrackOverride(value: unknown): value is TrackOverride {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  if (v.trackId !== undefined && typeof v.trackId !== "string") return false;
-  if (v.type !== undefined && typeof v.type !== "string") return false;
-  if (v.properties !== undefined && typeof v.properties !== "object")
-    return false;
-  if (v.startTime !== undefined && typeof v.startTime !== "number")
-    return false;
-  if (v.duration !== undefined && typeof v.duration !== "number") return false;
-  if (v.easing !== undefined && typeof v.easing !== "string") return false;
+  if (v.trackId !== undefined && typeof v.trackId !== 'string') return false;
+  if (v.type !== undefined && typeof v.type !== 'string') return false;
+  if (v.properties !== undefined && typeof v.properties !== 'object') return false;
+  if (v.startTime !== undefined && typeof v.startTime !== 'number') return false;
+  if (v.duration !== undefined && typeof v.duration !== 'number') return false;
+  if (v.easing !== undefined && typeof v.easing !== 'string') return false;
   return true;
 }
 
-export function isObjectAssignments(
-  value: unknown,
-): value is ObjectAssignments {
-  if (typeof value !== "object" || value === null) return false;
+export function isObjectAssignments(value: unknown): value is ObjectAssignments {
+  if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  if (v.initial !== undefined && !isObjectInitialOverrides(v.initial))
-    return false;
+  if (v.initial !== undefined && !isObjectInitialOverrides(v.initial)) return false;
   if (v.tracks !== undefined) {
     if (!Array.isArray(v.tracks)) return false;
     if (!v.tracks.every(isTrackOverride)) return false;
@@ -93,10 +83,8 @@ export function isObjectAssignments(
   return true;
 }
 
-export function isPerObjectAssignments(
-  value: unknown,
-): value is PerObjectAssignments {
-  if (typeof value !== "object" || value === null) return false;
+export function isPerObjectAssignments(value: unknown): value is PerObjectAssignments {
+  if (typeof value !== 'object' || value === null) return false;
   for (const entry of Object.values(value as Record<string, unknown>)) {
     if (!isObjectAssignments(entry)) return false;
   }
@@ -106,7 +94,7 @@ export function isPerObjectAssignments(
 // Merge two ObjectAssignments: `overrides` takes precedence over `base`
 export function mergeObjectAssignments(
   base: ObjectAssignments | undefined,
-  overrides: ObjectAssignments | undefined,
+  overrides: ObjectAssignments | undefined
 ): ObjectAssignments | undefined {
   if (!base && !overrides) return undefined;
   // Deep-merge initial so sub-fields (e.g., position.x) are preserved
@@ -138,26 +126,16 @@ export function mergeObjectAssignments(
   }
 
   for (const t of overrideTracks) {
-    const key = t.trackId
-      ? `id:${t.trackId}`
-      : t.type
-        ? `type:${t.type}`
-        : undefined;
+    const key = t.trackId ? `id:${t.trackId}` : t.type ? `type:${t.type}` : undefined;
     if (key && index.has(key)) {
       const baseT = index.get(key)!;
       // Deep-merge nested properties
       const mergedProps = deepMerge(baseT.properties ?? {}, t.properties ?? {});
       // Special-case from/to to ensure nested partials merge even if either side is non-plain (defensive)
-      if (
-        isPlainObject(baseT.properties?.from) &&
-        isPlainObject(t.properties?.from)
-      ) {
+      if (isPlainObject(baseT.properties?.from) && isPlainObject(t.properties?.from)) {
         mergedProps.from = deepMerge(baseT.properties.from, t.properties.from);
       }
-      if (
-        isPlainObject(baseT.properties?.to) &&
-        isPlainObject(t.properties?.to)
-      ) {
+      if (isPlainObject(baseT.properties?.to) && isPlainObject(t.properties?.to)) {
         mergedProps.to = deepMerge(baseT.properties.to, t.properties.to);
       }
       index.set(key, {

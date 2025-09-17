@@ -1,61 +1,58 @@
 // src/app/layout.tsx
-import "@/styles/globals.css";
+import '@/styles/globals.css';
 
-import { type Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import { type Metadata } from 'next';
+import { Montserrat } from 'next/font/google';
 
-import { TRPCReactProvider } from "@/trpc/react";
-import { NotificationProvider } from "@/hooks/use-notifications";
-import { ToastContainer } from "@/components/ui/toast";
-import { ThemeProvider } from "@/components/theme/theme-provider";
+import { TRPCReactProvider } from '@/trpc/react';
+import { NotificationProvider } from '@/hooks/use-notifications';
+import { ToastContainer } from '@/components/ui/toast';
+import { ThemeProvider } from '@/components/theme/theme-provider';
 
 export const metadata: Metadata = {
   title: {
-    default: "Variota - No-Code Video Animation Platform",
-    template: "%s | Variota",
+    default: 'Variota - No-Code Video Animation Platform',
+    template: '%s | Variota',
   },
   description:
-    "Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface for animation creation.",
+    'Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface for animation creation.',
   keywords: [
-    "video animation",
-    "no-code animation",
-    "visual programming",
-    "video advertisements",
-    "marketing videos",
-    "business automation",
-    "data-driven videos",
-    "node-based editor",
+    'video animation',
+    'no-code animation',
+    'visual programming',
+    'video advertisements',
+    'marketing videos',
+    'business automation',
+    'data-driven videos',
+    'node-based editor',
   ],
-  authors: [{ name: "Variota Team" }],
-  creator: "Variota",
-  publisher: "Variota",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
+  authors: [{ name: 'Variota Team' }],
+  creator: 'Variota',
+  publisher: 'Variota',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "/",
-    title: "Variota - No-Code Video Animation Platform",
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+    title: 'Variota - No-Code Video Animation Platform',
     description:
-      "Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface.",
-    siteName: "Variota",
+      'Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface.',
+    siteName: 'Variota',
     images: [
       {
-        url: "/og-image.png",
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: "Variota - No-Code Video Animation Platform",
+        alt: 'Variota - No-Code Video Animation Platform',
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Variota - No-Code Video Animation Platform",
-    description:
-      "Create stunning, data-driven video advertisements without coding.",
-    images: ["/og-image.png"],
-    creator: "@variota",
+    card: 'summary_large_image',
+    title: 'Variota - No-Code Video Animation Platform',
+    description: 'Create stunning, data-driven video advertisements without coding.',
+    images: ['/og-image.png'],
+    creator: '@variota',
   },
   robots: {
     index: true,
@@ -63,92 +60,74 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   verification: {
     google: process.env.GOOGLE_VERIFICATION_ID,
     yandex: process.env.YANDEX_VERIFICATION_ID,
   },
-  category: "technology",
-  classification: "Business Software",
+  category: 'technology',
+  classification: 'Business Software',
   other: {
-    "application-name": "Variota",
-    "mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "Variota",
-    "msapplication-TileColor": "#7c3aed",
-    "theme-color": "#7c3aed",
+    'application-name': 'Variota',
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-title': 'Variota',
+    'msapplication-TileColor': '#7c3aed',
+    'theme-color': '#7c3aed',
   },
   icons: [
-    { rel: "icon", url: "/icon.png", type: "image/png", sizes: "any" },
-    { rel: "icon", url: "/favicon.ico", sizes: "16x16 32x32" },
-    { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
-    { rel: "manifest", url: "/manifest.json" },
+    { rel: 'icon', url: '/icon.png', type: 'image/png', sizes: 'any' },
+    { rel: 'icon', url: '/favicon.ico', sizes: '16x16 32x32' },
+    { rel: 'apple-touch-icon', url: '/apple-touch-icon.png' },
+    { rel: 'manifest', url: '/manifest.json' },
   ],
 };
 
 const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
   preload: true,
 });
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
       className={`${montserrat.variable}`}
       data-theme="dark"
-      suppressHydrationWarning={process.env.NODE_ENV !== "production"}
+      suppressHydrationWarning={process.env.NODE_ENV !== 'production'}
     >
       <head>
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/* Security headers */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-        <meta
-          httpEquiv="Referrer-Policy"
-          content="strict-origin-when-cross-origin"
-        />
-        <meta
-          httpEquiv="Permissions-Policy"
-          content="camera=(), microphone=(), geolocation=()"
-        />
+        <meta httpEquiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+        <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
 
         {/* Viewport for responsive design */}
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
         {/* Progressive Web App */}
         <meta name="application-name" content="Variota" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="application-name" content="Variota" />
         <meta name="msapplication-TileColor" content="#7c3aed" />
         <meta name="theme-color" content="#7c3aed" />
       </head>
       <body
         className="bg-[var(--surface-0)] text-[var(--text-primary)] antialiased"
-        suppressHydrationWarning={process.env.NODE_ENV !== "production"}
+        suppressHydrationWarning={process.env.NODE_ENV !== 'production'}
       >
         <NotificationProvider>
           <TRPCReactProvider>
@@ -160,7 +139,7 @@ export default function RootLayout({
         </NotificationProvider>
 
         {/* Analytics and monitoring scripts would go here */}
-        {process.env.NODE_ENV === "production" && (
+        {process.env.NODE_ENV === 'production' && (
           <>
             {/* Google Analytics */}
             {process.env.NEXT_PUBLIC_GA_ID && (

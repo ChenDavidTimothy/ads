@@ -1,25 +1,18 @@
-import {
-  setNodeOutput,
-  getConnectedInputs,
-  type ExecutionContext,
-} from "../../execution-context";
-import type { ReactFlowNode, ReactFlowEdge } from "../../types/graph";
-import type { NodeData } from "@/shared/types";
-import {
-  extractObjectIdsFromInputs,
-  pickCursorsForIds,
-} from "../../scene/scene-assembler";
-import type { PerObjectAssignments } from "@/shared/properties/assignments";
+import { setNodeOutput, getConnectedInputs, type ExecutionContext } from '../../execution-context';
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/graph';
+import type { NodeData } from '@/shared/types';
+import { extractObjectIdsFromInputs, pickCursorsForIds } from '../../scene/scene-assembler';
+import type { PerObjectAssignments } from '@/shared/properties/assignments';
 import {
   extractCursorsFromInputs,
   extractPerObjectAnimationsFromInputs,
   extractPerObjectAssignmentsFromInputs,
-} from "./shared/per-object";
+} from './shared/per-object';
 
 export async function executeFilterNode(
   node: ReactFlowNode<NodeData>,
   context: ExecutionContext,
-  connections: ReactFlowEdge[],
+  connections: ReactFlowEdge[]
 ): Promise<void> {
   const data = node.data as unknown as Record<string, unknown>;
   const selectedObjectIds = (data.selectedObjectIds as string[]) || [];
@@ -33,18 +26,14 @@ export async function executeFilterNode(
       sourceHandle: string;
     }>,
     node.data.identifier.id,
-    "input",
+    'input'
   );
 
   if (inputs.length === 0) {
-    setNodeOutput(
-      context,
-      node.data.identifier.id,
-      "output",
-      "object_stream",
-      [],
-      { perObjectTimeCursor: {}, perObjectAssignments: {} },
-    );
+    setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', [], {
+      perObjectTimeCursor: {},
+      perObjectAssignments: {},
+    });
     return;
   }
 
@@ -55,23 +44,19 @@ export async function executeFilterNode(
   > = inputs.map((i) => {
     const m = i.metadata as
       | {
-          perObjectBatchOverrides?: Record<
-            string,
-            Record<string, Record<string, unknown>>
-          >;
+          perObjectBatchOverrides?: Record<string, Record<string, Record<string, unknown>>>;
         }
       | undefined;
     return m?.perObjectBatchOverrides;
   });
-  const upstreamBoundFieldsList: Array<undefined | Record<string, string[]>> =
-    inputs.map((i) => {
-      const m = i.metadata as
-        | {
-            perObjectBoundFields?: Record<string, string[]>;
-          }
-        | undefined;
-      return m?.perObjectBoundFields;
-    });
+  const upstreamBoundFieldsList: Array<undefined | Record<string, string[]>> = inputs.map((i) => {
+    const m = i.metadata as
+      | {
+          perObjectBoundFields?: Record<string, string[]>;
+        }
+      | undefined;
+    return m?.perObjectBoundFields;
+  });
 
   for (const input of inputs) {
     const inputData = Array.isArray(input.data) ? input.data : [input.data];
@@ -90,17 +75,13 @@ export async function executeFilterNode(
 
   const filteredIds = extractObjectIdsFromInputs([{ data: filteredResults }]);
   const propagatedCursors = pickCursorsForIds(upstreamCursorMap, filteredIds);
-  const propagatedAnimations = extractPerObjectAnimationsFromInputs(
+  const propagatedAnimations = extractPerObjectAnimationsFromInputs(inputs, filteredIds);
+  const propagatedAssignments: PerObjectAssignments = extractPerObjectAssignmentsFromInputs(
     inputs,
-    filteredIds,
+    filteredIds
   );
-  const propagatedAssignments: PerObjectAssignments =
-    extractPerObjectAssignmentsFromInputs(inputs, filteredIds);
 
-  const propagatedBatchOverrides: Record<
-    string,
-    Record<string, Record<string, unknown>>
-  > = {};
+  const propagatedBatchOverrides: Record<string, Record<string, Record<string, unknown>>> = {};
   for (const m of upstreamBatchOverridesList) {
     if (!m) continue;
     for (const [objectId, fields] of Object.entries(m)) {
@@ -118,40 +99,27 @@ export async function executeFilterNode(
     for (const [objectId, list] of Object.entries(m)) {
       if (!filteredIds.includes(objectId)) continue;
       const existing = propagatedBoundFields[objectId] ?? [];
-      propagatedBoundFields[objectId] = Array.from(
-        new Set([...existing, ...list.map(String)]),
-      );
+      propagatedBoundFields[objectId] = Array.from(new Set([...existing, ...list.map(String)]));
     }
   }
 
-  setNodeOutput(
-    context,
-    node.data.identifier.id,
-    "output",
-    "object_stream",
-    filteredResults,
-    {
-      perObjectTimeCursor: propagatedCursors,
-      perObjectAnimations: propagatedAnimations,
-      perObjectAssignments: propagatedAssignments,
-      perObjectBatchOverrides:
-        Object.keys(propagatedBatchOverrides).length > 0
-          ? propagatedBatchOverrides
-          : undefined,
-      perObjectBoundFields:
-        Object.keys(propagatedBoundFields).length > 0
-          ? propagatedBoundFields
-          : undefined,
-    },
-  );
+  setNodeOutput(context, node.data.identifier.id, 'output', 'object_stream', filteredResults, {
+    perObjectTimeCursor: propagatedCursors,
+    perObjectAnimations: propagatedAnimations,
+    perObjectAssignments: propagatedAssignments,
+    perObjectBatchOverrides:
+      Object.keys(propagatedBatchOverrides).length > 0 ? propagatedBatchOverrides : undefined,
+    perObjectBoundFields:
+      Object.keys(propagatedBoundFields).length > 0 ? propagatedBoundFields : undefined,
+  });
 }
 
 function hasFilterableObjects(item: unknown): boolean {
-  return typeof item === "object" && item !== null && "id" in item;
+  return typeof item === 'object' && item !== null && 'id' in item;
 }
 
 function filterItem(item: unknown, selectedObjectIds: string[]): unknown {
-  if (typeof item === "object" && item !== null && "id" in item) {
+  if (typeof item === 'object' && item !== null && 'id' in item) {
     const objectId = (item as { id: string }).id;
     return selectedObjectIds.includes(objectId) ? item : null;
   }

@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { WorkspaceTabs } from "./workspace-tabs";
-import { useWorkspace } from "./workspace-context";
-import { Button } from "@/components/ui/button";
-import { PanelLeft, PanelRight } from "lucide-react";
-import Logo from "@/components/ui/logo";
-import { UserProfile } from "@/components/auth/user-profile";
-import { useRouter } from "next/navigation";
+import { WorkspaceTabs } from './workspace-tabs';
+import { useWorkspace } from './workspace-context';
+import { Button } from '@/components/ui/button';
+import { PanelLeft, PanelRight } from 'lucide-react';
+import Logo from '@/components/ui/logo';
+import { UserProfile } from '@/components/auth/user-profile';
+import { useRouter } from 'next/navigation';
 
 // Type for the guarded router available on window when there are unsaved changes
 interface GuardedRouter {
@@ -34,9 +34,7 @@ export function WorkspaceHeader() {
           variant="ghost"
           size="sm"
           aria-label="Toggle left sidebar"
-          onClick={() =>
-            updateUI({ leftSidebarCollapsed: !state.ui.leftSidebarCollapsed })
-          }
+          onClick={() => updateUI({ leftSidebarCollapsed: !state.ui.leftSidebarCollapsed })}
         >
           <PanelLeft size={16} />
         </Button>
@@ -46,9 +44,9 @@ export function WorkspaceHeader() {
           onClick={() => {
             const guardedRouter = window.__guardedRouter;
             if (guardedRouter) {
-              guardedRouter.push("/dashboard");
+              guardedRouter.push('/dashboard');
             } else {
-              router.push("/dashboard");
+              router.push('/dashboard');
             }
           }}
           className="flex flex-shrink-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
@@ -71,9 +69,7 @@ export function WorkspaceHeader() {
           variant="ghost"
           size="sm"
           aria-label="Toggle right sidebar"
-          onClick={() =>
-            updateUI({ rightSidebarCollapsed: !state.ui.rightSidebarCollapsed })
-          }
+          onClick={() => updateUI({ rightSidebarCollapsed: !state.ui.rightSidebarCollapsed })}
         >
           <PanelRight size={16} />
         </Button>

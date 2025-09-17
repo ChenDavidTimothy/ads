@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { ChevronDown, HardDriveDownload } from "lucide-react";
-import { GenerationSelector } from "./generation-selector";
-import type { Node } from "reactflow";
-import type { NodeData } from "@/shared/types";
-import { LayerManagementModal } from "@/components/workspace/layer-management/layer-management-modal";
-import { Layers } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { ChevronDown, HardDriveDownload } from 'lucide-react';
+import { GenerationSelector } from './generation-selector';
+import type { Node } from 'reactflow';
+import type { NodeData } from '@/shared/types';
+import { LayerManagementModal } from '@/components/workspace/layer-management/layer-management-modal';
+import { Layers } from 'lucide-react';
 
 interface ValidationError {
-  type: "error" | "warning";
+  type: 'error' | 'warning';
   code: string;
   message: string;
   suggestions?: string[];
@@ -76,54 +76,47 @@ export function ActionsToolbar({
   const [selectedSceneIds, setSelectedSceneIds] = useState<string[]>([]);
   const [selectedFrameIds, setSelectedFrameIds] = useState<string[]>([]);
 
-  const sceneNodes = allNodes.filter((n) => n.type === "scene");
-  const frameNodes = allNodes.filter((n) => n.type === "frame");
+  const sceneNodes = allNodes.filter((n) => n.type === 'scene');
+  const frameNodes = allNodes.filter((n) => n.type === 'frame');
   const hasSelectableContent = sceneNodes.length > 0 || frameNodes.length > 0;
   const hasLayerableContent = hasSelectableContent;
 
-  const getButtonText = (isGenerating: boolean, type: "video" | "image") => {
-    if (isGenerating)
-      return type === "video" ? "Generating..." : "Generating...";
-    if (lastError || validationSummary?.hasErrors)
-      return "Fix Issues & Try Again";
+  const getButtonText = (isGenerating: boolean, type: 'video' | 'image') => {
+    if (isGenerating) return type === 'video' ? 'Generating...' : 'Generating...';
+    if (lastError || validationSummary?.hasErrors) return 'Fix Issues & Try Again';
 
     // Show different text when no content is available
-    if (type === "video" && sceneNodes.length === 0) {
-      return "No Scenes to Generate";
+    if (type === 'video' && sceneNodes.length === 0) {
+      return 'No Scenes to Generate';
     }
-    if (type === "image" && frameNodes.length === 0) {
-      return "No Frames to Generate";
+    if (type === 'image' && frameNodes.length === 0) {
+      return 'No Frames to Generate';
     }
 
-    return type === "video" ? "Generate All Videos" : "Generate All Images";
+    return type === 'video' ? 'Generate All Videos' : 'Generate All Images';
   };
 
   const getButtonVariant = () => {
-    if (lastError || validationSummary?.hasErrors) return "danger" as const;
-    return "success" as const;
+    if (lastError || validationSummary?.hasErrors) return 'danger' as const;
+    return 'success' as const;
   };
 
   const anyGenerating = isGenerating || isGeneratingImage;
 
   const handleToggleScene = (sceneId: string) => {
     setSelectedSceneIds((prev) =>
-      prev.includes(sceneId)
-        ? prev.filter((id) => id !== sceneId)
-        : [...prev, sceneId],
+      prev.includes(sceneId) ? prev.filter((id) => id !== sceneId) : [...prev, sceneId]
     );
   };
 
   const handleToggleFrame = (frameId: string) => {
     setSelectedFrameIds((prev) =>
-      prev.includes(frameId)
-        ? prev.filter((id) => id !== frameId)
-        : [...prev, frameId],
+      prev.includes(frameId) ? prev.filter((id) => id !== frameId) : [...prev, frameId]
     );
   };
 
   const handleGenerate = () => {
-    const hasSelection =
-      selectedSceneIds.length > 0 || selectedFrameIds.length > 0;
+    const hasSelection = selectedSceneIds.length > 0 || selectedFrameIds.length > 0;
     if (!hasSelection) return;
 
     onGenerateSelected(selectedSceneIds, selectedFrameIds);
@@ -148,7 +141,7 @@ export function ActionsToolbar({
               className="font-medium"
             >
               <HardDriveDownload size={16} className="mr-2" />
-              {isSaving ? "Saving…" : "Save"}
+              {isSaving ? 'Saving…' : 'Save'}
             </Button>
             {/* Small circle indicator for unsaved changes */}
             {hasUnsavedChanges && !isSaving && (
@@ -165,19 +158,17 @@ export function ActionsToolbar({
           size="sm"
           className="font-medium"
         >
-          {getButtonText(isGenerating, "video")}
+          {getButtonText(isGenerating, 'video')}
         </Button>
 
         <Button
           onClick={onGenerateImage}
-          disabled={
-            !canGenerateImage || anyGenerating || frameNodes.length === 0
-          }
+          disabled={!canGenerateImage || anyGenerating || frameNodes.length === 0}
           variant={getButtonVariant()}
           size="sm"
           className="font-medium"
         >
-          {getButtonText(isGeneratingImage, "image")}
+          {getButtonText(isGeneratingImage, 'image')}
         </Button>
 
         {/* Selective Generation - Always visible but disabled when no content */}
@@ -188,7 +179,7 @@ export function ActionsToolbar({
           size="sm"
           className="font-medium"
         >
-          {hasSelectableContent ? "Select & Generate" : "No Content to Select"}
+          {hasSelectableContent ? 'Select & Generate' : 'No Content to Select'}
           <ChevronDown className="ml-1 h-4 w-4" />
         </Button>
 
@@ -201,7 +192,7 @@ export function ActionsToolbar({
           className="font-medium"
         >
           <Layers className="mr-1 h-4 w-4" />
-          {hasLayerableContent ? "Layers" : "No Layers Available"}
+          {hasLayerableContent ? 'Layers' : 'No Layers Available'}
         </Button>
 
         {/* Reset Button */}
@@ -244,10 +235,7 @@ export function ActionsToolbar({
           />
 
           <div className="mt-6 flex justify-end gap-2 border-t border-[var(--border-primary)] pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => setShowSelectionModal(false)}
-            >
+            <Button variant="ghost" onClick={() => setShowSelectionModal(false)}>
               Cancel
             </Button>
             <Button
@@ -256,18 +244,15 @@ export function ActionsToolbar({
               variant="success"
             >
               {anyGenerating
-                ? "Generating..."
-                : `Generate ${selectedTotal} Item${selectedTotal !== 1 ? "s" : ""}`}
+                ? 'Generating...'
+                : `Generate ${selectedTotal} Item${selectedTotal !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>
       </Modal>
 
       {/* Layers Modal */}
-      <LayerManagementModal
-        isOpen={showLayersModal}
-        onClose={() => setShowLayersModal(false)}
-      />
+      <LayerManagementModal isOpen={showLayersModal} onClose={() => setShowLayersModal(false)} />
     </>
   );
 }
