@@ -237,7 +237,7 @@ export async function waitForRenderJobEvent(params: {
       }
 
       resolve(result);
-    };
+    }
 
     renderJobHandlers.push(handler);
 

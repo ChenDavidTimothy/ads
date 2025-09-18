@@ -164,7 +164,6 @@ export function mergeObjectAssignments(
   return result;
 }
 
-
 export interface PerObjectAssignmentUpdateOptions {
   /**
    * Keys whose values should be shallow merged when both the existing initial value

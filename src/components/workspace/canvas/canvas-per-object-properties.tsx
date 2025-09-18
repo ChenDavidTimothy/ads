@@ -414,7 +414,11 @@ export function CanvasPerObjectProperties({
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden('fillColor') && !isBound('fillColor') && (
-                      <CanvasOverrideBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
+                      <CanvasOverrideBadge
+                        nodeId={nodeId}
+                        keyName="fillColor"
+                        objectId={objectId}
+                      />
                     )}
                     {isBound('fillColor') && (
                       <CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
@@ -447,7 +451,11 @@ export function CanvasPerObjectProperties({
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden('strokeColor') && !isBound('strokeColor') && (
-                      <CanvasOverrideBadge nodeId={nodeId} keyName="strokeColor" objectId={objectId} />
+                      <CanvasOverrideBadge
+                        nodeId={nodeId}
+                        keyName="strokeColor"
+                        objectId={objectId}
+                      />
                     )}
                     {isBound('strokeColor') && (
                       <CanvasBindingBadge
@@ -487,7 +495,11 @@ export function CanvasPerObjectProperties({
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
                     {isOverridden('strokeWidth') && !isBound('strokeWidth') && (
-                      <CanvasOverrideBadge nodeId={nodeId} keyName="strokeWidth" objectId={objectId} />
+                      <CanvasOverrideBadge
+                        nodeId={nodeId}
+                        keyName="strokeWidth"
+                        objectId={objectId}
+                      />
                     )}
                     {isBound('strokeWidth') && (
                       <CanvasBindingBadge

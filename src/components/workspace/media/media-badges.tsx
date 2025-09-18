@@ -1,6 +1,9 @@
 import React from 'react';
 
-import { BindingBadge, OverrideBadge as UnifiedOverrideBadge } from '@/components/workspace/binding/badges';
+import {
+  BindingBadge,
+  OverrideBadge as UnifiedOverrideBadge,
+} from '@/components/workspace/binding/badges';
 
 export function MediaBindingBadge({
   nodeId,

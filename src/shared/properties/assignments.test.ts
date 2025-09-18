@@ -1,4 +1,3 @@
-
 import { describe, expect, it } from 'vitest';
 
 import type { PerObjectAssignments } from './assignments';
@@ -25,8 +24,9 @@ describe('applyPerObjectAssignmentUpdate', () => {
     );
 
     expect(result).not.toBe(base);
-    expect(result.objectA.initial?.position).toEqual({ x: 42, y: 20 });
-    expect(result.objectA.initial?.scale).toEqual({ x: 1, y: 1 });
+    expect(result.objectA).toBeDefined();
+    expect(result.objectA!.initial?.position).toEqual({ x: 42, y: 20 });
+    expect(result.objectA!.initial?.scale).toEqual({ x: 1, y: 1 });
   });
 
   it('removes entry when merged initial is empty and removeWhenEmpty is true', () => {
