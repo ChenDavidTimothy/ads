@@ -468,5 +468,5 @@ function evaluateSlideDelta(
   const angleRad =
     baselineRotationTurns * Math.PI * 2 + (slide.properties.orientationDeg ?? 0) * (Math.PI / 180);
   const d = totalDisplacement * eased;
-  return { x: d * Math.cos(angleRad), y: d * Math.sin(angleRad) };
+  return { x: d * Math.cos(angleRad), y: -d * Math.sin(angleRad) };
 }
