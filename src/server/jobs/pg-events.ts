@@ -210,10 +210,13 @@ export async function waitForRenderJobEvent(params: {
   return await new Promise((resolve) => {
     let settled = false;
     let timeout: NodeJS.Timeout | null = null;
-    let handler: RenderJobEventHandler;
+    const handler: RenderJobEventHandler = (payload: RenderJobEventPayload) => {
+      if (payload.jobId !== jobId) return;
+      finalize(payload);
+    };
     let removeSignalListeners: (() => void) | null = null;
 
-    const finalize = (result: RenderJobEventPayload | null) => {
+    function finalize(result: RenderJobEventPayload | null) {
       if (settled) return;
       settled = true;
 
@@ -234,11 +237,6 @@ export async function waitForRenderJobEvent(params: {
       }
 
       resolve(result);
-    };
-
-    handler = (payload: RenderJobEventPayload) => {
-      if (payload.jobId !== jobId) return;
-      finalize(payload);
     };
 
     renderJobHandlers.push(handler);

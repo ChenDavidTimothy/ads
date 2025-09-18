@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Node } from 'reactflow';
 import { TextareaField, SelectField, NumberField, ColorField } from '@/components/ui/form-fields';
 import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
 import { useWorkspace } from '@/components/workspace/workspace-context';

@@ -201,8 +201,8 @@ export function applyPerObjectAssignmentUpdate(
       mergedInitial = {
         ...mergedInitial,
         [key]: {
-          ...(baseValue as Record<string, unknown>),
-          ...(updateValue as Record<string, unknown>),
+          ...baseValue,
+          ...updateValue,
         },
       };
     }
