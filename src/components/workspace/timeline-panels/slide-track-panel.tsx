@@ -20,6 +20,7 @@ export function SlideTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -50,7 +51,7 @@ export function SlideTrackPanel({
             disabled={isFieldBound('slide.orientationDeg')}
             inputClassName={leftBorderClass('slide.orientationDeg')}
           />
-          {(isFieldOverridden('slide.orientationDeg') || isFieldBound('slide.orientationDeg')) && (
+          {(isFieldOverridden('slide.orientationDeg') || hasBinding('slide.orientationDeg')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="slide.orientationDeg" />
             </div>
@@ -75,7 +76,7 @@ export function SlideTrackPanel({
             disabled={isFieldBound('slide.velocity')}
             inputClassName={leftBorderClass('slide.velocity')}
           />
-          {(isFieldOverridden('slide.velocity') || isFieldBound('slide.velocity')) && (
+          {(isFieldOverridden('slide.velocity') || hasBinding('slide.velocity')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="slide.velocity" />
             </div>

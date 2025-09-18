@@ -3,6 +3,7 @@ import type { Node } from 'reactflow';
 
 import { NumberField, ColorField } from '@/components/ui/form-fields';
 import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
+import { useVariableBinding } from '@/components/workspace/binding/bindings';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { FlowTracker } from '@/lib/flow/flow-tracking';
 import { getResolverFieldPath } from '@/shared/properties/field-paths';
@@ -74,12 +75,8 @@ export function CanvasPerObjectProperties({
     strokeColor?: string;
     strokeWidth?: number;
   };
+  const { getBindingDetails } = useVariableBinding(nodeId, objectId);
 
-  const isBound = (key: string) => {
-    const vbAll = node?.data?.variableBindingsByObject ?? {};
-    return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-  };
-  // Removed unused isInheritedBound function
   const isOverridden = (key: string) => {
     switch (key) {
       case 'position.x':
@@ -104,8 +101,20 @@ export function CanvasPerObjectProperties({
         return false;
     }
   };
+  type BindingState = 'direct' | 'inherited' | 'none';
+
+  const getBindingState = (key: string): BindingState => {
+    const { scope } = getBindingDetails(key);
+    if (!scope) return 'none';
+    if (scope === 'object') return 'direct';
+    return isOverridden(key) ? 'none' : 'inherited';
+  };
+
+  const isDirectBinding = (key: string): boolean => getBindingState(key) === 'direct';
+  const hasVisibleBinding = (key: string): boolean => getBindingState(key) !== 'none';
+
   const leftBorderClass = (key: string) =>
-    isBound(key)
+    isDirectBinding(key)
       ? 'border-l-2 border-[var(--accent-secondary)]'
       : isOverridden(key)
         ? 'border-l-2 border-[var(--warning-600)]'
@@ -114,7 +123,7 @@ export function CanvasPerObjectProperties({
   // Helper to get value for bound fields - proper precedence like geometry nodes
   const getValue = (key: string, fallbackValue: number | string) => {
     // Check per-object binding first (highest priority)
-    if (isBound(key)) return undefined; // Blank when bound (like geometry nodes)
+    if (isDirectBinding(key)) return undefined; // Blank when bound (like geometry nodes)
 
     // Check manual override second (if not bound) - this is the key fix
     switch (key) {
@@ -144,7 +153,7 @@ export function CanvasPerObjectProperties({
   // Helper to get string value for color fields - proper precedence like geometry nodes
   const getStringValue = (key: string, fallbackValue: string) => {
     // Check per-object binding first (highest priority)
-    if (isBound(key)) return ''; // Empty string when bound (like geometry nodes)
+    if (isDirectBinding(key)) return ''; // Empty string when bound (like geometry nodes)
 
     // Check manual override second (if not bound) - this is the key fix
     switch (key) {
@@ -178,17 +187,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('position.x')}
+            disabled={isDirectBinding('position.x')}
             inputClassName={leftBorderClass('position.x')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('position.x') || isBound('position.x')) && (
+          {(isOverridden('position.x') || hasVisibleBinding('position.x')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('position.x') && !isBound('position.x') && (
+                {isOverridden('position.x') && !isDirectBinding('position.x') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
                 )}
-                {isBound('position.x') && (
+                {hasVisibleBinding('position.x') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="position.x" objectId={objectId} />
                 )}
               </div>
@@ -213,17 +222,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('position.y')}
+            disabled={isDirectBinding('position.y')}
             inputClassName={leftBorderClass('position.y')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('position.y') || isBound('position.y')) && (
+          {(isOverridden('position.y') || hasVisibleBinding('position.y')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('position.y') && !isBound('position.y') && (
+                {isOverridden('position.y') && !isDirectBinding('position.y') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
                 )}
-                {isBound('position.y') && (
+                {hasVisibleBinding('position.y') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="position.y" objectId={objectId} />
                 )}
               </div>
@@ -253,17 +262,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('scale.x')}
+            disabled={isDirectBinding('scale.x')}
             inputClassName={leftBorderClass('scale.x')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('scale.x') || isBound('scale.x')) && (
+          {(isOverridden('scale.x') || hasVisibleBinding('scale.x')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('scale.x') && !isBound('scale.x') && (
+                {isOverridden('scale.x') && !isDirectBinding('scale.x') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
                 )}
-                {isBound('scale.x') && (
+                {hasVisibleBinding('scale.x') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="scale.x" objectId={objectId} />
                 )}
               </div>
@@ -290,17 +299,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('scale.y')}
+            disabled={isDirectBinding('scale.y')}
             inputClassName={leftBorderClass('scale.y')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('scale.y') || isBound('scale.y')) && (
+          {(isOverridden('scale.y') || hasVisibleBinding('scale.y')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('scale.y') && !isBound('scale.y') && (
+                {isOverridden('scale.y') && !isDirectBinding('scale.y') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
                 )}
-                {isBound('scale.y') && (
+                {hasVisibleBinding('scale.y') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="scale.y" objectId={objectId} />
                 )}
               </div>
@@ -329,17 +338,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('rotation')}
+            disabled={isDirectBinding('rotation')}
             inputClassName={leftBorderClass('rotation')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('rotation') || isBound('rotation')) && (
+          {(isOverridden('rotation') || hasVisibleBinding('rotation')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('rotation') && !isBound('rotation') && (
+                {isOverridden('rotation') && !isDirectBinding('rotation') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
                 )}
-                {isBound('rotation') && (
+                {hasVisibleBinding('rotation') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="rotation" objectId={objectId} />
                 )}
               </div>
@@ -367,17 +376,17 @@ export function CanvasPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('opacity')}
+            disabled={isDirectBinding('opacity')}
             inputClassName={leftBorderClass('opacity')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('opacity') || isBound('opacity')) && (
+          {(isOverridden('opacity') || hasVisibleBinding('opacity')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('opacity') && !isBound('opacity') && (
+                {isOverridden('opacity') && !isDirectBinding('opacity') && (
                   <CanvasOverrideBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
                 )}
-                {isBound('opacity') && (
+                {hasVisibleBinding('opacity') && (
                   <CanvasBindingBadge nodeId={nodeId} keyName="opacity" objectId={objectId} />
                 )}
               </div>
@@ -406,21 +415,21 @@ export function CanvasPerObjectProperties({
                     }}
                   />
                 }
-                disabled={isBound('fillColor')}
+                disabled={isDirectBinding('fillColor')}
                 inputClassName={leftBorderClass('fillColor')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden('fillColor') || isBound('fillColor')) && (
+              {(isOverridden('fillColor') || hasVisibleBinding('fillColor')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden('fillColor') && !isBound('fillColor') && (
+                    {isOverridden('fillColor') && !isDirectBinding('fillColor') && (
                       <CanvasOverrideBadge
                         nodeId={nodeId}
                         keyName="fillColor"
                         objectId={objectId}
                       />
                     )}
-                    {isBound('fillColor') && (
+                    {hasVisibleBinding('fillColor') && (
                       <CanvasBindingBadge nodeId={nodeId} keyName="fillColor" objectId={objectId} />
                     )}
                   </div>
@@ -443,21 +452,21 @@ export function CanvasPerObjectProperties({
                     }}
                   />
                 }
-                disabled={isBound('strokeColor')}
+                disabled={isDirectBinding('strokeColor')}
                 inputClassName={leftBorderClass('strokeColor')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden('strokeColor') || isBound('strokeColor')) && (
+              {(isOverridden('strokeColor') || hasVisibleBinding('strokeColor')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden('strokeColor') && !isBound('strokeColor') && (
+                    {isOverridden('strokeColor') && !isDirectBinding('strokeColor') && (
                       <CanvasOverrideBadge
                         nodeId={nodeId}
                         keyName="strokeColor"
                         objectId={objectId}
                       />
                     )}
-                    {isBound('strokeColor') && (
+                    {hasVisibleBinding('strokeColor') && (
                       <CanvasBindingBadge
                         nodeId={nodeId}
                         keyName="strokeColor"
@@ -487,21 +496,21 @@ export function CanvasPerObjectProperties({
                     }}
                   />
                 }
-                disabled={isBound('strokeWidth')}
+                disabled={isDirectBinding('strokeWidth')}
                 inputClassName={leftBorderClass('strokeWidth')}
               />
               {/* Badge - Only show when overridden or bound */}
-              {(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
+              {(isOverridden('strokeWidth') || hasVisibleBinding('strokeWidth')) && (
                 <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-[var(--space-1)]">
-                    {isOverridden('strokeWidth') && !isBound('strokeWidth') && (
+                    {isOverridden('strokeWidth') && !isDirectBinding('strokeWidth') && (
                       <CanvasOverrideBadge
                         nodeId={nodeId}
                         keyName="strokeWidth"
                         objectId={objectId}
                       />
                     )}
-                    {isBound('strokeWidth') && (
+                    {hasVisibleBinding('strokeWidth') && (
                       <CanvasBindingBadge
                         nodeId={nodeId}
                         keyName="strokeWidth"

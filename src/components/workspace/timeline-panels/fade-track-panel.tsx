@@ -20,6 +20,7 @@ export function FadeTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -46,7 +47,7 @@ export function FadeTrackPanel({
             disabled={isFieldBound('fade.from')}
             inputClassName={leftBorderClass('fade.from')}
           />
-          {(isFieldOverridden('fade.from') || isFieldBound('fade.from')) && (
+          {(isFieldOverridden('fade.from') || hasBinding('fade.from')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="fade.from" />
             </div>
@@ -63,7 +64,7 @@ export function FadeTrackPanel({
             disabled={isFieldBound('fade.to')}
             inputClassName={leftBorderClass('fade.to')}
           />
-          {(isFieldOverridden('fade.to') || isFieldBound('fade.to')) && (
+          {(isFieldOverridden('fade.to') || hasBinding('fade.to')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="fade.to" />
             </div>

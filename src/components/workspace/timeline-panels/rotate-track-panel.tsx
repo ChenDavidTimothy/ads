@@ -20,6 +20,7 @@ export function RotateTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -46,7 +47,7 @@ export function RotateTrackPanel({
             disabled={isFieldBound('rotate.from')}
             inputClassName={leftBorderClass('rotate.from')}
           />
-          {(isFieldOverridden('rotate.from') || isFieldBound('rotate.from')) && (
+          {(isFieldOverridden('rotate.from') || hasBinding('rotate.from')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="rotate.from" />
             </div>
@@ -63,7 +64,7 @@ export function RotateTrackPanel({
             disabled={isFieldBound('rotate.to')}
             inputClassName={leftBorderClass('rotate.to')}
           />
-          {(isFieldOverridden('rotate.to') || isFieldBound('rotate.to')) && (
+          {(isFieldOverridden('rotate.to') || hasBinding('rotate.to')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <FieldBadges keyName="rotate.to" />
             </div>

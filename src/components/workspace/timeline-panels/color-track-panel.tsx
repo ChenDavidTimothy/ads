@@ -20,6 +20,7 @@ export function ColorTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -63,7 +64,7 @@ export function ColorTrackPanel({
               disabled={isFieldBound('color.from')}
               inputClassName={leftBorderClass('color.from')}
             />
-            {(isFieldOverridden('color.from') || isFieldBound('color.from')) && (
+            {(isFieldOverridden('color.from') || hasBinding('color.from')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="color.from" />
               </div>
@@ -81,7 +82,7 @@ export function ColorTrackPanel({
               disabled={isFieldBound('color.to')}
               inputClassName={leftBorderClass('color.to')}
             />
-            {(isFieldOverridden('color.to') || isFieldBound('color.to')) && (
+            {(isFieldOverridden('color.to') || hasBinding('color.to')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="color.to" />
               </div>

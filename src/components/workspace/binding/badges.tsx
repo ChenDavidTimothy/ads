@@ -8,36 +8,35 @@ export function BindingBadge({
   nodeId,
   bindingKey,
   objectId,
+  fallbackBindingKeys = [],
 }: {
   nodeId: string;
   bindingKey: string;
   objectId?: string;
+  fallbackBindingKeys?: string[];
 }) {
-  // Per-object and global hooks to allow auto-fallback display + correct removal scope
-  const objectBinding = useVariableBinding(nodeId, objectId);
-  const globalBinding = useVariableBinding(nodeId);
+  const { getBindingDetails, getBoundName, resetToDefault } = useVariableBinding(nodeId, objectId);
 
-  const boundIdObject = objectBinding.getBinding(bindingKey);
-  const boundIdGlobal = globalBinding.getBinding(bindingKey);
+  const keys = [bindingKey, ...fallbackBindingKeys];
+  const { scope, key, boundResultNodeId } = getBindingDetails(keys);
+  if (!scope || !key || !boundResultNodeId) return null;
 
-  const isObjectBound = !!boundIdObject;
-  const boundId = isObjectBound ? boundIdObject : boundIdGlobal;
-  if (!boundId) return null;
-
-  const name = isObjectBound
-    ? objectBinding.getBoundName(boundId)
-    : globalBinding.getBoundName(boundId);
+  const name = getBoundName(boundResultNodeId);
+  const isInherited = scope === 'global' && !!objectId;
+  const label = isInherited
+    ? name
+      ? `Inherited: ${name}`
+      : 'Inherited'
+    : name
+      ? `Bound: ${name}`
+      : 'Bound';
 
   return (
     <Badge
-      variant="bound"
-      onRemove={() =>
-        isObjectBound
-          ? objectBinding.resetToDefault(bindingKey)
-          : globalBinding.resetToDefault(bindingKey)
-      }
+      variant={isInherited ? 'inherited' : 'bound'}
+      onRemove={!isInherited ? () => resetToDefault(key) : undefined}
     >
-      {name ? `Bound: ${name}` : 'Bound'}
+      {label}
     </Badge>
   );
 }

@@ -49,6 +49,7 @@ export interface TimelineFieldHelpers {
   ) => T | undefined;
   getOverrideValue: <T>(path: string) => T | undefined;
   isFieldBound: (fieldKey: string) => boolean;
+  hasBinding: (fieldKey: string) => boolean;
   isFieldOverridden: (fieldKey: string) => boolean;
   FieldBadges: FC<{ keyName: string }>;
   leftBorderClass: (fieldKey: string) => string;
@@ -75,6 +76,33 @@ export function useTimelineFieldHelpers({
     return node?.data as AnimationNodeData | undefined;
   }, [state.flow.nodes, animationNodeId]);
 
+  const getBindingState = useCallback(
+    (fieldKey: string): 'direct' | 'inherited' | 'none' => {
+      if (!animationNodeData) return 'none';
+      const scopedKey = `track.${trackIdentifierId}.${fieldKey}`;
+      const candidateKeys = [scopedKey, fieldKey];
+      const vbGlobal = animationNodeData.variableBindings as BoundRecord;
+
+      if (!selectedObjectId) {
+        return candidateKeys.some((key) => vbGlobal?.[key]?.boundResultNodeId) ? 'direct' : 'none';
+      }
+
+      const vbByObject = animationNodeData.variableBindingsByObject as
+        | Record<string, BoundRecord>
+        | undefined;
+      const vbForObject = vbByObject?.[selectedObjectId];
+
+      for (const key of candidateKeys) {
+        if (vbForObject?.[key]?.boundResultNodeId) {
+          return 'direct';
+        }
+      }
+
+      return candidateKeys.some((key) => vbGlobal?.[key]?.boundResultNodeId) ? 'inherited' : 'none';
+    },
+    [animationNodeData, selectedObjectId, trackIdentifierId]
+  );
+
   const getOverrideValue = useCallback(
     <T,>(path: string): T | undefined => {
       if (!override?.properties) return undefined;
@@ -83,6 +111,11 @@ export function useTimelineFieldHelpers({
       return value as T | undefined;
     },
     [override]
+  );
+
+  const hasBinding = useCallback(
+    (fieldKey: string) => getBindingState(fieldKey) !== 'none',
+    [getBindingState]
   );
 
   const isFieldOverridden = useCallback(
@@ -96,26 +129,8 @@ export function useTimelineFieldHelpers({
   );
 
   const isFieldBound = useCallback(
-    (fieldKey: string) => {
-      if (!animationNodeData) return false;
-      const scopedKey = `track.${trackIdentifierId}.${fieldKey}`;
-      const vbGlobal = animationNodeData.variableBindings as BoundRecord;
-
-      if (selectedObjectId) {
-        const vbByObject = animationNodeData.variableBindingsByObject as
-          | Record<string, BoundRecord>
-          | undefined;
-        const vbForObject = vbByObject?.[selectedObjectId];
-        const direct =
-          vbForObject?.[scopedKey]?.boundResultNodeId ?? vbForObject?.[fieldKey]?.boundResultNodeId;
-        if (direct) return true;
-      }
-
-      return !!(
-        vbGlobal?.[scopedKey]?.boundResultNodeId ?? vbGlobal?.[fieldKey]?.boundResultNodeId
-      );
-    },
-    [animationNodeData, selectedObjectId, trackIdentifierId]
+    (fieldKey: string) => getBindingState(fieldKey) === 'direct',
+    [getBindingState]
   );
 
   const bindAdornment = useCallback(
@@ -174,6 +189,7 @@ export function useTimelineFieldHelpers({
             nodeId={animationNodeId}
             bindingKey={`track.${trackIdentifierId}.${keyName}`}
             objectId={selectedObjectId}
+            fallbackBindingKeys={[keyName]}
           />
         )}
       </div>
@@ -196,6 +212,7 @@ export function useTimelineFieldHelpers({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,

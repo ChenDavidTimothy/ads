@@ -2,6 +2,7 @@ import React from 'react';
 import type { Node } from 'reactflow';
 import { TextareaField, SelectField, NumberField, ColorField } from '@/components/ui/form-fields';
 import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
+import { useVariableBinding } from '@/components/workspace/binding/bindings';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { getResolverFieldPath } from '@/shared/properties/field-paths';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
@@ -73,11 +74,8 @@ export function TypographyPerObjectProperties({
     strokeColor?: string;
     strokeWidth?: number;
   };
+  const { getBindingDetails } = useVariableBinding(nodeId, objectId);
 
-  const isBound = (key: string) => {
-    const vbAll = node?.data?.variableBindingsByObject ?? {};
-    return !!vbAll?.[objectId]?.[key]?.boundResultNodeId;
-  };
   const isOverridden = (key: string) => {
     switch (key) {
       case 'content':
@@ -101,6 +99,18 @@ export function TypographyPerObjectProperties({
     }
   };
 
+  type BindingState = 'direct' | 'inherited' | 'none';
+
+  const getBindingState = (key: string): BindingState => {
+    const { scope } = getBindingDetails(key);
+    if (!scope) return 'none';
+    if (scope === 'object') return 'direct';
+    return isOverridden(key) ? 'none' : 'inherited';
+  };
+
+  const isDirectBinding = (key: string): boolean => getBindingState(key) === 'direct';
+  const hasVisibleBinding = (key: string): boolean => getBindingState(key) !== 'none';
+
   // Property value resolution (same pattern as Canvas)
   const fontFamily = initial.fontFamily ?? base.fontFamily ?? def.fontFamily ?? 'Arial';
   const fontSize = initial.fontSize ?? base.fontSize ?? def.fontSize ?? 24;
@@ -111,7 +121,7 @@ export function TypographyPerObjectProperties({
   const strokeWidth = initial.strokeWidth ?? base.strokeWidth ?? def.strokeWidth ?? 0;
 
   const leftBorderClass = (key: string) =>
-    isBound(key)
+    isDirectBinding(key)
       ? 'border-l-2 border-[var(--accent-secondary)]'
       : isOverridden(key)
         ? 'border-l-2 border-[var(--warning-600)]'
@@ -119,7 +129,7 @@ export function TypographyPerObjectProperties({
 
   // Helper functions for bound fields
   const getValue = (key: string, fallbackValue: number | string) => {
-    if (isBound(key)) return undefined; // Blank when bound
+    if (isDirectBinding(key)) return undefined; // Blank when bound
 
     switch (key) {
       case 'content':
@@ -190,17 +200,17 @@ export function TypographyPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('content')}
+            disabled={isDirectBinding('content')}
             inputClassName={leftBorderClass('content')}
           />
 
-          {(isOverridden('content') || isBound('content')) && (
+          {(isOverridden('content') || hasVisibleBinding('content')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('content') && !isBound('content') && (
+                {isOverridden('content') && !isDirectBinding('content') && (
                   <TypographyOverrideBadge nodeId={nodeId} keyName="content" objectId={objectId} />
                 )}
-                {isBound('content') && (
+                {hasVisibleBinding('content') && (
                   <TypographyBindingBadge nodeId={nodeId} keyName="content" objectId={objectId} />
                 )}
               </div>
@@ -258,17 +268,17 @@ export function TypographyPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('fontSize')}
+            disabled={isDirectBinding('fontSize')}
             inputClassName={leftBorderClass('fontSize')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('fontSize') || isBound('fontSize')) && (
+          {(isOverridden('fontSize') || hasVisibleBinding('fontSize')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('fontSize') && !isBound('fontSize') && (
+                {isOverridden('fontSize') && !isDirectBinding('fontSize') && (
                   <TypographyOverrideBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
                 )}
-                {isBound('fontSize') && (
+                {hasVisibleBinding('fontSize') && (
                   <TypographyBindingBadge nodeId={nodeId} keyName="fontSize" objectId={objectId} />
                 )}
               </div>
@@ -336,7 +346,7 @@ export function TypographyPerObjectProperties({
             <ColorField
               label="Fill Color"
               value={
-                isBound('fillColor')
+                isDirectBinding('fillColor')
                   ? (base.fillColor ?? def.fillColor ?? '#000000')
                   : getStringValue('fillColor', '#000000')
               }
@@ -352,20 +362,20 @@ export function TypographyPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('fillColor')}
+              disabled={isDirectBinding('fillColor')}
             />
             {/* Badge - Show when overridden or bound */}
-            {(isOverridden('fillColor') || isBound('fillColor')) && (
+            {(isOverridden('fillColor') || hasVisibleBinding('fillColor')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('fillColor') && !isBound('fillColor') && (
+                  {isOverridden('fillColor') && !isDirectBinding('fillColor') && (
                     <TypographyOverrideBadge
                       nodeId={nodeId}
                       keyName="fillColor"
                       objectId={objectId}
                     />
                   )}
-                  {isBound('fillColor') && (
+                  {hasVisibleBinding('fillColor') && (
                     <TypographyBindingBadge
                       nodeId={nodeId}
                       keyName="fillColor"
@@ -380,7 +390,7 @@ export function TypographyPerObjectProperties({
             <ColorField
               label="Stroke Color"
               value={
-                isBound('strokeColor')
+                isDirectBinding('strokeColor')
                   ? (base.strokeColor ?? def.strokeColor ?? '#ffffff')
                   : getStringValue('strokeColor', '#ffffff')
               }
@@ -396,20 +406,20 @@ export function TypographyPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('strokeColor')}
+              disabled={isDirectBinding('strokeColor')}
             />
             {/* Badge - Show when overridden or bound */}
-            {(isOverridden('strokeColor') || isBound('strokeColor')) && (
+            {(isOverridden('strokeColor') || hasVisibleBinding('strokeColor')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('strokeColor') && !isBound('strokeColor') && (
+                  {isOverridden('strokeColor') && !isDirectBinding('strokeColor') && (
                     <TypographyOverrideBadge
                       nodeId={nodeId}
                       keyName="strokeColor"
                       objectId={objectId}
                     />
                   )}
-                  {isBound('strokeColor') && (
+                  {hasVisibleBinding('strokeColor') && (
                     <TypographyBindingBadge
                       nodeId={nodeId}
                       keyName="strokeColor"
@@ -442,21 +452,21 @@ export function TypographyPerObjectProperties({
                 }}
               />
             }
-            disabled={isBound('strokeWidth')}
+            disabled={isDirectBinding('strokeWidth')}
             inputClassName={leftBorderClass('strokeWidth')}
           />
           {/* Badge - Only show when overridden or bound */}
-          {(isOverridden('strokeWidth') || isBound('strokeWidth')) && (
+          {(isOverridden('strokeWidth') || hasVisibleBinding('strokeWidth')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('strokeWidth') && !isBound('strokeWidth') && (
+                {isOverridden('strokeWidth') && !isDirectBinding('strokeWidth') && (
                   <TypographyOverrideBadge
                     nodeId={nodeId}
                     keyName="strokeWidth"
                     objectId={objectId}
                   />
                 )}
-                {isBound('strokeWidth') && (
+                {hasVisibleBinding('strokeWidth') && (
                   <TypographyBindingBadge
                     nodeId={nodeId}
                     keyName="strokeWidth"

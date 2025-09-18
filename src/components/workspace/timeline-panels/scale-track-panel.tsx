@@ -20,6 +20,7 @@ export function ScaleTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -52,7 +53,7 @@ export function ScaleTrackPanel({
               disabled={isFieldBound('scale.from.x')}
               inputClassName={leftBorderClass('scale.from.x')}
             />
-            {(isFieldOverridden('scale.from.x') || isFieldBound('scale.from.x')) && (
+            {(isFieldOverridden('scale.from.x') || hasBinding('scale.from.x')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="scale.from.x" />
               </div>
@@ -77,7 +78,7 @@ export function ScaleTrackPanel({
               disabled={isFieldBound('scale.from.y')}
               inputClassName={leftBorderClass('scale.from.y')}
             />
-            {(isFieldOverridden('scale.from.y') || isFieldBound('scale.from.y')) && (
+            {(isFieldOverridden('scale.from.y') || hasBinding('scale.from.y')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="scale.from.y" />
               </div>
@@ -105,7 +106,7 @@ export function ScaleTrackPanel({
               disabled={isFieldBound('scale.to.x')}
               inputClassName={leftBorderClass('scale.to.x')}
             />
-            {(isFieldOverridden('scale.to.x') || isFieldBound('scale.to.x')) && (
+            {(isFieldOverridden('scale.to.x') || hasBinding('scale.to.x')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="scale.to.x" />
               </div>
@@ -130,7 +131,7 @@ export function ScaleTrackPanel({
               disabled={isFieldBound('scale.to.y')}
               inputClassName={leftBorderClass('scale.to.y')}
             />
-            {(isFieldOverridden('scale.to.y') || isFieldBound('scale.to.y')) && (
+            {(isFieldOverridden('scale.to.y') || hasBinding('scale.to.y')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="scale.to.y" />
               </div>

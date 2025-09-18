@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'manual' | 'bound' | 'result';
+  variant?: 'default' | 'manual' | 'bound' | 'result' | 'inherited';
   onRemove?: () => void;
 }
 
@@ -48,6 +48,11 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
             `,
             borderColor: 'rgba(139, 92, 246, 0.4)',
             color: 'var(--text-primary)',
+          }),
+          ...(variant === 'inherited' && {
+            background: 'rgba(59, 130, 246, 0.05)',
+            borderColor: 'rgba(59, 130, 246, 0.25)',
+            color: 'var(--text-secondary)',
           }),
         }}
         {...props}

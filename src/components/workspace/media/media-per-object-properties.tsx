@@ -5,6 +5,7 @@ import { NumberField } from '@/components/ui/form-fields';
 import { Button } from '@/components/ui/button';
 import { RobustImage } from '@/components/ui/robust-image';
 import { BindingAndBatchControls } from '@/components/workspace/batch/BindingAndBatchControls';
+import { useVariableBinding } from '@/components/workspace/binding/bindings';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { getResolverFieldPath } from '@/shared/properties/field-paths';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
@@ -41,17 +42,27 @@ export function MediaPerObjectProperties({
   const assignment: ObjectAssignments = assignments[objectId] ?? {};
   const initial = assignment.initial ?? {};
   const base = data ?? ({} as MediaNodeData); // Node-level values as fallback
+  const { getBindingDetails } = useVariableBinding(nodeId, objectId);
 
   // Binding detection
-  const isBound = (key: string): boolean => {
-    return !!data?.variableBindingsByObject?.[objectId]?.[key]?.boundResultNodeId;
-  };
   const isOverridden = (key: string): boolean => {
     return key in initial;
   };
 
+  type BindingState = 'direct' | 'inherited' | 'none';
+
+  const getBindingState = (key: string): BindingState => {
+    const { scope } = getBindingDetails(key);
+    if (!scope) return 'none';
+    if (scope === 'object') return 'direct';
+    return isOverridden(key) ? 'none' : 'inherited';
+  };
+
+  const isDirectBinding = (key: string): boolean => getBindingState(key) === 'direct';
+  const hasVisibleBinding = (key: string): boolean => getBindingState(key) !== 'none';
+
   const leftBorderClass = (key: string) => {
-    if (isBound(key)) return 'border-l-2 border-[var(--accent-secondary)]';
+    if (isDirectBinding(key)) return 'border-l-2 border-[var(--accent-secondary)]';
     if (isOverridden(key)) return 'border-l-2 border-[var(--warning-600)]';
     return '';
   };
@@ -59,7 +70,7 @@ export function MediaPerObjectProperties({
   // Value resolution with proper precedence (matching geometry nodes)
   const getValue = (key: keyof MediaNodeData, fallbackValue: unknown) => {
     // Check per-object binding first (highest priority)
-    if (isBound(key)) return undefined; // Blank when bound (like geometry nodes)
+    if (isDirectBinding(key)) return undefined; // Blank when bound (like geometry nodes)
 
     // Check manual override second (if not bound)
     switch (key) {
@@ -214,7 +225,7 @@ export function MediaPerObjectProperties({
             variant="secondary"
             size="sm"
             onClick={() => setShowAssetModal(true)}
-            disabled={isBound('imageAssetId')}
+            disabled={isDirectBinding('imageAssetId')}
             className={`w-full ${leftBorderClass('imageAssetId')}`}
           >
             <Image size={14} className="mr-2" aria-label="Image icon" />
@@ -222,13 +233,13 @@ export function MediaPerObjectProperties({
           </Button>
 
           {/* Asset Binding/Override Badge */}
-          {(isOverridden('imageAssetId') || isBound('imageAssetId')) && (
+          {(isOverridden('imageAssetId') || hasVisibleBinding('imageAssetId')) && (
             <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
               <div className="flex items-center gap-[var(--space-1)]">
-                {isOverridden('imageAssetId') && !isBound('imageAssetId') && (
+                {isOverridden('imageAssetId') && !isDirectBinding('imageAssetId') && (
                   <MediaOverrideBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
                 )}
-                {isBound('imageAssetId') && (
+                {hasVisibleBinding('imageAssetId') && (
                   <MediaBindingBadge nodeId={nodeId} keyName="imageAssetId" objectId={objectId} />
                 )}
               </div>
@@ -259,17 +270,17 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('cropX')}
+              disabled={isDirectBinding('cropX')}
               inputClassName={leftBorderClass('cropX')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('cropX') || isBound('cropX')) && (
+            {(isOverridden('cropX') || hasVisibleBinding('cropX')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropX') && !isBound('cropX') && (
+                  {isOverridden('cropX') && !isDirectBinding('cropX') && (
                     <MediaOverrideBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
                   )}
-                  {isBound('cropX') && (
+                  {hasVisibleBinding('cropX') && (
                     <MediaBindingBadge nodeId={nodeId} keyName="cropX" objectId={objectId} />
                   )}
                 </div>
@@ -294,17 +305,17 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('cropY')}
+              disabled={isDirectBinding('cropY')}
               inputClassName={leftBorderClass('cropY')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('cropY') || isBound('cropY')) && (
+            {(isOverridden('cropY') || hasVisibleBinding('cropY')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropY') && !isBound('cropY') && (
+                  {isOverridden('cropY') && !isDirectBinding('cropY') && (
                     <MediaOverrideBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
                   )}
-                  {isBound('cropY') && (
+                  {hasVisibleBinding('cropY') && (
                     <MediaBindingBadge nodeId={nodeId} keyName="cropY" objectId={objectId} />
                   )}
                 </div>
@@ -331,17 +342,17 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('cropWidth')}
+              disabled={isDirectBinding('cropWidth')}
               inputClassName={leftBorderClass('cropWidth')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('cropWidth') || isBound('cropWidth')) && (
+            {(isOverridden('cropWidth') || hasVisibleBinding('cropWidth')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropWidth') && !isBound('cropWidth') && (
+                  {isOverridden('cropWidth') && !isDirectBinding('cropWidth') && (
                     <MediaOverrideBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
                   )}
-                  {isBound('cropWidth') && (
+                  {hasVisibleBinding('cropWidth') && (
                     <MediaBindingBadge nodeId={nodeId} keyName="cropWidth" objectId={objectId} />
                   )}
                 </div>
@@ -366,17 +377,17 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('cropHeight')}
+              disabled={isDirectBinding('cropHeight')}
               inputClassName={leftBorderClass('cropHeight')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('cropHeight') || isBound('cropHeight')) && (
+            {(isOverridden('cropHeight') || hasVisibleBinding('cropHeight')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('cropHeight') && !isBound('cropHeight') && (
+                  {isOverridden('cropHeight') && !isDirectBinding('cropHeight') && (
                     <MediaOverrideBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
                   )}
-                  {isBound('cropHeight') && (
+                  {hasVisibleBinding('cropHeight') && (
                     <MediaBindingBadge nodeId={nodeId} keyName="cropHeight" objectId={objectId} />
                   )}
                 </div>
@@ -408,21 +419,21 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('displayWidth')}
+              disabled={isDirectBinding('displayWidth')}
               inputClassName={leftBorderClass('displayWidth')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('displayWidth') || isBound('displayWidth')) && (
+            {(isOverridden('displayWidth') || hasVisibleBinding('displayWidth')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('displayWidth') && !isBound('displayWidth') && (
+                  {isOverridden('displayWidth') && !isDirectBinding('displayWidth') && (
                     <MediaOverrideBadge
                       nodeId={nodeId}
                       keyName="displayWidth"
                       objectId={objectId}
                     />
                   )}
-                  {isBound('displayWidth') && (
+                  {hasVisibleBinding('displayWidth') && (
                     <MediaBindingBadge nodeId={nodeId} keyName="displayWidth" objectId={objectId} />
                   )}
                 </div>
@@ -447,21 +458,21 @@ export function MediaPerObjectProperties({
                   }}
                 />
               }
-              disabled={isBound('displayHeight')}
+              disabled={isDirectBinding('displayHeight')}
               inputClassName={leftBorderClass('displayHeight')}
             />
             {/* Badge - Only show when overridden or bound */}
-            {(isOverridden('displayHeight') || isBound('displayHeight')) && (
+            {(isOverridden('displayHeight') || hasVisibleBinding('displayHeight')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <div className="flex items-center gap-[var(--space-1)]">
-                  {isOverridden('displayHeight') && !isBound('displayHeight') && (
+                  {isOverridden('displayHeight') && !isDirectBinding('displayHeight') && (
                     <MediaOverrideBadge
                       nodeId={nodeId}
                       keyName="displayHeight"
                       objectId={objectId}
                     />
                   )}
-                  {isBound('displayHeight') && (
+                  {hasVisibleBinding('displayHeight') && (
                     <MediaBindingBadge
                       nodeId={nodeId}
                       keyName="displayHeight"

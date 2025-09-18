@@ -60,6 +60,14 @@ interface VariableBinding {
 type VariableBindingsMap = Record<string, VariableBinding>;
 type PerObjectVariableBindings = Record<string, VariableBindingsMap>;
 
+export type BindingScope = 'object' | 'global';
+
+export interface BindingDetails {
+  scope?: BindingScope;
+  key?: string;
+  boundResultNodeId?: string;
+}
+
 export function useVariableBinding(nodeId: string, objectId?: string) {
   const { state, updateFlow } = useWorkspace();
 
@@ -68,35 +76,45 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
     return tracker.getAvailableResultVariables(nodeId, state.flow.nodes, state.flow.edges);
   }, [nodeId, state.flow.nodes, state.flow.edges]);
 
-  const getBinding = (key: string): string | undefined => {
+  const getBindingDetails = (rawKeys: string | string[]): BindingDetails => {
+    const keys = Array.isArray(rawKeys) ? rawKeys : [rawKeys];
     const node = state.flow.nodes.find((n) => n.data?.identifier?.id === nodeId);
-    if (!node?.data) return undefined;
+    if (!node?.data) return {};
+
+    const data = node.data;
+    const supportsBindings =
+      isAnimationNodeData(data) ||
+      isCanvasNodeData(data) ||
+      isTypographyNodeData(data) ||
+      isMediaNodeData(data) ||
+      isInsertNodeData(data);
+    if (!supportsBindings) return {};
 
     if (objectId) {
-      if (
-        isAnimationNodeData(node.data) ||
-        isCanvasNodeData(node.data) ||
-        isTypographyNodeData(node.data) ||
-        isMediaNodeData(node.data) ||
-        isInsertNodeData(node.data)
-      ) {
-        const prevAll = node.data.variableBindingsByObject ?? {};
-        return prevAll[objectId]?.[key]?.boundResultNodeId;
+      const allByObject: PerObjectVariableBindings = data.variableBindingsByObject ?? {};
+      const currentObject: VariableBindingsMap = allByObject[objectId] ?? {};
+      for (const key of keys) {
+        const bound = currentObject[key]?.boundResultNodeId;
+        if (bound) {
+          return { scope: 'object', key, boundResultNodeId: bound };
+        }
       }
-      return undefined;
     }
 
-    if (
-      isAnimationNodeData(node.data) ||
-      isCanvasNodeData(node.data) ||
-      isTypographyNodeData(node.data) ||
-      isMediaNodeData(node.data) ||
-      isInsertNodeData(node.data)
-    ) {
-      const vb = node.data.variableBindings ?? {};
-      return vb[key]?.boundResultNodeId;
+    const globalBindings: VariableBindingsMap = data.variableBindings ?? {};
+    for (const key of keys) {
+      const bound = globalBindings[key]?.boundResultNodeId;
+      if (bound) {
+        return { scope: 'global', key, boundResultNodeId: bound };
+      }
     }
-    return undefined;
+
+    return {};
+  };
+
+  const getBinding = (key: string): string | undefined => {
+    const { boundResultNodeId } = getBindingDetails(key);
+    return boundResultNodeId;
   };
 
   const getBoundName = (rid?: string): string | undefined => {
@@ -354,7 +372,7 @@ export function useVariableBinding(nodeId: string, objectId?: string) {
     });
   };
 
-  return { variables, getBinding, getBoundName, bind, resetToDefault } as const;
+  return { variables, getBinding, getBoundName, bind, resetToDefault, getBindingDetails } as const;
 }
 
 export function BindButton({ nodeId, bindingKey, objectId, className }: BindButtonProps) {

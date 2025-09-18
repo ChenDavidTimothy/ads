@@ -20,6 +20,7 @@ export function MoveTrackPanel({
     getFieldValue,
     getOverrideValue,
     isFieldBound,
+    hasBinding,
     isFieldOverridden,
     FieldBadges,
     leftBorderClass,
@@ -52,7 +53,7 @@ export function MoveTrackPanel({
               disabled={isFieldBound('move.from.x')}
               inputClassName={leftBorderClass('move.from.x')}
             />
-            {(isFieldOverridden('move.from.x') || isFieldBound('move.from.x')) && (
+            {(isFieldOverridden('move.from.x') || hasBinding('move.from.x')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="move.from.x" />
               </div>
@@ -76,7 +77,7 @@ export function MoveTrackPanel({
               disabled={isFieldBound('move.from.y')}
               inputClassName={leftBorderClass('move.from.y')}
             />
-            {(isFieldOverridden('move.from.y') || isFieldBound('move.from.y')) && (
+            {(isFieldOverridden('move.from.y') || hasBinding('move.from.y')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="move.from.y" />
               </div>
@@ -106,7 +107,7 @@ export function MoveTrackPanel({
               disabled={isFieldBound('move.to.x')}
               inputClassName={leftBorderClass('move.to.x')}
             />
-            {(isFieldOverridden('move.to.x') || isFieldBound('move.to.x')) && (
+            {(isFieldOverridden('move.to.x') || hasBinding('move.to.x')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="move.to.x" />
               </div>
@@ -130,7 +131,7 @@ export function MoveTrackPanel({
               disabled={isFieldBound('move.to.y')}
               inputClassName={leftBorderClass('move.to.y')}
             />
-            {(isFieldOverridden('move.to.y') || isFieldBound('move.to.y')) && (
+            {(isFieldOverridden('move.to.y') || hasBinding('move.to.y')) && (
               <div className="mt-[var(--space-1)] text-[10px] text-[var(--text-tertiary)]">
                 <FieldBadges keyName="move.to.y" />
               </div>
