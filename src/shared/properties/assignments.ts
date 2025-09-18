@@ -163,3 +163,78 @@ export function mergeObjectAssignments(
   if (mergedTracks.length > 0) result.tracks = mergedTracks;
   return result;
 }
+
+
+export interface PerObjectAssignmentUpdateOptions {
+  /**
+   * Keys whose values should be shallow merged when both the existing initial value
+   * and the incoming update are plain objects (e.g., position, scale).
+   */
+  nestedKeys?: string[];
+  /**
+   * When true, remove the per-object entry entirely if the merged initial overrides are empty.
+   */
+  removeWhenEmpty?: boolean;
+}
+
+export function applyPerObjectAssignmentUpdate(
+  assignments: PerObjectAssignments | undefined,
+  objectId: string,
+  updates: Record<string, unknown>,
+  options: PerObjectAssignmentUpdateOptions = {}
+): PerObjectAssignments {
+  const { nestedKeys = [], removeWhenEmpty = false } = options;
+  const source = assignments ?? {};
+  const next: PerObjectAssignments = { ...source };
+  const current: ObjectAssignments = { ...(next[objectId] ?? {}) };
+  const baseInitial = { ...(current.initial ?? {}) } as Record<string, unknown>;
+
+  let mergedInitial: Record<string, unknown> = {
+    ...baseInitial,
+    ...updates,
+  };
+
+  for (const key of nestedKeys) {
+    const baseValue = baseInitial[key];
+    const updateValue = updates[key];
+    if (isPlainObject(baseValue) && isPlainObject(updateValue)) {
+      mergedInitial = {
+        ...mergedInitial,
+        [key]: {
+          ...(baseValue as Record<string, unknown>),
+          ...(updateValue as Record<string, unknown>),
+        },
+      };
+    }
+  }
+
+  mergedInitial = Object.fromEntries(
+    Object.entries(mergedInitial).filter(([, value]) => value !== undefined)
+  );
+
+  if (removeWhenEmpty && Object.keys(mergedInitial).length === 0) {
+    delete next[objectId];
+    return next;
+  }
+
+  const nextAssignment: ObjectAssignments = {
+    ...current,
+    initial: mergedInitial as ObjectInitialOverrides,
+  };
+
+  next[objectId] = nextAssignment;
+  return next;
+}
+
+export function clearPerObjectAssignment(
+  assignments: PerObjectAssignments | undefined,
+  objectId: string
+): PerObjectAssignments {
+  const source = assignments ?? {};
+  if (!(objectId in source)) {
+    return source === assignments ? source : { ...source };
+  }
+  const next: PerObjectAssignments = { ...source };
+  delete next[objectId];
+  return next;
+}

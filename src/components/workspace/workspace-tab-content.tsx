@@ -3,9 +3,9 @@
 import { useWorkspace } from './workspace-context';
 import { FlowEditorTab } from '@/components/workspace/flow-editor-tab';
 import { TimelineEditorTab } from '@/components/workspace/timeline-editor-tab';
-import { CanvasEditorTab } from '@/components/workspace/canvas-editor-tab';
-import { TypographyEditorTab } from '@/components/workspace/typography-editor-tab';
-import { MediaEditorTab } from '@/components/workspace/media-editor-tab';
+import { CanvasEditorTab } from '@/components/workspace/canvas';
+import { TypographyEditorTab } from '@/components/workspace/typography';
+import { MediaEditorTab } from '@/components/workspace/media';
 
 export function WorkspaceTabContent() {
   const { state } = useWorkspace();
