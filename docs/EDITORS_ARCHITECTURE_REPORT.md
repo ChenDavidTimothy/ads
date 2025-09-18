@@ -140,6 +140,8 @@ MediaEditorTab
 
 - `src/components/workspace/timeline-editor-tab.tsx` - Main editor component
 - `src/components/workspace/timeline-editor-core.tsx` - Timeline visualization
+- `src/components/workspace/timeline-track-properties.tsx` - Track property orchestrator
+- `src/components/workspace/timeline-panels/*` - Per-track property editors
 
 **Component Tree:**
 
@@ -157,6 +159,9 @@ TimelineEditorTab
 **Shared Components:**
 
 - `src/components/workspace/timeline-editor-core.tsx` - TimelineEditorCore component
+- `src/components/workspace/timeline-track-properties.tsx` - TrackProperties container
+- `src/components/workspace/timeline-panels` - Track-specific property panels
+- `src/components/workspace/timeline-binding-utils.tsx` - Shared binding helpers
 
 ## Field Rendering Pipeline
 
@@ -795,11 +800,11 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
 **Per-Field Drawer Mount Points:**
 
 - **Location:** `src/components/workspace/timeline-editor-core.tsx`
-- **TrackProperties component:** Lines 22-356
+- **TrackProperties module:** `timeline-track-properties.tsx`
 
 **Specific Mount Points:**
 
-- Track properties are rendered in `TrackProperties` component
+- Track properties are rendered via `timeline-track-properties.tsx` delegating to `timeline-panels/*`
 - Mount points would be after each property field in the track editor
 
 ### Risk Assessment
@@ -835,7 +840,7 @@ Editor UI → updateFlow() → node.data → SceneAssembler → Render Pipeline
    - Typography Editor: 8 mount points (content, fontFamily, fontSize, fontWeight, fontStyle, fillColor, strokeColor, strokeWidth)
    - Canvas Editor: 9 mount points (position.x/y, scale.x/y, rotation, opacity, fillColor, strokeColor, strokeWidth)
    - Media Editor: 7 mount points (imageAssetId, cropX/Y/Width/Height, displayWidth/Height)
-   - Animation Editor: Track property mount points in TrackProperties component
+   - Animation Editor: Track property mount points in `timeline-track-properties.tsx` panels
 
 ### Error Surfacing Strategy
 
