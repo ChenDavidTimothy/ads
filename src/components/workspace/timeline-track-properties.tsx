@@ -102,7 +102,9 @@ export function TrackProperties({
     setEditingName(false);
   };
 
-  const currentError = editingName ? validateDisplayName(tempDisplayName, track.identifier.id) : null;
+  const currentError = editingName
+    ? validateDisplayName(tempDisplayName, track.identifier.id)
+    : null;
 
   return (
     <div className="space-y-[var(--space-4)]">
@@ -135,7 +137,12 @@ export function TrackProperties({
                   <div className="text-xs text-[var(--danger-500)]">{currentError}</div>
                 )}
                 <div className="flex gap-[var(--space-2)]">
-                  <Button onClick={handleSaveDisplayName} disabled={!!currentError} variant="primary" size="sm">
+                  <Button
+                    onClick={handleSaveDisplayName}
+                    disabled={!!currentError}
+                    variant="primary"
+                    size="sm"
+                  >
                     Save
                   </Button>
                   <Button onClick={handleCancelEdit} variant="secondary" size="sm">
@@ -145,7 +152,9 @@ export function TrackProperties({
               </>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="font-medium text-[var(--text-primary)]">{track.identifier.displayName}</span>
+                <span className="font-medium text-[var(--text-primary)]">
+                  {track.identifier.displayName}
+                </span>
                 <Button onClick={() => setEditingName(true)} variant="minimal" size="sm">
                   Edit
                 </Button>
@@ -164,16 +173,16 @@ export function TrackProperties({
         />
         <div className="space-y-[var(--space-2)]">
           <label className="block text-xs text-[var(--text-tertiary)]">Track Duration</label>
-          <div className="text-sm font-medium text-[var(--text-primary)]">{track.duration.toFixed(1)}s</div>
+          <div className="text-sm font-medium text-[var(--text-primary)]">
+            {track.duration.toFixed(1)}s
+          </div>
         </div>
       </div>
 
       {isMoveTrack(track) && (
         <MoveTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<MoveTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<MoveTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -182,9 +191,7 @@ export function TrackProperties({
       {isSlideTrack(track) && (
         <SlideTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<SlideTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<SlideTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -193,9 +200,7 @@ export function TrackProperties({
       {isRotateTrack(track) && (
         <RotateTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<RotateTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<RotateTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -204,9 +209,7 @@ export function TrackProperties({
       {isScaleTrack(track) && (
         <ScaleTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<ScaleTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<ScaleTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -215,9 +218,7 @@ export function TrackProperties({
       {isFadeTrack(track) && (
         <FadeTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<FadeTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<FadeTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -226,9 +227,7 @@ export function TrackProperties({
       {isColorTrack(track) && (
         <ColorTrackPanel
           track={track}
-          onChange={(updates) =>
-            commitProperties<ColorTrackProperties>(updates, track.properties)
-          }
+          onChange={(updates) => commitProperties<ColorTrackProperties>(updates, track.properties)}
           helpers={helpers}
           labelWithOverride={labelWithOverride}
         />
@@ -236,6 +235,3 @@ export function TrackProperties({
     </div>
   );
 }
-
-
-

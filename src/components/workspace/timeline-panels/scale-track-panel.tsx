@@ -9,8 +9,21 @@ interface ScaleTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function ScaleTrackPanel({ track, onChange, helpers, labelWithOverride }: ScaleTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function ScaleTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: ScaleTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">

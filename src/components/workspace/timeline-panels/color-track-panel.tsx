@@ -9,8 +9,21 @@ interface ColorTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function ColorTrackPanel({ track, onChange, helpers, labelWithOverride }: ColorTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function ColorTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: ColorTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">
@@ -60,11 +73,8 @@ export function ColorTrackPanel({ track, onChange, helpers, labelWithOverride }:
             <ColorField
               label={labelWithOverride('To')}
               value={
-                getFieldValue(
-                  'color.to',
-                  getOverrideValue<string>('to'),
-                  track.properties.to
-                ) ?? track.properties.to
+                getFieldValue('color.to', getOverrideValue<string>('to'), track.properties.to) ??
+                track.properties.to
               }
               onChange={(to) => onChange({ to })}
               bindAdornment={bindAdornment('color.to')}

@@ -9,8 +9,21 @@ interface RotateTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function RotateTrackPanel({ track, onChange, helpers, labelWithOverride }: RotateTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function RotateTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: RotateTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">
@@ -42,11 +55,7 @@ export function RotateTrackPanel({ track, onChange, helpers, labelWithOverride }
         <div>
           <NumberField
             label={labelWithOverride('To')}
-            value={getFieldValue(
-              'rotate.to',
-              getOverrideValue<number>('to'),
-              track.properties.to
-            )}
+            value={getFieldValue('rotate.to', getOverrideValue<number>('to'), track.properties.to)}
             onChange={(to) => onChange({ to })}
             step={0.1}
             defaultValue={1}

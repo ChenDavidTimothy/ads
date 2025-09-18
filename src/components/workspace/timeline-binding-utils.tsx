@@ -42,7 +42,11 @@ interface UseTimelineFieldHelpersArgs {
 
 export interface TimelineFieldHelpers {
   bindAdornment: (fieldKey: string) => ReactNode;
-  getFieldValue: <T>(fieldKey: string, overrideValue: T | undefined, defaultValue: T) => T | undefined;
+  getFieldValue: <T>(
+    fieldKey: string,
+    overrideValue: T | undefined,
+    defaultValue: T
+  ) => T | undefined;
   getOverrideValue: <T>(path: string) => T | undefined;
   isFieldBound: (fieldKey: string) => boolean;
   isFieldOverridden: (fieldKey: string) => boolean;
@@ -102,7 +106,8 @@ export function useTimelineFieldHelpers({
           | Record<string, BoundRecord>
           | undefined;
         const vbForObject = vbByObject?.[selectedObjectId];
-        const direct = vbForObject?.[scopedKey]?.boundResultNodeId ?? vbForObject?.[fieldKey]?.boundResultNodeId;
+        const direct =
+          vbForObject?.[scopedKey]?.boundResultNodeId ?? vbForObject?.[fieldKey]?.boundResultNodeId;
         if (direct) return true;
       }
 

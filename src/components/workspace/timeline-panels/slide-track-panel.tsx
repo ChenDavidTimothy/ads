@@ -9,8 +9,21 @@ interface SlideTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function SlideTrackPanel({ track, onChange, helpers, labelWithOverride }: SlideTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function SlideTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: SlideTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">

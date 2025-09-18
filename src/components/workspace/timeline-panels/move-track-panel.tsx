@@ -9,8 +9,21 @@ interface MoveTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function MoveTrackPanel({ track, onChange, helpers, labelWithOverride }: MoveTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function MoveTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: MoveTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">

@@ -20,7 +20,11 @@ import type {
 import type { PerObjectAssignments, TrackOverride } from '@/shared/properties/assignments';
 import { useWorkspace } from './workspace-context';
 import { BindButton } from '@/components/workspace/binding/bindings';
-import { TimelineTrackRow, type TimelineDragState, type TimelineDragAction } from './timeline-track-row';
+import {
+  TimelineTrackRow,
+  type TimelineDragState,
+  type TimelineDragAction,
+} from './timeline-track-row';
 interface TimelineEditorCoreProps {
   animationNodeId: string;
   duration: number;
@@ -494,7 +498,6 @@ export function TimelineEditorCore({
                   />
                 );
               })}
-
             </div>
           </div>
 

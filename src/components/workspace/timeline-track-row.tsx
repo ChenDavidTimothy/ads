@@ -53,7 +53,12 @@ export function TimelineTrackRow({
           </span>
           {isSelected && <Badge variant="result">SELECTED</Badge>}
         </div>
-        <Button onClick={() => onDelete(track.identifier.id)} variant="danger" size="sm" className="text-xs">
+        <Button
+          onClick={() => onDelete(track.identifier.id)}
+          variant="danger"
+          size="sm"
+          className="text-xs"
+        >
           Delete
         </Button>
       </div>
@@ -78,7 +83,9 @@ export function TimelineTrackRow({
         >
           <div className="flex h-full items-center justify-between px-[var(--space-2)]">
             <span className="truncate text-xs font-medium">{track.identifier.displayName}</span>
-            <span className="text-xs text-[var(--text-secondary)]">{track.duration.toFixed(1)}s</span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {track.duration.toFixed(1)}s
+            </span>
           </div>
         </div>
 
@@ -110,9 +117,3 @@ export function TimelineTrackRow({
     </div>
   );
 }
-
-
-
-
-
-

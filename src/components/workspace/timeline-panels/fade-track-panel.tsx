@@ -9,8 +9,21 @@ interface FadeTrackPanelProps {
   labelWithOverride: (label: string) => string;
 }
 
-export function FadeTrackPanel({ track, onChange, helpers, labelWithOverride }: FadeTrackPanelProps) {
-  const { bindAdornment, getFieldValue, getOverrideValue, isFieldBound, isFieldOverridden, FieldBadges, leftBorderClass } = helpers;
+export function FadeTrackPanel({
+  track,
+  onChange,
+  helpers,
+  labelWithOverride,
+}: FadeTrackPanelProps) {
+  const {
+    bindAdornment,
+    getFieldValue,
+    getOverrideValue,
+    isFieldBound,
+    isFieldOverridden,
+    FieldBadges,
+    leftBorderClass,
+  } = helpers;
 
   return (
     <div className="space-y-[var(--space-3)]">
@@ -42,11 +55,7 @@ export function FadeTrackPanel({ track, onChange, helpers, labelWithOverride }: 
         <div>
           <NumberField
             label={labelWithOverride('To')}
-            value={getFieldValue(
-              'fade.to',
-              getOverrideValue<number>('to'),
-              track.properties.to
-            )}
+            value={getFieldValue('fade.to', getOverrideValue<number>('to'), track.properties.to)}
             onChange={(to) => onChange({ to })}
             step={0.05}
             defaultValue={0}
