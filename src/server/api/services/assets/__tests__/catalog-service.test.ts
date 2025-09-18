@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAssetCatalogService } from '../catalog-service';
 import type {
   DatabaseResponse,
@@ -114,6 +114,65 @@ describe('createAssetCatalogService', () => {
     expect(storageFrom).toHaveBeenCalledWith('images');
   });
 
+  it('normalizes null metadata and dimensions before returning assets', async () => {
+    const asset = {
+      id: 'asset-2',
+      user_id: 'user-1',
+      filename: 'asset-2.png',
+      original_name: 'asset-2.png',
+      file_size: 200,
+      mime_type: 'image/png',
+      bucket_name: 'images',
+      storage_path: 'user-1/file-2.png',
+      asset_type: 'uploaded',
+      metadata: null as unknown as Record<string, unknown>,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      image_width: null as unknown as number,
+      image_height: null as unknown as number,
+    } as unknown as DatabaseUserAsset;
+
+    const builder = createQueryBuilder({
+      data: [asset],
+      error: null,
+      count: 1,
+    });
+
+    const storageBucket: StorageBucket = {
+      list: vi.fn<(path?: string) => Promise<{ data: StorageFileInfo[] | null; error: unknown }>>(
+        async () => ({
+          data: [{ name: 'file-2.png', metadata: { size: 200 } }],
+          error: null,
+        })
+      ),
+      createSignedUrl: vi.fn<(path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>>(
+        async () => ({
+          data: { signedUrl: 'https://signed-2' },
+          error: null,
+        })
+      ),
+    };
+
+    const supabase = {
+      from: vi.fn<(table: string) => QueryBuilder>((table) => {
+        if (table !== 'user_assets') {
+          throw new Error(`Unexpected table ${table}`);
+        }
+        return builder;
+      }),
+      storage: { from: vi.fn<(bucket: string) => StorageBucket>(() => storageBucket) },
+    } as unknown as SupabaseClientLike;
+
+    const service = createAssetCatalogService({ supabase });
+
+    const input: ListAssetsInput = { assetType: 'all', limit: 50, offset: 0 };
+    const result = await service.listAssets({ userId: 'user-1', input });
+
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0].metadata).toEqual({});
+    expect(result.assets[0].image_width).toBeUndefined();
+    expect(result.assets[0].image_height).toBeUndefined();
+  });
   it('filters assets missing in storage', async () => {
     const asset: DatabaseUserAsset = {
       id: 'asset-1',

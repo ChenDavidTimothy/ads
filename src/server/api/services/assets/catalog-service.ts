@@ -109,11 +109,11 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
             bucket_name: asset.bucket_name,
             storage_path: asset.storage_path,
             asset_type: asset.asset_type,
-            metadata: asset.metadata,
+            metadata: coerceRecord(asset.metadata),
             created_at: asset.created_at,
-            public_url: signedUrlResult.data?.signedUrl,
-            image_width: asset.image_width,
-            image_height: asset.image_height,
+            public_url: signedUrlResult.data?.signedUrl ?? undefined,
+            image_width: coerceDimension(asset.image_width),
+            image_height: coerceDimension(asset.image_height),
           };
 
           return assetWithUrl;
@@ -140,4 +140,16 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
   return {
     listAssets,
   };
+}
+
+
+function coerceRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function coerceDimension(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
