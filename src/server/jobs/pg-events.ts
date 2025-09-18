@@ -209,43 +209,57 @@ export async function waitForRenderJobEvent(params: {
 
   return await new Promise((resolve) => {
     let settled = false;
+    let timeout: NodeJS.Timeout | null = null;
+    let handler: RenderJobEventHandler;
+    let removeSignalListeners: (() => void) | null = null;
 
-    const handler = (payload: RenderJobEventPayload) => {
-      if (settled || payload.jobId !== jobId) return;
-      settled = true;
-
-      const idx = renderJobHandlers.indexOf(handler);
-      if (idx >= 0) renderJobHandlers.splice(idx, 1);
-
-      resolve(payload);
-    };
-
-    renderJobHandlers.push(handler);
-
-    const timeout = setTimeout(() => {
+    const finalize = (result: RenderJobEventPayload | null) => {
       if (settled) return;
       settled = true;
 
       const idx = renderJobHandlers.indexOf(handler);
-      if (idx >= 0) renderJobHandlers.splice(idx, 1);
+      if (idx >= 0) {
+        renderJobHandlers.splice(idx, 1);
+      }
 
-      resolve(null);
-    }, timeoutMs);
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+
+      if (removeSignalListeners) {
+        // Ensure timers and signal handlers are cleaned up to avoid leaks
+        removeSignalListeners();
+        removeSignalListeners = null;
+      }
+
+      resolve(result);
+    };
+
+    handler = (payload: RenderJobEventPayload) => {
+      if (payload.jobId !== jobId) return;
+      finalize(payload);
+    };
+
+    renderJobHandlers.push(handler);
+
+    timeout = setTimeout(() => finalize(null), timeoutMs);
 
     if (typeof process !== 'undefined') {
-      const onExit = () => {
-        if (settled) return;
-        settled = true;
-
-        const idx = renderJobHandlers.indexOf(handler);
-        if (idx >= 0) renderJobHandlers.splice(idx, 1);
-
-        clearTimeout(timeout);
-        resolve(null);
-      };
+      const onExit = () => finalize(null);
 
       process.once('SIGINT', onExit);
       process.once('SIGTERM', onExit);
+
+      removeSignalListeners = () => {
+        if (typeof process.off === 'function') {
+          process.off('SIGINT', onExit);
+          process.off('SIGTERM', onExit);
+        } else {
+          process.removeListener('SIGINT', onExit);
+          process.removeListener('SIGTERM', onExit);
+        }
+      };
     }
   });
 }
