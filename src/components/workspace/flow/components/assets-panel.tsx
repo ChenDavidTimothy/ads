@@ -72,7 +72,14 @@ export function AssetsPanel() {
     isLoading: isLoadingAssets,
     error: assetsError,
     refetch: refetchAssets,
-  } = api.assets.list.useQuery(queryParams);
+  } = api.assets.list.useQuery(queryParams, {
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    keepPreviousData: true,
+  });
 
   // Fetch storage quota
   const { data: quotaData, isLoading: isLoadingQuota } = api.assets.getQuota.useQuery();
@@ -236,3 +243,4 @@ export function AssetsPanel() {
     </div>
   );
 }
+

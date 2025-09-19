@@ -3,7 +3,6 @@ import { createAssetCatalogService } from '../catalog-service';
 import type {
   DatabaseResponse,
   DatabaseUserAsset,
-  StorageFileInfo,
   StorageResponse,
   SupabaseClientLike,
 } from '../types';
@@ -45,7 +44,6 @@ const createQueryBuilder = (result: QueryResult): QueryBuilder => {
 };
 
 type StorageBucket = {
-  list: (path?: string) => Promise<{ data: StorageFileInfo[] | null; error: unknown }>;
   createSignedUrl: (path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>;
 };
 
@@ -73,18 +71,12 @@ describe('createAssetCatalogService', () => {
     });
 
     const storageBucket: StorageBucket = {
-      list: vi.fn<(path?: string) => Promise<{ data: StorageFileInfo[] | null; error: unknown }>>(
+      createSignedUrl: vi.fn<(path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>>(
         async () => ({
-          data: [{ name: 'file.png', metadata: { size: 100 } }],
+          data: { signedUrl: 'https://signed' },
           error: null,
         })
       ),
-      createSignedUrl: vi.fn<
-        (path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>
-      >(async () => ({
-        data: { signedUrl: 'https://signed' },
-        error: null,
-      })),
     };
 
     const storageFrom = vi.fn<(bucket: string) => StorageBucket>(() => storageBucket);
@@ -139,12 +131,6 @@ describe('createAssetCatalogService', () => {
     });
 
     const storageBucket: StorageBucket = {
-      list: vi.fn<(path?: string) => Promise<{ data: StorageFileInfo[] | null; error: unknown }>>(
-        async () => ({
-          data: [{ name: 'file-2.png', metadata: { size: 200 } }],
-          error: null,
-        })
-      ),
       createSignedUrl: vi.fn<(path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>>(
         async () => ({
           data: { signedUrl: 'https://signed-2' },
@@ -172,8 +158,10 @@ describe('createAssetCatalogService', () => {
     expect(result.assets[0].metadata).toEqual({});
     expect(result.assets[0].image_width).toBeUndefined();
     expect(result.assets[0].image_height).toBeUndefined();
+    expect(result.assets[0].public_url).toBe('https://signed-2');
   });
-  it('filters assets missing in storage', async () => {
+
+  it('filters assets when a signed URL cannot be generated', async () => {
     const asset: DatabaseUserAsset = {
       id: 'asset-1',
       user_id: 'user-1',
@@ -196,12 +184,6 @@ describe('createAssetCatalogService', () => {
     });
 
     const storageBucket: StorageBucket = {
-      list: vi.fn<(path?: string) => Promise<{ data: StorageFileInfo[] | null; error: unknown }>>(
-        async () => ({
-          data: [],
-          error: null,
-        })
-      ),
       createSignedUrl: vi.fn<
         (path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>
       >(async () => ({ data: null, error: null })),
@@ -225,7 +207,8 @@ describe('createAssetCatalogService', () => {
     const result = await service.listAssets({ userId: 'user-1', input });
 
     expect(result.assets).toHaveLength(0);
-    expect(result.total).toBe(0);
-    expect(result.hasMore).toBe(true);
+    expect(result.total).toBe(1);
+    expect(result.hasMore).toBe(false);
   });
 });
+

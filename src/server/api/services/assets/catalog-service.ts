@@ -1,7 +1,6 @@
-﻿import type {
+import type {
   DatabaseResponse,
   DatabaseUserAsset,
-  StorageFileInfo,
   StorageResponse,
   SupabaseClientLike,
 } from './types';
@@ -73,32 +72,21 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
     const maybeAssets: Array<AssetResponse | null> = await Promise.all(
       typedAssets.map(async (asset: DatabaseUserAsset) => {
         try {
-          const filename = asset.storage_path.split('/').pop();
-          const parentDir = asset.storage_path.includes('/')
-            ? asset.storage_path.slice(0, asset.storage_path.lastIndexOf('/'))
-            : '';
-
-          const listResult = await supabase.storage.from(asset.bucket_name).list(parentDir);
-          const { data: entries, error: listError } = listResult as {
-            data: StorageFileInfo[] | null;
-            error: unknown;
-          };
-
-          if (listError || !entries || !filename) {
-            return null;
-          }
-
-          const present = entries.some((entry) => entry.name === filename);
-          if (!present) {
-            return null;
-          }
-
           const signedUrlResult = (await supabase.storage
             .from(asset.bucket_name)
             .createSignedUrl(
               asset.storage_path,
               60 * 60 * 24
             )) as DatabaseResponse<StorageResponse>;
+
+          if (signedUrlResult.error || !signedUrlResult.data?.signedUrl) {
+            log.warn?.(`Failed to create signed URL for asset ${asset.id}`, {
+              bucket: asset.bucket_name,
+              path: asset.storage_path,
+              error: signedUrlResult.error ? String(signedUrlResult.error) : 'No URL returned',
+            });
+            return null;
+          }
 
           const assetWithUrl: AssetResponse = {
             id: asset.id,
@@ -111,7 +99,7 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
             asset_type: asset.asset_type,
             metadata: coerceRecord(asset.metadata),
             created_at: asset.created_at,
-            public_url: signedUrlResult.data?.signedUrl ?? undefined,
+            public_url: signedUrlResult.data.signedUrl,
             image_width: coerceDimension(asset.image_width),
             image_height: coerceDimension(asset.image_height),
           };
@@ -130,10 +118,13 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
       (asset): asset is AssetResponse => asset !== null
     );
 
+    const totalCount = count ?? typedAssets.length;
+    const hasMore = input.offset + typedAssets.length < totalCount;
+
     return {
       assets: assetsWithUrls,
-      total: assetsWithUrls.length,
-      hasMore: input.offset + assetsWithUrls.length < (count ?? 0),
+      total: totalCount,
+      hasMore,
     };
   }
 
@@ -153,3 +144,4 @@ function coerceRecord(value: unknown): Record<string, unknown> {
 function coerceDimension(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
+
