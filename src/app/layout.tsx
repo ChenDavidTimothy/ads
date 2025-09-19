@@ -11,20 +11,19 @@ import { ThemeProvider } from '@/components/theme/theme-provider';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Variota - No-Code Video Animation Platform',
+    default: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
     template: '%s | Variota',
   },
   description:
-    'Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface for animation creation.',
+    'Generate brand-safe images and videos from Excel/CSV using no-code logic. Localize by region and update thousands of assets in minutes. Join the pilot.',
   keywords: [
-    'video animation',
-    'no-code animation',
-    'visual programming',
-    'video advertisements',
-    'marketing videos',
-    'business automation',
-    'data-driven videos',
-    'node-based editor',
+    'creative automation',
+    'data-driven promo assets',
+    'batch image generation',
+    'video automation',
+    'regional pricing',
+    'no-code logic',
+    'retail promotions',
   ],
   authors: [{ name: 'Variota Team' }],
   creator: 'Variota',
@@ -34,23 +33,23 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    title: 'Variota - No-Code Video Animation Platform',
+    title: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
     description:
-      'Create stunning, data-driven video advertisements without coding. Variota empowers business professionals with an intuitive visual programming interface.',
+      'Generate brand-safe images and videos from Excel/CSV using no-code logic. Localize by region and update thousands of assets in minutes. Join the pilot.',
     siteName: 'Variota',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Variota - No-Code Video Animation Platform',
-      },
-    ],
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
+        },
+      ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Variota - No-Code Video Animation Platform',
-    description: 'Create stunning, data-driven video advertisements without coding.',
+    title: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
+    description: 'Generate brand-safe images and videos from Excel/CSV using no-code logic.',
     images: ['/og-image.png'],
     creator: '@variota',
   },
