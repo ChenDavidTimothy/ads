@@ -10,6 +10,10 @@ interface FormStatus {
   message: string;
 }
 
+interface ApiError {
+  error: string;
+}
+
 const useCaseOptions = [
   { value: 'weekly-promos', label: 'Weekly promos' },
   { value: 'marketplaces', label: 'Marketplaces' },
@@ -18,12 +22,7 @@ const useCaseOptions = [
   { value: 'other', label: 'Other' },
 ];
 
-const skuRangeOptions = [
-  'Under 500 SKUs',
-  '500 – 2,000 SKUs',
-  '2,000 – 5,000 SKUs',
-  '5,000+ SKUs',
-];
+const skuRangeOptions = ['Under 500 SKUs', '500 – 2,000 SKUs', '2,000 – 5,000 SKUs', '5,000+ SKUs'];
 
 export function EarlyAccessForm() {
   const [status, setStatus] = useState<FormStatus>({ type: 'idle', message: '' });
@@ -54,16 +53,24 @@ export function EarlyAccessForm() {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error ?? 'Unable to submit the form.');
+        const errorData = (await response
+          .json()
+          .catch(() => ({ error: 'Unable to submit the form.' }))) as ApiError;
+        throw new Error(errorData.error ?? 'Unable to submit the form.');
       }
 
-      setStatus({ type: 'success', message: 'Thank you—our team will be in touch within 2 business days.' });
+      setStatus({
+        type: 'success',
+        message: 'Thank you—our team will be in touch within 2 business days.',
+      });
       form.reset();
     } catch (error) {
       setStatus({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Something went wrong. Please try again or email hello@variota.com.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong. Please try again or email hello@variota.com.',
       });
     } finally {
       setIsSubmitting(false);
@@ -74,13 +81,19 @@ export function EarlyAccessForm() {
     <form className="space-y-6" onSubmit={handleSubmit} noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="name"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Name
           </label>
           <Input id="name" name="name" placeholder="Ada Lovelace" required autoComplete="name" />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="email"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Email
           </label>
           <Input
@@ -93,19 +106,40 @@ export function EarlyAccessForm() {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="company" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="company"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Company
           </label>
-          <Input id="company" name="company" placeholder="RetailCo" required autoComplete="organization" />
+          <Input
+            id="company"
+            name="company"
+            placeholder="RetailCo"
+            required
+            autoComplete="organization"
+          />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="role" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="role"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Role
           </label>
-          <Input id="role" name="role" placeholder="Head of Merchandising" required autoComplete="organization-title" />
+          <Input
+            id="role"
+            name="role"
+            placeholder="Head of Merchandising"
+            required
+            autoComplete="organization-title"
+          />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="useCase" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="useCase"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Primary use case
           </label>
           <select
@@ -119,14 +153,21 @@ export function EarlyAccessForm() {
               Choose one
             </option>
             {useCaseOptions.map((option) => (
-              <option key={option.value} value={option.value} className="bg-[var(--surface-1)] text-[var(--text-primary)]">
+              <option
+                key={option.value}
+                value={option.value}
+                className="bg-[var(--surface-1)] text-[var(--text-primary)]"
+              >
                 {option.label}
               </option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="skuRange" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          <label
+            htmlFor="skuRange"
+            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+          >
             Approximate SKU range
           </label>
           <select
@@ -140,7 +181,11 @@ export function EarlyAccessForm() {
               Select a range
             </option>
             {skuRangeOptions.map((option) => (
-              <option key={option} value={option} className="bg-[var(--surface-1)] text-[var(--text-primary)]">
+              <option
+                key={option}
+                value={option}
+                className="bg-[var(--surface-1)] text-[var(--text-primary)]"
+              >
                 {option}
               </option>
             ))}
@@ -148,7 +193,10 @@ export function EarlyAccessForm() {
         </div>
         <div className="sm:col-span-2">
           <div className="flex flex-col gap-2">
-            <label htmlFor="regions" className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+            <label
+              htmlFor="regions"
+              className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
+            >
               Regions you operate in
             </label>
             <Input id="regions" name="regions" placeholder="North America, DACH, APAC" required />
@@ -157,11 +205,20 @@ export function EarlyAccessForm() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button type="submit" variant="primary" size="md" disabled={isSubmitting} className="sm:w-auto">
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          disabled={isSubmitting}
+          className="sm:w-auto"
+        >
           {isSubmitting ? 'Submitting…' : 'Request Early Access'}
         </Button>
         <span className="text-xs text-[var(--text-tertiary)]">
-          Need help now? Email <a className="underline" href="mailto:hello@variota.com">hello@variota.com</a>
+          Need help now? Email{' '}
+          <a className="underline" href="mailto:hello@variota.com">
+            hello@variota.com
+          </a>
         </span>
       </div>
 

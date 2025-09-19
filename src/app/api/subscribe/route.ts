@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 
+interface SubscribeRequest {
+  email: string;
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const email = (body?.email as string | undefined)?.toString().trim().toLowerCase();
+    const body = (await request.json()) as SubscribeRequest;
+    const email = body.email?.toString().trim().toLowerCase();
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required.' }, { status: 400 });
@@ -34,7 +38,10 @@ export async function POST(request: Request) {
       } catch (error) {
         console.error('Failed to forward newsletter subscription', error);
         return NextResponse.json(
-          { error: 'Unable to notify the team right now. Please email hello@variota.com to subscribe.' },
+          {
+            error:
+              'Unable to notify the team right now. Please email hello@variota.com to subscribe.',
+          },
           { status: 502 }
         );
       }

@@ -1,13 +1,31 @@
 import { NextResponse } from 'next/server';
 
-const requiredFields = ['name', 'email', 'company', 'role', 'useCase', 'regions', 'skuRange'] as const;
+interface EarlyAccessRequest {
+  name: string;
+  email: string;
+  company: string;
+  role: string;
+  useCase: string;
+  regions: string;
+  skuRange: string;
+}
+
+const requiredFields = [
+  'name',
+  'email',
+  'company',
+  'role',
+  'useCase',
+  'regions',
+  'skuRange',
+] as const;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as EarlyAccessRequest;
 
     const missing = requiredFields.filter((field) => {
-      const value = (body?.[field] as string | undefined)?.toString().trim();
+      const value = body[field]?.toString().trim();
       return !value;
     });
 
@@ -18,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const email = (body.email as string).toLowerCase();
+    const email = body.email.toLowerCase();
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
       return NextResponse.json({ error: 'Please provide a valid email address.' }, { status: 400 });

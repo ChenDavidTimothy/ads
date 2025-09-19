@@ -94,7 +94,7 @@ interface BatchModalProps {
   fieldPath: string;
   objectId?: string;
   currentValue: unknown; // Current field value for fallbacks
-  valueType: "string" | "number" | "color" | "boolean";
+  valueType: 'string' | 'number' | 'color' | 'boolean';
   onValueChange: (value: unknown) => void;
 }
 ```
@@ -154,7 +154,7 @@ interface BatchKeysResult {
 
 export function useBatchKeysForField(
   nodeId: string,
-  fieldPath: string,
+  fieldPath: string
 ): BatchKeysResult {
   // Implementation uses FlowTracker to find upstream batch nodes
   // Returns deduplicated list of keys from all upstream batch nodes
@@ -172,7 +172,7 @@ export function getKeysForObject(
   nodeId: string,
   objectId: string,
   nodes: Node<NodeData>[],
-  edges: Edge[],
+  edges: Edge[]
 ): string[] {
   // Find upstream batch nodes from the current node
   // Check which batch nodes affect this specific object
@@ -195,7 +195,7 @@ interface BatchOverridesData {
 export function useBatchOverrides(
   nodeId: string,
   fieldPath: string,
-  objectId?: string,
+  objectId?: string
 ): {
   data: BatchOverridesData;
   setPerObjectDefault: (value: unknown) => void;

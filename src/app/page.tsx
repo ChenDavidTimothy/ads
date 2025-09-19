@@ -67,7 +67,7 @@ export default async function LandingPage() {
 
   const problemPoints = [
     'Frequent price and assortment changes across regions and channels',
-    "Manual tools don’t scale to hundreds or thousands of variants",
+    'Manual tools don’t scale to hundreds or thousands of variants',
     'Custom-coded pipelines require engineers and slow every iteration',
     'Brand inconsistencies and compliance risks under deadline pressure',
     'Rising labor costs and omnichannel demands',
@@ -291,7 +291,10 @@ export default async function LandingPage() {
             </Link>
 
             <nav aria-label="Primary" className="hidden items-center gap-8 text-sm md:flex">
-              <Link href="#product" className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
+              <Link
+                href="#product"
+                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              >
                 Product
               </Link>
               <Link
@@ -306,7 +309,10 @@ export default async function LandingPage() {
               >
                 Use Cases
               </Link>
-              <Link href="#pilot" className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
+              <Link
+                href="#pilot"
+                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              >
                 Pilot
               </Link>
               <Link
@@ -338,12 +344,13 @@ export default async function LandingPage() {
             <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32">
               <div className="grid gap-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
                 <div>
-                  <h1 className="text-balance text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl">
+                  <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance sm:text-5xl md:text-6xl">
                     Turn your product data into brand-safe images and videos—at scale, without code
                   </h1>
                   <p className="mt-6 max-w-2xl text-lg text-[var(--text-secondary)] sm:text-xl">
-                    Import Excel/CSV, set simple if-else rules, and generate thousands of localized assets in minutes. Update
-                    instantly when prices or assortments change across regions.
+                    Import Excel/CSV, set simple if-else rules, and generate thousands of localized
+                    assets in minutes. Update instantly when prices or assortments change across
+                    regions.
                   </p>
 
                   <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -362,32 +369,51 @@ export default async function LandingPage() {
 
                   <ul className="mt-12 grid gap-4 sm:grid-cols-2">
                     {microBenefits.map((benefit) => (
-                      <li key={benefit} className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--accent-primary)]" aria-hidden="true" />
+                      <li
+                        key={benefit}
+                        className="flex items-start gap-3 text-sm text-[var(--text-secondary)]"
+                      >
+                        <CheckCircle2
+                          className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>{benefit}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <figure className="glass-panel relative overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] p-8 shadow-glass-lg">
+                <figure className="glass-panel shadow-glass-lg relative overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] p-8">
                   <div className="space-y-6">
                     <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
                       <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Database className="h-5 w-5 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <Database
+                          className="h-5 w-5 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>Product data import (prices, inventory, imagery)</span>
                       </div>
                     </div>
                     <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
                       <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Workflow className="h-5 w-5 text-[var(--accent-secondary)]" aria-hidden="true" />
-                        <span>No-code rule builder: highlight promos, localize copy, trigger animations</span>
+                        <Workflow
+                          className="h-5 w-5 text-[var(--accent-secondary)]"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          No-code rule builder: highlight promos, localize copy, trigger animations
+                        </span>
                       </div>
                     </div>
                     <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
                       <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Layers className="h-5 w-5 text-[var(--node-animation)]" aria-hidden="true" />
-                        <span>Asset grid preview: localized images and video thumbnails ready to export</span>
+                        <Layers
+                          className="h-5 w-5 text-[var(--node-animation)]"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          Asset grid preview: localized images and video thumbnails ready to export
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -401,26 +427,40 @@ export default async function LandingPage() {
 
           <section className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/90">
             <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-12 text-center text-sm text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-center sm:text-base">
-              <span className="font-medium text-[var(--text-primary)]">Built with insights from retail leaders</span>
-              <span className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block" aria-hidden="true" />
+              <span className="font-medium text-[var(--text-primary)]">
+                Built with insights from retail leaders
+              </span>
+              <span
+                className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block"
+                aria-hidden="true"
+              />
               <span>Designed for promo-heavy retailers and e-commerce teams</span>
-              <span className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block" aria-hidden="true" />
-              <span className="italic text-[var(--text-tertiary)]">“If one person can handle a full promo cycle in minutes, that’s a game-changer.”</span>
+              <span
+                className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block"
+                aria-hidden="true"
+              />
+              <span className="text-[var(--text-tertiary)] italic">
+                “If one person can handle a full promo cycle in minutes, that’s a game-changer.”
+              </span>
             </div>
           </section>
 
           <section id="product" className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
             <div className="mb-12 max-w-3xl">
-              <h2 className="text-3xl font-bold sm:text-4xl">Role-specific wins without adding headcount</h2>
+              <h2 className="text-3xl font-bold sm:text-4xl">
+                Role-specific wins without adding headcount
+              </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                Variota equips every go-to-market role with governed automation so teams react to market shifts without sacrificing
-                brand or compliance.
+                Variota equips every go-to-market role with governed automation so teams react to
+                market shifts without sacrificing brand or compliance.
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               {personaWins.map((persona) => (
                 <Card key={persona.title} variant="glass" className="h-full p-6">
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)]">{persona.title}</h3>
+                  <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+                    {persona.title}
+                  </h3>
                   <p className="mt-3 text-sm text-[var(--text-secondary)]">{persona.description}</p>
                 </Card>
               ))}
@@ -430,18 +470,24 @@ export default async function LandingPage() {
           <section className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80">
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
-                <h2 className="text-3xl font-bold sm:text-4xl">Manual production can’t keep up with modern promo cycles</h2>
+                <h2 className="text-3xl font-bold sm:text-4xl">
+                  Manual production can’t keep up with modern promo cycles
+                </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
                 {problemPoints.map((point) => (
                   <li key={point} className="flex items-start gap-3">
-                    <ArrowRight className="mt-1 h-4 w-4 text-[var(--accent-secondary)]" aria-hidden="true" />
+                    <ArrowRight
+                      className="mt-1 h-4 w-4 text-[var(--accent-secondary)]"
+                      aria-hidden="true"
+                    />
                     <span>{point}</span>
                   </li>
                 ))}
               </ul>
               <p className="mt-10 max-w-2xl text-base text-[var(--text-secondary)]">
-                Teams need a logic-first engine that connects data to creative—fast, consistent, and non-technical.
+                Teams need a logic-first engine that connects data to creative—fast, consistent, and
+                non-technical.
               </p>
             </div>
           </section>
@@ -450,14 +496,19 @@ export default async function LandingPage() {
             <div className="max-w-3xl">
               <h2 className="text-3xl font-bold sm:text-4xl">How Variota works</h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                A five-step workflow that keeps marketing, merchandising, and creative teams in lockstep.
+                A five-step workflow that keeps marketing, merchandising, and creative teams in
+                lockstep.
               </p>
             </div>
             <div className="mt-14 grid gap-6 lg:grid-cols-5">
               {howItWorksSteps.map((step, index) => (
                 <Card key={step.title} variant="glass" className="flex h-full flex-col p-6">
-                  <span className="text-sm font-medium text-[var(--accent-secondary)]">Step {index + 1}</span>
-                  <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                  <span className="text-sm font-medium text-[var(--accent-secondary)]">
+                    Step {index + 1}
+                  </span>
+                  <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+                    {step.title}
+                  </h3>
                   <p className="mt-3 text-sm text-[var(--text-secondary)]">{step.description}</p>
                 </Card>
               ))}
@@ -475,7 +526,10 @@ export default async function LandingPage() {
             </div>
           </section>
 
-          <section id="capabilities" className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80">
+          <section
+            id="capabilities"
+            className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80"
+          >
             <div className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">Capabilities</h2>
@@ -488,23 +542,40 @@ export default async function LandingPage() {
                   <Card key={group.title} variant="glass" className="p-6">
                     <div className="flex items-center gap-3">
                       {group.title === 'Data & Logic' && (
-                        <Database className="h-5 w-5 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <Database
+                          className="h-5 w-5 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                       )}
                       {group.title === 'Creative Generation' && (
-                        <Sparkles className="h-5 w-5 text-[var(--node-animation)]" aria-hidden="true" />
+                        <Sparkles
+                          className="h-5 w-5 text-[var(--node-animation)]"
+                          aria-hidden="true"
+                        />
                       )}
                       {group.title === 'Brand & Compliance' && (
-                        <ShieldCheck className="h-5 w-5 text-[var(--accent-success)]" aria-hidden="true" />
+                        <ShieldCheck
+                          className="h-5 w-5 text-[var(--accent-success)]"
+                          aria-hidden="true"
+                        />
                       )}
                       {group.title === 'Workflow & Delivery' && (
-                        <Workflow className="h-5 w-5 text-[var(--accent-secondary)]" aria-hidden="true" />
+                        <Workflow
+                          className="h-5 w-5 text-[var(--accent-secondary)]"
+                          aria-hidden="true"
+                        />
                       )}
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">{group.title}</h3>
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                        {group.title}
+                      </h3>
                     </div>
                     <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                       {group.items.map((item) => (
                         <li key={item} className="flex items-start gap-3">
-                          <CheckCircle2 className="mt-1 h-4 w-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                          <CheckCircle2
+                            className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
+                            aria-hidden="true"
+                          />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -519,13 +590,17 @@ export default async function LandingPage() {
             <div className="max-w-3xl">
               <h2 className="text-3xl font-bold sm:text-4xl">Protect your brand at scale</h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                Governance, compliance, and localization are first-class citizens across the Variota workflow.
+                Governance, compliance, and localization are first-class citizens across the Variota
+                workflow.
               </p>
             </div>
             <ul className="mt-10 space-y-4 text-sm text-[var(--text-secondary)]">
               {brandSafetyPoints.map((point) => (
                 <li key={point} className="flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 text-[var(--accent-success)]" aria-hidden="true" />
+                  <ShieldCheck
+                    className="mt-0.5 h-5 w-5 text-[var(--accent-success)]"
+                    aria-hidden="true"
+                  />
                   <span>{point}</span>
                 </li>
               ))}
@@ -535,12 +610,17 @@ export default async function LandingPage() {
           <section className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80">
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
-                <h2 className="text-3xl font-bold sm:text-4xl">Ship more promotions, faster—without sacrificing brand or control</h2>
+                <h2 className="text-3xl font-bold sm:text-4xl">
+                  Ship more promotions, faster—without sacrificing brand or control
+                </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
                 {outcomes.map((outcome) => (
                   <li key={outcome} className="flex items-start gap-3">
-                    <LineChart className="mt-0.5 h-5 w-5 text-[var(--accent-secondary)]" aria-hidden="true" />
+                    <LineChart
+                      className="mt-0.5 h-5 w-5 text-[var(--accent-secondary)]"
+                      aria-hidden="true"
+                    />
                     <span>{outcome}</span>
                   </li>
                 ))}
@@ -555,7 +635,10 @@ export default async function LandingPage() {
                 <ul className="mt-8 space-y-4 text-sm text-[var(--text-secondary)]">
                   {useCases.map((useCase) => (
                     <li key={useCase} className="flex items-start gap-3">
-                      <Sparkles className="mt-0.5 h-5 w-5 text-[var(--node-animation)]" aria-hidden="true" />
+                      <Sparkles
+                        className="mt-0.5 h-5 w-5 text-[var(--node-animation)]"
+                        aria-hidden="true"
+                      />
                       <span>{useCase}</span>
                     </li>
                   ))}
@@ -566,7 +649,10 @@ export default async function LandingPage() {
                 <ul className="mt-8 space-y-4 text-sm text-[var(--text-secondary)]">
                   {audiences.map((audience) => (
                     <li key={audience} className="flex items-start gap-3">
-                      <Globe2 className="mt-0.5 h-5 w-5 text-[var(--accent-primary)]" aria-hidden="true" />
+                      <Globe2
+                        className="mt-0.5 h-5 w-5 text-[var(--accent-primary)]"
+                        aria-hidden="true"
+                      />
                       <span>{audience}</span>
                     </li>
                   ))}
@@ -583,8 +669,12 @@ export default async function LandingPage() {
               <div className="mt-12 grid gap-6 md:grid-cols-3">
                 {comparisonPoints.map((comparison) => (
                   <Card key={comparison.title} variant="glass" className="h-full p-6">
-                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">{comparison.title}</h3>
-                    <p className="mt-4 text-sm text-[var(--text-secondary)]">{comparison.description}</p>
+                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+                      {comparison.title}
+                    </h3>
+                    <p className="mt-4 text-sm text-[var(--text-secondary)]">
+                      {comparison.description}
+                    </p>
                   </Card>
                 ))}
               </div>
@@ -594,30 +684,42 @@ export default async function LandingPage() {
           <section className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
             <div className="grid gap-12 lg:grid-cols-2">
               <div>
-                <h2 className="text-3xl font-bold sm:text-4xl">Connect to your data and channels</h2>
+                <h2 className="text-3xl font-bold sm:text-4xl">
+                  Connect to your data and channels
+                </h2>
                 <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                  Bring Variota into your existing merchandising and creative stack. Tell us which integrations matter most during
-                  the pilot.
+                  Bring Variota into your existing merchandising and creative stack. Tell us which
+                  integrations matter most during the pilot.
                 </p>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Available today</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Available today
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {integrationsToday.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-1 h-4 w-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <CheckCircle2
+                          className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
                 </Card>
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">On the roadmap</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    On the roadmap
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {integrationsRoadmap.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <ArrowRight className="mt-1 h-4 w-4 text-[var(--accent-secondary)]" aria-hidden="true" />
+                        <ArrowRight
+                          className="mt-1 h-4 w-4 text-[var(--accent-secondary)]"
+                          aria-hidden="true"
+                        />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -627,7 +729,10 @@ export default async function LandingPage() {
             </div>
           </section>
 
-          <section id="pilot" className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80">
+          <section
+            id="pilot"
+            className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80"
+          >
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">Join the pilot</h2>
@@ -635,12 +740,20 @@ export default async function LandingPage() {
               </div>
               <div className="mt-10 grid gap-6 md:grid-cols-2">
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Ideal partners</h3>
-                  <p className="mt-3 text-sm text-[var(--text-secondary)]">{pilotHighlights.profile}</p>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Ideal partners
+                  </h3>
+                  <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                    {pilotHighlights.profile}
+                  </p>
                 </Card>
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">What we provide</h3>
-                  <p className="mt-3 text-sm text-[var(--text-secondary)]">{pilotHighlights.provide}</p>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    What we provide
+                  </h3>
+                  <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                    {pilotHighlights.provide}
+                  </p>
                 </Card>
                 <Card variant="glass" className="p-6 md:col-span-2">
                   <h3 className="text-lg font-semibold text-[var(--text-primary)]">What we ask</h3>
@@ -664,9 +777,12 @@ export default async function LandingPage() {
               <div>
                 <h2 className="text-3xl font-bold sm:text-4xl">See Variota in action</h2>
                 <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                  Request early access or book a live demo (15 minutes). Share your context and we’ll tailor the walkthrough.
+                  Request early access or book a live demo (15 minutes). Share your context and
+                  we’ll tailor the walkthrough.
                 </p>
-                <p className="mt-6 text-sm text-[var(--text-tertiary)]">We’ll reply within 2 business days.</p>
+                <p className="mt-6 text-sm text-[var(--text-tertiary)]">
+                  We’ll reply within 2 business days.
+                </p>
               </div>
               <Card variant="glass" className="p-6">
                 <EarlyAccessForm />
@@ -674,24 +790,31 @@ export default async function LandingPage() {
             </div>
           </section>
 
-          <section id="investors" className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/85">
+          <section
+            id="investors"
+            className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/85"
+          >
             <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 sm:py-28 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
               <div>
-                <h2 className="text-3xl font-bold sm:text-4xl">Building the automation layer for retail creative</h2>
+                <h2 className="text-3xl font-bold sm:text-4xl">
+                  Building the automation layer for retail creative
+                </h2>
                 <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                  Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and custom-coded pipelines can’t
-                  keep pace with multi-region catalogs, compliance, and localization. Variota’s no-code, logic-first engine spans
-                  images and video with governance built in.
+                  Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and
+                  custom-coded pipelines can’t keep pace with multi-region catalogs, compliance, and
+                  localization. Variota’s no-code, logic-first engine spans images and video with
+                  governance built in.
                 </p>
               </div>
               <div className="space-y-6 text-sm text-[var(--text-secondary)]">
                 <p>
-                  Early traction: pilot pipeline development with promo-heavy retailers, expert endorsements from merchandising
-                  leaders, and active design partners co-shaping automation workflows.
+                  Early traction: pilot pipeline development with promo-heavy retailers, expert
+                  endorsements from merchandising leaders, and active design partners co-shaping
+                  automation workflows.
                 </p>
                 <p>
-                  Business model: tiered SaaS based on usage, seats, and integrations with enterprise options for governance and
-                  delivery.
+                  Business model: tiered SaaS based on usage, seats, and integrations with
+                  enterprise options for governance and delivery.
                 </p>
                 <Link href="mailto:invest@variota.com" className="inline-flex">
                   <Button variant="primary" size="md">
@@ -710,28 +833,40 @@ export default async function LandingPage() {
             <div className="mt-10 space-y-6">
               {faqs.map((faq) => (
                 <Card key={faq.question} variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">{faq.question}</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    {faq.question}
+                  </h3>
                   <p className="mt-3 text-sm text-[var(--text-secondary)]">{faq.answer}</p>
                 </Card>
               ))}
             </div>
           </section>
 
-          <section id="accessibility" className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80">
+          <section
+            id="accessibility"
+            className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/80"
+          >
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
-                <h2 className="text-3xl font-bold sm:text-4xl">Accessibility, performance, and security</h2>
+                <h2 className="text-3xl font-bold sm:text-4xl">
+                  Accessibility, performance, and security
+                </h2>
                 <p className="mt-4 text-lg text-[var(--text-secondary)]">
                   Built for enterprise standards with inclusive design and resilient infrastructure.
                 </p>
               </div>
               <div className="mt-12 grid gap-6 md:grid-cols-3">
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Accessibility</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Accessibility
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {accessibilityNotes.accessibility.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-1 h-4 w-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <CheckCircle2
+                          className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -742,18 +877,26 @@ export default async function LandingPage() {
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {accessibilityNotes.performance.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-1 h-4 w-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <CheckCircle2
+                          className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
                 </Card>
                 <Card variant="glass" className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Security & privacy</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Security & privacy
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {accessibilityNotes.security.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-1 h-4 w-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <CheckCircle2
+                          className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
+                          aria-hidden="true"
+                        />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -764,11 +907,11 @@ export default async function LandingPage() {
           </section>
 
           <section className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
-            <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--surface-1)]/80 p-10 text-center shadow-glass-lg">
+            <div className="shadow-glass-lg rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--surface-1)]/80 p-10 text-center">
               <h2 className="text-3xl font-bold sm:text-4xl">Apply for pilot access</h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                Ready to connect your product data to governed creative automation? Share your context and we’ll align on a pilot
-                path.
+                Ready to connect your product data to governed creative automation? Share your
+                context and we’ll align on a pilot path.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="#early-access" className="inline-flex">
@@ -784,7 +927,9 @@ export default async function LandingPage() {
                 </Link>
               </div>
               <p className="mt-6 text-sm text-[var(--text-tertiary)]">
-                {hello ? hello.greeting : 'Welcome to the future of data-driven creative automation.'}
+                {hello
+                  ? hello.greeting
+                  : 'Welcome to the future of data-driven creative automation.'}
               </p>
             </div>
           </section>
@@ -794,12 +939,16 @@ export default async function LandingPage() {
           <div className="mx-auto max-w-7xl px-6 py-16">
             <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
               <div>
-                <Link href="/dashboard" className="flex items-center gap-3" aria-label="Variota logo">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-3"
+                  aria-label="Variota logo"
+                >
                   <Logo className="h-12 w-48" />
                 </Link>
                 <p className="mt-4 max-w-md text-sm text-[var(--text-secondary)]">
-                  Variota turns product data and business rules into brand-safe images and videos at scale. Subscribe for updates or
-                  request early access.
+                  Variota turns product data and business rules into brand-safe images and videos at
+                  scale. Subscribe for updates or request early access.
                 </p>
                 <div className="mt-6 max-w-sm">
                   <SubscribeForm />
@@ -807,7 +956,9 @@ export default async function LandingPage() {
               </div>
               <div className="grid gap-10 sm:grid-cols-3">
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Navigate</h3>
+                  <h3 className="text-sm font-semibold tracking-wide text-[var(--text-tertiary)] uppercase">
+                    Navigate
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     <li>
                       <Link href="#product" className="hover:text-[var(--text-primary)]">
@@ -842,7 +993,9 @@ export default async function LandingPage() {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Company</h3>
+                  <h3 className="text-sm font-semibold tracking-wide text-[var(--text-tertiary)] uppercase">
+                    Company
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     <li>
                       <Link href="#product" className="hover:text-[var(--text-primary)]">
@@ -850,7 +1003,10 @@ export default async function LandingPage() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="mailto:hello@variota.com" className="hover:text-[var(--text-primary)]">
+                      <Link
+                        href="mailto:hello@variota.com"
+                        className="hover:text-[var(--text-primary)]"
+                      >
                         Contact
                       </Link>
                     </li>
@@ -862,7 +1018,9 @@ export default async function LandingPage() {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Legal & social</h3>
+                  <h3 className="text-sm font-semibold tracking-wide text-[var(--text-tertiary)] uppercase">
+                    Legal & social
+                  </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     <li>
                       <Link href="/privacy" className="hover:text-[var(--text-primary)]">
@@ -875,12 +1033,20 @@ export default async function LandingPage() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="https://www.linkedin.com" target="_blank" rel="noreferrer" className="hover:text-[var(--text-primary)]">
+                      <Link
+                        href="https://www.linkedin.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-[var(--text-primary)]"
+                      >
                         LinkedIn
                       </Link>
                     </li>
                     <li>
-                      <Link href="mailto:hello@variota.com" className="hover:text-[var(--text-primary)]">
+                      <Link
+                        href="mailto:hello@variota.com"
+                        className="hover:text-[var(--text-primary)]"
+                      >
                         Email us
                       </Link>
                     </li>

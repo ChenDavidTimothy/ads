@@ -10,6 +10,10 @@ interface FormStatus {
   message: string;
 }
 
+interface ApiError {
+  error: string;
+}
+
 export function SubscribeForm() {
   const [status, setStatus] = useState<FormStatus>({ type: 'idle', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,16 +39,24 @@ export function SubscribeForm() {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error ?? 'Unable to subscribe right now.');
+        const errorData = (await response
+          .json()
+          .catch(() => ({ error: 'Unable to subscribe right now.' }))) as ApiError;
+        throw new Error(errorData.error ?? 'Unable to subscribe right now.');
       }
 
-      setStatus({ type: 'success', message: 'Subscribed. We’ll keep you posted on product updates.' });
+      setStatus({
+        type: 'success',
+        message: 'Subscribed. We’ll keep you posted on product updates.',
+      });
       form.reset();
     } catch (error) {
       setStatus({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Something went wrong. Try again or email hello@variota.com.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong. Try again or email hello@variota.com.',
       });
     } finally {
       setIsSubmitting(false);
@@ -63,7 +75,13 @@ export function SubscribeForm() {
           aria-label="Email address"
           autoComplete="email"
         />
-        <Button type="submit" variant="secondary" size="md" disabled={isSubmitting} className="sm:w-auto">
+        <Button
+          type="submit"
+          variant="secondary"
+          size="md"
+          disabled={isSubmitting}
+          className="sm:w-auto"
+        >
           {isSubmitting ? 'Sending…' : 'Subscribe'}
         </Button>
       </div>

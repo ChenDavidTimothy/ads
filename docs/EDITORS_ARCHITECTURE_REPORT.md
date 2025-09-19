@@ -188,7 +188,7 @@ Node definitions are registered in `NODE_DEFINITIONS` and accessed via:
 // src/shared/registry/registry-utils.ts
 export function getNodeDefinition(nodeType: string): NodeDefinition | undefined;
 export function getNodeDefaults(
-  nodeType: string,
+  nodeType: string
 ): Record<string, unknown> | undefined;
 ```
 
@@ -204,7 +204,7 @@ Value resolution follows a 3-tier precedence system:
 
 ```typescript
 // src/components/workspace/typography-editor-tab.tsx:129
-const content = data.content ?? def.content ?? "Sample Text";
+const content = data.content ?? def.content ?? 'Sample Text';
 ```
 
 ### Typography.content Example

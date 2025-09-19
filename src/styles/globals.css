@@ -1,10 +1,10 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* stylelint-disable-next-line at-rule-no-unknown */
 @theme {
   --font-sans:
-    var(--font-montserrat), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    var(--font-montserrat), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 :root {
@@ -167,8 +167,7 @@
       transparent 35%,
       rgba(59, 130, 246, 0.015) 100%
     ),
-    /* Deep glass frosting */
-      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Deep glass frosting */ linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
     /* Premium dark base */ rgba(12, 12, 20, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(16px);
@@ -187,8 +186,7 @@
       transparent 30%,
       rgba(59, 130, 246, 0.025) 100%
     ),
-    /* Enhanced deep frosting */
-      linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
+    /* Enhanced deep frosting */ linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent),
     /* Premium interactive base */ rgba(18, 18, 28, 0.92);
   border-color: rgba(255, 255, 255, 0.22);
   box-shadow:
@@ -206,8 +204,7 @@
       transparent 40%,
       rgba(59, 130, 246, 0.01) 100%
     ),
-    /* Deep glass layer */
-      linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
+    /* Deep glass layer */ linear-gradient(145deg, rgba(255, 255, 255, 0.02), transparent),
     /* Premium dark base */ rgba(8, 8, 15, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
@@ -225,8 +222,7 @@
       transparent 35%,
       rgba(139, 92, 246, 0.02) 100%
     ),
-    /* Enhanced glass layer */
-      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
+    /* Enhanced glass layer */ linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
     /* Premium focused base */ rgba(12, 12, 22, 0.9);
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow:
@@ -368,8 +364,7 @@ body {
   height: 20px;
   border-radius: var(--radius-sm);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
-    var(--surface-2);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 60%), var(--surface-2);
   color: var(--text-tertiary);
   opacity: 0.4;
   transition: all var(--duration-fast) var(--easing-standard);
@@ -382,8 +377,7 @@ body {
   opacity: 1;
   transform: scale(1.1);
   background:
-    linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%),
-    var(--danger-600);
+    linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%), var(--danger-600);
   color: white;
   box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
 }
@@ -404,8 +398,7 @@ body {
     opacity: 1;
     transform: none;
     background:
-      linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%),
-      var(--danger-600);
+      linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 60%), var(--danger-600);
     color: white;
   }
 }
@@ -450,8 +443,7 @@ body {
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.8);
   background:
-    linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 60%),
-    var(--surface-2);
+    linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 60%), var(--surface-2);
   transition: all 120ms ease;
   cursor: crosshair;
   transform-origin: center;
@@ -462,8 +454,7 @@ body {
 .react-flow__handle:hover {
   border-color: var(--accent-primary);
   background:
-    linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, transparent 60%),
-    rgba(139, 92, 246, 0.15);
+    linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, transparent 60%), rgba(139, 92, 246, 0.15);
   box-shadow:
     0 0 12px rgba(139, 92, 246, 0.3),
     0 0 24px rgba(139, 92, 246, 0.1);
@@ -479,7 +470,7 @@ body {
 
 /* Large invisible hit area around ports for easy clicking - PRESERVED */
 .react-flow__handle::before {
-  content: "";
+  content: '';
   position: absolute;
   width: 32px;
   height: 32px;
@@ -491,7 +482,7 @@ body {
 
 /* Enhanced visual feedback when hovering near ports */
 .react-flow__handle:hover::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 40px;
   height: 40px;

@@ -37,14 +37,14 @@ export const metadata: Metadata = {
     description:
       'Generate brand-safe images and videos from Excel/CSV using no-code logic. Localize by region and update thousands of assets in minutes. Join the pilot.',
     siteName: 'Variota',
-      images: [
-        {
-          url: '/og-image.png',
-          width: 1200,
-          height: 630,
-          alt: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
-        },
-      ],
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Variota | Data-Driven Creative Automation for Retail & E-commerce',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',

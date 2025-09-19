@@ -30,7 +30,7 @@ The system uses a priority-based approach for determining the "from" values:
 ```typescript
 // Animation 1: Move from (0,0) to (900,900)
 const moveTrack = {
-  type: "move",
+  type: 'move',
   startTime: 0,
   duration: 1000,
   properties: {
@@ -41,7 +41,7 @@ const moveTrack = {
 
 // Animation 2: Rotate from 0° to 90°
 const rotateTrack = {
-  type: "rotate",
+  type: 'rotate',
   startTime: 1000, // Start when move ends
   duration: 500,
   properties: {
@@ -58,7 +58,7 @@ const rotateTrack = {
 ```typescript
 // First move: (0,0) to (100,100)
 const move1 = {
-  type: "move",
+  type: 'move',
   startTime: 0,
   duration: 500,
   properties: {
@@ -69,7 +69,7 @@ const move1 = {
 
 // Second move: (100,100) to (200,200)
 const move2 = {
-  type: "move",
+  type: 'move',
   startTime: 500, // Start when first move ends
   duration: 500,
   properties: {
@@ -86,7 +86,7 @@ const move2 = {
 ```typescript
 // Move animation
 const moveTrack = {
-  type: "move",
+  type: 'move',
   startTime: 0,
   duration: 1000,
   properties: {
@@ -97,7 +97,7 @@ const moveTrack = {
 
 // Scale animation
 const scaleTrack = {
-  type: "scale",
+  type: 'scale',
   startTime: 1000, // Start when move ends
   duration: 500,
   properties: {
