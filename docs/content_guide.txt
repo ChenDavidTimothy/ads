@@ -1,0 +1,278 @@
+TITLE: Variota Landing Page Content Guide (Users + Investors) — Optimal 2025 Version
+
+PURPOSE
+- Communicate Variota’s USP: no-code, logic-first, data-driven creative generation (images + videos) at scale.
+- Convert two audiences:
+  1) Prospective users (retail/e-commerce marketing, merchandising, creative, ad ops)
+  2) Prospective investors
+- Avoid specific pricing or numerical claims; focus on capabilities, workflows, and outcomes.
+- Optimize for a single primary CTA (Pilot/Early Access) with minimal distractions.
+
+PAGE ARCHITECTURE (TOP TO BOTTOM)
+1) Minimal Header
+2) Hero Section (USP + single primary CTA + demo link)
+3) Micro Social Proof (trust cues)
+4) Persona Wins (role-based value cards)
+5) Problem Section (pain, context)
+6) How It Works (5-step visual narrative)
+7) Capabilities & Features (grouped by themes)
+8) Brand Safety, Governance, Compliance (elevated)
+9) Outcomes (benefits/ROI narrative, no hard numbers)
+10) Use Cases (scenarios) and Who It’s For (personas)
+11) Comparisons (Manual vs Custom Code vs Variota)
+12) Integrations (today + roadmap invitation)
+13) Pilot Program Offer (clear expectations)
+14) Demo/Early Access CTA (short form)
+15) Investor Section (concise thesis + CTA)
+16) FAQ (buyers + investor questions)
+17) Accessibility, Performance, Security Notes
+18) Footer (legal, contact, minimal nav)
+
+STYLE/TONE
+- Clear, outcome-first, credible. Avoid hype and numeric claims.
+- Skimmable, scannable headings and bullets.
+- Place demo and trust indicators early. Repeat primary CTA.
+
+------------------------------------------------------------
+SECTION-BY-SECTION CONTENT SPEC
+
+1) MINIMAL HEADER
+- Left: Variota logo/name
+- Right: Anchor links (same-page) only:
+  - Product
+  - How It Works
+  - Use Cases
+  - Pilot
+  - Investors
+- Primary CTA button: “Request Early Access”
+- Keep header sticky and minimal; no external links beyond footer.
+
+2) HERO
+- H1: Turn your product data into brand-safe images and videos—at scale, without code
+- Subhead: Import Excel/CSV, set simple if-else rules, and generate thousands of localized assets in minutes. Update instantly when prices or assortments change.
+- Primary CTA: “Apply for Pilot” (prominent, high-contrast)
+- Secondary CTA (text link or button): “Watch 2‑minute demo”
+- Visual: Static or looped animation showing:
+  - Data table → logic nodes → grid of generated assets (images + video thumbnails)
+- Micro benefits (3–5 short bullets):
+  - No-code logic for colors, motion, sizes, layouts tied to your data
+  - Excel/CSV import; regional pricing and localization
+  - Brand-locked templates; compliance-ready text blocks
+  - Batch images and videos for social, marketplaces, in-store
+  - Regenerate everything in minutes when data changes
+
+3) MICRO SOCIAL PROOF
+- Row of light trust cues (text or placeholder logos):
+  - “Built with insights from retail leaders”
+  - “Designed for promo-heavy retailers and e-commerce teams”
+  - Optional expert quote (anonymized if needed): “If one person can handle a full promo cycle in minutes, that’s a game-changer.”
+
+4) PERSONA WINS (ROLE-BASED CARDS)
+- 3–4 micro-cards with headline + one sentence each:
+  - Marketing: Launch promos faster, react to price changes instantly, keep every channel aligned.
+  - Creative/Design: Automate repetitive variants with brand-locked templates; focus on high-impact work.
+  - Merchandising: Reflect negotiated deals by region or category with one data import.
+  - Ad Ops/Performance: Generate platform-ready variants for testing without waiting on production.
+
+5) PROBLEM SECTION
+- H2: Manual production can’t keep up with modern promo cycles
+- Bullets:
+  - Frequent price and assortment changes across regions and channels
+  - Manual tools don’t scale to hundreds or thousands of variants
+  - Custom-coded pipelines require engineers and slow iteration
+  - Brand inconsistencies and compliance risks under deadline pressure
+  - Rising labor costs and omnichannel demands
+- Closing line: Teams need a logic-first engine that connects data to creative—fast, consistent, and non-technical.
+
+6) HOW IT WORKS (5-STEP VISUAL)
+- H2: How Variota works
+- Steps (each with 1–2 sentences):
+  1) Import data: Upload Excel/CSV or connect a sheet. Map fields like price, discount, region, category, color, size, and image URLs.
+  2) Build logic: Use a no-code, node-based builder to define rules (e.g., “If discount ≥ 50% → red badge + highlight animation”).
+  3) Choose templates: Start from brand-locked templates with dynamic fields and platform presets.
+  4) Generate at scale: Produce images and videos for all SKUs, regions, and channels in a single run.
+  5) Review and publish: Preview variants, route for approval, export or deliver to your channels. Regenerate instantly when data changes.
+- CTA beneath steps: “See it in a 2‑minute demo”
+
+7) CAPABILITIES & FEATURES (GROUPED)
+- H2: Capabilities
+- Data & Logic
+  - Excel/CSV import, field mapping, and validation
+  - No-code rules tied to product attributes (discounts, categories, regions)
+  - Conditional animation/styling: color, motion, size, layout
+  - Region- and market-based variants (prices, currencies, legal text)
+- Creative Generation
+  - Batch images and videos from a single data source
+  - Aspect ratio presets for social, ads, marketplaces, in-store screens
+  - Auto naming and metadata injection (titles, descriptions)
+  - Multi-language text fields and dynamic price formatting
+- Brand & Compliance
+  - Brand-locked templates (fonts, colors, safe zones)
+  - Legal copy blocks per market; fine-print and disclosures
+  - Localization support (language, currency, date/price formats)
+- Workflow & Governance
+  - Roles/permissions for marketing, design, and merchandising
+  - Approval steps, versioning, and audit trails
+  - Error reports, QA previews, and rollbacks
+- Performance & Delivery
+  - Scalable cloud rendering with concurrency and queueing
+  - Export packages and delivery options (download, feeds, APIs on roadmap)
+
+8) BRAND SAFETY, GOVERNANCE, COMPLIANCE (ELEVATED)
+- H2: Protect your brand at scale
+- Copy:
+  - Lock essential brand elements while allowing controlled variation via rules
+  - Centralize brand kits: fonts, colors, logos, safe zones
+  - Enforce regional legal text and disclosures automatically
+  - Maintain traceability with approvals, version history, and audit logs
+
+9) OUTCOMES (NO HARD NUMBERS)
+- H2: Ship more promotions, faster—without sacrificing brand or control
+- Bullets:
+  - Compress promo production timelines from days to minutes
+  - Eliminate repetitive manual work and reduce reliance on engineers
+  - Keep every channel and region in sync as data changes
+  - Enable rapid test-and-learn with effortless variants
+
+10) USE CASES + WHO IT’S FOR
+- H2: Where Variota shines
+- Use cases:
+  - Weekly/bi-weekly promo cycles with regional pricing
+  - E-commerce catalog updates across large assortments
+  - Marketplace thumbnails and banners at scale
+  - Social bursts with dynamic price badges and animations
+  - In-store screens and printable flyers driven by the same data
+- Who it’s for:
+  - Marketing Managers, Creative Leads/Designers, Merchandising/Category Managers, Ad Ops/Performance Teams, Digital/IT Leaders
+
+11) COMPARISON (MANUAL VS CUSTOM CODE VS VARIOTA)
+- H2: Why Variota vs. alternatives?
+- Short comparison points:
+  - Manual tools: Great for single assets—slow and error-prone at scale; no data logic.
+  - Custom-coded automation: Powerful but requires engineers for setup and changes; longer time-to-value.
+  - Variota: No-code, logic-first, data-to-creative engine for images and video; fast setup; operated by marketing.
+
+12) INTEGRATIONS (TODAY + ROADMAP INVITE)
+- H2: Connect to your data and channels
+- Today:
+  - Excel/CSV uploads; Google Sheets; use existing product image URLs or libraries
+- Roadmap (no dates, invite feedback):
+  - PIM/DAM/CMS connectors
+  - Ad platforms and marketplaces
+  - SSO/Directory sync for larger teams
+- Invite: “Tell us which integrations matter most during the pilot.”
+
+13) PILOT PROGRAM OFFER (FOCUSED)
+- H2: Join the pilot
+- Copy:
+  - We’re partnering with promo-heavy retailers and e-commerce teams to validate workflows and outcomes.
+  - Ideal pilot profile: multi-region pricing, frequent promo cycles, large SKU catalogs, resource-constrained creative ops.
+  - What we provide: onboarding, template setup guidance, logic builder training, priority support, pilot incentives.
+  - What we ask: sample data (sanitized), 1–2 target templates, weekly check-ins, and feedback on outcomes.
+- CTA: “Apply for Pilot”
+
+14) DEMO / EARLY ACCESS CTA (SHORT FORM)
+- H2: See Variota in action
+- Options:
+  - Request Early Access
+  - Book a Live Demo (15 minutes)
+- Short form fields:
+  - Name, Email, Company, Role
+  - Primary use case (dropdown: weekly promos, marketplaces, social, in-store, other)
+  - Regions (free text or dropdown)
+  - Approximate SKU range (select ranges; no exact numbers)
+- Expectation note: “We’ll reply within 2 business days.”
+
+15) INVESTOR SECTION (CONCISE)
+- H2: Building the automation layer for retail creative
+- Thesis:
+  - Retail and e-commerce require high-velocity, data-driven creative at scale.
+  - Manual tools and custom-coded pipelines can’t keep pace with dynamic, multi-region catalogs.
+  - Variota’s no-code, logic-first engine spans images and video with brand safety and localization.
+- Early traction (non-numeric):
+  - Pilot pipeline development, expert endorsements, active design partners (if any)
+- Business model (high-level):
+  - Tiered SaaS based on usage, seats, and integrations; enterprise options
+- CTA: “Request investor brief”
+
+16) FAQ (USERS + INVESTORS)
+- What makes Variota different from design tools or ad platforms?
+- Can non-technical marketers use the logic builder?
+- How do you handle brand guidelines and approvals?
+- Which data sources can I use? How are errors reported?
+- Can I generate both images and videos? Which formats/aspect ratios are supported?
+- How does localization work (languages, currencies, date/price formats)?
+- How does this help with regional pricing differences?
+- Do I need engineers to set it up?
+- What about security and privacy?
+- What’s the pricing model?
+  - Answer: Tiered subscriptions; pilot and early access available. Contact us to discuss fit.
+- How do pilots work? What’s expected from our team?
+
+17) ACCESSIBILITY, PERFORMANCE, SECURITY NOTES
+- Accessibility:
+  - High contrast CTAs; keyboard navigable; clear focus states
+  - Alt text for images; captions/subtitles for demo video
+  - Legible typography and adequate tap targets on mobile
+- Performance:
+  - Fast page load (optimize hero media), responsive images, CDN
+  - Lazy-load non-critical visuals; compress demo video
+- Privacy/Security (high-level, non-committal):
+  - “We process only the data you choose to upload”
+  - “Data deletion upon request; storage best practices”
+  - “SSO and directory sync on the roadmap”
+  - Link to Privacy Policy / Terms
+
+18) FOOTER
+- Company: About, Contact, Careers (if any)
+- Legal: Privacy Policy, Terms of Service
+- Social/Contact: LinkedIn, Email
+- Email capture: “Subscribe for updates”
+- Secondary CTA: “Request Early Access”
+
+------------------------------------------------------------
+COPYWRITING GUIDELINES
+- Outcome-first headlines; verbs that convey speed, control, and scale
+- Avoid hard numbers until validated; use “minutes,” “at scale,” “instantly” cautiously but credibly
+- Reinforce “no-code,” “logic-first,” “data-driven,” “brand-safe,” “localized”
+- Keep paragraphs short; use bullets and subheads for scanability
+- Maintain consistent language for CTAs (“Apply for Pilot,” “Request Early Access,” “Book a Live Demo”)
+
+VISUAL/ASSET CHECKLIST
+- Hero animation or image: data table → logic nodes → generated assets (images + videos)
+- 2-minute demo video: import → map → build logic → template → generate → update change
+- Before/after process diagram: manual vs Variota workflow (steps, not numbers)
+- Template governance visual: lock icons on fonts/colors/safe zones; dynamic fields highlighted
+- Integrations strip: “Today” icons (Excel/CSV/Sheets) + “Roadmap” placeholders
+- One-pager PDF: executive summary for users/investors
+- ROI calculator placeholder: describe inputs/outputs (no numbers yet)
+
+CTA STRATEGY
+- Primary CTA above the fold: “Apply for Pilot” or “Request Early Access”
+- Secondary CTA in hero: “Watch 2-minute demo”
+- Mid-page CTA after How It Works/Features: “See it in action”
+- Strong final CTA near page end: “Apply for Pilot”
+- Keep nav minimal; reduce exits; replicate CTAs throughout
+
+SEO BASICS
+- Title: Variota | Data‑Driven Creative Automation for Retail & E‑commerce
+- Meta description: Generate brand‑safe images and videos from Excel/CSV using no‑code logic. Localize by region and update thousands of assets in minutes. Join the pilot.
+- H1 mirrors hero; H2s for Problem, How It Works, Capabilities, Use Cases, Pilot, Investors, FAQ
+- Keywords (natural use): creative automation, data‑driven promo assets, batch image generation, video automation, regional pricing, no‑code logic, retail promotions
+
+FORM/FLOW BEST PRACTICES
+- Short forms; avoid multi-step unless necessary
+- Clear success state after submission; manage expectations (“We’ll reply within 2 business days”)
+- Provide a fallback contact email
+- Respect privacy; no mandatory phone field unless needed for demos
+
+RISK/CREDIBILITY MANAGEMENT
+- Do not claim specific time or cost savings yet
+- Do not list customer logos without permission
+- Keep security statements high-level; avoid naming certifications until achieved
+- If using quotes, attribute or mark as anonymized; ensure accuracy
+
+SINGLE-SENTENCE POSITIONING (FOR META OR SOCIAL)
+- Variota turns your product data and business rules into brand-safe images and videos—at scale, without code.
+
+END OF GUIDE
