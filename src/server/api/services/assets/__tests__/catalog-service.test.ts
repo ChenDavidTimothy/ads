@@ -71,12 +71,12 @@ describe('createAssetCatalogService', () => {
     });
 
     const storageBucket: StorageBucket = {
-      createSignedUrl: vi.fn<(path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>>(
-        async () => ({
-          data: { signedUrl: 'https://signed' },
-          error: null,
-        })
-      ),
+      createSignedUrl: vi.fn<
+        (path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>
+      >(async () => ({
+        data: { signedUrl: 'https://signed' },
+        error: null,
+      })),
     };
 
     const storageFrom = vi.fn<(bucket: string) => StorageBucket>(() => storageBucket);
@@ -97,7 +97,9 @@ describe('createAssetCatalogService', () => {
     const result = await service.listAssets({ userId: 'user-1', input });
 
     expect(result.assets).toHaveLength(1);
-    expect(result.assets[0]).toMatchObject({
+    const firstAsset = result.assets[0];
+    if (!firstAsset) throw new Error('Expected first asset to be defined');
+    expect(firstAsset).toMatchObject({
       id: 'asset-1',
       public_url: 'https://signed',
     });
@@ -131,12 +133,12 @@ describe('createAssetCatalogService', () => {
     });
 
     const storageBucket: StorageBucket = {
-      createSignedUrl: vi.fn<(path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>>(
-        async () => ({
-          data: { signedUrl: 'https://signed-2' },
-          error: null,
-        })
-      ),
+      createSignedUrl: vi.fn<
+        (path: string, expiresIn: number) => Promise<DatabaseResponse<StorageResponse>>
+      >(async () => ({
+        data: { signedUrl: 'https://signed-2' },
+        error: null,
+      })),
     };
 
     const supabase = {
@@ -155,10 +157,12 @@ describe('createAssetCatalogService', () => {
     const result = await service.listAssets({ userId: 'user-1', input });
 
     expect(result.assets).toHaveLength(1);
-    expect(result.assets[0].metadata).toEqual({});
-    expect(result.assets[0].image_width).toBeUndefined();
-    expect(result.assets[0].image_height).toBeUndefined();
-    expect(result.assets[0].public_url).toBe('https://signed-2');
+    const assetResult = result.assets[0];
+    if (!assetResult) throw new Error('Expected asset result to be defined');
+    expect(assetResult.metadata).toEqual({});
+    expect(assetResult.image_width).toBeUndefined();
+    expect(assetResult.image_height).toBeUndefined();
+    expect(assetResult.public_url).toBe('https://signed-2');
   });
 
   it('filters assets when a signed URL cannot be generated', async () => {
@@ -211,4 +215,3 @@ describe('createAssetCatalogService', () => {
     expect(result.hasMore).toBe(false);
   });
 });
-

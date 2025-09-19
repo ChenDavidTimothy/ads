@@ -78,7 +78,6 @@ export function AssetsPanel() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    keepPreviousData: true,
   });
 
   // Fetch storage quota
@@ -243,4 +242,3 @@ export function AssetsPanel() {
     </div>
   );
 }
-

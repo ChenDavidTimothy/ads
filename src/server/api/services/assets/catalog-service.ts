@@ -79,11 +79,14 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
               60 * 60 * 24
             )) as DatabaseResponse<StorageResponse>;
 
-          if (signedUrlResult.error || !signedUrlResult.data?.signedUrl) {
+          const signedUrl = signedUrlResult.data?.signedUrl ?? null;
+          const signError: unknown = signedUrlResult.error;
+
+          if (signError || !signedUrl) {
             log.warn?.(`Failed to create signed URL for asset ${asset.id}`, {
               bucket: asset.bucket_name,
               path: asset.storage_path,
-              error: signedUrlResult.error ? String(signedUrlResult.error) : 'No URL returned',
+              error: signError ? serializeError(signError) : 'No URL returned',
             });
             return null;
           }
@@ -99,7 +102,7 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
             asset_type: asset.asset_type,
             metadata: coerceRecord(asset.metadata),
             created_at: asset.created_at,
-            public_url: signedUrlResult.data.signedUrl,
+            public_url: signedUrl,
             image_width: coerceDimension(asset.image_width),
             image_height: coerceDimension(asset.image_height),
           };
@@ -107,7 +110,7 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
           return assetWithUrl;
         } catch (error) {
           log.warn?.(`Asset ${asset.id} reconciliation failed`, {
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
           });
           return null;
         }
@@ -133,7 +136,6 @@ export function createAssetCatalogService({ supabase, logger }: AssetCatalogServ
   };
 }
 
-
 function coerceRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -145,3 +147,22 @@ function coerceDimension(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+function serializeError(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (typeof value === 'object' && value !== null) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[unserializable error object]';
+    }
+  }
+  return '[unknown error]';
+}
