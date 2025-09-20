@@ -51,7 +51,7 @@ export default async function LandingPage() {
     {
       title: 'Creative & Design',
       description:
-        'Automate repetitive variants with brand-locked templates so designers focus on storytelling instead of manual versioning.',
+        'Automate repetitive variants with consistent templates so designers focus on storytelling instead of manual versioning.',
     },
     {
       title: 'Merchandising',
@@ -67,7 +67,7 @@ export default async function LandingPage() {
 
   const problemPoints = [
     'Frequent price and assortment changes across regions and channels',
-    'Manual tools don’t scale to hundreds or thousands of variants',
+    "Manual tools don't scale to hundreds or thousands of variants",
     'Custom-coded pipelines require engineers and slow every iteration',
     'Brand inconsistencies and compliance risks under deadline pressure',
     'Rising labor costs and omnichannel demands',
@@ -82,12 +82,12 @@ export default async function LandingPage() {
     {
       title: 'Build logic',
       description:
-        'Use a no-code, node-based builder to define rules—like highlighting high-margin items or swapping layouts when inventory is low.',
+        'Use a no-code, node-based builder to define rules, like highlighting high-margin items or swapping layouts when inventory is low.',
     },
     {
       title: 'Choose templates',
       description:
-        'Start from brand-locked templates with dynamic fields, safe zones, and presets for every channel.',
+        'Start from consistent templates with dynamic fields, safe zones, and presets for every channel.',
     },
     {
       title: 'Generate at scale',
@@ -135,7 +135,7 @@ export default async function LandingPage() {
         'Roles and permissions for marketing, design, and merchandising teams',
         'Approval steps, version history, and rollbacks',
         'Error reporting, QA previews, and collaborative review',
-        'Scalable rendering queues with export packages and feed delivery roadmap',
+        'Scalable rendering queues with export packages and feed delivery',
       ],
     },
   ];
@@ -202,7 +202,7 @@ export default async function LandingPage() {
 
   const pilotHighlights = {
     intro:
-      'We’re partnering with promo-heavy retailers and e-commerce teams to validate workflows, governance, and outcomes.',
+      "We're partnering with promo-heavy retailers and e-commerce teams to validate workflows, governance, and outcomes.",
     profile:
       'Ideal pilot profile: multi-region pricing, frequent promo cycles, large SKU catalogs, and creative operations that need scale.',
     provide:
@@ -252,12 +252,12 @@ export default async function LandingPage() {
         'Variota processes only the data you choose to upload, supports data deletion upon request, follows storage best practices, and has SSO and directory sync on the roadmap.',
     },
     {
-      question: 'What’s the pricing model?',
+      question: "What's the pricing model?",
       answer:
         'Tiered subscriptions based on usage, seats, and integrations. Pilot and early access pricing is available once we confirm fit.',
     },
     {
-      question: 'How do pilots work? What’s expected from our team?',
+      question: "How do pilots work? What's expected from our team?",
       answer:
         'We co-design workflows with your team, deliver onboarding and training, and hold weekly check-ins. You provide feedback on outcomes so we can prioritize the roadmap together.',
     },
@@ -345,10 +345,10 @@ export default async function LandingPage() {
               <div className="grid gap-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
                 <div>
                   <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance sm:text-5xl md:text-6xl">
-                    Turn your product data into brand-safe images and videos—at scale, without code
+                    Turn your product data into professional images and videos at scale, without code
                   </h1>
                   <p className="mt-6 max-w-2xl text-lg text-[var(--text-secondary)] sm:text-xl">
-                    Import Excel/CSV, set simple if-else rules, and generate thousands of localized
+                    Upload Excel/CSV files, set simple if-else rules, and generate thousands of localized
                     assets in minutes. Update instantly when prices or assortments change across
                     regions.
                   </p>
@@ -448,11 +448,11 @@ export default async function LandingPage() {
           <section id="product" className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
             <div className="mb-12 max-w-3xl">
               <h2 className="text-3xl font-bold sm:text-4xl">
-                Role-specific wins without adding headcount
+                Benefits for every team without hiring more people
               </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                Variota equips every go-to-market role with governed automation so teams react to
-                market shifts without sacrificing brand or compliance.
+                Variota gives every sales and marketing team smart automation so they can quickly adapt to
+                market changes without losing quality or following rules.
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
@@ -471,7 +471,7 @@ export default async function LandingPage() {
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">
-                  Manual production can’t keep up with modern promo cycles
+                  "Manual production can't keep up with modern promo cycles"
                 </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
@@ -486,7 +486,7 @@ export default async function LandingPage() {
                 ))}
               </ul>
               <p className="mt-10 max-w-2xl text-base text-[var(--text-secondary)]">
-                Teams need a logic-first engine that connects data to creative—fast, consistent, and
+                Teams need a logic-first engine that connects data to creative. Fast, consistent, and
                 non-technical.
               </p>
             </div>
@@ -611,7 +611,7 @@ export default async function LandingPage() {
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">
-                  Ship more promotions, faster—without sacrificing brand or control
+                  Ship more promotions, faster without sacrificing brand or control
                 </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
@@ -801,8 +801,8 @@ export default async function LandingPage() {
                 </h2>
                 <p className="mt-4 text-lg text-[var(--text-secondary)]">
                   Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and
-                  custom-coded pipelines can’t keep pace with multi-region catalogs, compliance, and
-                  localization. Variota’s no-code, logic-first engine spans images and video with
+                  "custom-coded pipelines can't keep pace with multi-region catalogs, compliance, and"
+                  localization. "Variota's no-code, logic-first engine spans images and video with"
                   governance built in.
                 </p>
               </div>
@@ -911,7 +911,7 @@ export default async function LandingPage() {
               <h2 className="text-3xl font-bold sm:text-4xl">Apply for pilot access</h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
                 Ready to connect your product data to governed creative automation? Share your
-                context and we’ll align on a pilot path.
+                "context and we'll align on a pilot path."
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="#early-access" className="inline-flex">
@@ -947,7 +947,7 @@ export default async function LandingPage() {
                   <Logo className="h-12 w-48" />
                 </Link>
                 <p className="mt-4 max-w-md text-sm text-[var(--text-secondary)]">
-                  Variota turns product data and business rules into brand-safe images and videos at
+                  Variota turns product data and business rules into professional images and videos at
                   scale. Subscribe for updates or request early access.
                 </p>
                 <div className="mt-6 max-w-sm">
