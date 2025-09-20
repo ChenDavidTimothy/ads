@@ -32,14 +32,14 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         label: 'When true',
         tooltip: 'Data forwarded when the condition is true',
         handleClassName: 'bg-[var(--success-500)]',
-        labelClassName: 'text-[var(--success-500)]',
+        badge: 'T',
       },
       {
         id: 'false_path',
         label: 'When false',
         tooltip: 'Data forwarded when the condition is false',
         handleClassName: 'bg-[var(--danger-500)]',
-        labelClassName: 'text-[var(--danger-500)]',
+        badge: 'F',
       },
     ],
     []

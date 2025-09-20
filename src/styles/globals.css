@@ -480,6 +480,91 @@ body {
   cursor: crosshair;
 }
 
+/* Compact port badges with hover tooltips */
+.port-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background-color: var(--surface-2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard),
+    box-shadow var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
+  touch-action: manipulation;
+}
+
+.port-badge:focus {
+  outline: none;
+}
+
+.port-badge:hover,
+.port-badge:focus-visible {
+  background-color: var(--surface-interactive);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px var(--purple-shadow-subtle),
+    0 0 14px rgba(139, 92, 246, 0.35);
+}
+
+.port-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  right: auto;
+  transform: translate3d(0, -50%, 0) translateX(6px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(10, 10, 18, 0.94);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  max-width: 240px;
+  width: max-content;
+  white-space: pre-line;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition:
+    opacity var(--duration-fast) var(--easing-standard),
+    transform var(--duration-fast) var(--easing-standard);
+  z-index: 20;
+}
+
+.port-badge[data-direction='input']::after {
+  left: auto;
+  right: calc(100% + 12px);
+  transform: translate3d(0, -50%, 0) translateX(-6px);
+  text-align: right;
+}
+
+.port-badge:hover::after,
+.port-badge:focus-visible::after {
+  opacity: 1;
+  transform: translate3d(0, -50%, 0);
+}
+
+.port-badge[data-direction='input']:hover::after,
+.port-badge[data-direction='input']:focus-visible::after {
+  transform: translate3d(0, -50%, 0);
+}
+
+.port-badge[data-tooltip='']::after {
+  display: none;
+}
+
 /* Enhanced visual feedback when hovering near ports */
 .react-flow__handle:hover::after {
   content: '';
