@@ -65,31 +65,22 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
   const accessibleLabel = tooltipSections.join('. ');
 
   const indicator = icon ? (
-    <span
-      className="pointer-events-none text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--text-primary)]"
-      aria-hidden="true"
-    >
+    <span className="node-port-indicator node-port-indicator--icon" aria-hidden="true">
       {icon}
     </span>
   ) : badge ? (
-    <span
-      className="pointer-events-none inline-flex h-2 w-2 items-center justify-center rounded-full bg-[var(--surface-3)] text-[8px] font-semibold text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:bg-[var(--accent-primary)] group-hover:text-[var(--text-primary)]"
-      aria-hidden="true"
-    >
+    <span className="node-port-indicator node-port-indicator--badge" aria-hidden="true">
       {badge}
     </span>
   ) : (
-    <span
-      className="pointer-events-none block h-2 w-2 rounded-full bg-[var(--text-tertiary)] transition-transform duration-[var(--duration-fast)] group-hover:scale-110 group-hover:bg-[var(--accent-primary)]"
-      aria-hidden="true"
-    />
+    <span className="node-port-indicator node-port-indicator--dot" aria-hidden="true" />
   );
 
   return (
     <div
       ref={onRef}
       className={cn(
-        'port-badge group text-[10px] font-medium focus-visible:outline-none',
+        'port-badge node-port-badge group focus-visible:outline-none',
         side === 'input' ? 'ml-auto' : 'mr-auto'
       )}
       data-direction={side}
@@ -167,8 +158,16 @@ export function NodeLayout({
     <Card
       selected={selected}
       onDoubleClick={onDoubleClick}
-      className={cn('min-w-[var(--node-min-width)] p-[var(--card-padding)]', className)}
+      className={cn(
+        'node-card group relative isolate min-w-[var(--node-min-width)] overflow-hidden p-0',
+        selected && 'node-card--selected',
+        className
+      )}
     >
+      <div className="node-card__halo" aria-hidden="true" />
+      <div className="node-card__sheen" aria-hidden="true" />
+
+      <div className="node-card__content" style={{ gridTemplateColumns }}>
       {hasInputs &&
         inputs.map((port, index) => (
           <Handle
@@ -195,70 +194,75 @@ export function NodeLayout({
           />
         ))}
 
-      <div className="grid items-stretch gap-x-[var(--space-3)]" style={{ gridTemplateColumns }}>
         {hasInputs && (
-          <div className="flex h-full min-h-[80px] flex-col justify-evenly gap-[var(--space-2)] pr-[var(--space-1)]">
+          <div className="node-port-column node-port-column--input">
             {inputs.map((port) => (
-              <div key={port.id} className="flex w-full justify-end">
+              <div key={port.id} className="node-port-slot node-port-slot--input">
                 <PortBadge side="input" config={port} onRef={noop} />
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex min-h-[96px] flex-col gap-[var(--space-3)]">
-          <div className="flex flex-col gap-[var(--space-2)]">
-            <div className="flex items-start justify-between gap-[var(--space-3)]">
-              <div className="flex min-w-0 items-start gap-[var(--space-2)]">
-                <div
-                  className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]',
-                    iconClassName
-                  )}
-                >
-                  {icon}
-                </div>
-                <div className="min-w-0">
+        <div className="node-core">
+          <div className="node-core__glare" aria-hidden="true" />
+
+          <div className="node-core__inner">
+            <div className="flex flex-col gap-[var(--space-2)]">
+              <div className="flex items-start justify-between gap-[var(--space-3)]">
+                <div className="flex min-w-0 items-start gap-[var(--space-2)]">
                   <div
-                    className="truncate text-sm font-semibold text-[var(--text-primary)]"
-                    title={title}
+                    className={cn(
+                      'node-core__icon-swatch flex h-9 w-9 shrink-0 items-center justify-center text-[var(--text-primary)]',
+                      iconClassName
+                    )}
                   >
-                    {title}
+                    <span className="relative z-[1] flex h-5 w-5 items-center justify-center">{icon}</span>
                   </div>
-                  {subtitle ? (
+                  <div className="min-w-0">
                     <div
-                      className="mt-[2px] text-xs text-[var(--text-secondary)]"
-                      style={TITLE_LINE_CLAMP_STYLE}
-                      title={subtitle}
+                      className="truncate text-sm font-semibold tracking-tight text-[var(--text-primary)]"
+                      title={title}
                     >
-                      {subtitle}
+                      {title}
                     </div>
-                  ) : null}
+                    {subtitle ? (
+                      <div
+                        className="mt-[2px] text-xs font-medium text-[var(--text-secondary)]/85"
+                        style={TITLE_LINE_CLAMP_STYLE}
+                        title={subtitle}
+                      >
+                        {subtitle}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
+                {headerAccessory ? (
+                  <div className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                    {headerAccessory}
+                  </div>
+                ) : null}
               </div>
-              {headerAccessory ? (
-                <div className="shrink-0 text-xs text-[var(--text-tertiary)]">
-                  {headerAccessory}
-                </div>
-              ) : null}
             </div>
+
+            {children ? (
+              <div className="flex flex-col gap-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+                {children}
+              </div>
+            ) : null}
+
+            {footer ? (
+              <div className="node-core__footer mt-auto text-[11px] font-medium text-[var(--text-tertiary)]">
+                {footer}
+              </div>
+            ) : null}
           </div>
-
-          {children ? (
-            <div className="flex flex-col gap-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-              {children}
-            </div>
-          ) : null}
-
-          {footer ? (
-            <div className="mt-auto text-xs text-[var(--text-tertiary)]">{footer}</div>
-          ) : null}
         </div>
 
         {hasOutputs && (
-          <div className="flex h-full min-h-[80px] flex-col justify-evenly gap-[var(--space-2)] pl-[var(--space-1)]">
+          <div className="node-port-column node-port-column--output">
             {outputs.map((port) => (
-              <div key={port.id} className="flex w-full justify-start">
+              <div key={port.id} className="node-port-slot node-port-slot--output">
                 <PortBadge side="output" config={port} onRef={noop} />
               </div>
             ))}
