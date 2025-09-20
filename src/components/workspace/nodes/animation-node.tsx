@@ -91,8 +91,8 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
             No keyframes yet—double-click to open the timeline.
           </div>
         )}
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Manage keyframes, easing, and variable bindings from the timeline editor.
+        <div className="text-xs text-[var(--text-muted)]">
+          Timeline-based animation
         </div>
       </div>
 

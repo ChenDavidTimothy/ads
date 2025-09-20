@@ -85,8 +85,8 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         >
           {isRunning ? 'Running…' : 'Run to Here'}
         </Button>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Double-click to review the latest logs for this node.
+        <div className="text-xs text-[var(--text-muted)]">
+          Debug and inspect data
         </div>
       </div>
 

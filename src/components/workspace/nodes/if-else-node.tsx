@@ -52,9 +52,8 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Use this node to branch a flow—connect any yes/no signal to control which output is
-          active.
+        <div className="text-xs text-[var(--text-muted)]">
+          Conditional routing
         </div>
       </div>
 

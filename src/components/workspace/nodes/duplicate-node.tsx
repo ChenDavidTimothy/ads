@@ -46,13 +46,11 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)]">
-          {data.count === 1
-            ? 'Pass-through mode — no additional duplicates created.'
-            : `Creates ${data.count - 1} extra duplicate${data.count > 2 ? 's' : ''}.`}
+        <div className="text-xs text-[var(--text-muted)]">
+          {data.count === 1 ? 'Pass-through mode' : `${data.count} total copies`}
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Each duplicate receives a unique ID so downstream nodes can treat them independently.
+        <div className="text-xs text-[var(--text-muted)]">
+          Creates multiple copies
         </div>
       </div>
 

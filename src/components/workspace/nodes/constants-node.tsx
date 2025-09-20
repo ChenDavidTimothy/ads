@@ -87,8 +87,8 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
             />
           </div>
         ) : null}
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Emits a constant value that can drive any downstream property or control flow.
+        <div className="text-xs text-[var(--text-muted)]">
+          Fixed value source
         </div>
       </div>
 

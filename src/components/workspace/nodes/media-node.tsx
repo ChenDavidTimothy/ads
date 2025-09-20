@@ -80,8 +80,8 @@ export function MediaNode({ data, selected, onOpenMedia }: MediaNodeProps) {
           <span>Display</span>
           <span className="font-medium text-[var(--text-primary)]">{displayInfo}</span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Double-click to adjust cropping, scaling, and alignment in the media panel.
+        <div className="text-xs text-[var(--text-muted)]">
+          Advanced media processing
         </div>
       </div>
 

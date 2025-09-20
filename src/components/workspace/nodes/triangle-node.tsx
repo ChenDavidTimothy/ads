@@ -38,8 +38,8 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           <span>Orientation</span>
           <span className="font-medium text-[var(--text-primary)]">Centered upright</span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Emits a crisp triangle ready for styling, animation, or duplication downstream.
+        <div className="text-xs text-[var(--text-muted)]">
+          Triangular geometry
         </div>
       </div>
 

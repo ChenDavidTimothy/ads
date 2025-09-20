@@ -113,8 +113,8 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
         <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-center text-[var(--text-primary)]">
           {isUnaryOperation ? `${getOperatorSymbol()} A` : `A ${getOperatorSymbol()} B`}
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Chain math operations together to build expressions without leaving the canvas.
+        <div className="text-xs text-[var(--text-muted)]">
+          Mathematical operations
         </div>
       </div>
 

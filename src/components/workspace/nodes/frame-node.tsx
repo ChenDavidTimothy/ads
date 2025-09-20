@@ -75,9 +75,8 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
             <span className="font-medium text-[var(--text-primary)]">{data.quality ?? 90}</span>
           </div>
         ) : null}
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Ideal for exporting still frames—connect downstream automation or download from the render
-          panel.
+        <div className="text-xs text-[var(--text-muted)]">
+          Still image output
         </div>
       </div>
     </NodeCard>

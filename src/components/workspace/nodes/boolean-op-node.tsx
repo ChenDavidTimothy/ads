@@ -112,9 +112,8 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
           </div>
         </div>
 
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
-          Use this node to gate downstream flows—connect clear on/off style signals for predictable
-          behaviour.
+        <div className="text-xs text-[var(--text-muted)]">
+          Boolean logic operations
         </div>
       </div>
 

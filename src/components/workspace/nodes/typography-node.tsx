@@ -81,8 +81,8 @@ export function TypographyNode({ data, selected, onOpenTypography }: TypographyN
           <span>Line height</span>
           <span className="font-medium text-[var(--text-primary)]">{data.lineHeight ?? 1.2}</span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Double-click to fine tune fonts, spacing, and color in the typography panel.
+        <div className="text-xs text-[var(--text-muted)]">
+          Advanced text styling
         </div>
       </div>
 

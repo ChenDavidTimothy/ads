@@ -70,8 +70,8 @@ export function BatchNode({ id }: { id: string }) {
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
           Manage keys
         </Button>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Tags let you batch render subsets of your scene without duplicating nodes.
+        <div className="text-xs text-[var(--text-muted)]">
+          Batch processing
         </div>
       </div>
 

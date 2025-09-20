@@ -72,12 +72,11 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)]">
-          Incoming streams are merged in order—use the first input when you need deterministic
-          overrides.
+        <div className="text-xs text-[var(--text-muted)]">
+          Deterministic stream merging
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Helpful for bringing parallel branches back together after conditional logic.
+        <div className="text-xs text-[var(--text-muted)]">
+          Merge multiple streams
         </div>
       </div>
 

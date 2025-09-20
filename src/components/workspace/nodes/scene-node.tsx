@@ -72,8 +72,8 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
             {data.backgroundColor.toUpperCase()}
           </span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Configure quality and preset options here before exporting your final video.
+        <div className="text-xs text-[var(--text-muted)]">
+          Final video output
         </div>
       </div>
     </NodeCard>

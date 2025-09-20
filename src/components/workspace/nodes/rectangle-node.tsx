@@ -43,8 +43,8 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           <span>Aspect</span>
           <span className="font-medium text-[var(--text-primary)]">{aspectRatio}</span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Emits a clean rectangle—ideal for panels, masks, or layout primitives in later nodes.
+        <div className="text-xs text-[var(--text-muted)]">
+          Clean rectangular geometry
         </div>
       </div>
 

@@ -103,8 +103,8 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
           </div>
         </div>
 
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
-          Align both inputs to the same kind of content so the comparison behaves as expected.
+        <div className="text-xs text-[var(--text-muted)]">
+          Value comparison logic
         </div>
       </div>
 

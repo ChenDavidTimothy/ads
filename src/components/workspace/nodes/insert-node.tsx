@@ -54,8 +54,8 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           <span>Start time</span>
           <span className="font-medium text-[var(--text-primary)]">{appearanceTime}s</span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Double-click to configure per-object offsets or bind this start time to another node.
+        <div className="text-xs text-[var(--text-muted)]">
+          Timing control
         </div>
       </div>
 

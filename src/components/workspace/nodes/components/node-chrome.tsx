@@ -110,7 +110,7 @@ export function NodeCard({ selected, className, children, ...props }: NodeCardPr
     <Card
       selected={selected}
       className={cn(
-        'relative min-w-[var(--node-min-width)] overflow-hidden px-[var(--space-5)] py-[var(--space-4)]',
+        'relative w-auto px-[var(--space-5)] py-[var(--space-4)]',
         'flex flex-col gap-[var(--space-3)]',
         'shadow-[0_12px_28px_rgba(0,0,0,0.45)]',
         className
@@ -132,29 +132,27 @@ interface NodeHeaderProps {
 
 export function NodeHeader({ icon, title, accentClassName, subtitle, meta }: NodeHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-[var(--space-2)]">
-      <div className="flex min-w-0 items-start gap-[var(--space-2)]">
-        <div
-          className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
-            accentClassName
-          )}
-          aria-hidden="true"
-        >
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="truncate text-sm leading-tight font-semibold text-[var(--text-primary)]">
-            {title}
-          </div>
-          {subtitle ? (
-            <div className="text-[10px] tracking-[0.18em] text-[var(--text-tertiary)] uppercase">
-              {subtitle}
-            </div>
-          ) : null}
-        </div>
+    <div className="flex items-start gap-[var(--space-2)]">
+      <div
+        className={cn(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
+          accentClassName
+        )}
+        aria-hidden="true"
+      >
+        {icon}
       </div>
-      {meta ? <div className="shrink-0 text-xs text-[var(--text-secondary)]">{meta}</div> : null}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm leading-tight font-semibold text-[var(--text-primary)] break-words">
+          {title}
+        </div>
+        {subtitle ? (
+          <div className="text-[10px] tracking-[0.18em] text-[var(--text-tertiary)] uppercase">
+            {subtitle}
+          </div>
+        ) : null}
+      </div>
+      {meta ? <div className="shrink-0 text-xs text-[var(--text-secondary)] ml-auto">{meta}</div> : null}
     </div>
   );
 }
@@ -181,7 +179,7 @@ const BADGE_BASE_CLASS =
   'inline-flex items-center gap-[var(--space-1)] rounded-full px-[var(--space-2)] py-[var(--space-1)] text-[10px] font-semibold uppercase tracking-[0.08em]';
 
 const LABEL_BASE_CLASS =
-  'pointer-events-none absolute z-[2] flex max-w-[11.5rem] -translate-y-1/2 flex-col gap-[var(--space-1)] leading-tight';
+  'pointer-events-none absolute z-[2] flex max-w-[12rem] -translate-y-1/2 flex-col gap-[var(--space-1)] leading-tight';
 
 export function NodePortIndicator({
   id,
@@ -200,8 +198,8 @@ export function NodePortIndicator({
   const position = side === 'left' ? Position.Left : Position.Right;
   const labelPosition: CSSProperties =
     side === 'left'
-      ? { top, left: 'calc(var(--space-4) + 1.35rem)' }
-      : { top, right: 'calc(var(--space-4) + 1.35rem)' };
+      ? { top, left: 'calc(var(--space-4) + 0.75rem)' }
+      : { top, right: 'calc(var(--space-4) + 0.75rem)' };
   const containerAlignment = side === 'left' ? 'items-start text-left' : 'items-end text-right';
   const directionGlyph = icon ?? (
     <span aria-hidden="true" className="text-[0.65rem] leading-none">

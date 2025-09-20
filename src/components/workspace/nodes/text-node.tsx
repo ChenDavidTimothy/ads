@@ -39,8 +39,8 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
         <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[var(--text-primary)]">
           “{previewContent}”
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Source plain text that can be styled, animated, or duplicated further down the graph.
+        <div className="text-xs text-[var(--text-muted)]">
+          Text content source
         </div>
       </div>
 

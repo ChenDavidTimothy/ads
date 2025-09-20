@@ -73,8 +73,8 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
             {data.fillColor ?? '#ffffff'}
           </span>
         </div>
-        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
-          Double-click to adjust transforms and layer order in the canvas panel.
+        <div className="text-xs text-[var(--text-muted)]">
+          Canvas-based styling
         </div>
       </div>
 
