@@ -277,7 +277,7 @@ export default async function LandingPage() {
           <section id="product" className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
             <div className="mb-12 max-w-3xl">
               <h2 className="scroll-mt-24 text-3xl font-bold sm:text-4xl">
-                Benefits for every team — without adding headcount
+                More impact for every team — without more hiring
               </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
                 Variota gives marketing and merchandising teams a simple way to turn product data
