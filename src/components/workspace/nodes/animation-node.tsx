@@ -1,12 +1,12 @@
-// src/components/workspace/nodes/animation-node.tsx - Simplified single input/output ports
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { useMemo } from 'react';
+import type { NodeProps } from 'reactflow';
+import { Clapperboard } from 'lucide-react';
 import { transformFactory } from '@/shared/registry/transforms';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { NodeLayout, type PortConfig } from './components/node-layout';
 import type { AnimationNodeData } from '@/shared/types/nodes';
-import { Clapperboard } from 'lucide-react';
 
 interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
   onOpenTimeline?: () => void;
@@ -15,9 +15,63 @@ interface AnimationNodeProps extends NodeProps<AnimationNodeData> {
 export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeProps) {
   const nodeDefinition = getNodeDefinition('animation');
 
+  const inputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.inputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'input',
+          label: 'Objects to animate',
+          tooltip: 'Incoming objects that will be animated over time',
+          handleClassName: 'bg-[var(--node-animation)]',
+        },
+      ];
+    }
+
+    return definitions.map((port, index) => ({
+      id: port.id,
+      label: index === 0 ? 'Objects to animate' : port.label,
+      tooltip: 'Incoming objects that will be animated over time',
+      handleClassName: 'bg-[var(--node-animation)]',
+    }));
+  }, [nodeDefinition]);
+
+  const outputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.outputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'output',
+          label: 'Animated objects',
+          tooltip: 'Emits objects with keyframed animations applied',
+          handleClassName: 'bg-[var(--node-animation)]',
+        },
+      ];
+    }
+
+    return definitions.map((port) => ({
+      id: port.id,
+      label: 'Animated objects',
+      tooltip: 'Emits objects with keyframed animations applied',
+      handleClassName: 'bg-[var(--node-animation)]',
+    }));
+  }, [nodeDefinition]);
+
+  const trackCount = data.tracks?.length ?? 0;
+  const uniqueTypes = useMemo(
+    () => Array.from(new Set((data.tracks ?? []).map((track) => track.type))),
+    [data.tracks],
+  );
+
+  const trackColors = transformFactory.getTrackColors();
+  const trackIcons = transformFactory.getTrackIcons();
+
   const handleDoubleClick = () => {
-    if (onOpenTimeline) return onOpenTimeline();
-    // Fallback: navigate to dedicated timeline editor page preserving workspace
+    if (onOpenTimeline) {
+      onOpenTimeline();
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     const ws = params.get('workspace');
     const url = new URL(window.location.href);
@@ -27,83 +81,39 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
     window.history.pushState({}, '', url.toString());
   };
 
-  const trackCount = data.tracks?.length || 0;
-  const trackTypes = data.tracks?.map((t) => t.type) || [];
-  const uniqueTypes = [...new Set(trackTypes)];
-
-  const handleClass = 'bg-[var(--node-animation)]';
-
   return (
-    <Card
+    <NodeLayout
       selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)] transition-all hover:bg-[var(--surface-interactive)]"
+      title={data.identifier.displayName}
+      subtitle={`Duration ${data.duration}s`}
+      icon={<Clapperboard size={14} />}
+      iconClassName="bg-[var(--node-animation)]"
+      inputs={inputs}
+      outputs={outputs}
       onDoubleClick={handleDoubleClick}
+      measureDeps={[trackCount, uniqueTypes.join(','), data.duration]}
+      className="cursor-pointer"
     >
-      {/* Single input port */}
-      {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center justify-between">
-          <div className="flex min-w-0 flex-1 items-center gap-[var(--space-2)]">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-animation)] text-[var(--text-primary)]">
-              <Clapperboard size={12} />
-            </div>
-            <span className="font-semibold text-[var(--text-primary)]">
-              {data.identifier.displayName}
+      <div className="flex items-center justify-between text-xs">
+        <span>Tracks</span>
+        <span className="font-medium text-[var(--text-primary)]">{trackCount}</span>
+      </div>
+      {trackCount > 0 ? (
+        <div className="flex flex-wrap gap-[var(--space-1)] text-[10px] text-[var(--text-primary)]">
+          {uniqueTypes.map((type) => (
+            <span
+              key={type}
+              className={`rounded-[var(--radius-sm)] px-[var(--space-2)] py-[2px] ${
+                trackColors[type] ?? 'bg-[var(--surface-2)]'
+              }`}
+            >
+              {trackIcons[type] ?? '●'} {type}
             </span>
-          </div>
-          <div className="text-xs text-[var(--text-tertiary)]">{data.duration}s</div>
+          ))}
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-[var(--space-2)] p-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Tracks:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">{trackCount}</span>
-        </div>
-
-        {trackCount > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {uniqueTypes.map((type) => (
-              <span
-                key={type}
-                className={`rounded-[var(--radius-sharp)] px-[var(--space-2)] py-[var(--space-1)] text-xs ${transformFactory.getTrackColors()[type] ?? 'bg-[var(--surface-2)]'} text-[var(--text-primary)]`}
-              >
-                {transformFactory.getTrackIcons()[type] ?? '●'} {type}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {trackCount === 0 && (
-          <div className="py-2 text-center text-xs text-[var(--text-tertiary)]">No tracks</div>
-        )}
-
-        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
-          Variables can be bound in the timeline editor
-        </div>
-      </CardContent>
-
-      {/* Single output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-    </Card>
+      ) : (
+        <div className="text-xs text-[var(--text-secondary)]">No tracks configured yet</div>
+      )}
+    </NodeLayout>
   );
 }

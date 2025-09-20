@@ -1,27 +1,46 @@
-// src/components/workspace/nodes/result-node.tsx - Production-ready debug node with modal viewer
 'use client';
 
-import { useState } from 'react';
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import type { NodeProps } from 'reactflow';
+import { Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { NodeLayout, type PortConfig } from './components/node-layout';
 import type { ResultNodeData } from '@/shared/types/nodes';
 import { useDebugContext } from '../flow/debug-context';
 import { logger } from '@/lib/logger';
-import { Target } from 'lucide-react';
 
 interface ResultNodeProps extends NodeProps<ResultNodeData> {
   onOpenLogViewer?: (nodeId: string) => void;
 }
 
 export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps) {
-  const nodeDefinition = getNodeDefinition('result');
   const [isRunning, setIsRunning] = useState(false);
-
-  // Use debug context if available
   const debugContext = useDebugContext();
   const onRunToHere = debugContext?.runToNode;
+
+  const inputs = useMemo<PortConfig[]>(
+    () => [
+      {
+        id: 'input',
+        label: 'Flow to inspect',
+        tooltip: 'Data stream being observed by this result node',
+        handleClassName: 'bg-[var(--node-output)]',
+      },
+    ],
+    [],
+  );
+
+  const outputs = useMemo<PortConfig[]>(
+    () => [
+      {
+        id: 'output',
+        label: 'Last value',
+        tooltip: 'Outputs the most recent value captured here',
+        handleClassName: 'bg-[var(--node-output)]',
+      },
+    ],
+    [],
+  );
 
   const handleRunToHere = async () => {
     if (!onRunToHere) return;
@@ -36,67 +55,33 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
     }
   };
 
-  const handleDoubleClick = () => {
-    if (onOpenLogViewer) {
-      onOpenLogViewer(data.identifier.id);
-    }
-  };
-
-  const handleClass = 'bg-[var(--node-output)]';
-
   return (
-    <Card
+    <NodeLayout
       selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)] transition-all hover:bg-[var(--surface-interactive)]"
-      onDoubleClick={handleDoubleClick}
+      title={data.identifier.displayName}
+      subtitle={data.label || 'Inspect downstream results'}
+      icon={<Target size={14} />}
+      iconClassName="bg-[var(--node-output)]"
+      inputs={inputs}
+      outputs={outputs}
+      onDoubleClick={() => onOpenLogViewer?.(data.identifier.id)}
+      measureDeps={[isRunning, data.label]}
+      className="cursor-pointer"
     >
-      {/* Single input port */}
-      {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `35%` }}
-        />
-      ))}
-      {/* New output port to expose variable value */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `35%` }}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-output)] text-[var(--text-primary)]">
-            <Target size={12} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold text-[var(--text-primary)]">
-              {data.identifier.displayName}
-            </div>
-          </div>
+      <Button
+        onClick={handleRunToHere}
+        disabled={isRunning || !onRunToHere}
+        variant="primary"
+        size="sm"
+        className="w-full"
+      >
+        {isRunning ? 'Running…' : 'Run to here'}
+      </Button>
+      {data.lastValueType ? (
+        <div className="text-xs text-[var(--text-secondary)]">
+          Last value type: <span className="font-medium text-[var(--text-primary)]">{data.lastValueType}</span>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-[var(--space-3)] p-0">
-        <Button
-          onClick={handleRunToHere}
-          disabled={isRunning || !onRunToHere}
-          variant="primary"
-          size="sm"
-          className="w-full"
-        >
-          {isRunning ? 'Running...' : 'Run to Here'}
-        </Button>
-      </CardContent>
-    </Card>
+      ) : null}
+    </NodeLayout>
   );
 }

@@ -1,69 +1,69 @@
-// src/components/workspace/nodes/insert-node.tsx - Simplified single input/output ports
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
-import type { InsertNodeData } from '@/shared/types/nodes';
-import React from 'react';
+import { useMemo, useState } from 'react';
+import type { NodeProps } from 'reactflow';
+import { Clock3 } from 'lucide-react';
+import { NodeLayout, type PortConfig } from './components/node-layout';
 import { InsertModal } from './InsertModal';
+import type { InsertNodeData } from '@/shared/types/nodes';
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
-  const nodeDefinition = getNodeDefinition('insert');
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
-  const handleClass = 'bg-[var(--node-data)]';
+  const inputs = useMemo<PortConfig[]>(
+    () => [
+      {
+        id: 'input',
+        label: 'Object to schedule',
+        tooltip: 'Receives the object stream that should be timed',
+        handleClassName: 'bg-[var(--node-data)]',
+      },
+    ],
+    [],
+  );
+
+  const outputs = useMemo<PortConfig[]>(
+    () => [
+      {
+        id: 'output',
+        label: 'Timed object stream',
+        tooltip: 'Emits objects with the configured appearance time',
+        handleClassName: 'bg-[var(--node-data)]',
+      },
+    ],
+    [],
+  );
+
+  const customAssignments = Object.keys(data.appearanceTimeByObject ?? {}).length;
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
-      onDoubleClick={() => setOpen(true)}
-    >
-      {/* Single input port */}
-      {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-data)] text-sm font-bold text-[var(--text-primary)]">
-            ⏰
+    <>
+      <NodeLayout
+        selected={selected}
+        title={data.identifier.displayName}
+        subtitle={`Starts at ${data.appearanceTime}s`}
+        icon={<Clock3 size={14} />}
+        iconClassName="bg-[var(--node-data)]"
+        inputs={inputs}
+        outputs={outputs}
+        onDoubleClick={() => setOpen(true)}
+        footer="Double-click to edit individual timings"
+        measureDeps={[data.appearanceTime, customAssignments]}
+        className="cursor-pointer"
+      >
+        {customAssignments > 0 ? (
+          <div className="flex items-center justify-between">
+            <span>Custom overrides</span>
+            <span className="font-medium text-[var(--text-primary)]">{customAssignments}</span>
           </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
+        ) : (
+          <div className="text-[var(--text-secondary)]">Uses the default time for all objects</div>
+        )}
+      </NodeLayout>
 
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div>Appears at: {data.appearanceTime}s</div>
-        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
-          Double-click to edit per-object times
-        </div>
-      </CardContent>
-
-      {/* Single output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
       {open ? (
         <InsertModal isOpen={open} onClose={() => setOpen(false)} nodeId={data.identifier.id} />
       ) : null}
-    </Card>
+    </>
   );
 }

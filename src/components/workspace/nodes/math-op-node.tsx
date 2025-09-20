@@ -1,138 +1,138 @@
-// src/components/workspace/nodes/math-op-node.tsx - Math operation logic node
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
-import type { MathOpNodeData } from '@/shared/types/nodes';
+import { useMemo } from 'react';
+import type { NodeProps } from 'reactflow';
 import { Calculator } from 'lucide-react';
+import { getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
+import { NodeLayout, type PortConfig } from './components/node-layout';
+import type { MathOpNodeData } from '@/shared/types/nodes';
+
+function getOperatorLabel(operator: MathOpNodeData['operator']) {
+  switch (operator) {
+    case 'add':
+      return 'Add';
+    case 'subtract':
+      return 'Subtract';
+    case 'multiply':
+      return 'Multiply';
+    case 'divide':
+      return 'Divide';
+    case 'modulo':
+      return 'Modulo';
+    case 'power':
+      return 'Power';
+    case 'sqrt':
+      return 'Square root';
+    case 'abs':
+      return 'Absolute';
+    case 'min':
+      return 'Minimum';
+    case 'max':
+      return 'Maximum';
+    default:
+      return 'Math';
+  }
+}
+
+function getOperatorSymbol(operator: MathOpNodeData['operator']) {
+  switch (operator) {
+    case 'add':
+      return '+';
+    case 'subtract':
+      return '-';
+    case 'multiply':
+      return '×';
+    case 'divide':
+      return '÷';
+    case 'modulo':
+      return '%';
+    case 'power':
+      return '^';
+    case 'sqrt':
+      return '√';
+    case 'abs':
+      return '| |';
+    case 'min':
+      return 'min';
+    case 'max':
+      return 'max';
+    default:
+      return '?';
+  }
+}
 
 export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
-  const nodeDefinition = getNodeDefinitionWithDynamicPorts(
-    'math_op',
-    data as unknown as Record<string, unknown>
-  );
+  const nodeDefinition = getNodeDefinitionWithDynamicPorts('math_op', data as unknown as Record<string, unknown>);
 
-  const getOperatorDisplay = () => {
-    switch (data.operator) {
-      case 'add':
-        return 'ADD';
-      case 'subtract':
-        return 'SUB';
-      case 'multiply':
-        return 'MUL';
-      case 'divide':
-        return 'DIV';
-      case 'modulo':
-        return 'MOD';
-      case 'power':
-        return 'POW';
-      case 'sqrt':
-        return 'SQRT';
-      case 'abs':
-        return 'ABS';
-      case 'min':
-        return 'MIN';
-      case 'max':
-        return 'MAX';
+  const inputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.inputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'input_1',
+          label: 'Input 1',
+          tooltip: 'Numeric input',
+          handleClassName: 'bg-[var(--node-logic)]',
+          badge: '1',
+        },
+        {
+          id: 'input_2',
+          label: 'Input 2',
+          tooltip: 'Numeric input',
+          handleClassName: 'bg-[var(--node-logic)]',
+          badge: '2',
+        },
+      ];
     }
-  };
 
-  const getOperatorSymbol = () => {
-    switch (data.operator) {
-      case 'add':
-        return '+';
-      case 'subtract':
-        return '-';
-      case 'multiply':
-        return '×';
-      case 'divide':
-        return '÷';
-      case 'modulo':
-        return '%';
-      case 'power':
-        return '^';
-      case 'sqrt':
-        return '√A';
-      case 'abs':
-        return '|A|';
-      case 'min':
-        return 'min';
-      case 'max':
-        return 'max';
+    return definitions.map((port, index) => ({
+      id: port.id,
+      label: `Input ${index + 1}`,
+      tooltip: 'Numeric input',
+      handleClassName: 'bg-[var(--node-logic)]',
+      badge: String(index + 1),
+    }));
+  }, [nodeDefinition]);
+
+  const outputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.outputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'output',
+          label: 'Calculated value',
+          tooltip: 'Result of the math operation',
+          handleClassName: 'bg-[var(--node-logic)]',
+        },
+      ];
     }
-  };
 
-  const isUnaryOperation = () => data.operator === 'sqrt' || data.operator === 'abs';
+    return definitions.map((port) => ({
+      id: port.id,
+      label: 'Calculated value',
+      tooltip: 'Result of the math operation',
+      handleClassName: 'bg-[var(--node-logic)]',
+    }));
+  }, [nodeDefinition]);
 
-  const handleClass = 'bg-[var(--node-logic)]';
+  const isUnary = data.operator === 'sqrt' || data.operator === 'abs';
+  const symbol = getOperatorSymbol(data.operator);
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Dynamic input ports */}
-      {nodeDefinition?.ports.inputs.map((port, index) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `${35 + index * 30}%` }}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Calculator size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-0">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2 text-center">
-          <div className="font-mono text-sm text-[var(--text-primary)]">
-            Math ({getOperatorDisplay()})
-          </div>
-          <div className="mt-1 font-mono text-lg text-[var(--text-primary)]">
-            {isUnaryOperation() ? getOperatorSymbol() : `A ${getOperatorSymbol()} B`}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">
-            {getOperatorDisplay()}
-          </span>
-        </div>
-
-        <div className="text-center text-xs">
-          <span className="rounded-[var(--radius-sm)] bg-[var(--accent-100)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--accent-900)]">
-            Number Math
-          </span>
-        </div>
-
-        <div className="mt-3 border-t border-[var(--border-primary)] pt-2">
-          <div className="text-center text-xs text-[var(--text-tertiary)]">
-            {isUnaryOperation() ? '1 Input' : '2 Inputs'} → Number
-          </div>
-        </div>
-      </CardContent>
-
-      {/* Output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: '50%' }}
-        />
-      ))}
-    </Card>
+    <NodeLayout
+      selected={selected}
+      title={data.identifier.displayName}
+      subtitle={getOperatorLabel(data.operator)}
+      icon={<Calculator size={14} />}
+      iconClassName="bg-[var(--node-logic)]"
+      inputs={inputs}
+      outputs={outputs}
+      measureDeps={[data.operator, inputs.length]}
+    >
+      <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center font-mono text-sm text-[var(--text-primary)]">
+        {isUnary ? `${symbol}A` : `A ${symbol} B`}
+      </div>
+      <div className="text-xs text-[var(--text-secondary)]">Returns the numeric result of the expression.</div>
+    </NodeLayout>
   );
 }
