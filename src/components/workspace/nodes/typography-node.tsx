@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { NodeProps } from 'reactflow';
-import { Settings, Type } from 'lucide-react';
+import { Type } from 'lucide-react';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import { NodeLayout, type PortConfig } from './components/node-layout';
 import type { TypographyNodeData } from '@/shared/types/nodes';
@@ -90,7 +90,6 @@ export function TypographyNode({ data, selected, onOpenTypography }: TypographyN
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
       className="cursor-pointer"
-      headerAccessory={<Settings size={12} className="text-[var(--text-tertiary)]" />}
     >
       <div className="text-xs text-[var(--text-secondary)]">Font: {currentFont}</div>
       <div className="flex items-center justify-between text-xs">

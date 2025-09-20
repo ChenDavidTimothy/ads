@@ -486,9 +486,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  min-width: 1.75rem;
-  height: 1.75rem;
+  width: 0.75rem;
+  min-width: 0.75rem;
+  height: 0.75rem;
   border-radius: 9999px;
   background-color: var(--surface-2);
   border: 1px solid rgba(255, 255, 255, 0.12);

@@ -46,13 +46,6 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
       inputs={inputs}
       outputs={outputs}
     >
-      <div className="flex items-center justify-between text-xs">
-        <span>Priority</span>
-        <span className="font-medium text-[var(--text-primary)]">First connected stream</span>
-      </div>
-      <div className="text-xs text-[var(--text-secondary)]">
-        Later streams fill gaps without overriding existing IDs.
-      </div>
     </NodeLayout>
   );
 }

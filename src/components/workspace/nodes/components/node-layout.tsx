@@ -73,7 +73,7 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
     </span>
   ) : badge ? (
     <span
-      className="pointer-events-none inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-3)] text-[10px] font-semibold text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:bg-[var(--accent-primary)] group-hover:text-[var(--text-primary)]"
+      className="pointer-events-none inline-flex h-2 w-2 items-center justify-center rounded-full bg-[var(--surface-3)] text-[8px] font-semibold text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:bg-[var(--accent-primary)] group-hover:text-[var(--text-primary)]"
       aria-hidden="true"
     >
       {badge}
@@ -96,7 +96,6 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
       data-tooltip={tooltipText}
       aria-label={accessibleLabel}
       tabIndex={0}
-      title={accessibleLabel}
     >
       {indicator}
     </div>

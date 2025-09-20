@@ -75,7 +75,7 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
       label: port.label || `Input ${index + 1}`,
       tooltip: 'Numeric input',
       handleClassName: 'bg-[var(--node-logic)]',
-      badge: String(index + 1),
+      badge: index === 0 ? 'A' : index === 1 ? 'B' : String(index + 1),
     }));
   }, [nodeDefinition]);
 

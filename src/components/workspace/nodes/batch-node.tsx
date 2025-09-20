@@ -146,14 +146,8 @@ export function BatchNode({ id }: { id: string }) {
         outputs={outputs}
         onDoubleClick={() => setOpen(true)}
         className="cursor-pointer"
-        footer="Double-click or press Keys to manage batch outputs"
+        footer="Double-click to manage batch outputs"
       >
-        <div className="flex items-center gap-[var(--space-2)]">
-          <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-            Keys
-          </Button>
-          <span className="text-[10px] text-[var(--text-tertiary)]">Manage key list</span>
-        </div>
       </NodeLayout>
 
       {open ? (

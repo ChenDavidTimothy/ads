@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { NodeProps } from 'reactflow';
-import { Image, Settings } from 'lucide-react';
+import { Image } from 'lucide-react';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import { NodeLayout, type PortConfig } from './components/node-layout';
 import type { MediaNodeData } from '@/shared/types/nodes';
@@ -84,7 +84,6 @@ export function MediaNode({
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
       className="cursor-pointer"
-      headerAccessory={<Settings size={12} className="text-[var(--text-tertiary)]" />}
       footer="Double-click to edit in the Media tab"
     >
       <div className="text-xs text-[var(--text-secondary)]">Asset: {currentAsset}</div>
