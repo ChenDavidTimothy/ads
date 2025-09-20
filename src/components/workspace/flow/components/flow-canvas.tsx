@@ -116,6 +116,24 @@ const EDGE_STYLES = `
   border-color: var(--purple-shadow-strong) !important;
 }
 
+/* Minimap visibility fixes */
+.react-flow__minimap-node {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+.minimap-node-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Ensure minimap shows all nodes regardless of viewport */
+.react-flow__minimap {
+  overflow: visible !important;
+}
+
 .react-flow__connectionline {
   stroke: var(--edge-stroke-hover) !important;
   stroke-width: 4px !important;
@@ -244,7 +262,13 @@ export function FlowCanvas(props: Props) {
           <MiniMap
             className="shadow-glass rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--surface-1)]"
             nodeColor={nodeColorMemo}
-            maskColor="var(--surface-0)"
+            nodeStrokeColor="var(--border-primary)"
+            nodeStrokeWidth={1}
+            maskColor="transparent"
+            zoomable={true}
+            pannable={true}
+            position="bottom-right"
+            nodeClassNameFn={() => ''}
             style={{
               backgroundColor: 'var(--surface-1)',
               border: '1px solid var(--border-primary)',
