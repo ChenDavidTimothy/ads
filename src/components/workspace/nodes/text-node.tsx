@@ -1,9 +1,7 @@
 'use client';
 
-import type { NodeProps } from 'reactflow';
-
-import { NodeLayout } from './node-layout';
-import { buildPortDisplays } from './port-utils';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { TextNodeData } from '@/shared/types/nodes';
 import { Type } from 'lucide-react';
@@ -11,36 +9,41 @@ import { Type } from 'lucide-react';
 export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
   const nodeDefinition = getNodeDefinition('text');
 
-  const outputs = buildPortDisplays(nodeDefinition?.ports.outputs, 'output', {
-    output: {
-      label: 'Text content for scene layout',
-      description: 'Sends styled text content to typography or animation nodes.',
-    },
-  });
-
-  const content = data.content?.trim() || 'Hello World';
-  const preview = content.length > 28 ? `${content.substring(0, 25)}…` : content;
-  const fontSize = data.fontSize ?? 24;
+  const displayContent =
+    data.content?.length > 20
+      ? data.content.substring(0, 20) + '...'
+      : data.content || 'Hello World';
 
   return (
-    <NodeLayout
-      selected={selected}
-      title={data.identifier.displayName}
-      subtitle={`Preview: ${preview}`}
-      icon={<Type className="h-3 w-3" />}
-      iconBackgroundClass="bg-[var(--node-text)] text-[var(--text-primary)]"
-      inputs={[]}
-      outputs={outputs}
-      accentHandleClass="!bg-[var(--node-text)]"
-      footer="Double-click to edit text in the Typography tab"
-    >
-      <div className="rounded bg-[var(--surface-2)]/80 px-[var(--space-2)] py-[var(--space-1)] font-mono text-[10px] text-[var(--text-primary)]">
-        “{preview}”
-      </div>
-      <div className="flex items-center justify-between text-xs">
-        <span>Font size</span>
-        <span className="font-medium text-[var(--text-primary)]">{fontSize}px</span>
-      </div>
-    </NodeLayout>
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-text)] text-[var(--text-primary)]">
+            <Type size={12} />
+          </div>
+          <span className="font-semibold text-[var(--text-primary)]">
+            {data.identifier.displayName}
+          </span>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
+        <div className="rounded bg-[var(--surface-2)] p-1 font-mono text-[10px]">
+          &ldquo;{displayContent}&rdquo;
+        </div>
+        <div>Size: {data.fontSize || 24}px</div>
+      </CardContent>
+
+      {nodeDefinition?.ports.outputs.map((port) => (
+        <Handle
+          key={port.id}
+          type="source"
+          position={Position.Right}
+          id={port.id}
+          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-text)]"
+          style={{ top: '50%' }}
+        />
+      ))}
+    </Card>
   );
 }

@@ -506,28 +506,3 @@ body {
     box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
   }
 }
-
-/* Workspace node layout helpers */
-.node-center-zone {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.node-subtitle,
-.node-port-label-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: normal;
-  word-break: break-word;
-  text-overflow: ellipsis;
-}
-
-.node-subtitle {
-  -webkit-line-clamp: 2;
-}
-
-.node-port-label-text {
-  -webkit-line-clamp: 2;
-}
