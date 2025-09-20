@@ -33,7 +33,6 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
       iconClassName="bg-[var(--node-text)]"
       inputs={[]}
       outputs={outputs}
-      measureDeps={[data.fontSize, displayContent]}
     >
       <div className="flex items-center justify-between">
         <span>Font size</span>

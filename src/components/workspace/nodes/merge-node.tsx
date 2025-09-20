@@ -45,7 +45,6 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[portCount]}
     >
       <div className="flex items-center justify-between text-xs">
         <span>Priority</span>

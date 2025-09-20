@@ -81,7 +81,6 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
       inputs={inputs}
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
-      measureDeps={[]}
       className="cursor-pointer"
       footer="Double-click to edit in the Canvas tab"
     />

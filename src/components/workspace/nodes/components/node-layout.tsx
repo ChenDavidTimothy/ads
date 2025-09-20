@@ -1,11 +1,7 @@
 'use client';
 
 import {
-  useCallback,
-  useLayoutEffect,
   useMemo,
-  useRef,
-  useState,
   type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
@@ -14,9 +10,7 @@ import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const PORT_ZONE_MIN_WIDTH = 64;
-const PORT_ZONE_MAX_WIDTH = 168;
-const PORT_ZONE_PADDING = 12;
+const PORT_ZONE_WIDTH = 120; // Fixed width for all port zones
 const HANDLE_BASE_CLASS = 'h-3 w-3 !border-2 !border-[var(--text-primary)]';
 const TITLE_LINE_CLAMP_STYLE: CSSProperties = {
   display: '-webkit-box',
@@ -50,7 +44,6 @@ interface NodeLayoutProps {
   onDoubleClick?: () => void;
   className?: string;
   headerAccessory?: ReactNode;
-  measureDeps?: Array<string | number | boolean | null | undefined>;
 }
 
 interface PortBadgeProps {
@@ -104,31 +97,9 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
   );
 }
 
-interface LayoutState {
-  leftWidth: number;
-  rightWidth: number;
-  leftPositions: number[];
-  rightPositions: number[];
-}
+// Layout is now static - removed dynamic state
 
-const INITIAL_LAYOUT: LayoutState = {
-  leftWidth: 0,
-  rightWidth: 0,
-  leftPositions: [],
-  rightPositions: [],
-};
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function arraysClose(a: number[], b: number[], epsilon = 0.5) {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (Math.abs(a[i] - b[i]) > epsilon) return false;
-  }
-  return true;
-}
+// Removed unused utility functions - layout is now static
 
 export function NodeLayout({
   selected,
@@ -143,146 +114,52 @@ export function NodeLayout({
   onDoubleClick,
   className,
   headerAccessory,
-  measureDeps,
 }: NodeLayoutProps) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const leftBadgeRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const rightBadgeRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const leftRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const rightRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
+  // Static layout - no refs or state needed
 
   const hasInputs = inputs.length > 0;
   const hasOutputs = outputs.length > 0;
 
-  const measureKey = useMemo(() => {
-    if (!measureDeps || measureDeps.length === 0) return '';
-    return measureDeps.map((value) => `${value ?? ''}`).join('|');
-  }, [measureDeps]);
+  // No complex signatures needed - layout is static
 
-  const inputSignature = useMemo(
-    () => inputs.map((port) => `${port.id}:${port.label}`).join('|'),
-    [inputs],
-  );
-
-  const outputSignature = useMemo(
-    () => outputs.map((port) => `${port.id}:${port.label}`).join('|'),
-    [outputs],
-  );
-
-  const updateLayout = useCallback(() => {
-    const card = cardRef.current;
-    if (!card) return;
-
-    const cardRect = card.getBoundingClientRect();
-
-    let maxLeftWidth = 0;
-    let maxRightWidth = 0;
-
-    for (const port of inputs) {
-      const badge = leftBadgeRefs.current[port.id];
-      if (badge) {
-        const width = badge.scrollWidth;
-        if (width > maxLeftWidth) maxLeftWidth = width;
-      }
-    }
-
-    for (const port of outputs) {
-      const badge = rightBadgeRefs.current[port.id];
-      if (badge) {
-        const width = badge.scrollWidth;
-        if (width > maxRightWidth) maxRightWidth = width;
-      }
-    }
-
-    const leftWidth = hasInputs
-      ? clamp(Math.ceil(maxLeftWidth) + PORT_ZONE_PADDING, PORT_ZONE_MIN_WIDTH, PORT_ZONE_MAX_WIDTH)
-      : 0;
-    const rightWidth = hasOutputs
-      ? clamp(Math.ceil(maxRightWidth) + PORT_ZONE_PADDING, PORT_ZONE_MIN_WIDTH, PORT_ZONE_MAX_WIDTH)
-      : 0;
-
-    const leftPositions = inputs.map((port) => {
-      const row = leftRowRefs.current[port.id];
-      if (!row) return cardRect.height / 2;
-      const rect = row.getBoundingClientRect();
-      return rect.top - cardRect.top + rect.height / 2;
-    });
-
-    const rightPositions = outputs.map((port) => {
-      const row = rightRowRefs.current[port.id];
-      if (!row) return cardRect.height / 2;
-      const rect = row.getBoundingClientRect();
-      return rect.top - cardRect.top + rect.height / 2;
-    });
-
-    setLayout((prev) => {
-      if (
-        prev.leftWidth === leftWidth &&
-        prev.rightWidth === rightWidth &&
-        arraysClose(prev.leftPositions, leftPositions) &&
-        arraysClose(prev.rightPositions, rightPositions)
-      ) {
-        return prev;
-      }
-      return {
-        leftWidth,
-        rightWidth,
-        leftPositions,
-        rightPositions,
-      };
-    });
-  }, [hasInputs, hasOutputs, inputs, outputs]);
-
-  useLayoutEffect(() => {
-    let frame: number | null = null;
-    const runMeasure = () => {
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        updateLayout();
-        frame = null;
-      });
-    };
-
-    runMeasure();
-
-    if (cardRef.current && 'ResizeObserver' in window) {
-      const observer = new ResizeObserver(() => {
-        runMeasure();
-      });
-      observer.observe(cardRef.current);
-      return () => {
-        observer.disconnect();
-        if (frame) cancelAnimationFrame(frame);
-      };
-    }
-
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [updateLayout, inputSignature, outputSignature, measureKey, subtitle]);
-
+  // Static layout calculation - fixed width for all cases
   const gridTemplateColumns = useMemo(() => {
     const columns: string[] = [];
-    if (hasInputs) columns.push(`${Math.max(layout.leftWidth, PORT_ZONE_MIN_WIDTH)}px`);
+    if (hasInputs) columns.push(`${PORT_ZONE_WIDTH}px`);
     columns.push('minmax(0, 1fr)');
-    if (hasOutputs) columns.push(`${Math.max(layout.rightWidth, PORT_ZONE_MIN_WIDTH)}px`);
+    if (hasOutputs) columns.push(`${PORT_ZONE_WIDTH}px`);
     return columns.join(' ');
-  }, [hasInputs, hasOutputs, layout.leftWidth, layout.rightWidth]);
+  }, [hasInputs, hasOutputs]);
 
+  // Simple handle positioning for common port counts
   const handleLeftTop = (index: number) => {
-    if (!hasInputs || !layout.leftPositions.length) return '50%';
-    return `${layout.leftPositions[index]}px`;
+    if (!hasInputs) return '50%';
+    const totalPorts = inputs.length;
+
+    // Simple positioning for common cases
+    if (totalPorts === 1) return '50%';
+    if (totalPorts === 2) return index === 0 ? '33%' : '67%';
+    if (totalPorts === 3) return index === 0 ? '25%' : index === 1 ? '50%' : '75%';
+
+    // Fallback for more ports
+    return `${((index + 1) / (totalPorts + 1)) * 100}%`;
   };
 
   const handleRightTop = (index: number) => {
-    if (!hasOutputs || !layout.rightPositions.length) return '50%';
-    return `${layout.rightPositions[index]}px`;
+    if (!hasOutputs) return '50%';
+    const totalPorts = outputs.length;
+
+    // Simple positioning for common cases
+    if (totalPorts === 1) return '50%';
+    if (totalPorts === 2) return index === 0 ? '33%' : '67%';
+    if (totalPorts === 3) return index === 0 ? '25%' : index === 1 ? '50%' : '75%';
+
+    // Fallback for more ports
+    return `${((index + 1) / (totalPorts + 1)) * 100}%`;
   };
 
   return (
     <Card
-      ref={cardRef}
       selected={selected}
       onDoubleClick={onDoubleClick}
       className={cn('min-w-[var(--node-min-width)] p-[var(--card-padding)]', className)}
@@ -322,25 +199,12 @@ export function NodeLayout({
             {inputs.map((port) => (
               <div
                 key={port.id}
-                ref={(element) => {
-                  if (element) {
-                    leftRowRefs.current[port.id] = element;
-                  } else {
-                    delete leftRowRefs.current[port.id];
-                  }
-                }}
                 className="flex w-full justify-end"
               >
                 <PortBadge
                   side="input"
                   config={port}
-                  onRef={(element) => {
-                    if (element) {
-                      leftBadgeRefs.current[port.id] = element;
-                    } else {
-                      delete leftBadgeRefs.current[port.id];
-                    }
-                  }}
+                  onRef={() => {}} // No-op - static layout
                 />
               </div>
             ))}
@@ -394,25 +258,12 @@ export function NodeLayout({
             {outputs.map((port) => (
               <div
                 key={port.id}
-                ref={(element) => {
-                  if (element) {
-                    rightRowRefs.current[port.id] = element;
-                  } else {
-                    delete rightRowRefs.current[port.id];
-                  }
-                }}
                 className="flex w-full justify-start"
               >
                 <PortBadge
                   side="output"
                   config={port}
-                  onRef={(element) => {
-                    if (element) {
-                      rightBadgeRefs.current[port.id] = element;
-                    } else {
-                      delete rightBadgeRefs.current[port.id];
-                    }
-                  }}
+                  onRef={() => {}} // No-op - static layout
                 />
               </div>
             ))}

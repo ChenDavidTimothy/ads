@@ -127,7 +127,6 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[data.operator, inputs.length]}
     >
       <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center font-mono text-sm text-[var(--text-primary)]">
         {isUnary ? `${symbol}A` : `A ${symbol} B`}
