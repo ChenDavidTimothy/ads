@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { HydrateClient, api } from '@/trpc/server';
 import { createClient } from '@/utils/supabase/server';
+import { withTimeout } from '@/utils/timeout-utils';
 import type { User } from '@supabase/supabase-js';
 
 import { EarlyAccessForm } from './_components/early-access-form';
@@ -38,10 +39,14 @@ import {
   pilotHighlights,
   faqs,
   accessibilityNotes,
+  type CapabilityGroupTitle,
 } from './landing.content';
 
 // Cache public traffic for 60 seconds while preserving auth redirects
 export const revalidate = 60;
+
+// Force dynamic rendering since auth check can cause redirects
+export const dynamic = 'force-dynamic';
 
 // SEO metadata for search engines and social sharing
 export const metadata = {
@@ -67,66 +72,63 @@ export const metadata = {
 };
 
 export default async function LandingPage() {
-  // Optimize Supabase auth call with timeout guard
+  // Check auth with timeout to avoid blocking anonymous page loads
   let user: User | null = null;
   try {
     const supabase = await createClient();
-    const authPromise = supabase.auth.getUser();
-
-    // Add 3-second timeout to prevent slow auth from blocking the page
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Auth timeout')), 3000)
-    );
-
-    const result = await Promise.race([authPromise, timeoutPromise]);
-    const { data } = result as { data: { user: User | null } };
-    user = data.user ?? null;
+    const result = await withTimeout(supabase.auth.getUser(), 3000, 'Auth check');
+    user = (result as { data: { user: User | null } })?.data?.user ?? null;
   } catch (error) {
-    // Auth failed or timed out - continue with anonymous user
-    console.warn(
-      'Auth check failed or timed out:',
-      error instanceof Error ? error.message : String(error)
-    );
+    console.warn('[landing] Auth check failed or timed out:', error instanceof Error ? error.message : String(error));
   }
 
   if (user) {
     redirect('/dashboard');
   }
 
-  // Guard TRPC call to prevent blocking if it fails
-  let hello = null;
-  try {
-    hello = await api.post.hello({ text: 'from Variota' });
-  } catch (error) {
-    console.warn('TRPC hello call failed:', error instanceof Error ? error.message : String(error));
-  }
+  // Optional TRPC call with timeout to avoid blocking anonymous page loads
+  const hello = await withTimeout(
+    api.post.hello({ text: 'from Variota' }).catch(() => null),
+    800,
+    'Hello message'
+  ).catch(() => null);
 
   return (
     <HydrateClient>
       {/* Structured data for SEO */}
-      <Script type="application/ld+json" id="organization-jsonld">
-        {JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: 'Variota',
-          url: 'https://variota.com',
-          logo: 'https://variota.com/logo.png',
-          sameAs: ['https://www.linkedin.com/company/variota'],
-        })}
-      </Script>
-      <Script type="application/ld+json" id="website-jsonld">
-        {JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: 'Variota',
-          url: 'https://variota.com',
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: 'https://variota.com/?q={search_term_string}',
-            'query-input': 'required name=search_term_string',
-          },
-        })}
-      </Script>
+      <Script
+        id="organization-jsonld"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Variota',
+            url: 'https://variota.com',
+            logo: 'https://variota.com/logo.png',
+            sameAs: ['https://www.linkedin.com/company/variota'],
+          }),
+        }}
+      />
+      <Script
+        id="website-jsonld"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Variota',
+            url: 'https://variota.com',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://variota.com/?q={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          }),
+        }}
+      />
 
       <div className="min-h-screen bg-[var(--surface-0)] text-[var(--text-primary)]">
         <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/90 backdrop-blur-xl">
@@ -184,7 +186,7 @@ export default async function LandingPage() {
               <div className="grid gap-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
                 <div>
                   <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance sm:text-5xl md:text-6xl">
-                    Data‑driven creative with no‑code, node‑based rules - at scale
+                    Data‑driven creative with no‑code, node‑based rules — at scale
                   </h1>
                   <p className="mt-6 max-w-2xl text-lg text-[var(--text-secondary)] sm:text-xl">
                     Build visual rules for prices, discounts, markets, and inventory that trigger
@@ -193,15 +195,15 @@ export default async function LandingPage() {
                   </p>
                   <ul className="mt-6 space-y-2 text-sm text-[var(--text-tertiary)]">
                     <li>
-                      • If discount ≥ 20% → show red &quot;Save &#123;discount&#125;%&quot; badge
+                      If discount ≥ 20% → show red &quot;Save &#123;discount&#125;%&quot; badge
                       across all eligible SKUs
                     </li>
                     <li>
-                      • If market = FR → use EUR, comma decimal, and French legal copy across French
+                      If market = FR → use EUR, comma decimal, and French legal copy across French
                       variants
                     </li>
                     <li>
-                      • If inventory &lt; threshold → switch to &quot;Limited stock&quot; layout
+                      If inventory &lt; threshold → switch to &quot;Limited stock&quot; layout
                       with pulse for those products
                     </li>
                   </ul>
@@ -250,6 +252,7 @@ export default async function LandingPage() {
                       />
                       <p className="text-lg font-medium">Data → Node Rules → Variants</p>
                       <p className="mt-2 text-sm">Coming soon: Visual rule builder demo</p>
+                      <span className="sr-only">Visual rule builder demo coming soon</span>
                     </div>
                   </div>
                   <figcaption className="mt-6 text-sm text-[var(--text-tertiary)]">
@@ -274,7 +277,7 @@ export default async function LandingPage() {
           <section id="product" className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
             <div className="mb-12 max-w-3xl">
               <h2 className="scroll-mt-24 text-3xl font-bold sm:text-4xl">
-                Benefits for every team - without adding headcount
+                Benefits for every team — without adding headcount
               </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
                 Variota gives marketing and merchandising teams a simple way to turn product data
@@ -353,6 +356,7 @@ export default async function LandingPage() {
                   />
                   <p className="text-lg font-medium">Interactive workflow preview</p>
                   <p className="mt-2 text-sm">Coming soon: Step-by-step visual guide</p>
+                  <span className="sr-only">Interactive workflow preview coming soon</span>
                 </div>
               </div>
             </div>
@@ -381,37 +385,32 @@ export default async function LandingPage() {
                 </p>
               </div>
               <div className="mt-12 grid gap-8 lg:grid-cols-2">
-                {capabilityGroups.map((group) => (
-                  <Card key={group.title} variant="glass" className="p-6">
-                    <div className="flex items-center gap-3">
-                      {group.title === 'Data & Logic' && (
-                        <Database
-                          className="h-5 w-5 text-[var(--accent-primary)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {group.title === 'Creative Generation' && (
-                        <Sparkles
-                          className="h-5 w-5 text-[var(--node-animation)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {group.title === 'Brand & Compliance' && (
-                        <ShieldCheck
-                          className="h-5 w-5 text-[var(--accent-success)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {group.title === 'Workflow & Delivery' && (
-                        <Workflow
-                          className="h-5 w-5 text-[var(--accent-secondary)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                        {group.title}
-                      </h3>
-                    </div>
+                {capabilityGroups.map((group) => {
+                  const iconMap = {
+                    'Data & Logic': Database,
+                    'Creative Generation': Sparkles,
+                    'Brand & Compliance': ShieldCheck,
+                    'Workflow & Delivery': Workflow,
+                  } as const satisfies Record<CapabilityGroupTitle, typeof Database>;
+
+                  const colorMap = {
+                    'Data & Logic': 'var(--accent-primary)',
+                    'Creative Generation': 'var(--node-animation)',
+                    'Brand & Compliance': 'var(--accent-success)',
+                    'Workflow & Delivery': 'var(--accent-secondary)',
+                  } as const satisfies Record<CapabilityGroupTitle, string>;
+
+                  const Icon = iconMap[group.title as CapabilityGroupTitle] ?? CheckCircle2;
+                  const color = colorMap[group.title as CapabilityGroupTitle] ?? 'var(--accent-primary)';
+
+                  return (
+                    <Card key={group.title} variant="glass" className="p-6">
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" style={{ color }} aria-hidden="true" />
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                          {group.title}
+                        </h3>
+                      </div>
                     <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                       {group.items.map((item) => (
                         <li key={item.text} className="flex items-start gap-3">
@@ -430,8 +429,9 @@ export default async function LandingPage() {
                         </li>
                       ))}
                     </ul>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -461,7 +461,7 @@ export default async function LandingPage() {
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">
-                  Ship more promotions faster - without sacrificing brand control
+                  Ship more promotions faster — without sacrificing brand control
                 </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
@@ -660,6 +660,7 @@ export default async function LandingPage() {
                         />
                         <p className="text-lg font-medium">2-minute demo video</p>
                         <p className="mt-2 text-sm">Coming soon: Live walkthrough</p>
+                        <span className="sr-only">Demo video coming soon</span>
                       </div>
                     </div>
                   </div>
@@ -875,7 +876,7 @@ export default async function LandingPage() {
                       <Link
                         href="https://www.linkedin.com"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="hover:text-[var(--text-primary)]"
                       >
                         LinkedIn
