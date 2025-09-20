@@ -147,8 +147,7 @@ export function BatchNode({ id }: { id: string }) {
         onDoubleClick={() => setOpen(true)}
         className="cursor-pointer"
         footer="Double-click to manage batch outputs"
-      >
-      </NodeLayout>
+      ></NodeLayout>
 
       {open ? (
         <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch Keys" size="sm">
