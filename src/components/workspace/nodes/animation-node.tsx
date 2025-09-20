@@ -91,9 +91,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
             No keyframes yet—double-click to open the timeline.
           </div>
         )}
-        <div className="text-xs text-[var(--text-muted)]">
-          Timeline-based animation
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Timeline-based animation</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

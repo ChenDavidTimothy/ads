@@ -87,9 +87,7 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
             />
           </div>
         ) : null}
-        <div className="text-xs text-[var(--text-muted)]">
-          Fixed value source
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Fixed value source</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

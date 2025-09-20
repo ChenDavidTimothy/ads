@@ -81,9 +81,7 @@ export function TypographyNode({ data, selected, onOpenTypography }: TypographyN
           <span>Line height</span>
           <span className="font-medium text-[var(--text-primary)]">{data.lineHeight ?? 1.2}</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Advanced text styling
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Advanced text styling</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

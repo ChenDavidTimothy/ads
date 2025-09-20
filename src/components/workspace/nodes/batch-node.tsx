@@ -2,7 +2,6 @@
 'use client';
 
 import React from 'react';
-import type { NodeProps } from 'reactflow';
 import { Tag } from 'lucide-react';
 
 import { useWorkspace } from '@/components/workspace/workspace-context';
@@ -70,9 +69,7 @@ export function BatchNode({ id }: { id: string }) {
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
           Manage keys
         </Button>
-        <div className="text-xs text-[var(--text-muted)]">
-          Batch processing
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Batch processing</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

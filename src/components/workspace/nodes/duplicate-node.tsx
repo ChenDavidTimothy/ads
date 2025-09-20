@@ -49,9 +49,7 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
         <div className="text-xs text-[var(--text-muted)]">
           {data.count === 1 ? 'Pass-through mode' : `${data.count} total copies`}
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Creates multiple copies
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Creates multiple copies</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

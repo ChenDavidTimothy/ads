@@ -23,7 +23,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
   const category = nodeDefinition?.execution.category;
   const visuals = getNodeCategoryVisuals(category);
   const categoryLabel = getNodeCategoryLabel(category);
-  const portCount = data.inputPortCount || nodeDefinition?.ports.inputs.length || 2;
+  const portCount = data.inputPortCount ?? nodeDefinition?.ports.inputs.length ?? 2;
 
   const getPortTopPosition = (index: number) => {
     if (portCount <= 2) {
@@ -72,12 +72,8 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="text-xs text-[var(--text-muted)]">
-          Deterministic stream merging
-        </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Merge multiple streams
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Deterministic stream merging</div>
+        <div className="text-xs text-[var(--text-muted)]">Merge multiple streams</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

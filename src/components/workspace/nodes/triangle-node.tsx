@@ -38,9 +38,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
           <span>Orientation</span>
           <span className="font-medium text-[var(--text-primary)]">Centered upright</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Triangular geometry
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Triangular geometry</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

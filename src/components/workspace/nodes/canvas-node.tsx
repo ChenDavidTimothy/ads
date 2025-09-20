@@ -73,9 +73,7 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
             {data.fillColor ?? '#ffffff'}
           </span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Canvas-based styling
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Canvas-based styling</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

@@ -37,9 +37,7 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
           <span>Edge softness</span>
           <span className="font-medium text-[var(--text-primary)]">Perfectly round</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Smooth circular geometry
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Smooth circular geometry</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

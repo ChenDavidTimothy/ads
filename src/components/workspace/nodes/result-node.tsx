@@ -85,9 +85,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         >
           {isRunning ? 'Running…' : 'Run to Here'}
         </Button>
-        <div className="text-xs text-[var(--text-muted)]">
-          Debug and inspect data
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Debug and inspect data</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

@@ -72,9 +72,7 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
             {data.backgroundColor.toUpperCase()}
           </span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Final video output
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Final video output</div>
       </div>
     </NodeCard>
   );

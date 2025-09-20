@@ -103,9 +103,7 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
           </div>
         </div>
 
-        <div className="text-xs text-[var(--text-muted)]">
-          Value comparison logic
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Value comparison logic</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

@@ -9,7 +9,8 @@ import {
 
 const safeHeight = (value: number) => Math.max(value, NODE_PORT_MIN_HEIGHT);
 
-const spacingFor = (a: number, b: number) => safeHeight(a) / 2 + safeHeight(b) / 2 + NODE_PORT_MIN_GAP;
+const spacingFor = (a: number, b: number) =>
+  safeHeight(a) / 2 + safeHeight(b) / 2 + NODE_PORT_MIN_GAP;
 
 describe('computePortLayout', () => {
   it('prevents overlaps when preferred anchors cluster together', () => {
@@ -25,9 +26,14 @@ describe('computePortLayout', () => {
 
     // Ensure ordering is preserved and spacing is enforced.
     for (let index = 0; index < centers.length - 1; index += 1) {
-      expect(centers[index]).toBeLessThan(centers[index + 1]);
-      const minimumSpacing = spacingFor(inputs[index].height, inputs[index + 1].height);
-      expect(centers[index + 1] - centers[index]).toBeGreaterThanOrEqual(minimumSpacing - 0.5);
+      const currentCenter = centers[index]!;
+      const nextCenter = centers[index + 1]!;
+      const currentInput = inputs[index]!;
+      const nextInput = inputs[index + 1]!;
+
+      expect(currentCenter).toBeLessThan(nextCenter);
+      const minimumSpacing = spacingFor(currentInput.height, nextInput.height);
+      expect(nextCenter - currentCenter).toBeGreaterThanOrEqual(minimumSpacing - 0.5);
     }
   });
 
@@ -62,14 +68,16 @@ describe('computePortLayout', () => {
     expect(bottomCenter).toBeDefined();
 
     if (topCenter && bottomCenter) {
-      const halfHeight = safeHeight(inputs[0].height) / 2;
+      const firstInput = inputs[0];
+      const secondInput = inputs[1];
+      const halfHeight = safeHeight(firstInput!.height) / 2;
       const lowerBound = NODE_PORT_EDGE_PADDING + halfHeight;
       const upperBound = containerHeight - NODE_PORT_EDGE_PADDING - halfHeight;
 
       expect(topCenter).toBeGreaterThanOrEqual(lowerBound - 0.5);
       expect(bottomCenter).toBeLessThanOrEqual(upperBound + 0.5);
       expect(bottomCenter - topCenter).toBeGreaterThanOrEqual(
-        spacingFor(inputs[0].height, inputs[1].height) - 0.5
+        spacingFor(firstInput!.height, secondInput!.height) - 0.5
       );
     }
   });

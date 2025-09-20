@@ -52,9 +52,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="text-xs text-[var(--text-muted)]">
-          Conditional routing
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Conditional routing</div>
       </div>
 
       <NodePortIndicator

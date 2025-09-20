@@ -112,9 +112,7 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
           </div>
         </div>
 
-        <div className="text-xs text-[var(--text-muted)]">
-          Boolean logic operations
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Boolean logic operations</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

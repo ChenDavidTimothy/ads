@@ -32,9 +32,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
       />
 
       <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="text-xs text-[var(--text-muted)]">
-          Image asset source
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Image asset source</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

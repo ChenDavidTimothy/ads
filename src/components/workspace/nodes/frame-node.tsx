@@ -75,9 +75,7 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
             <span className="font-medium text-[var(--text-primary)]">{data.quality ?? 90}</span>
           </div>
         ) : null}
-        <div className="text-xs text-[var(--text-muted)]">
-          Still image output
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Still image output</div>
       </div>
     </NodeCard>
   );

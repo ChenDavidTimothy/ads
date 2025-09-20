@@ -113,9 +113,7 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
         <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-center text-[var(--text-primary)]">
           {isUnaryOperation ? `${getOperatorSymbol()} A` : `A ${getOperatorSymbol()} B`}
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Mathematical operations
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Mathematical operations</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

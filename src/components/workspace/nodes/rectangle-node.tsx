@@ -43,9 +43,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
           <span>Aspect</span>
           <span className="font-medium text-[var(--text-primary)]">{aspectRatio}</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Clean rectangular geometry
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Clean rectangular geometry</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

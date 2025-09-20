@@ -54,9 +54,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
           <span>Start time</span>
           <span className="font-medium text-[var(--text-primary)]">{appearanceTime}s</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Timing control
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Timing control</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (

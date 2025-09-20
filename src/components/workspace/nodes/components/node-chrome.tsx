@@ -103,44 +103,44 @@ export function computePortLayout(
   const layoutHeight = Math.max(containerHeight, requiredHeight);
 
   const positions = new Map<string, number>();
-  const halfHeights = normalizedPorts.map((port) => port.height / 2);
-  const minCenters = halfHeights.map((half) => edgePadding + half);
-  const maxCenters = halfHeights.map((half) => layoutHeight - edgePadding - half);
-  const centers = normalizedPorts.map((port, index) => {
+  const halfHeights: number[] = normalizedPorts.map((port) => port.height / 2);
+  const minCenters: number[] = halfHeights.map((half) => edgePadding + half);
+  const maxCenters: number[] = halfHeights.map((half) => layoutHeight - edgePadding - half);
+  const centers: number[] = normalizedPorts.map((port, index) => {
     const ideal = port.preferredTop * layoutHeight;
-    return clamp(ideal, minCenters[index], maxCenters[index]);
+    // TypeScript doesn't know arrays have same length, so we use non-null assertion
+    const minCenter = minCenters[index]!;
+    const maxCenter = maxCenters[index]!;
+    return clamp(ideal, minCenter, maxCenter);
   });
 
   // Forward pass - enforce minimum spacing moving downward
   for (let index = 1; index < centers.length; index += 1) {
-    const minAllowed =
-      centers[index - 1] + halfHeights[index - 1] + halfHeights[index] + minGap;
-    if (centers[index] < minAllowed) {
-      centers[index] = Math.min(minAllowed, maxCenters[index]);
+    const minAllowed = centers[index - 1]! + halfHeights[index - 1]! + halfHeights[index]! + minGap;
+    if (centers[index]! < minAllowed) {
+      centers[index] = Math.min(minAllowed, maxCenters[index]!);
     }
   }
 
   // Backward pass - ensure we respect bottom boundary and pull items upward if needed
   for (let index = centers.length - 2; index >= 0; index -= 1) {
-    const maxAllowed =
-      centers[index + 1] - halfHeights[index + 1] - halfHeights[index] - minGap;
-    if (centers[index] > maxAllowed) {
-      centers[index] = Math.max(maxAllowed, minCenters[index]);
+    const maxAllowed = centers[index + 1]! - halfHeights[index + 1]! - halfHeights[index]! - minGap;
+    if (centers[index]! > maxAllowed) {
+      centers[index] = Math.max(maxAllowed, minCenters[index]!);
     }
   }
 
   // Final forward normalization to ensure constraints remain satisfied
   for (let index = 1; index < centers.length; index += 1) {
-    const minAllowed =
-      centers[index - 1] + halfHeights[index - 1] + halfHeights[index] + minGap;
-    if (centers[index] < minAllowed) {
+    const minAllowed = centers[index - 1]! + halfHeights[index - 1]! + halfHeights[index]! + minGap;
+    if (centers[index]! < minAllowed) {
       centers[index] = minAllowed;
     }
-    centers[index] = clamp(centers[index], minCenters[index], maxCenters[index]);
+    centers[index] = clamp(centers[index]!, minCenters[index]!, maxCenters[index]!);
   }
 
   normalizedPorts.forEach((port, index) => {
-    positions.set(port.id, centers[index]);
+    positions.set(port.id, centers[index]!);
   });
 
   return { positions, requiredHeight };
@@ -415,7 +415,7 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
         selected={selected}
         data-node-card-root
         className={cn(
-          'relative w-auto min-w-[18rem] max-w-[28rem] px-[var(--space-5)] py-[var(--space-4)]',
+          'relative w-auto max-w-[28rem] min-w-[18rem] px-[var(--space-5)] py-[var(--space-4)]',
           'flex flex-col gap-[var(--space-3)]',
           'shadow-[0_12px_28px_rgba(0,0,0,0.45)]',
           className
@@ -449,9 +449,9 @@ export function NodeHeader({ icon, title, accentClassName, subtitle, meta }: Nod
       >
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div
-          className="text-sm font-semibold leading-tight text-[var(--text-primary)] truncate"
+          className="truncate text-sm leading-tight font-semibold text-[var(--text-primary)]"
           title={title}
         >
           {title}
@@ -462,7 +462,9 @@ export function NodeHeader({ icon, title, accentClassName, subtitle, meta }: Nod
           </div>
         ) : null}
       </div>
-      {meta ? <div className="shrink-0 text-xs text-[var(--text-secondary)] ml-auto">{meta}</div> : null}
+      {meta ? (
+        <div className="ml-auto shrink-0 text-xs text-[var(--text-secondary)]">{meta}</div>
+      ) : null}
     </div>
   );
 }
@@ -494,8 +496,7 @@ const LABEL_BASE_CLASS =
 const PORT_LABEL_TEXT_CLASS =
   'min-w-0 whitespace-normal text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]';
 
-const DESCRIPTION_TEXT_CLASS =
-  'text-[11px] font-medium text-[var(--text-secondary)]';
+const DESCRIPTION_TEXT_CLASS = 'text-[11px] font-medium text-[var(--text-secondary)]';
 
 const LABEL_OFFSET = 'calc(var(--space-4) + 0.75rem)';
 
@@ -627,11 +628,7 @@ export function NodePortIndicator({
         aria-label={ariaLabel ?? `${type === 'target' ? 'Input' : 'Output'} • ${label}`}
         onDoubleClick={onHandleDoubleClick}
       />
-      <div
-        ref={labelRef}
-        className={cn(LABEL_BASE_CLASS, alignmentClass)}
-        style={labelPosition}
-      >
+      <div ref={labelRef} className={cn(LABEL_BASE_CLASS, alignmentClass)} style={labelPosition}>
         <span className={cn(BADGE_BASE_CLASS, resolvedBadgeClass)} title={label}>
           {directionGlyph}
           <span className={PORT_LABEL_TEXT_CLASS} style={LABEL_CLAMP_STYLE}>

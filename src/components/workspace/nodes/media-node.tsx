@@ -59,6 +59,7 @@ export function MediaNode({ data, selected, onOpenMedia }: MediaNodeProps) {
       ))}
 
       <NodeHeader
+        // eslint-disable-next-line jsx-a11y/alt-text
         icon={<Image size={14} />}
         title={data.identifier.displayName}
         accentClassName={visuals.iconBg}
@@ -80,9 +81,7 @@ export function MediaNode({ data, selected, onOpenMedia }: MediaNodeProps) {
           <span>Display</span>
           <span className="font-medium text-[var(--text-primary)]">{displayInfo}</span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">
-          Advanced media processing
-        </div>
+        <div className="text-xs text-[var(--text-muted)]">Advanced media processing</div>
       </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (
