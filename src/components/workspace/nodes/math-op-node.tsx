@@ -1,40 +1,51 @@
-// src/components/workspace/nodes/math-op-node.tsx - Math operation logic node
+// src/components/workspace/nodes/math-op-node.tsx - Math operation node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Calculator } from 'lucide-react';
+
 import { getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import type { MathOpNodeData } from '@/shared/types/nodes';
-import { Calculator } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
   const nodeDefinition = getNodeDefinitionWithDynamicPorts(
     'math_op',
     data as unknown as Record<string, unknown>
   );
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const getOperatorDisplay = () => {
     switch (data.operator) {
       case 'add':
-        return 'ADD';
+        return 'Add';
       case 'subtract':
-        return 'SUB';
+        return 'Subtract';
       case 'multiply':
-        return 'MUL';
+        return 'Multiply';
       case 'divide':
-        return 'DIV';
+        return 'Divide';
       case 'modulo':
-        return 'MOD';
+        return 'Modulo';
       case 'power':
-        return 'POW';
+        return 'Power';
       case 'sqrt':
-        return 'SQRT';
+        return 'Square root';
       case 'abs':
-        return 'ABS';
+        return 'Absolute';
       case 'min':
-        return 'MIN';
+        return 'Minimum';
       case 'max':
-        return 'MAX';
+        return 'Maximum';
     }
   };
 
@@ -43,7 +54,7 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
       case 'add':
         return '+';
       case 'subtract':
-        return '-';
+        return '−';
       case 'multiply':
         return '×';
       case 'divide':
@@ -53,9 +64,9 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
       case 'power':
         return '^';
       case 'sqrt':
-        return '√A';
+        return '√';
       case 'abs':
-        return '|A|';
+        return '| |';
       case 'min':
         return 'min';
       case 'max':
@@ -63,76 +74,63 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
     }
   };
 
-  const isUnaryOperation = () => data.operator === 'sqrt' || data.operator === 'abs';
-
-  const handleClass = 'bg-[var(--node-logic)]';
+  const isUnaryOperation = data.operator === 'sqrt' || data.operator === 'abs';
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Dynamic input ports */}
+    <NodeCard selected={selected}>
       {nodeDefinition?.ports.inputs.map((port, index) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
+          id={port.id}
+          side="left"
           type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `${35 + index * 30}%` }}
+          top={`${35 + index * 30}%`}
+          label={index === 0 ? 'First value' : 'Second value'}
+          description={
+            index === 0
+              ? 'Primary value for the calculation.'
+              : 'Optional second value when the rule needs it.'
+          }
+          handleClassName={visuals.handle}
+          accent={category}
+          icon={
+            <span className="text-[0.65rem] leading-none font-semibold">
+              {index === 0 ? 'A' : 'B'}
+            </span>
+          }
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Calculator size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
+      <NodeHeader
+        icon={<Calculator size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={<span className="text-xs text-[var(--text-secondary)]">{getOperatorDisplay()}</span>}
+      />
 
-      <CardContent className="space-y-2 p-0">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2 text-center">
-          <div className="font-mono text-sm text-[var(--text-primary)]">
-            Math ({getOperatorDisplay()})
-          </div>
-          <div className="mt-1 font-mono text-lg text-[var(--text-primary)]">
-            {isUnaryOperation() ? getOperatorSymbol() : `A ${getOperatorSymbol()} B`}
-          </div>
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-center text-[var(--text-primary)]">
+          {isUnaryOperation ? `${getOperatorSymbol()} A` : `A ${getOperatorSymbol()} B`}
         </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">
-            {getOperatorDisplay()}
-          </span>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Chain math operations together to build expressions without leaving the canvas.
         </div>
+      </div>
 
-        <div className="text-center text-xs">
-          <span className="rounded-[var(--radius-sm)] bg-[var(--accent-100)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--accent-900)]">
-            Number Math
-          </span>
-        </div>
-
-        <div className="mt-3 border-t border-[var(--border-primary)] pt-2">
-          <div className="text-center text-xs text-[var(--text-tertiary)]">
-            {isUnaryOperation() ? '1 Input' : '2 Inputs'} → Number
-          </div>
-        </div>
-      </CardContent>
-
-      {/* Output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: '50%' }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Calculated result"
+          description="Emits the outcome of this operation."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

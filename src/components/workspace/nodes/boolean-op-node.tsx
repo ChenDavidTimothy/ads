@@ -1,17 +1,28 @@
 // src/components/workspace/nodes/boolean-op-node.tsx - Boolean operation logic node
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Binary } from 'lucide-react';
+
 import { getNodeDefinitionWithDynamicPorts } from '@/shared/registry/registry-utils';
 import type { BooleanOpNodeData } from '@/shared/types/nodes';
-import { Binary } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
   const nodeDefinition = getNodeDefinitionWithDynamicPorts(
     'boolean_op',
     data as unknown as Record<string, unknown>
   );
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const getOperatorDisplay = () => {
     switch (data.operator) {
@@ -39,74 +50,87 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
     }
   };
 
-  const handleClass = 'bg-[var(--node-logic)]';
+  const isUnary = data.operator === 'not';
+
+  const inputCopy = isUnary
+    ? [
+        {
+          label: 'Signal to flip',
+          description: 'Connect the input you want to invert.',
+          icon: <span className="text-[0.65rem] leading-none font-semibold">A</span>,
+        },
+      ]
+    : [
+        {
+          label: 'First value',
+          description: 'Primary signal for the rule.',
+          icon: <span className="text-[0.65rem] leading-none font-semibold">A</span>,
+        },
+        {
+          label: 'Second value',
+          description: 'Secondary signal to evaluate with the first.',
+          icon: <span className="text-[0.65rem] leading-none font-semibold">B</span>,
+        },
+      ];
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Dynamic input ports */}
+    <NodeCard selected={selected}>
       {nodeDefinition?.ports.inputs.map((port, index) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="target"
-          position={Position.Left}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `${35 + index * 30}%` }}
+          side="left"
+          type="target"
+          top={`${35 + index * 30}%`}
+          label={inputCopy[index]?.label ?? 'Input'}
+          description={inputCopy[index]?.description}
+          handleClassName={visuals.handle}
+          accent={category}
+          icon={inputCopy[index]?.icon}
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Binary size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-0">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2 text-center">
-          <div className="font-mono text-sm text-[var(--text-primary)]">
-            Bool ({getOperatorDisplay()})
-          </div>
-          <div className="mt-1 font-mono text-lg text-[var(--text-primary)]">
-            {data.operator === 'not' ? `${getOperatorSymbol()}A` : `A ${getOperatorSymbol()} B`}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">
+      <NodeHeader
+        icon={<Binary size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={
+          <span className="text-xs font-medium text-[var(--text-secondary)]">
             {getOperatorDisplay()}
           </span>
-        </div>
+        }
+      />
 
-        <div className="text-center text-xs">
-          <span className="rounded-[var(--radius-sm)] bg-[var(--accent-100)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--accent-900)]">
-            Boolean Logic
-          </span>
-        </div>
-
-        <div className="mt-3 border-t border-[var(--border-primary)] pt-2">
-          <div className="text-center text-xs text-[var(--text-tertiary)]">
-            {data.operator === 'not' ? '1 Input' : '2 Inputs'} → Boolean
+      <div className="space-y-[var(--space-3)]">
+        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-center">
+          <div className="text-[11px] tracking-[0.18em] text-[var(--text-tertiary)] uppercase">
+            Logic rule
+          </div>
+          <div className="mt-[var(--space-2)] text-lg font-semibold text-[var(--text-primary)]">
+            {isUnary ? `${getOperatorSymbol()}A` : `A ${getOperatorSymbol()} B`}
           </div>
         </div>
-      </CardContent>
 
-      {/* Output port */}
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
+          Use this node to gate downstream flows—connect clear on/off style signals for predictable
+          behaviour.
+        </div>
+      </div>
+
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: '50%' }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Logic result"
+          description="Emits when the rule passes."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

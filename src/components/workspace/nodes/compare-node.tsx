@@ -1,14 +1,26 @@
 // src/components/workspace/nodes/compare-node.tsx - Compare logic node
+
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Equal } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { CompareNodeData } from '@/shared/types/nodes';
-import { Equal } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
   const nodeDefinition = getNodeDefinition('compare');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const getOperatorSymbol = () => {
     switch (data.operator) {
@@ -44,71 +56,71 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
     }
   };
 
-  const handleClass = 'bg-[var(--node-logic)]';
-
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Input ports */}
+    <NodeCard selected={selected}>
       {nodeDefinition?.ports.inputs.map((port, index) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="target"
-          position={Position.Left}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `${35 + index * 30}%` }}
+          side="left"
+          type="target"
+          top={`${35 + index * 30}%`}
+          label={index === 0 ? 'First value' : 'Second value'}
+          description={
+            index === 0
+              ? 'Connect the value you want to test.'
+              : 'Connect what you want to compare against.'
+          }
+          handleClassName={visuals.handle}
+          accent={category}
+          icon={
+            <span className="text-[0.65rem] leading-none font-semibold">
+              {index === 0 ? 'A' : 'B'}
+            </span>
+          }
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Equal size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
+      <NodeHeader
+        icon={<Equal size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={
+          <span className="text-xs font-medium text-[var(--text-secondary)]">
+            {getOperatorLabel()}
           </span>
-        </div>
-      </CardHeader>
+        }
+      />
 
-      <CardContent className="space-y-2 p-0">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-2 text-center">
-          <div className="font-mono text-lg text-[var(--text-primary)]">
+      <div className="space-y-[var(--space-3)]">
+        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-center">
+          <div className="text-[11px] tracking-[0.18em] text-[var(--text-tertiary)] uppercase">
+            Comparison
+          </div>
+          <div className="mt-[var(--space-2)] text-lg font-semibold text-[var(--text-primary)]">
             A {getOperatorSymbol()} B
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Operation:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">
-            {getOperatorLabel()}
-          </span>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px] text-[var(--text-secondary)]">
+          Align both inputs to the same kind of content so the comparison behaves as expected.
         </div>
+      </div>
 
-        <div className="text-center text-xs">
-          <span className="rounded-[var(--radius-sm)] bg-[var(--success-100)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--success-700)]">
-            Boolean Output
-          </span>
-        </div>
-
-        <div className="mt-3 border-t border-[var(--border-primary)] pt-2">
-          <div className="text-center text-xs text-[var(--text-tertiary)]">
-            Type-Safe Comparison
-          </div>
-        </div>
-      </CardContent>
-
-      {/* Output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: '50%' }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Pass / fail signal"
+          description="Sends “yes” when the condition is satisfied."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

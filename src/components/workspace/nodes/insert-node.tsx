@@ -1,69 +1,81 @@
-// src/components/workspace/nodes/insert-node.tsx - Simplified single input/output ports
+// src/components/workspace/nodes/insert-node.tsx - Timing insert node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import React from 'react';
+import type { NodeProps } from 'reactflow';
+import { Clock3 } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { InsertNodeData } from '@/shared/types/nodes';
-import React from 'react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 import { InsertModal } from './InsertModal';
 
 export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
   const nodeDefinition = getNodeDefinition('insert');
   const [open, setOpen] = React.useState(false);
-
-  const handleClass = 'bg-[var(--node-data)]';
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
+  const appearanceTime = data.appearanceTime ?? 0;
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
-      onDoubleClick={() => setOpen(true)}
-    >
-      {/* Single input port */}
+    <NodeCard selected={selected} className="cursor-pointer" onDoubleClick={() => setOpen(true)}>
       {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
+          id={port.id}
+          side="left"
           type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          top="50%"
+          label="Objects to schedule"
+          description="Connect the stream you want to delay."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-data)] text-sm font-bold text-[var(--text-primary)]">
-            ⏰
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
+      <NodeHeader
+        icon={<Clock3 size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={<span className="text-xs text-[var(--text-secondary)]">{appearanceTime}s</span>}
+      />
 
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div>Appears at: {data.appearanceTime}s</div>
-        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
-          Double-click to edit per-object times
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center justify-between">
+          <span>Start time</span>
+          <span className="font-medium text-[var(--text-primary)]">{appearanceTime}s</span>
         </div>
-      </CardContent>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Double-click to configure per-object offsets or bind this start time to another node.
+        </div>
+      </div>
 
-      {/* Single output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Scheduled objects"
+          description="Emits the stream once the start time is reached."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
+
       {open ? (
         <InsertModal isOpen={open} onClose={() => setOpen(false)} nodeId={data.identifier.id} />
       ) : null}
-    </Card>
+    </NodeCard>
   );
 }
