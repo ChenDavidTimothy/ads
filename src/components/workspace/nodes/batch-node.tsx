@@ -1,94 +1,144 @@
 'use client';
 
-import React from 'react';
-import { Handle, Position } from 'reactflow';
-import { useWorkspace } from '@/components/workspace/workspace-context';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { NodeLayout } from './node-layout';
+import { buildPortDisplays } from './port-utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { useWorkspace } from '@/components/workspace/workspace-context';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { NodeData } from '@/shared/types/nodes';
+import type { BatchNodeData } from '@/shared/types/nodes';
 
 export function BatchNode({ id }: { id: string }) {
   const { state, updateFlow } = useWorkspace();
   const node = state.flow.nodes.find((n) => n.id === id);
   const nodeId = node?.data?.identifier?.id ?? id;
 
-  const data = (node?.data ?? {}) as unknown as Record<string, unknown> & {
-    keys?: string[];
+  const data = (node?.data ?? {}) as unknown as BatchNodeData & {
     variableBindings?: Record<string, { boundResultNodeId?: string }>;
   };
   const keys = Array.isArray(data.keys)
     ? (data.keys as unknown[]).filter((k) => typeof k === 'string')
     : [];
 
-  const [open, setOpen] = React.useState(false);
-  const [localInput, setLocalInput] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [localInput, setLocalInput] = useState('');
 
   const nodeDefinition = getNodeDefinition('batch');
-  const handleClass = 'bg-[var(--node-logic)]';
+
+  const inputs = buildPortDisplays(nodeDefinition?.ports.inputs, 'input', {
+    input: {
+      label: 'Objects to tag',
+      description: 'Connect objects that should be grouped by batch keys.',
+    },
+  });
+
+  const outputs = buildPortDisplays(nodeDefinition?.ports.outputs, 'output', {
+    output: {
+      label: 'Tagged objects',
+      description: 'Forwards the objects with batch metadata attached.',
+    },
+  });
+
+  const openModal = () => setOpen(true);
+  const closeModal = () => setOpen(false);
+
+  const addKey = () => {
+    const value = localInput.trim();
+    if (!value || keys.includes(value)) return;
+    const nextKeys = [...keys, value];
+    updateFlow({
+      nodes: state.flow.nodes.map((n) =>
+        n.id !== id
+          ? n
+          : {
+              ...n,
+              data: {
+                ...n.data,
+                keys: nextKeys,
+              } as NodeData,
+            }
+      ),
+    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('batch-keys-updated', {
+          detail: {
+            nodeIdentifierId: nodeId,
+            keys: [...nextKeys],
+          },
+        })
+      );
+    }
+    setLocalInput('');
+  };
+
+  const removeKey = (keyToRemove: string) => {
+    const nextKeys = keys.filter((key) => key !== keyToRemove);
+    updateFlow({
+      nodes: state.flow.nodes.map((n) =>
+        n.id !== id
+          ? n
+          : {
+              ...n,
+              data: {
+                ...n.data,
+                keys: nextKeys,
+              } as NodeData,
+            }
+      ),
+    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('batch-keys-updated', {
+          detail: {
+            nodeIdentifierId: nodeId,
+            keys: [...nextKeys],
+          },
+        })
+      );
+    }
+  };
 
   return (
-    <Card
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
-      onDoubleClick={() => setOpen(true)}
-    >
-      {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <span role="img" aria-label="batch">
-              🏷️
-            </span>
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {node?.data?.identifier?.displayName ?? 'Batch'}
-          </span>
-          <span className="ml-auto text-[10px] text-[var(--text-secondary)]">
-            {keys.length} keys
-          </span>
+    <>
+      <NodeLayout
+        selected={node?.selected ?? false}
+        className="cursor-pointer"
+        title={node?.data?.identifier?.displayName ?? 'Batch'}
+        subtitle={keys.length ? `${keys.length} key${keys.length === 1 ? '' : 's'} configured` : 'No keys yet'}
+        icon={<span className="text-xs">🏷️</span>}
+        iconBackgroundClass="bg-[var(--node-logic)] text-[var(--text-primary)]"
+        inputs={inputs}
+        outputs={outputs}
+        accentHandleClass="!bg-[var(--node-logic)]"
+        onDoubleClick={openModal}
+        footer="Double-click or use the Keys button to edit batch tags"
+      >
+        <div className="flex items-center justify-between text-xs">
+          <span>Keys</span>
+          <span className="font-medium text-[var(--text-primary)]">{keys.length}</span>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-0">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <Button variant="secondary" onClick={() => setOpen(true)}>
-            Keys
-          </Button>
-          <div className="text-[10px] text-[var(--text-tertiary)]">Manage keys</div>
-        </div>
-      </CardContent>
-
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
-      ))}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            openModal();
+          }}
+        >
+          Manage keys
+        </Button>
+      </NodeLayout>
 
       {open ? (
-        <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch Keys" size="sm">
+        <Modal isOpen={open} onClose={closeModal} title="Batch Keys" size="sm">
           <div className="p-[var(--space-4)]">
             <div className="mb-[var(--space-2)] text-[12px] text-[var(--text-secondary)]">
-              Add or remove keys
+              Add or remove keys used for batch rendering.
             </div>
             <div className="flex gap-[var(--space-2)]">
               <Input
@@ -96,84 +146,20 @@ export function BatchNode({ id }: { id: string }) {
                 value={localInput}
                 onChange={(e) => setLocalInput(e.target.value)}
               />
-              <Button
-                onClick={() => {
-                  const v = localInput.trim();
-                  if (!v) return;
-                  if (keys.includes(v)) return; // prevent duplicates
-                  const nextKeys = [...keys, v];
-                  // Autosave like layer modal: update flow immediately
-                  updateFlow({
-                    nodes: state.flow.nodes.map((n) =>
-                      n.id !== id
-                        ? n
-                        : {
-                            ...n,
-                            data: {
-                              ...n.data,
-                              keys: nextKeys,
-                            } as NodeData,
-                          }
-                    ),
-                  });
-                  // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(
-                      new CustomEvent('batch-keys-updated', {
-                        detail: {
-                          nodeIdentifierId: nodeId,
-                          keys: [...nextKeys],
-                        },
-                      })
-                    );
-                  }
-                  setLocalInput('');
-                }}
-              >
-                Add
-              </Button>
+              <Button onClick={addKey}>Add</Button>
             </div>
 
             <div className="mt-[var(--space-3)] space-y-[var(--space-2)]">
               {keys.length === 0 ? (
                 <div className="text-[12px] text-[var(--text-tertiary)]">No keys yet.</div>
               ) : (
-                keys.map((k) => (
+                keys.map((key) => (
                   <div
-                    key={k}
-                    className="flex items-center justify-between rounded border border-[var(--border)] px-[var(--space-2)] py-[var(--space-1)]"
+                    key={key}
+                    className="flex items-center justify-between rounded border border-[var(--border-primary)] px-[var(--space-2)] py-[var(--space-1)]"
                   >
-                    <div className="text-[12px]">{k}</div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const nextKeys = keys.filter((x) => x !== k);
-                        updateFlow({
-                          nodes: state.flow.nodes.map((n) =>
-                            n.id !== id
-                              ? n
-                              : {
-                                  ...n,
-                                  data: {
-                                    ...n.data,
-                                    keys: nextKeys,
-                                  } as NodeData,
-                                }
-                          ),
-                        });
-                        if (typeof window !== 'undefined') {
-                          window.dispatchEvent(
-                            new CustomEvent('batch-keys-updated', {
-                              detail: {
-                                nodeIdentifierId: nodeId,
-                                keys: [...nextKeys],
-                              },
-                            })
-                          );
-                        }
-                      }}
-                    >
+                    <div className="text-[12px]">{key}</div>
+                    <Button variant="ghost" size="sm" onClick={() => removeKey(key)}>
                       Remove
                     </Button>
                   </div>
@@ -187,6 +173,6 @@ export function BatchNode({ id }: { id: string }) {
           </div>
         </Modal>
       ) : null}
-    </Card>
+    </>
   );
 }

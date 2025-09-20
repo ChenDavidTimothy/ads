@@ -1,46 +1,41 @@
-// src/components/workspace/nodes/circle-node.tsx - Simplified single output port
+// src/components/workspace/nodes/circle-node.tsx - Geometry circle node with structured layout
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+
+import { NodeLayout } from './node-layout';
+import { buildPortDisplays } from './port-utils';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { CircleNodeData } from '@/shared/types/nodes';
 import { Circle as CircleIcon } from 'lucide-react';
 
 export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
   const nodeDefinition = getNodeDefinition('circle');
+  const outputs = buildPortDisplays(nodeDefinition?.ports.outputs, 'output', {
+    output: {
+      label: 'Circle shape for composition',
+      description: 'Emits a circle geometry you can animate, style, or merge with other shapes.',
+    },
+  });
+
+  const radius = data.radius ?? 50;
+  const subtitle = `Radius ${radius}px`;
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: '#4444ff' }} // Canvas default
-          >
-            <CircleIcon size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div>Radius: {data.radius || 50}px</div>
-      </CardContent>
-
-      {/* Single output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-geometry)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-    </Card>
+    <NodeLayout
+      selected={selected}
+      title={data.identifier.displayName}
+      subtitle={subtitle}
+      icon={<CircleIcon className="h-3 w-3" />}
+      iconBackgroundClass="bg-[var(--node-geometry)] text-[var(--text-primary)]"
+      inputs={[]}
+      outputs={outputs}
+      accentHandleClass="!bg-[var(--node-geometry)]"
+    >
+      <div className="flex items-center justify-between text-xs">
+        <span>Fill</span>
+        <span className="font-medium text-[var(--text-primary)]">Workspace accent</span>
+      </div>
+    </NodeLayout>
   );
 }
