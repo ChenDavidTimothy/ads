@@ -12,27 +12,32 @@ export default function InvestorsPage() {
           <h1 className="text-4xl font-bold sm:text-5xl">
             Building the automation layer for retail creative
           </h1>
-          <p className="mt-6 text-lg text-[var(--text-secondary)] max-w-2xl mx-auto">
-            Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and custom-coded pipelines can't keep pace with multi-region catalogs, compliance, and localization. Variota's no-code, logic-first engine spans images and video with governance built in.
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
+            Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and
+            custom-coded pipelines can&apos;t keep pace with multi-region catalogs, compliance, and
+            localization. Variota&apos;s no-code, logic-first engine spans images and video with
+            governance built in.
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 md:grid-cols-2">
           <Card className="p-6">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
+            <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
               Early traction
             </h2>
             <p className="text-sm text-[var(--text-secondary)]">
-              Pilot pipeline development with promo-heavy retailers, expert endorsements from merchandising leaders, and active design partners co-shaping automation workflows.
+              Pilot pipeline development with promo-heavy retailers, expert endorsements from
+              merchandising leaders, and active design partners co-shaping automation workflows.
             </p>
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
+            <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
               Business model
             </h2>
             <p className="text-sm text-[var(--text-secondary)]">
-              Tiered SaaS based on usage, seats, and integrations with enterprise options for governance and delivery.
+              Tiered SaaS based on usage, seats, and integrations with enterprise options for
+              governance and delivery.
             </p>
           </Card>
         </div>
