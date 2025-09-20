@@ -1,46 +1,41 @@
-// src/components/workspace/nodes/triangle-node.tsx - Simplified single output port
+// src/components/workspace/nodes/triangle-node.tsx - Geometry triangle node with visual port layout
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+
+import { NodeLayout } from './node-layout';
+import { buildPortDisplays } from './port-utils';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { TriangleNodeData } from '@/shared/types/nodes';
 import { Triangle as TriangleIcon } from 'lucide-react';
 
 export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
   const nodeDefinition = getNodeDefinition('triangle');
+  const outputs = buildPortDisplays(nodeDefinition?.ports.outputs, 'output', {
+    output: {
+      label: 'Triangle shape for downstream styling',
+      description: 'Provides the triangle geometry to layer, animate, or style in canvas nodes.',
+    },
+  });
+
+  const size = data.size ?? 80;
+  const subtitle = `Edge length ${size}px`;
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: '#4444ff' }} // Canvas default
-          >
-            <TriangleIcon size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div>Size: {data.size || 80}px</div>
-      </CardContent>
-
-      {/* Single output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-geometry)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-    </Card>
+    <NodeLayout
+      selected={selected}
+      title={data.identifier.displayName}
+      subtitle={subtitle}
+      icon={<TriangleIcon className="h-3 w-3" />}
+      iconBackgroundClass="bg-[var(--node-geometry)] text-[var(--text-primary)]"
+      inputs={[]}
+      outputs={outputs}
+      accentHandleClass="!bg-[var(--node-geometry)]"
+    >
+      <div className="flex items-center justify-between text-xs">
+        <span>Default fill</span>
+        <span className="font-medium text-[var(--text-primary)]">Workspace accent</span>
+      </div>
+    </NodeLayout>
   );
 }
