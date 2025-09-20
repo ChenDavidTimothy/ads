@@ -1,23 +1,15 @@
-// src/components/workspace/nodes/batch-node.tsx - Batch tagging node UI
 'use client';
 
 import React from 'react';
-import { Tag } from 'lucide-react';
-
+import { Handle, Position } from 'reactflow';
 import { useWorkspace } from '@/components/workspace/workspace-context';
 import { Input } from '@/components/ui/input';
+
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { NodeData } from '@/shared/types/nodes';
-
-import {
-  NodeCard,
-  NodeHeader,
-  NodePortIndicator,
-  getNodeCategoryLabel,
-  getNodeCategoryVisuals,
-} from './components/node-chrome';
 
 export function BatchNode({ id }: { id: string }) {
   const { state, updateFlow } = useWorkspace();
@@ -36,62 +28,67 @@ export function BatchNode({ id }: { id: string }) {
   const [localInput, setLocalInput] = React.useState('');
 
   const nodeDefinition = getNodeDefinition('batch');
-  const category = nodeDefinition?.execution.category;
-  const visuals = getNodeCategoryVisuals(category);
-  const categoryLabel = getNodeCategoryLabel(category);
+  const handleClass = 'bg-[var(--node-logic)]';
 
   return (
-    <NodeCard className="cursor-pointer" onDoubleClick={() => setOpen(true)}>
+    <Card
+      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)]"
+      onDoubleClick={() => setOpen(true)}
+    >
       {nodeDefinition?.ports.inputs.map((port) => (
-        <NodePortIndicator
+        <Handle
           key={port.id}
-          id={port.id}
-          side="left"
           type="target"
-          top="50%"
-          label="Incoming stream"
-          description="Objects passing through will receive tags."
-          handleClassName={visuals.handle}
-          accent={category}
-          onHandleDoubleClick={(event) => event.stopPropagation()}
+          position={Position.Left}
+          id={port.id}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          style={{ top: `50%` }}
+          onDoubleClick={(e) => e.stopPropagation()}
         />
       ))}
 
-      <NodeHeader
-        icon={<Tag size={14} />}
-        title={node?.data?.identifier?.displayName ?? 'Batch'}
-        accentClassName={visuals.iconBg}
-        subtitle={categoryLabel}
-        meta={<span className="text-xs text-[var(--text-secondary)]">{keys.length} keys</span>}
-      />
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
+            <span role="img" aria-label="batch">
+              🏷️
+            </span>
+          </div>
+          <span className="font-semibold text-[var(--text-primary)]">
+            {node?.data?.identifier?.displayName ?? 'Batch'}
+          </span>
+          <span className="ml-auto text-[10px] text-[var(--text-secondary)]">
+            {keys.length} keys
+          </span>
+        </div>
+      </CardHeader>
 
-      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-          Manage keys
-        </Button>
-        <div className="text-xs text-[var(--text-muted)]">Batch processing</div>
-      </div>
+      <CardContent className="space-y-2 p-0">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Keys
+          </Button>
+          <div className="text-[10px] text-[var(--text-tertiary)]">Manage keys</div>
+        </div>
+      </CardContent>
 
       {nodeDefinition?.ports.outputs.map((port) => (
-        <NodePortIndicator
+        <Handle
           key={port.id}
-          id={port.id}
-          side="right"
           type="source"
-          top="50%"
-          label="Tagged stream"
-          description="Outputs the same objects with batch metadata attached."
-          handleClassName={visuals.handle}
-          accent={category}
-          onHandleDoubleClick={(event) => event.stopPropagation()}
+          position={Position.Right}
+          id={port.id}
+          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
+          style={{ top: `50%` }}
+          onDoubleClick={(e) => e.stopPropagation()}
         />
       ))}
 
       {open ? (
-        <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch keys" size="sm">
-          <div className="space-y-[var(--space-3)] p-[var(--space-4)] text-xs text-[var(--text-secondary)]">
-            <div className="text-[11px] text-[var(--text-tertiary)]">
-              Add or remove keys. Updates apply immediately.
+        <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch Keys" size="sm">
+          <div className="p-[var(--space-4)]">
+            <div className="mb-[var(--space-2)] text-[12px] text-[var(--text-secondary)]">
+              Add or remove keys
             </div>
             <div className="flex gap-[var(--space-2)]">
               <Input
@@ -101,9 +98,11 @@ export function BatchNode({ id }: { id: string }) {
               />
               <Button
                 onClick={() => {
-                  const value = localInput.trim();
-                  if (!value || keys.includes(value)) return;
-                  const nextKeys = [...keys, value];
+                  const v = localInput.trim();
+                  if (!v) return;
+                  if (keys.includes(v)) return; // prevent duplicates
+                  const nextKeys = [...keys, v];
+                  // Autosave like layer modal: update flow immediately
                   updateFlow({
                     nodes: state.flow.nodes.map((n) =>
                       n.id !== id
@@ -117,6 +116,7 @@ export function BatchNode({ id }: { id: string }) {
                           }
                     ),
                   });
+                  // Notify FlowEditorTab to sync its local nodes to prevent snap-back overwrite
                   if (typeof window !== 'undefined') {
                     window.dispatchEvent(
                       new CustomEvent('batch-keys-updated', {
@@ -134,16 +134,16 @@ export function BatchNode({ id }: { id: string }) {
               </Button>
             </div>
 
-            <div className="space-y-[var(--space-2)]">
+            <div className="mt-[var(--space-3)] space-y-[var(--space-2)]">
               {keys.length === 0 ? (
-                <div className="text-[11px] text-[var(--text-tertiary)]">No keys yet.</div>
+                <div className="text-[12px] text-[var(--text-tertiary)]">No keys yet.</div>
               ) : (
                 keys.map((k) => (
                   <div
                     key={k}
-                    className="flex items-center justify-between rounded border border-[var(--border-primary)] px-[var(--space-2)] py-[var(--space-1)]"
+                    className="flex items-center justify-between rounded border border-[var(--border)] px-[var(--space-2)] py-[var(--space-1)]"
                   >
-                    <div>{k}</div>
+                    <div className="text-[12px]">{k}</div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -180,9 +180,13 @@ export function BatchNode({ id }: { id: string }) {
                 ))
               )}
             </div>
+
+            <div className="mt-[var(--space-3)] text-right text-[10px] text-[var(--text-tertiary)]">
+              Changes update your workspace immediately. Use Save to persist.
+            </div>
           </div>
         </Modal>
       ) : null}
-    </NodeCard>
+    </Card>
   );
 }

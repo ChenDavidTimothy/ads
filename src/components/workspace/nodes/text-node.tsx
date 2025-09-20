@@ -1,60 +1,49 @@
-// src/components/workspace/nodes/text-node.tsx - Text source node UI
 'use client';
 
-import type { NodeProps } from 'reactflow';
-import { Type } from 'lucide-react';
-
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { TextNodeData } from '@/shared/types/nodes';
-
-import {
-  NodeCard,
-  NodeHeader,
-  NodePortIndicator,
-  getNodeCategoryLabel,
-  getNodeCategoryVisuals,
-} from './components/node-chrome';
+import { Type } from 'lucide-react';
 
 export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
   const nodeDefinition = getNodeDefinition('text');
-  const category = nodeDefinition?.execution.category;
-  const visuals = getNodeCategoryVisuals(category);
-  const categoryLabel = getNodeCategoryLabel(category);
 
-  const content = data.content?.trim() ?? 'Hello World';
-  const previewContent = content.length > 40 ? `${content.slice(0, 37)}…` : content;
-  const fontSize = data.fontSize ?? (nodeDefinition?.defaults.fontSize as number) ?? 24;
+  const displayContent =
+    data.content?.length > 20
+      ? data.content.substring(0, 20) + '...'
+      : data.content || 'Hello World';
 
   return (
-    <NodeCard selected={selected}>
-      <NodeHeader
-        icon={<Type size={14} />}
-        title={data.identifier.displayName}
-        accentClassName={visuals.iconBg}
-        subtitle={categoryLabel}
-        meta={<span className="text-xs text-[var(--text-secondary)]">{fontSize}px</span>}
-      />
-
-      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[var(--text-primary)]">
-          “{previewContent}”
+    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
+      <CardHeader className="p-0 pb-[var(--space-3)]">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-text)] text-[var(--text-primary)]">
+            <Type size={12} />
+          </div>
+          <span className="font-semibold text-[var(--text-primary)]">
+            {data.identifier.displayName}
+          </span>
         </div>
-        <div className="text-xs text-[var(--text-muted)]">Text content source</div>
-      </div>
+      </CardHeader>
+
+      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
+        <div className="rounded bg-[var(--surface-2)] p-1 font-mono text-[10px]">
+          &ldquo;{displayContent}&rdquo;
+        </div>
+        <div>Size: {data.fontSize || 24}px</div>
+      </CardContent>
 
       {nodeDefinition?.ports.outputs.map((port) => (
-        <NodePortIndicator
+        <Handle
           key={port.id}
-          id={port.id}
-          side="right"
           type="source"
-          top="50%"
-          label="Text output"
-          description="Sends this text element to the next node."
-          handleClassName={visuals.handle}
-          accent={category}
+          position={Position.Right}
+          id={port.id}
+          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-text)]"
+          style={{ top: '50%' }}
         />
       ))}
-    </NodeCard>
+    </Card>
   );
 }

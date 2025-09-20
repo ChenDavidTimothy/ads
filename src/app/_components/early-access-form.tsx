@@ -112,7 +112,7 @@ export function EarlyAccessForm() {
           <Input
             id="name"
             value={formData.name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Ada Lovelace"
             required
             autoComplete="name"
@@ -128,7 +128,7 @@ export function EarlyAccessForm() {
           <Input
             id="email"
             value={formData.email}
-            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
             type="email"
             placeholder="ada@retailco.com"
             required
@@ -145,7 +145,7 @@ export function EarlyAccessForm() {
           <Input
             id="company"
             value={formData.company}
-            onChange={(e) => setFormData((prev) => ({ ...prev, company: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
             placeholder="RetailCo"
             required
             autoComplete="organization"
@@ -161,7 +161,7 @@ export function EarlyAccessForm() {
           <Input
             id="role"
             value={formData.role}
-            onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
             placeholder="Head of Merchandising"
             required
             autoComplete="organization-title"
@@ -171,7 +171,7 @@ export function EarlyAccessForm() {
           <SelectField
             label="Primary use case"
             value={formData.useCase}
-            onChange={(value) => setFormData((prev) => ({ ...prev, useCase: value }))}
+            onChange={(value) => setFormData(prev => ({ ...prev, useCase: value }))}
             options={useCaseOptions}
             placeholder="Choose one"
             variant="glass"
@@ -181,7 +181,7 @@ export function EarlyAccessForm() {
           <SelectField
             label="Approximate SKU range"
             value={formData.skuRange}
-            onChange={(value) => setFormData((prev) => ({ ...prev, skuRange: value }))}
+            onChange={(value) => setFormData(prev => ({ ...prev, skuRange: value }))}
             options={skuRangeOptions}
             placeholder="Select a range"
             variant="glass"
@@ -198,7 +198,7 @@ export function EarlyAccessForm() {
             <Input
               id="regions"
               value={formData.regions}
-              onChange={(e) => setFormData((prev) => ({ ...prev, regions: e.target.value }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, regions: e.target.value }))}
               placeholder="North America, DACH, APAC"
               required
             />
