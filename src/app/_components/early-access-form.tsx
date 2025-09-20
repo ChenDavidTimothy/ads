@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SelectField } from '@/components/ui/form-fields';
 
 interface FormStatus {
   type: 'idle' | 'success' | 'error';
@@ -22,25 +23,38 @@ const useCaseOptions = [
   { value: 'other', label: 'Other' },
 ];
 
-const skuRangeOptions = ['Under 500 SKUs', '500 – 2,000 SKUs', '2,000 – 5,000 SKUs', '5,000+ SKUs'];
+const skuRangeOptions = [
+  { value: 'Under 500 SKUs', label: 'Under 500 SKUs' },
+  { value: '500 – 2,000 SKUs', label: '500 – 2,000 SKUs' },
+  { value: '2,000 – 5,000 SKUs', label: '2,000 – 5,000 SKUs' },
+  { value: '5,000+ SKUs', label: '5,000+ SKUs' },
+];
 
 export function EarlyAccessForm() {
   const [status, setStatus] = useState<FormStatus>({ type: 'idle', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    role: '',
+    useCase: '',
+    regions: '',
+    skuRange: '',
+  });
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
 
     const payload = {
-      name: (formData.get('name') as string)?.trim(),
-      email: (formData.get('email') as string)?.trim(),
-      company: (formData.get('company') as string)?.trim(),
-      role: (formData.get('role') as string)?.trim(),
-      useCase: (formData.get('useCase') as string)?.trim(),
-      regions: (formData.get('regions') as string)?.trim(),
-      skuRange: (formData.get('skuRange') as string)?.trim(),
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      company: formData.company.trim(),
+      role: formData.role.trim(),
+      useCase: formData.useCase.trim(),
+      regions: formData.regions.trim(),
+      skuRange: formData.skuRange.trim(),
     };
 
     setIsSubmitting(true);
@@ -63,7 +77,15 @@ export function EarlyAccessForm() {
         type: 'success',
         message: 'Thank you—our team will be in touch within 2 business days.',
       });
-      form.reset();
+      setFormData({
+        name: '',
+        email: '',
+        company: '',
+        role: '',
+        useCase: '',
+        regions: '',
+        skuRange: '',
+      });
     } catch (error) {
       setStatus({
         type: 'error',
@@ -87,7 +109,14 @@ export function EarlyAccessForm() {
           >
             Name
           </label>
-          <Input id="name" name="name" placeholder="Ada Lovelace" required autoComplete="name" />
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Ada Lovelace"
+            required
+            autoComplete="name"
+          />
         </div>
         <div className="flex flex-col gap-2">
           <label
@@ -98,7 +127,8 @@ export function EarlyAccessForm() {
           </label>
           <Input
             id="email"
-            name="email"
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
             type="email"
             placeholder="ada@retailco.com"
             required
@@ -114,7 +144,8 @@ export function EarlyAccessForm() {
           </label>
           <Input
             id="company"
-            name="company"
+            value={formData.company}
+            onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
             placeholder="RetailCo"
             required
             autoComplete="organization"
@@ -129,67 +160,32 @@ export function EarlyAccessForm() {
           </label>
           <Input
             id="role"
-            name="role"
+            value={formData.role}
+            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
             placeholder="Head of Merchandising"
             required
             autoComplete="organization-title"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="useCase"
-            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
-          >
-            Primary use case
-          </label>
-          <select
-            id="useCase"
-            name="useCase"
-            required
-            defaultValue=""
-            className="glass-input w-full appearance-none rounded-[var(--radius-sm)] bg-transparent px-[var(--space-3)] py-[var(--space-2)] text-sm text-[var(--text-primary)] focus:outline-none"
-          >
-            <option value="" disabled>
-              Choose one
-            </option>
-            {useCaseOptions.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                className="bg-[var(--surface-1)] text-[var(--text-primary)]"
-              >
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <SelectField
+            label="Primary use case"
+            value={formData.useCase}
+            onChange={(value) => setFormData(prev => ({ ...prev, useCase: value }))}
+            options={useCaseOptions}
+            placeholder="Choose one"
+            variant="glass"
+          />
         </div>
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="skuRange"
-            className="text-xs font-medium tracking-wide text-[var(--text-tertiary)] uppercase"
-          >
-            Approximate SKU range
-          </label>
-          <select
-            id="skuRange"
-            name="skuRange"
-            required
-            defaultValue=""
-            className="glass-input w-full appearance-none rounded-[var(--radius-sm)] bg-transparent px-[var(--space-3)] py-[var(--space-2)] text-sm text-[var(--text-primary)] focus:outline-none"
-          >
-            <option value="" disabled>
-              Select a range
-            </option>
-            {skuRangeOptions.map((option) => (
-              <option
-                key={option}
-                value={option}
-                className="bg-[var(--surface-1)] text-[var(--text-primary)]"
-              >
-                {option}
-              </option>
-            ))}
-          </select>
+          <SelectField
+            label="Approximate SKU range"
+            value={formData.skuRange}
+            onChange={(value) => setFormData(prev => ({ ...prev, skuRange: value }))}
+            options={skuRangeOptions}
+            placeholder="Select a range"
+            variant="glass"
+          />
         </div>
         <div className="sm:col-span-2">
           <div className="flex flex-col gap-2">
@@ -199,7 +195,13 @@ export function EarlyAccessForm() {
             >
               Regions you operate in
             </label>
-            <Input id="regions" name="regions" placeholder="North America, DACH, APAC" required />
+            <Input
+              id="regions"
+              value={formData.regions}
+              onChange={(e) => setFormData(prev => ({ ...prev, regions: e.target.value }))}
+              placeholder="North America, DACH, APAC"
+              required
+            />
           </div>
         </div>
       </div>
