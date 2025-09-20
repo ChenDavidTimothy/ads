@@ -5,7 +5,7 @@ import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const PORT_ZONE_WIDTH = 120; // Fixed width for all port zones
+const PORT_ZONE_SIZE = 28; // Compact width for hoverable port zones
 const HANDLE_BASE_CLASS = 'h-3 w-3 !border-2 !border-[var(--text-primary)]';
 const TITLE_LINE_CLAMP_STYLE: CSSProperties = {
   display: '-webkit-box',
@@ -26,8 +26,6 @@ export interface PortConfig {
   tooltip?: string;
   badge?: string;
   icon?: ReactNode;
-  badgeClassName?: string;
-  labelClassName?: string;
   handleProps?: HTMLAttributes<HTMLDivElement>;
 }
 
@@ -52,48 +50,55 @@ interface PortBadgeProps {
   onRef: (element: HTMLDivElement | null) => void;
 }
 
-const lineClampStyle: CSSProperties = {
-  display: '-webkit-box',
-  WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: 2,
-  overflow: 'hidden',
-};
-
 function PortBadge({ side, config, onRef }: PortBadgeProps) {
-  const { badge, icon, label, tooltip, badgeClassName, labelClassName } = config;
-  const displayBadge = icon ?? badge;
-  const shouldRenderBadge =
-    displayBadge !== undefined && displayBadge !== null && displayBadge !== '';
+  const { badge, icon, label, tooltip } = config;
+
+  const directionLabel = side === 'input' ? 'Input' : 'Output';
+  const description = tooltip ?? label;
+  const tooltipSections = [`${directionLabel} • ${label}`];
+
+  if (description && description !== label) {
+    tooltipSections.push(description);
+  }
+
+  const tooltipText = tooltipSections.join('\n');
+  const accessibleLabel = tooltipSections.join('. ');
+
+  const indicator = icon ? (
+    <span
+      className="pointer-events-none text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--text-primary)]"
+      aria-hidden="true"
+    >
+      {icon}
+    </span>
+  ) : badge ? (
+    <span
+      className="pointer-events-none inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-3)] text-[10px] font-semibold text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] group-hover:bg-[var(--accent-primary)] group-hover:text-[var(--text-primary)]"
+      aria-hidden="true"
+    >
+      {badge}
+    </span>
+  ) : (
+    <span
+      className="pointer-events-none block h-2 w-2 rounded-full bg-[var(--text-tertiary)] transition-transform duration-[var(--duration-fast)] group-hover:scale-110 group-hover:bg-[var(--accent-primary)]"
+      aria-hidden="true"
+    />
+  );
+
   return (
     <div
       ref={onRef}
       className={cn(
-        'flex min-h-[26px] max-w-full min-w-0 items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-[2px]',
-        side === 'input' ? 'justify-end text-right' : 'justify-start text-left',
-        badgeClassName
+        'port-badge group text-[10px] font-medium focus-visible:outline-none',
+        side === 'input' ? 'ml-auto' : 'mr-auto'
       )}
-      title={tooltip ?? label}
+      data-direction={side}
+      data-tooltip={tooltipText}
+      aria-label={accessibleLabel}
+      tabIndex={0}
+      title={accessibleLabel}
     >
-      {shouldRenderBadge && (
-        <span
-          className={cn(
-            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-3)] text-[10px] font-medium text-[var(--text-tertiary)]',
-            side === 'input' ? 'order-first' : 'order-none'
-          )}
-        >
-          {displayBadge}
-        </span>
-      )}
-      <span
-        className={cn(
-          'max-w-full text-xs leading-snug text-[var(--text-primary)]',
-          side === 'input' ? 'text-right' : 'text-left',
-          labelClassName
-        )}
-        style={lineClampStyle}
-      >
-        {label}
-      </span>
+      {indicator}
     </div>
   );
 }
@@ -123,12 +128,12 @@ export function NodeLayout({
 
   // No complex signatures needed - layout is static
 
-  // Static layout calculation - fixed width for all cases
+  // Static layout calculation - compact width for port zones
   const gridTemplateColumns = useMemo(() => {
     const columns: string[] = [];
-    if (hasInputs) columns.push(`${PORT_ZONE_WIDTH}px`);
+    if (hasInputs) columns.push(`${PORT_ZONE_SIZE}px`);
     columns.push('minmax(0, 1fr)');
-    if (hasOutputs) columns.push(`${PORT_ZONE_WIDTH}px`);
+    if (hasOutputs) columns.push(`${PORT_ZONE_SIZE}px`);
     return columns.join(' ');
   }, [hasInputs, hasOutputs]);
 
