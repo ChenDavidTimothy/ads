@@ -21,7 +21,7 @@ export function TextNode({ data, selected }: NodeProps<TextNodeData>) {
         handleClassName: 'bg-[var(--node-text)]',
       },
     ],
-    [],
+    []
   );
 
   return (

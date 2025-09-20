@@ -64,13 +64,17 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
       iconClassName="bg-[var(--node-output)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[width, height, backgroundColor, format, data.quality ?? '']}
     >
       <div className="flex items-center justify-between text-xs">
         <span>Background</span>
         <span className="flex items-center gap-[var(--space-1)]">
-          <span className="h-3 w-3 rounded border border-[var(--border-primary)]" style={{ backgroundColor }} />
-          <span className="font-mono text-[var(--text-primary)]">{backgroundColor.toUpperCase()}</span>
+          <span
+            className="h-3 w-3 rounded border border-[var(--border-primary)]"
+            style={{ backgroundColor }}
+          />
+          <span className="font-mono text-[var(--text-primary)]">
+            {backgroundColor.toUpperCase()}
+          </span>
         </span>
       </div>
       <div className="flex items-center justify-between text-xs">

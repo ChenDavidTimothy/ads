@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  useMemo,
-  type CSSProperties,
-  type HTMLAttributes,
-  type ReactNode,
-} from 'react';
+import { useMemo, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -17,6 +12,11 @@ const TITLE_LINE_CLAMP_STYLE: CSSProperties = {
   WebkitBoxOrient: 'vertical',
   WebkitLineClamp: 2,
   overflow: 'hidden',
+};
+
+// No-op function for unused refs in static layout
+const noop = () => {
+  // Intentionally empty - static layout doesn't need refs
 };
 
 export interface PortConfig {
@@ -62,14 +62,15 @@ const lineClampStyle: CSSProperties = {
 function PortBadge({ side, config, onRef }: PortBadgeProps) {
   const { badge, icon, label, tooltip, badgeClassName, labelClassName } = config;
   const displayBadge = icon ?? badge;
-  const shouldRenderBadge = displayBadge !== undefined && displayBadge !== null && displayBadge !== '';
+  const shouldRenderBadge =
+    displayBadge !== undefined && displayBadge !== null && displayBadge !== '';
   return (
     <div
       ref={onRef}
       className={cn(
-        'flex min-h-[26px] min-w-0 max-w-full items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-[2px]',
+        'flex min-h-[26px] max-w-full min-w-0 items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-[var(--space-2)] py-[var(--space-1)] text-xs text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-[2px]',
         side === 'input' ? 'justify-end text-right' : 'justify-start text-left',
-        badgeClassName,
+        badgeClassName
       )}
       title={tooltip ?? label}
     >
@@ -77,7 +78,7 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
         <span
           className={cn(
             'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-3)] text-[10px] font-medium text-[var(--text-tertiary)]',
-            side === 'input' ? 'order-first' : 'order-none',
+            side === 'input' ? 'order-first' : 'order-none'
           )}
         >
           {displayBadge}
@@ -87,7 +88,7 @@ function PortBadge({ side, config, onRef }: PortBadgeProps) {
         className={cn(
           'max-w-full text-xs leading-snug text-[var(--text-primary)]',
           side === 'input' ? 'text-right' : 'text-left',
-          labelClassName,
+          labelClassName
         )}
         style={lineClampStyle}
       >
@@ -190,22 +191,12 @@ export function NodeLayout({
           />
         ))}
 
-      <div
-        className="grid items-stretch gap-x-[var(--space-3)]"
-        style={{ gridTemplateColumns }}
-      >
+      <div className="grid items-stretch gap-x-[var(--space-3)]" style={{ gridTemplateColumns }}>
         {hasInputs && (
           <div className="flex h-full min-h-[80px] flex-col justify-evenly gap-[var(--space-2)] pr-[var(--space-1)]">
             {inputs.map((port) => (
-              <div
-                key={port.id}
-                className="flex w-full justify-end"
-              >
-                <PortBadge
-                  side="input"
-                  config={port}
-                  onRef={() => {}} // No-op - static layout
-                />
+              <div key={port.id} className="flex w-full justify-end">
+                <PortBadge side="input" config={port} onRef={noop} />
               </div>
             ))}
           </div>
@@ -218,13 +209,16 @@ export function NodeLayout({
                 <div
                   className={cn(
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-primary)]',
-                    iconClassName,
+                    iconClassName
                   )}
                 >
                   {icon}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-[var(--text-primary)]" title={title}>
+                  <div
+                    className="truncate text-sm font-semibold text-[var(--text-primary)]"
+                    title={title}
+                  >
                     {title}
                   </div>
                   {subtitle ? (
@@ -239,7 +233,9 @@ export function NodeLayout({
                 </div>
               </div>
               {headerAccessory ? (
-                <div className="shrink-0 text-xs text-[var(--text-tertiary)]">{headerAccessory}</div>
+                <div className="shrink-0 text-xs text-[var(--text-tertiary)]">
+                  {headerAccessory}
+                </div>
               ) : null}
             </div>
           </div>
@@ -250,21 +246,16 @@ export function NodeLayout({
             </div>
           ) : null}
 
-          {footer ? <div className="mt-auto text-xs text-[var(--text-tertiary)]">{footer}</div> : null}
+          {footer ? (
+            <div className="mt-auto text-xs text-[var(--text-tertiary)]">{footer}</div>
+          ) : null}
         </div>
 
         {hasOutputs && (
           <div className="flex h-full min-h-[80px] flex-col justify-evenly gap-[var(--space-2)] pl-[var(--space-1)]">
             {outputs.map((port) => (
-              <div
-                key={port.id}
-                className="flex w-full justify-start"
-              >
-                <PortBadge
-                  side="output"
-                  config={port}
-                  onRef={() => {}} // No-op - static layout
-                />
+              <div key={port.id} className="flex w-full justify-start">
+                <PortBadge side="output" config={port} onRef={noop} />
               </div>
             ))}
           </div>

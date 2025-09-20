@@ -27,7 +27,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         handleClassName: 'bg-[var(--node-output)]',
       },
     ],
-    [],
+    []
   );
 
   const outputs = useMemo<PortConfig[]>(
@@ -39,7 +39,7 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
         handleClassName: 'bg-[var(--node-output)]',
       },
     ],
-    [],
+    []
   );
 
   const handleRunToHere = async () => {
@@ -65,7 +65,6 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
       inputs={inputs}
       outputs={outputs}
       onDoubleClick={() => onOpenLogViewer?.(data.identifier.id)}
-      measureDeps={[isRunning, data.label]}
       className="cursor-pointer"
     >
       <Button
@@ -79,7 +78,8 @@ export function ResultNode({ data, selected, onOpenLogViewer }: ResultNodeProps)
       </Button>
       {data.lastValueType ? (
         <div className="text-xs text-[var(--text-secondary)]">
-          Last value type: <span className="font-medium text-[var(--text-primary)]">{data.lastValueType}</span>
+          Last value type:{' '}
+          <span className="font-medium text-[var(--text-primary)]">{data.lastValueType}</span>
         </div>
       ) : null}
     </NodeLayout>

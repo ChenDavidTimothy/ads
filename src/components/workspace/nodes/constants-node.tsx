@@ -31,7 +31,7 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
         handleClassName: 'bg-[var(--node-data)]',
       },
     ],
-    [],
+    []
   );
 
   const displayValue = formatValue(data);
@@ -45,7 +45,6 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
       iconClassName="bg-[var(--node-data)]"
       inputs={[]}
       outputs={outputs}
-      measureDeps={[data.valueType, displayValue]}
     >
       <div className="flex items-center justify-between">
         <span>Current value</span>
@@ -53,7 +52,10 @@ export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) 
       </div>
       {data.valueType === 'color' ? (
         <div className="flex items-center gap-[var(--space-2)]">
-          <span className="h-4 w-4 rounded border border-[var(--border-primary)]" style={{ backgroundColor: data.colorValue }} />
+          <span
+            className="h-4 w-4 rounded border border-[var(--border-primary)]"
+            style={{ backgroundColor: data.colorValue }}
+          />
           <span className="text-xs text-[var(--text-secondary)]">Preview swatch</span>
         </div>
       ) : null}

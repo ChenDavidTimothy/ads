@@ -64,13 +64,15 @@ export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) 
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[duplicates]}
     >
       {additional === 0 ? (
-        <div className="text-xs text-[var(--text-secondary)]">Pass-through when count equals 1.</div>
+        <div className="text-xs text-[var(--text-secondary)]">
+          Pass-through when count equals 1.
+        </div>
       ) : (
         <div className="text-xs text-[var(--text-secondary)]">
-          Produces <span className="font-medium text-[var(--text-primary)]">{additional}</span> duplicate
+          Produces <span className="font-medium text-[var(--text-primary)]">{additional}</span>{' '}
+          duplicate
           {additional === 1 ? '' : 's'} for each input item.
         </div>
       )}

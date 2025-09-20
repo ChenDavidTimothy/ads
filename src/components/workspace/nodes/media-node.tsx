@@ -69,7 +69,7 @@ export function MediaNode({
     window.dispatchEvent(
       new CustomEvent('open-media-editor', {
         detail: { nodeId: data.identifier.id },
-      }),
+      })
     );
   };
 
@@ -83,7 +83,6 @@ export function MediaNode({
       inputs={inputs}
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
-      measureDeps={[currentAsset, cropInfo, displayInfo]}
       className="cursor-pointer"
       headerAccessory={<Settings size={12} className="text-[var(--text-tertiary)]" />}
       footer="Double-click to edit in the Media tab"

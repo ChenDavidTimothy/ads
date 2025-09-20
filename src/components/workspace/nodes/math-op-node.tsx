@@ -62,7 +62,10 @@ function getOperatorSymbol(operator: MathOpNodeData['operator']) {
 }
 
 export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
-  const nodeDefinition = getNodeDefinitionWithDynamicPorts('math_op', data as unknown as Record<string, unknown>);
+  const nodeDefinition = getNodeDefinitionWithDynamicPorts(
+    'math_op',
+    data as unknown as Record<string, unknown>
+  );
 
   const inputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.inputs ?? [];
@@ -103,7 +106,9 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
       <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center font-mono text-sm text-[var(--text-primary)]">
         {isUnary ? `${symbol}A` : `A ${symbol} B`}
       </div>
-      <div className="text-xs text-[var(--text-secondary)]">Returns the numeric result of the expression.</div>
+      <div className="text-xs text-[var(--text-secondary)]">
+        Returns the numeric result of the expression.
+      </div>
     </NodeLayout>
   );
 }

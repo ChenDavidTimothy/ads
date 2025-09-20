@@ -72,9 +72,10 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
     return definitions.map((port, index) => ({
       id: port.id,
       label: index === 0 ? 'First value' : 'Second value',
-      tooltip: index === 0
-        ? 'Value compared on the left side (A)'
-        : 'Value compared on the right side (B)',
+      tooltip:
+        index === 0
+          ? 'Value compared on the left side (A)'
+          : 'Value compared on the right side (B)',
       handleClassName: 'bg-[var(--node-logic)]',
       badge: index === 0 ? 'A' : 'B',
     }));
@@ -113,13 +114,13 @@ export function CompareNode({ data, selected }: NodeProps<CompareNodeData>) {
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[data.operator]}
     >
       <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center font-mono text-sm text-[var(--text-primary)]">
         A {operatorSymbol} B
       </div>
       <div className="text-xs text-[var(--text-secondary)]">
-        Emits <span className="font-medium text-[var(--text-primary)]">true</span> when the comparison holds.
+        Emits <span className="font-medium text-[var(--text-primary)]">true</span> when the
+        comparison holds.
       </div>
     </NodeLayout>
   );

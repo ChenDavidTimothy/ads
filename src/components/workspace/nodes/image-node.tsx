@@ -30,7 +30,9 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
       inputs={[]}
       outputs={outputs}
     >
-      <div className="text-xs text-[var(--text-secondary)]">Connect to a Media node to edit this image.</div>
+      <div className="text-xs text-[var(--text-secondary)]">
+        Connect to a Media node to edit this image.
+      </div>
     </NodeLayout>
   );
 }

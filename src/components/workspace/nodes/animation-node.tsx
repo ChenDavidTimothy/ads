@@ -60,7 +60,7 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
   const trackCount = data.tracks?.length ?? 0;
   const uniqueTypes = useMemo(
     () => Array.from(new Set((data.tracks ?? []).map((track) => track.type))),
-    [data.tracks],
+    [data.tracks]
   );
 
   const trackColors = transformFactory.getTrackColors();
@@ -91,7 +91,6 @@ export function AnimationNode({ data, selected, onOpenTimeline }: AnimationNodeP
       inputs={inputs}
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
-      measureDeps={[trackCount, uniqueTypes.join(','), data.duration]}
       className="cursor-pointer"
     >
       <div className="flex items-center justify-between text-xs">

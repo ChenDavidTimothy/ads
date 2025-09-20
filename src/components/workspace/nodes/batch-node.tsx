@@ -87,7 +87,7 @@ export function BatchNode({ id }: { id: string }) {
                 ...n.data,
                 keys: nextKeys,
               } as NodeData,
-            },
+            }
       ),
     });
     if (typeof window !== 'undefined') {
@@ -97,7 +97,7 @@ export function BatchNode({ id }: { id: string }) {
             nodeIdentifierId: nodeId,
             keys: [...nextKeys],
           },
-        }),
+        })
       );
     }
     setLocalInput('');
@@ -115,7 +115,7 @@ export function BatchNode({ id }: { id: string }) {
                 ...n.data,
                 keys: nextKeys,
               } as NodeData,
-            },
+            }
       ),
     });
     if (typeof window !== 'undefined') {
@@ -125,7 +125,7 @@ export function BatchNode({ id }: { id: string }) {
             nodeIdentifierId: nodeId,
             keys: [...nextKeys],
           },
-        }),
+        })
       );
     }
   };
@@ -136,12 +136,15 @@ export function BatchNode({ id }: { id: string }) {
         selected={Boolean(node?.selected)}
         title={node?.data?.identifier?.displayName ?? 'Batch'}
         subtitle={`${keys.length} key${keys.length === 1 ? '' : 's'} configured`}
-        icon={<span role="img" aria-label="batch">🏷️</span>}
+        icon={
+          <span role="img" aria-label="batch">
+            🏷️
+          </span>
+        }
         iconClassName="bg-[var(--node-logic)]"
         inputs={inputs}
         outputs={outputs}
         onDoubleClick={() => setOpen(true)}
-        measureDeps={[keys.length]}
         className="cursor-pointer"
         footer="Double-click or press Keys to manage batch outputs"
       >
@@ -156,9 +159,15 @@ export function BatchNode({ id }: { id: string }) {
       {open ? (
         <Modal isOpen={open} onClose={() => setOpen(false)} title="Batch Keys" size="sm">
           <div className="p-[var(--space-4)]">
-            <div className="mb-[var(--space-2)] text-[12px] text-[var(--text-secondary)]">Add or remove keys</div>
+            <div className="mb-[var(--space-2)] text-[12px] text-[var(--text-secondary)]">
+              Add or remove keys
+            </div>
             <div className="flex gap-[var(--space-2)]">
-              <Input placeholder="Enter key" value={localInput} onChange={(event) => setLocalInput(event.target.value)} />
+              <Input
+                placeholder="Enter key"
+                value={localInput}
+                onChange={(event) => setLocalInput(event.target.value)}
+              />
               <Button onClick={handleAddKey}>Add</Button>
             </div>
 

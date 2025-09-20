@@ -22,7 +22,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         handleClassName: 'bg-[var(--node-logic)]',
       },
     ],
-    [],
+    []
   );
 
   const outputs = useMemo<PortConfig[]>(
@@ -42,7 +42,7 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
         labelClassName: 'text-[var(--danger-500)]',
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -54,7 +54,6 @@ export function IfElseNode({ data, selected }: NodeProps<IfElseNodeData>) {
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[]}
     >
       <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center text-xs text-[var(--text-secondary)]">
         Sends the payload to the matching path without modifying it.

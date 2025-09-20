@@ -77,13 +77,18 @@ export function TypographyNode({ data, selected, onOpenTypography }: TypographyN
     <NodeLayout
       selected={selected}
       title={data.identifier.displayName}
-      subtitle={data.content ? (data.content.length > 40 ? `${data.content.slice(0, 37)}…` : data.content) : 'Typography styling'}
+      subtitle={
+        data.content
+          ? data.content.length > 40
+            ? `${data.content.slice(0, 37)}…`
+            : data.content
+          : 'Typography styling'
+      }
       icon={<Type size={14} />}
       iconClassName="bg-[var(--node-animation)]"
       inputs={inputs}
       outputs={outputs}
       onDoubleClick={handleDoubleClick}
-      measureDeps={[currentFont, data.textAlign, data.lineHeight, data.content ?? '']}
       className="cursor-pointer"
       headerAccessory={<Settings size={12} className="text-[var(--text-tertiary)]" />}
     >

@@ -38,7 +38,10 @@ function getOperatorSymbol(operator: BooleanOpNodeData['operator']) {
 }
 
 export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) {
-  const nodeDefinition = getNodeDefinitionWithDynamicPorts('boolean_op', data as unknown as Record<string, unknown>);
+  const nodeDefinition = getNodeDefinitionWithDynamicPorts(
+    'boolean_op',
+    data as unknown as Record<string, unknown>
+  );
 
   const inputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.inputs ?? [];
@@ -81,7 +84,9 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
       <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)] text-center font-mono text-sm text-[var(--text-primary)]">
         {formula}
       </div>
-      <div className="text-xs text-[var(--text-secondary)]">Outputs true when the expression evaluates to true.</div>
+      <div className="text-xs text-[var(--text-secondary)]">
+        Outputs true when the expression evaluates to true.
+      </div>
     </NodeLayout>
   );
 }

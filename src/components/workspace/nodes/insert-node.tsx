@@ -19,7 +19,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         handleClassName: 'bg-[var(--node-data)]',
       },
     ],
-    [],
+    []
   );
 
   const outputs = useMemo<PortConfig[]>(
@@ -31,7 +31,7 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         handleClassName: 'bg-[var(--node-data)]',
       },
     ],
-    [],
+    []
   );
 
   const customAssignments = Object.keys(data.appearanceTimeByObject ?? {}).length;
@@ -48,7 +48,6 @@ export function InsertNode({ data, selected }: NodeProps<InsertNodeData>) {
         outputs={outputs}
         onDoubleClick={() => setOpen(true)}
         footer="Double-click to edit individual timings"
-        measureDeps={[data.appearanceTime, customAssignments]}
         className="cursor-pointer"
       >
         {customAssignments > 0 ? (

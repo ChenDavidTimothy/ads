@@ -21,7 +21,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
         handleClassName: 'bg-[var(--node-logic)]',
         badge: String(index + 1),
       })),
-    [portCount],
+    [portCount]
   );
 
   const outputs = useMemo<PortConfig[]>(
@@ -33,7 +33,7 @@ export function MergeNode({ data, selected }: NodeProps<MergeNodeData>) {
         handleClassName: 'bg-[var(--node-logic)]',
       },
     ],
-    [],
+    []
   );
 
   return (

@@ -16,7 +16,7 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
         handleClassName: 'bg-[var(--node-geometry)]',
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -28,7 +28,6 @@ export function TriangleNode({ data, selected }: NodeProps<TriangleNodeData>) {
       iconClassName="bg-[var(--node-geometry)]"
       inputs={[]}
       outputs={outputs}
-      measureDeps={[data.size]}
     >
       <div className="flex items-center justify-between">
         <span>Edge length</span>

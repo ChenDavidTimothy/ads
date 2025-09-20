@@ -16,7 +16,7 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
         handleClassName: 'bg-[var(--node-geometry)]',
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -28,11 +28,12 @@ export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) 
       iconClassName="bg-[var(--node-geometry)]"
       inputs={[]}
       outputs={outputs}
-      measureDeps={[data.width, data.height]}
     >
       <div className="flex items-center justify-between">
         <span>Size</span>
-        <span className="font-medium text-[var(--text-primary)]">{data.width} × {data.height}px</span>
+        <span className="font-medium text-[var(--text-primary)]">
+          {data.width} × {data.height}px
+        </span>
       </div>
     </NodeLayout>
   );

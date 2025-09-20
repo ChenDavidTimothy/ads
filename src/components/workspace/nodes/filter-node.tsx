@@ -18,7 +18,7 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
         handleClassName: 'bg-[var(--node-logic)]',
       },
     ],
-    [],
+    []
   );
 
   const outputs = useMemo<PortConfig[]>(
@@ -30,7 +30,7 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
         handleClassName: 'bg-[var(--node-logic)]',
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -42,7 +42,6 @@ export function FilterNode({ data, selected }: NodeProps<FilterNodeData>) {
       iconClassName="bg-[var(--node-logic)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[selectedCount]}
     >
       {selectedCount > 0 ? (
         <div className="flex items-center justify-between text-xs">

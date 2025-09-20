@@ -60,7 +60,6 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
       iconClassName="bg-[var(--node-output)]"
       inputs={inputs}
       outputs={outputs}
-      measureDeps={[data.width, data.height, data.fps, data.duration, data.backgroundColor]}
     >
       <div className="flex items-center justify-between text-xs">
         <span>Duration</span>
@@ -73,11 +72,14 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
             className="h-3 w-3 rounded border border-[var(--border-primary)]"
             style={{ backgroundColor: data.backgroundColor }}
           />
-          <span className="font-mono text-[var(--text-primary)]">{data.backgroundColor.toUpperCase()}</span>
+          <span className="font-mono text-[var(--text-primary)]">
+            {data.backgroundColor.toUpperCase()}
+          </span>
         </span>
       </div>
       <div className="text-xs text-[var(--text-secondary)]">
-        Quality preset: <span className="font-medium text-[var(--text-primary)]">{data.videoPreset}</span>
+        Quality preset:{' '}
+        <span className="font-medium text-[var(--text-primary)]">{data.videoPreset}</span>
       </div>
     </NodeLayout>
   );

@@ -16,7 +16,7 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
         handleClassName: 'bg-[var(--node-geometry)]',
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -28,7 +28,6 @@ export function CircleNode({ data, selected }: NodeProps<CircleNodeData>) {
       iconClassName="bg-[var(--node-geometry)]"
       inputs={[]}
       outputs={outputs}
-      measureDeps={[data.radius]}
     >
       <div className="flex items-center justify-between">
         <span>Radius</span>
