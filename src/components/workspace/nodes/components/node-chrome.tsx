@@ -29,6 +29,9 @@ interface PortState {
   side: NodePortSide;
   preferredTop: number;
   height: number;
+  labelWidth: number;
+  inlineStart: number;
+  inlineEnd: number;
   update: (value: number) => void;
 }
 
@@ -41,12 +44,18 @@ interface RegisterPortOptions {
 
 interface RegisterPortResult {
   unregister: () => void;
-  reportSize: (height: number) => void;
+  reportSize: (metrics: {
+    height: number;
+    width: number;
+    inlineStart: number;
+    inlineEnd: number;
+  }) => void;
 }
 
 interface NodeLayoutContextValue {
   registerPort: (options: RegisterPortOptions) => RegisterPortResult;
   getNodeHeight: () => number;
+  getNodeRect: () => DOMRect | null;
 }
 
 const NodeLayoutContext = createContext<NodeLayoutContextValue | null>(null);
@@ -54,6 +63,9 @@ const NodeLayoutContext = createContext<NodeLayoutContextValue | null>(null);
 const MIN_PORT_HEIGHT = 28;
 const MIN_PORT_GAP = 12;
 const EDGE_PADDING = 20;
+const MIN_CONTENT_ZONE = 180;
+const PORT_CONTENT_GAP = 12;
+const DIMENSION_EPSILON = 0.5;
 
 export const NODE_PORT_MIN_HEIGHT = MIN_PORT_HEIGHT;
 export const NODE_PORT_MIN_GAP = MIN_PORT_GAP;
@@ -239,11 +251,21 @@ interface NodeCardProps extends ComponentProps<typeof Card> {
   children: ReactNode;
 }
 
+type NodeCardStyle = CSSProperties & {
+  '--node-port-zone-left'?: string;
+  '--node-port-zone-right'?: string;
+  '--node-port-label-max-left'?: string;
+  '--node-port-label-max-right'?: string;
+};
+
 export function NodeCard({ selected, className, children, style, ...props }: NodeCardProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [ports, setPorts] = useState<Map<string, PortState>>(new Map());
   const previousPositionsRef = useRef<Map<string, number>>(new Map());
   const [cardHeight, setCardHeight] = useState(0);
+  const [cardWidth, setCardWidth] = useState(0);
+  const [cardBaseMinWidth, setCardBaseMinWidth] = useState(0);
+  const [cardBaseMaxWidth, setCardBaseMaxWidth] = useState<number>(Number.POSITIVE_INFINITY);
   const [portDrivenMinHeight, setPortDrivenMinHeight] = useState(0);
 
   const registerPort = useCallback(
@@ -257,6 +279,9 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
           preferredTop,
           update,
           height: existing?.height ?? MIN_PORT_HEIGHT,
+          labelWidth: existing?.labelWidth ?? 0,
+          inlineStart: existing?.inlineStart ?? 0,
+          inlineEnd: existing?.inlineEnd ?? 0,
         });
         return next;
       });
@@ -271,16 +296,30 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
             return next;
           });
         },
-        reportSize: (height: number) => {
+        reportSize: ({ height, width, inlineStart, inlineEnd }) => {
           setPorts((previous) => {
             const existing = previous.get(id);
             if (!existing) return previous;
             const normalizedHeight = Math.max(height, MIN_PORT_HEIGHT);
-            if (Math.abs(existing.height - normalizedHeight) < 0.5) {
+            const normalizedWidth = Math.max(width, 0);
+            const normalizedInlineStart = Math.max(inlineStart, 0);
+            const normalizedInlineEnd = Math.max(inlineEnd, 0);
+            if (
+              Math.abs(existing.height - normalizedHeight) < DIMENSION_EPSILON &&
+              Math.abs(existing.labelWidth - normalizedWidth) < DIMENSION_EPSILON &&
+              Math.abs(existing.inlineStart - normalizedInlineStart) < DIMENSION_EPSILON &&
+              Math.abs(existing.inlineEnd - normalizedInlineEnd) < DIMENSION_EPSILON
+            ) {
               return previous;
             }
             const next = new Map(previous);
-            next.set(id, { ...existing, height: normalizedHeight });
+            next.set(id, {
+              ...existing,
+              height: normalizedHeight,
+              labelWidth: normalizedWidth,
+              inlineStart: normalizedInlineStart,
+              inlineEnd: normalizedInlineEnd,
+            });
             return next;
           });
         },
@@ -293,17 +332,51 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
     const element = rootRef.current;
     if (!element) return;
 
+    const applySize = (width: number, height: number) => {
+      setCardHeight((previous) =>
+        Math.abs(previous - height) < DIMENSION_EPSILON ? previous : height
+      );
+      setCardWidth((previous) => (Math.abs(previous - width) < DIMENSION_EPSILON ? previous : width));
+    };
+
+    const updateBaseConstraints = () => {
+      const computed = window.getComputedStyle(element);
+      const minWidthValue = Number.parseFloat(computed.minWidth ?? '');
+      if (!Number.isNaN(minWidthValue)) {
+        setCardBaseMinWidth((previous) =>
+          Math.abs(previous - minWidthValue) < DIMENSION_EPSILON ? previous : minWidthValue
+        );
+      }
+      const maxWidthRaw = Number.parseFloat(computed.maxWidth ?? '');
+      const normalizedMaxWidth = Number.isNaN(maxWidthRaw) ? Number.POSITIVE_INFINITY : maxWidthRaw;
+      setCardBaseMaxWidth((previous) => {
+        if (!Number.isFinite(previous) && !Number.isFinite(normalizedMaxWidth)) {
+          return previous;
+        }
+        if (Number.isFinite(previous) && Number.isFinite(normalizedMaxWidth)) {
+          if (Math.abs(previous - normalizedMaxWidth) < DIMENSION_EPSILON) {
+            return previous;
+          }
+        }
+        return normalizedMaxWidth;
+      });
+    };
+
     const measure = () => {
-      const nextHeight = element.getBoundingClientRect().height;
-      setCardHeight((previous) => (Math.abs(previous - nextHeight) < 0.5 ? previous : nextHeight));
+      const rect = element.getBoundingClientRect();
+      applySize(rect.width, rect.height);
+      updateBaseConstraints();
     };
 
     measure();
 
     if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', measure);
+      const handleResize = () => {
+        measure();
+      };
+      window.addEventListener('resize', handleResize);
       return () => {
-        window.removeEventListener('resize', measure);
+        window.removeEventListener('resize', handleResize);
       };
     }
 
@@ -313,8 +386,13 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
         entry?.borderBoxSize?.[0]?.blockSize ??
         entry?.contentRect?.height ??
         element.getBoundingClientRect().height;
+      const nextWidth =
+        entry?.borderBoxSize?.[0]?.inlineSize ??
+        entry?.contentRect?.width ??
+        element.getBoundingClientRect().width;
 
-      setCardHeight((previous) => (Math.abs(previous - nextHeight) < 0.5 ? previous : nextHeight));
+      applySize(nextWidth, nextHeight);
+      updateBaseConstraints();
     });
 
     observer.observe(element);
@@ -383,27 +461,137 @@ export function NodeCard({ selected, className, children, style, ...props }: Nod
     });
   }, [portsBySide, cardHeight]);
 
-  const cardStyle = useMemo(() => {
-    const baseStyle: CSSProperties = { ...(style ?? {}) };
-    if (portDrivenMinHeight > 0) {
-      const inlineValue = baseStyle.minHeight;
-      let inlineNumeric: number | undefined;
-      if (typeof inlineValue === 'number') {
-        inlineNumeric = inlineValue;
-      } else if (typeof inlineValue === 'string') {
-        const parsed = Number.parseFloat(inlineValue);
-        inlineNumeric = Number.isNaN(parsed) ? undefined : parsed;
+  const cardStyle = useMemo<NodeCardStyle>(() => {
+    const baseStyle: NodeCardStyle = { ...(style ?? {}) };
+
+    const parseNumeric = (value: unknown) => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? undefined : parsed;
       }
-      const finalMinHeight = Math.max(portDrivenMinHeight, inlineNumeric ?? 0);
-      baseStyle.minHeight = `${finalMinHeight}px`;
+      return undefined;
+    };
+
+    const formatDimension = (value: number) => `${Math.max(0, Math.round(value * 100) / 100)}px`;
+
+    const inlineMinHeight = parseNumeric(baseStyle.minHeight);
+    if (portDrivenMinHeight > 0) {
+      const finalMinHeight = Math.max(portDrivenMinHeight, inlineMinHeight ?? 0);
+      baseStyle.minHeight = formatDimension(finalMinHeight);
     }
+
+    const inlineMinWidth = parseNumeric(baseStyle.minWidth);
+
+    const leftMetrics = portsBySide.left.reduce(
+      (acc, port) => ({
+        zone: Math.max(acc.zone, port.inlineStart + port.labelWidth),
+        offset: Math.max(acc.offset, port.inlineStart),
+        width: Math.max(acc.width, port.labelWidth),
+      }),
+      { zone: 0, offset: 0, width: 0 }
+    );
+
+    const rightMetrics = portsBySide.right.reduce(
+      (acc, port) => ({
+        zone: Math.max(acc.zone, port.inlineEnd + port.labelWidth),
+        offset: Math.max(acc.offset, port.inlineEnd),
+        width: Math.max(acc.width, port.labelWidth),
+      }),
+      { zone: 0, offset: 0, width: 0 }
+    );
+
+    const hasLeftPorts = portsBySide.left.length > 0;
+    const hasRightPorts = portsBySide.right.length > 0;
+    const leftGap = hasLeftPorts ? PORT_CONTENT_GAP : 0;
+    const rightGap = hasRightPorts ? PORT_CONTENT_GAP : 0;
+
+    const baselineMinWidth = cardBaseMinWidth > 0 ? cardBaseMinWidth : 0;
+    const baselineMaxWidth = Number.isFinite(cardBaseMaxWidth) ? cardBaseMaxWidth : Number.POSITIVE_INFINITY;
+    let computedMinWidth = inlineMinWidth ?? 0;
+    if (baselineMinWidth > 0) {
+      computedMinWidth = Math.max(computedMinWidth, baselineMinWidth);
+    }
+
+    const desiredZoneWidth = leftMetrics.zone + rightMetrics.zone;
+    const desiredMinWidth =
+      hasLeftPorts || hasRightPorts
+        ? Math.ceil(desiredZoneWidth + MIN_CONTENT_ZONE + leftGap + rightGap)
+        : computedMinWidth;
+
+    const widthCapacity = baselineMaxWidth;
+    const cardWidthCandidate = cardWidth > 0 ? Math.min(cardWidth, widthCapacity) : 0;
+    const widthForBudget = Math.max(
+      computedMinWidth,
+      Math.min(desiredMinWidth, widthCapacity),
+      cardWidthCandidate
+    );
+
+    const zoneBudget = Math.max(0, widthForBudget - MIN_CONTENT_ZONE - leftGap - rightGap);
+    const labelBudget = Math.max(0, zoneBudget - leftMetrics.offset - rightMetrics.offset);
+    const totalLabelWidth = leftMetrics.width + rightMetrics.width;
+
+    let leftLabelCap = hasLeftPorts ? leftMetrics.width : 0;
+    let rightLabelCap = hasRightPorts ? rightMetrics.width : 0;
+
+    if (totalLabelWidth > 0 && labelBudget < totalLabelWidth) {
+      const shrinkFactor = labelBudget / totalLabelWidth;
+      if (hasLeftPorts) {
+        leftLabelCap = leftMetrics.width * shrinkFactor;
+      }
+      if (hasRightPorts) {
+        rightLabelCap = rightMetrics.width * shrinkFactor;
+      }
+    }
+
+    const finalLeftZone = hasLeftPorts ? leftMetrics.offset + leftLabelCap : 0;
+    const finalRightZone = hasRightPorts ? rightMetrics.offset + rightLabelCap : 0;
+    const totalGap = leftGap + rightGap;
+    const widthNeededAfter =
+      hasLeftPorts || hasRightPorts
+        ? Math.ceil(finalLeftZone + finalRightZone + MIN_CONTENT_ZONE + totalGap)
+        : computedMinWidth;
+
+    let finalMinWidth = Math.max(computedMinWidth, widthNeededAfter);
+    if (Number.isFinite(widthCapacity) && finalMinWidth > widthCapacity) {
+      finalMinWidth = widthCapacity;
+    }
+
+    if (finalMinWidth > computedMinWidth + DIMENSION_EPSILON) {
+      baseStyle.minWidth = formatDimension(finalMinWidth);
+    }
+
+    if (hasLeftPorts) {
+      const paddedZone = Math.round(finalLeftZone * 100) / 100;
+      const paddingValue = `max(var(--space-5), calc(${paddedZone}px + var(--space-3)))`;
+      baseStyle.paddingLeft = paddingValue;
+      baseStyle['--node-port-zone-left'] = formatDimension(finalLeftZone);
+      baseStyle['--node-port-label-max-left'] = formatDimension(leftLabelCap);
+    }
+
+    if (hasRightPorts) {
+      const paddedZone = Math.round(finalRightZone * 100) / 100;
+      const paddingValue = `max(var(--space-5), calc(${paddedZone}px + var(--space-3)))`;
+      baseStyle.paddingRight = paddingValue;
+      baseStyle['--node-port-zone-right'] = formatDimension(finalRightZone);
+      baseStyle['--node-port-label-max-right'] = formatDimension(rightLabelCap);
+    }
+
     return baseStyle;
-  }, [style, portDrivenMinHeight]);
+  }, [
+    style,
+    portDrivenMinHeight,
+    portsBySide,
+    cardBaseMinWidth,
+    cardBaseMaxWidth,
+    cardWidth,
+  ]);
 
   const contextValue = useMemo<NodeLayoutContextValue>(
     () => ({
       registerPort,
       getNodeHeight: () => rootRef.current?.getBoundingClientRect().height ?? 0,
+      getNodeRect: () => rootRef.current?.getBoundingClientRect() ?? null,
     }),
     [registerPort]
   );
@@ -500,6 +688,8 @@ const DESCRIPTION_TEXT_CLASS = 'text-[11px] font-medium text-[var(--text-seconda
 
 const LABEL_OFFSET = 'calc(var(--space-4) + 0.75rem)';
 
+type PortLabelStyle = CSSProperties & { '--node-port-label-max'?: string };
+
 const LABEL_CLAMP_STYLE: CSSProperties = {
   display: '-webkit-box',
   WebkitLineClamp: 2,
@@ -582,7 +772,15 @@ export function NodePortIndicator({
       const element = labelRef.current;
       if (!element) return;
       const rect = element.getBoundingClientRect();
-      reportSize(rect.height);
+      const nodeRect = layoutContext.getNodeRect();
+      const inlineStart = nodeRect ? Math.max(0, rect.left - nodeRect.left) : 0;
+      const inlineEnd = nodeRect ? Math.max(0, nodeRect.right - rect.right) : 0;
+      reportSize({
+        height: rect.height,
+        width: rect.width,
+        inlineStart,
+        inlineEnd,
+      });
     };
 
     measure();
@@ -612,10 +810,15 @@ export function NodePortIndicator({
     };
   }, [layoutContext, id, side, top]);
 
-  const labelPosition: CSSProperties =
+  const labelPosition: PortLabelStyle =
     side === 'left'
       ? { top: computedTop, left: LABEL_OFFSET }
       : { top: computedTop, right: LABEL_OFFSET };
+
+  labelPosition['--node-port-label-max'] =
+    side === 'left'
+      ? 'var(--node-port-label-max-left, 16rem)'
+      : 'var(--node-port-label-max-right, 16rem)';
 
   return (
     <>
