@@ -1,68 +1,79 @@
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
-import type { DuplicateNodeData } from '@/shared/types/nodes';
+import { useMemo } from 'react';
+import type { NodeProps } from 'reactflow';
 import { Copy } from 'lucide-react';
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import { NodeLayout, type PortConfig } from './components/node-layout';
+import type { DuplicateNodeData } from '@/shared/types/nodes';
 
 export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) {
   const nodeDefinition = getNodeDefinition('duplicate');
-  const handleClass = 'bg-[var(--node-logic)]';
+
+  const inputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.inputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'input',
+          label: 'Item to duplicate',
+          tooltip: 'Incoming data that should be cloned',
+          handleClassName: 'bg-[var(--node-logic)]',
+        },
+      ];
+    }
+
+    return definitions.map((port) => ({
+      id: port.id,
+      label: 'Item to duplicate',
+      tooltip: 'Incoming data that should be cloned',
+      handleClassName: 'bg-[var(--node-logic)]',
+    }));
+  }, [nodeDefinition]);
+
+  const outputs = useMemo<PortConfig[]>(() => {
+    const definitions = nodeDefinition?.ports.outputs ?? [];
+    if (definitions.length === 0) {
+      return [
+        {
+          id: 'output',
+          label: 'Duplicated stream',
+          tooltip: 'Emits the original plus duplicates',
+          handleClassName: 'bg-[var(--node-logic)]',
+        },
+      ];
+    }
+
+    return definitions.map((port) => ({
+      id: port.id,
+      label: 'Duplicated stream',
+      tooltip: 'Emits the original plus duplicates',
+      handleClassName: 'bg-[var(--node-logic)]',
+    }));
+  }, [nodeDefinition]);
+
+  const duplicates = Math.max(1, data.count ?? 1);
+  const additional = Math.max(0, duplicates - 1);
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Input port */}
-      {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Copy size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
+    <NodeLayout
+      selected={selected}
+      title={data.identifier.displayName}
+      subtitle={`Create ${duplicates} copy${duplicates === 1 ? '' : 'ies'}`}
+      icon={<Copy size={14} />}
+      iconClassName="bg-[var(--node-logic)]"
+      inputs={inputs}
+      outputs={outputs}
+      measureDeps={[duplicates]}
+    >
+      {additional === 0 ? (
+        <div className="text-xs text-[var(--text-secondary)]">Pass-through when count equals 1.</div>
+      ) : (
+        <div className="text-xs text-[var(--text-secondary)]">
+          Produces <span className="font-medium text-[var(--text-primary)]">{additional}</span> duplicate
+          {additional === 1 ? '' : 's'} for each input item.
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Count:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">{data.count}</span>
-        </div>
-
-        <div className="text-xs text-[var(--success-500)]">
-          {data.count === 1
-            ? 'Pass-through mode'
-            : `Creating ${data.count - 1} duplicate${data.count > 2 ? 's' : ''}`}
-        </div>
-
-        <div className="text-xs text-[var(--text-tertiary)] italic">
-          Generic duplication - works with any node type
-        </div>
-      </CardContent>
-
-      {/* Output port */}
-      {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
-        />
-      ))}
-    </Card>
+      )}
+    </NodeLayout>
   );
 }
