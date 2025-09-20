@@ -35,11 +35,10 @@ export default async function LandingPage() {
   const hello = await api.post.hello({ text: 'from Variota' });
 
   const microBenefits = [
-    'No-code logic for colors, motion, sizes, and layouts tied to your data',
-    'Excel/CSV import to localize pricing, assortments, and messaging',
-    'Brand-locked templates that keep compliance copy intact',
-    'Batch-ready assets for social, marketplaces, in-store, and more',
-    'Instant regeneration whenever product data shifts',
+    'No‑code rules for badges, pricing, layouts, and motion',
+    'Localize by region and language with guardrails',
+    'Batch‑generate assets for social, ads, marketplaces, and in‑store',
+    'One‑click re‑generate when product data changes',
   ];
 
   const personaWins = [
@@ -66,38 +65,37 @@ export default async function LandingPage() {
   ];
 
   const problemPoints = [
-    'Frequent price and assortment changes across regions and channels',
-    "Manual tools don't scale to hundreds or thousands of variants",
-    'Custom-coded pipelines require engineers and slow every iteration',
-    'Brand inconsistencies and compliance risks under deadline pressure',
-    'Rising labor costs and omnichannel demands',
+    'Prices and assortments change weekly across regions and channels.',
+    "Manual tools don't scale to hundreds or thousands of variants.",
+    'Custom-coded pipelines are slow to update and need engineers.',
+    'Brand and compliance errors under deadline pressure.',
   ];
 
   const howItWorksSteps = [
     {
       title: 'Import data',
       description:
-        'Upload Excel/CSV or connect a sheet. Map price, discount, region, category, color, size, and asset URLs in minutes.',
+        'Import product data from a sheet, CSV, or API. Map price, discount, market, and image URL fields in minutes.',
     },
     {
-      title: 'Build logic',
+      title: 'Build rules',
       description:
-        'Use a no-code, node-based builder to define rules, like highlighting high-margin items or swapping layouts when inventory is low.',
+        'Build rules visually with a node‑based builder (e.g., If discount ≥ 20% then show red "Save {discount}%" badge).',
     },
     {
       title: 'Choose templates',
       description:
-        'Start from consistent templates with dynamic fields, safe zones, and presets for every channel.',
+        'Start with on‑brand templates with dynamic fields and safe zones for each channel.',
     },
     {
       title: 'Generate at scale',
       description:
-        'Create image and video variants for all SKUs, regions, and channels in one batch run with cloud rendering.',
+        'Batch‑generate images and short videos for all SKUs and markets in a single run, with parallel rendering.',
     },
     {
       title: 'Review and publish',
       description:
-        'Preview variants, route for approval, export packages, or deliver through feeds. Regenerate instantly when data changes.',
+        'Preview variants, export packages, or deliver via feeds. Re‑generate when data changes.',
     },
   ];
 
@@ -105,50 +103,46 @@ export default async function LandingPage() {
     {
       title: 'Data & Logic',
       items: [
-        'Excel/CSV import, field mapping, and validation',
-        'No-code rules tied to product attributes and thresholds',
-        'Conditional animation, styling, and layouts based on data',
-        'Regional variants that respect currencies, copy, and disclosures',
+        { text: 'CSV/Sheet import with column mapping and validation', chip: 'Pilot' },
+        { text: 'No‑code rules tied to product attributes and thresholds', chip: null },
+        { text: 'Regional variants with currency and localized copy guardrails', chip: null },
       ],
     },
     {
       title: 'Creative Generation',
       items: [
-        'Batch images and videos from a single source of truth',
-        'Aspect-ratio presets for social, ads, marketplaces, and in-store screens',
-        'Automatic naming, metadata, and tagging for every asset',
-        'Dynamic price formatting and multi-language text fields',
+        { text: 'Batch images and short videos from one source of truth', chip: null },
+        { text: 'Presets for social, ads, and marketplace aspect ratios', chip: null },
+        { text: 'Automatic naming and metadata (basic)', chip: null },
       ],
     },
     {
       title: 'Brand & Compliance',
       items: [
-        'Brand-locked templates with fonts, colors, safe zones, and legal copy',
-        'Enforced disclosures and fine print per market',
-        'Localization guardrails for language, currency, and regulatory text',
-        'Audit-ready logs of who changed what and when',
+        { text: 'Brand‑locked templates with fonts, colors, safe zones', chip: null },
+        { text: 'Legal copy blocks per market (configurable)', chip: null },
+        { text: 'Version history and approvals (pilot scope)', chip: 'Pilot' },
       ],
     },
     {
       title: 'Workflow & Delivery',
       items: [
-        'Roles and permissions for marketing, design, and merchandising teams',
-        'Approval steps, version history, and rollbacks',
-        'Error reporting, QA previews, and collaborative review',
-        'Scalable rendering queues with export packages and feed delivery',
+        { text: 'Roles and permissions (basic roles)', chip: null },
+        { text: 'QA previews and error reporting (pilot)', chip: 'Pilot' },
+        { text: 'Export packages for channels; feeds (roadmap)', chip: 'Roadmap' },
       ],
     },
   ];
 
   const brandSafetyPoints = [
-    'Lock essential brand elements while still allowing controlled variation through logic rules.',
-    'Centralize brand kits across teams with fonts, colors, logos, and motion presets.',
-    'Automate regional legal text, disclosures, and pricing footnotes for every output.',
-    'Maintain traceability with approvals, version history, and audit logs.',
+    'Lock brand elements; allow controlled variation via rules.',
+    'Enforce regional legal/disclosure blocks automatically.',
+    'Centralize brand kits: fonts, colors, logos, motion presets.',
+    'Track changes with approvals and version notes (pilot).',
   ];
 
   const outcomes = [
-    'Compress promo production cycles from multi-day timelines to responsive updates.',
+    'Produce thousands of governed variants from a single data file: images and video.',
     'Eliminate repetitive manual work so teams focus on campaigns, not versioning.',
     'Keep every channel and region in sync the moment product data changes.',
     'Enable rapid experimentation with effortless creative variants.',
@@ -184,30 +178,32 @@ export default async function LandingPage() {
     {
       title: 'Variota',
       description:
-        'No-code, logic-first, data-to-creative engine for images and video. Operated by marketing teams with governance and brand safety built in.',
+        'A no‑code, logic‑first data‑to‑creative engine that batch‑generates images and video at scale, operated by marketing, with brand safety built in.',
     },
   ];
 
   const integrationsToday = [
-    'Excel/CSV uploads with validation and saved mappings',
-    'Google Sheets sync for shared merchandising data',
-    'Use existing product image URLs or DAM libraries',
+    'Manual import support (we prep your CSV/Sheet)',
+    'Use existing product image URLs or DAM links',
+    'Early template library with dynamic fields',
   ];
 
   const integrationsRoadmap = [
-    'PIM, DAM, and CMS connectors',
-    'Marketplace and ad platform delivery',
-    'SSO and directory sync for enterprise governance',
+    'Self‑serve CSV/Google Sheets import with validation',
+    'PIM/DAM/CMS connectors',
+    'Direct delivery to ad/marketplace channels',
+    'SSO and directory sync (enterprise)',
   ];
 
   const pilotHighlights = {
     intro:
-      "We're partnering with promo-heavy retailers and e-commerce teams to validate workflows, governance, and outcomes.",
+      "We're onboarding 3–5 promo‑heavy retailers for a 4–6 week pilot. We'll prep your CSV/Sheet, help set up templates and rules, and deliver your first large batch (e.g., 500–2,000 variants). Limited spots.",
     profile:
-      'Ideal pilot profile: multi-region pricing, frequent promo cycles, large SKU catalogs, and creative operations that need scale.',
+      'Ideal partners: Multi‑region pricing, weekly promos, 1k+ SKUs, multiple channels.',
     provide:
-      'What we provide: onboarding support, template setup guidance, logic builder training, dedicated slack, and pilot incentives.',
-    ask: 'What we ask: sanitized sample data, 1–2 target templates, weekly working sessions, and candid feedback.',
+      'What we provide: Data prep, column mapping, template setup, rule training, batch rendering, Slack support.',
+    ask: 'What we ask: Sanitized sample data, 1–2 target templates, 1 hour/week for 4–6 weeks, candid feedback.',
+    incentives: 'Pilot incentives: Early pricing and priority input on the roadmap.',
   };
 
   const faqs = [
@@ -217,22 +213,17 @@ export default async function LandingPage() {
         'Variota connects live product data and business rules directly into creative generation. Instead of manual layout work or limited ad templates, teams define logic once and produce governed assets across every channel.',
     },
     {
-      question: 'Can non-technical marketers use the logic builder?',
+      question: 'Can non-technical marketers use the rules?',
       answer:
-        'Yes. The node-based builder uses plain-language rules, presets, and visual debugging so marketing, merchandising, and creative teams can own automation without code.',
+        'Yes. The node‑based builder uses drag‑and‑drop conditions, presets, and visual debugging so marketing, merchandising, and creative teams can automate without code.',
     },
     {
-      question: 'How do you handle brand guidelines and approvals?',
+      question: 'Which data sources can I use? How are errors handled?',
       answer:
-        'Templates lock critical brand elements while approvals, version history, and audit logs keep every change tracked. Legal copy blocks and safe zones are enforced automatically.',
+        'Start with CSV or Google Sheets. During pilot, we\'ll help map your columns, validate fields, and flag errors before generation. You can download error reports, fix in your sheet, and re‑upload.',
     },
     {
-      question: 'Which data sources can I use? How are errors reported?',
-      answer:
-        'Start with Excel/CSV or Google Sheets. Field validation, error reports, and QA previews highlight any mismatches before generation.',
-    },
-    {
-      question: 'Can I generate both images and videos? Which formats are supported?',
+      question: 'Can I generate both images and short videos?',
       answer:
         'Yes. Batch render image and video assets with presets for social, marketplaces, digital signage, and more. Aspect ratios and duration rules are controlled through templates.',
     },
@@ -247,19 +238,9 @@ export default async function LandingPage() {
         'No. Marketing and creative teams configure rules, while IT partners can assist with governance or data connections as needed.',
     },
     {
-      question: 'What about security and privacy?',
+      question: "What's the pricing model during pilot?",
       answer:
-        'Variota processes only the data you choose to upload, supports data deletion upon request, follows storage best practices, and has SSO and directory sync on the roadmap.',
-    },
-    {
-      question: "What's the pricing model?",
-      answer:
-        'Tiered subscriptions based on usage, seats, and integrations. Pilot and early access pricing is available once we confirm fit.',
-    },
-    {
-      question: "How do pilots work? What's expected from our team?",
-      answer:
-        'We co-design workflows with your team, deliver onboarding and training, and hold weekly check-ins. You provide feedback on outcomes so we can prioritize the roadmap together.',
+        'Pilot incentives available after we confirm fit. We\'ll work with you to customize pricing based on your needs and provide early access terms.',
     },
   ];
 
@@ -277,7 +258,7 @@ export default async function LandingPage() {
     security: [
       'Only process the data teams choose to upload and honor deletion requests',
       'Follow hardened storage practices with scoped access controls',
-      'SSO and directory sync are on the roadmap for larger teams',
+      'Data deletion upon request and scoped access controls',
     ],
   };
 
@@ -286,7 +267,7 @@ export default async function LandingPage() {
       <div className="min-h-screen bg-[var(--surface-0)] text-[var(--text-primary)]">
         <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--surface-1)]/90 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <Link href="/dashboard" className="flex items-center gap-3" aria-label="Variota home">
+            <Link href="/" className="flex items-center gap-3" aria-label="Variota home">
               <Logo className="h-14 w-52" />
             </Link>
 
@@ -315,12 +296,6 @@ export default async function LandingPage() {
               >
                 Pilot
               </Link>
-              <Link
-                href="#investors"
-                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-              >
-                Investors
-              </Link>
             </nav>
 
             <div className="flex items-center gap-3">
@@ -345,13 +320,17 @@ export default async function LandingPage() {
               <div className="grid gap-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
                 <div>
                   <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance sm:text-5xl md:text-6xl">
-                    Turn your product data into professional images and videos at scale, without code
+                    Data‑driven creative with no‑code, node‑based rules - at scale
                   </h1>
                   <p className="mt-6 max-w-2xl text-lg text-[var(--text-secondary)] sm:text-xl">
-                    Upload Excel/CSV files, set simple if-else rules, and generate thousands of localized
-                    assets in minutes. Update instantly when prices or assortments change across
-                    regions.
+                    Build visual rules for prices, discounts, markets, and inventory that trigger badges,
+                    layouts, motion, and copy. Batch‑generate thousands of image and video variants.
                   </p>
+                  <ul className="mt-6 space-y-2 text-sm text-[var(--text-tertiary)]">
+                    <li>• If discount ≥ 20% → show red "Save &#123;discount&#125;%" badge across all eligible SKUs</li>
+                    <li>• If market = FR → use EUR, comma decimal, and French legal copy across French variants</li>
+                    <li>• If inventory &lt; threshold → switch to "Limited stock" layout with pulse for those products</li>
+                  </ul>
 
                   <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                     <Link href="#pilot">
@@ -362,7 +341,7 @@ export default async function LandingPage() {
                     </Link>
                     <Link href="#demo" className="w-full sm:w-auto">
                       <Button variant="secondary" size="lg" className="w-full sm:w-auto">
-                        <Play className="mr-2 h-5 w-5" aria-hidden="true" /> Watch 2-minute demo
+                        <Play className="mr-2 h-5 w-5" aria-hidden="true" /> See the workflow
                       </Button>
                     </Link>
                   </div>
@@ -384,41 +363,16 @@ export default async function LandingPage() {
                 </div>
 
                 <figure className="glass-panel shadow-glass-lg relative overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] p-8">
-                  <div className="space-y-6">
-                    <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
-                      <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Database
-                          className="h-5 w-5 text-[var(--accent-primary)]"
-                          aria-hidden="true"
-                        />
-                        <span>Product data import (prices, inventory, imagery)</span>
-                      </div>
-                    </div>
-                    <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
-                      <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Workflow
-                          className="h-5 w-5 text-[var(--accent-secondary)]"
-                          aria-hidden="true"
-                        />
-                        <span>
-                          No-code rule builder: highlight promos, localize copy, trigger animations
-                        </span>
-                      </div>
-                    </div>
-                    <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface-2)]/70 p-4">
-                      <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <Layers
-                          className="h-5 w-5 text-[var(--node-animation)]"
-                          aria-hidden="true"
-                        />
-                        <span>
-                          Asset grid preview: localized images and video thumbnails ready to export
-                        </span>
-                      </div>
+                  <div className="flex items-center justify-center h-64 text-[var(--text-tertiary)]">
+                    {/* [PLACEHOLDER VISUAL: Data sources (Sheet/API/CSV) → Node graph (conditions/actions) → Variants grid] */}
+                    <div className="text-center">
+                      <Database className="h-16 w-16 mx-auto mb-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                      <p className="text-lg font-medium">Data → Node Rules → Variants</p>
+                      <p className="text-sm mt-2">Coming soon: Visual rule builder demo</p>
                     </div>
                   </div>
                   <figcaption className="mt-6 text-sm text-[var(--text-tertiary)]">
-                    Visualizing the Variota flow: data in, logic applied, governed assets out.
+                    Data sources (Sheet/API/CSV) → Node graph (conditions/actions) → Variants grid. Build rules visually with drag-and-drop nodes for conditions that trigger creative changes.
                   </figcaption>
                 </figure>
               </div>
@@ -428,19 +382,7 @@ export default async function LandingPage() {
           <section className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/90">
             <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-12 text-center text-sm text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-center sm:text-base">
               <span className="font-medium text-[var(--text-primary)]">
-                Built with insights from retail leaders
-              </span>
-              <span
-                className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block"
-                aria-hidden="true"
-              />
-              <span>Designed for promo-heavy retailers and e-commerce teams</span>
-              <span
-                className="hidden h-4 w-px bg-[var(--border-primary)] sm:inline-block"
-                aria-hidden="true"
-              />
-              <span className="text-[var(--text-tertiary)] italic">
-                “If one person can handle a full promo cycle in minutes, that’s a game-changer.”
+                Now recruiting 3–5 pilot partners in promo-heavy retail. We'll prep your CSV/Sheet for you.
               </span>
             </div>
           </section>
@@ -448,11 +390,10 @@ export default async function LandingPage() {
           <section id="product" className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
             <div className="mb-12 max-w-3xl">
               <h2 className="text-3xl font-bold sm:text-4xl">
-                Benefits for every team without hiring more people
+                Benefits for every team - without adding headcount
               </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                Variota gives every sales and marketing team smart automation so they can quickly adapt to
-                market changes without losing quality or following rules.
+                Variota gives marketing and merchandising teams a simple way to turn product data into on‑brand creative at scale - without waiting on production.
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
@@ -513,15 +454,25 @@ export default async function LandingPage() {
                 </Card>
               ))}
             </div>
+            <div className="mt-12">
+              {/* [PLACEHOLDER: HOW-IT-WORKS GIF - CSV upload → column mapping → rules → variants preview] */}
+              <div className="flex items-center justify-center h-64 bg-[var(--surface-2)]/50 rounded-[var(--radius-lg)] border border-[var(--border-primary)]">
+                <div className="text-center text-[var(--text-tertiary)]">
+                  <Play className="h-12 w-12 mx-auto mb-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                  <p className="text-lg font-medium">Interactive workflow preview</p>
+                  <p className="text-sm mt-2">Coming soon: Step-by-step visual guide</p>
+                </div>
+              </div>
+            </div>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
               <Link href="#demo">
                 <Button variant="primary" size="md">
-                  See it in a 2-minute demo
+                  See the workflow
                   <Play className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
               </Link>
               <p className="text-sm text-[var(--text-tertiary)]">
-                Prefer a walkthrough? Request a live session via the early access form below.
+                Prefer a live walkthrough? Request a 15‑min session via the early access form.
               </p>
             </div>
           </section>
@@ -571,12 +522,19 @@ export default async function LandingPage() {
                     </div>
                     <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                       {group.items.map((item) => (
-                        <li key={item} className="flex items-start gap-3">
+                        <li key={item.text} className="flex items-start gap-3">
                           <CheckCircle2
                             className="mt-1 h-4 w-4 text-[var(--accent-primary)]"
                             aria-hidden="true"
                           />
-                          <span>{item}</span>
+                          <span>
+                            {item.text}
+                            {item.chip && (
+                              <span className="ml-2 inline-block rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]">
+                                {item.chip}
+                              </span>
+                            )}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -611,7 +569,7 @@ export default async function LandingPage() {
             <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold sm:text-4xl">
-                  Ship more promotions, faster without sacrificing brand or control
+                  Ship more promotions faster - without sacrificing brand control
                 </h2>
               </div>
               <ul className="mt-10 grid gap-4 text-sm text-[var(--text-secondary)] md:grid-cols-2">
@@ -695,7 +653,8 @@ export default async function LandingPage() {
               <div className="grid gap-6 md:grid-cols-2">
                 <Card variant="glass" className="p-6">
                   <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                    Available today
+                    In pilot now
+                    <span className="ml-2 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--text-tertiary)]">Private beta</span>
                   </h3>
                   <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
                     {integrationsToday.map((item) => (
@@ -760,6 +719,9 @@ export default async function LandingPage() {
                   <p className="mt-3 text-sm text-[var(--text-secondary)]">{pilotHighlights.ask}</p>
                 </Card>
               </div>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-[var(--text-secondary)]">{pilotHighlights.incentives}</p>
+              </div>
               <div className="mt-10">
                 <Link href="#early-access">
                   <Button variant="primary" size="md">
@@ -773,56 +735,33 @@ export default async function LandingPage() {
 
           <section id="demo" className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
             <div id="early-access" className="-mt-24 h-24 sm:-mt-32 sm:h-32" aria-hidden="true" />
-            <div className="grid gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
-              <div>
-                <h2 className="text-3xl font-bold sm:text-4xl">See Variota in action</h2>
-                <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                  Request early access or book a live demo (15 minutes). Share your context and
-                  we’ll tailor the walkthrough.
-                </p>
-                <p className="mt-6 text-sm text-[var(--text-tertiary)]">
-                  We’ll reply within 2 business days.
-                </p>
+            <div className="space-y-12">
+              <div className="grid gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
+                <div>
+                  <h2 className="text-3xl font-bold sm:text-4xl">See Variota in action</h2>
+                  <p className="mt-4 text-lg text-[var(--text-secondary)]">
+                    Watch a 2-minute walkthrough of importing data, setting rules, and generating variants. Prefer live? Book a 15-minute session below.
+                  </p>
+                  <p className="mt-6 text-sm text-[var(--text-tertiary)]">
+                    We’ll reply within 2 business days.
+                  </p>
+                </div>
+                <Card variant="glass" className="p-0 overflow-hidden">
+                  <div className="aspect-video w-full">
+                    {/* [PLACEHOLDER: EMBEDDED VIDEO - use an iframe] */}
+                    <div className="flex h-full items-center justify-center bg-[var(--surface-2)] text-[var(--text-tertiary)]">
+                      <div className="text-center">
+                        <Play className="h-16 w-16 mx-auto mb-4 text-[var(--accent-primary)]" aria-hidden="true" />
+                        <p className="text-lg font-medium">2-minute demo video</p>
+                        <p className="text-sm mt-2">Coming soon: Live walkthrough</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
               <Card variant="glass" className="p-6">
                 <EarlyAccessForm />
               </Card>
-            </div>
-          </section>
-
-          <section
-            id="investors"
-            className="border-y border-[var(--border-primary)] bg-[var(--surface-1)]/85"
-          >
-            <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 sm:py-28 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-              <div>
-                <h2 className="text-3xl font-bold sm:text-4xl">
-                  Building the automation layer for retail creative
-                </h2>
-                <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                  Retail and e-commerce demand high-velocity, data-driven creative. Manual tools and
-                  "custom-coded pipelines can't keep pace with multi-region catalogs, compliance, and"
-                  localization. "Variota's no-code, logic-first engine spans images and video with"
-                  governance built in.
-                </p>
-              </div>
-              <div className="space-y-6 text-sm text-[var(--text-secondary)]">
-                <p>
-                  Early traction: pilot pipeline development with promo-heavy retailers, expert
-                  endorsements from merchandising leaders, and active design partners co-shaping
-                  automation workflows.
-                </p>
-                <p>
-                  Business model: tiered SaaS based on usage, seats, and integrations with
-                  enterprise options for governance and delivery.
-                </p>
-                <Link href="mailto:invest@variota.com" className="inline-flex">
-                  <Button variant="primary" size="md">
-                    Request investor brief
-                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </Link>
-              </div>
             </div>
           </section>
 
@@ -911,7 +850,7 @@ export default async function LandingPage() {
               <h2 className="text-3xl font-bold sm:text-4xl">Apply for pilot access</h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
                 Ready to connect your product data to governed creative automation? Share your
-                "context and we'll align on a pilot path."
+                context and we'll align on a pilot path.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="#early-access" className="inline-flex">
@@ -940,7 +879,7 @@ export default async function LandingPage() {
             <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
               <div>
                 <Link
-                  href="/dashboard"
+                  href="/"
                   className="flex items-center gap-3"
                   aria-label="Variota logo"
                 >
@@ -981,7 +920,7 @@ export default async function LandingPage() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="#investors" className="hover:text-[var(--text-primary)]">
+                      <Link href="/investors" className="hover:text-[var(--text-primary)]">
                         Investors
                       </Link>
                     </li>
@@ -1011,7 +950,7 @@ export default async function LandingPage() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="#investors" className="hover:text-[var(--text-primary)]">
+                      <Link href="/investors" className="hover:text-[var(--text-primary)]">
                         Investors
                       </Link>
                     </li>
