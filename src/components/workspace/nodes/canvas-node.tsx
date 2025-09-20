@@ -1,21 +1,35 @@
-// src/components/workspace/nodes/canvas-node.tsx
+// src/components/workspace/nodes/canvas-node.tsx - Canvas styling node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { getNodeDefinition } from '@/shared/registry/registry-utils';
-import type { CanvasNodeData } from '@/shared/types/nodes';
+import type { NodeProps } from 'reactflow';
 import { Palette } from 'lucide-react';
 
-type CanvasNodeProps = NodeProps<CanvasNodeData> & {
+import { getNodeDefinition } from '@/shared/registry/registry-utils';
+import type { CanvasNodeData } from '@/shared/types/nodes';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
+
+interface CanvasNodeProps extends NodeProps<CanvasNodeData> {
   onOpenCanvas?: () => void;
-};
+}
 
 export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
   const nodeDefinition = getNodeDefinition('canvas');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const handleDoubleClick = () => {
-    if (onOpenCanvas) return onOpenCanvas();
+    if (onOpenCanvas) {
+      onOpenCanvas();
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const ws = params.get('workspace');
     const url = new URL(window.location.href);
@@ -25,53 +39,58 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handleClass = 'bg-[var(--node-geometry)]';
-
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)] transition-all hover:bg-[var(--surface-interactive)]"
-      onDoubleClick={handleDoubleClick}
-    >
+    <NodeCard selected={selected} className="cursor-pointer" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
+          id={port.id}
+          side="left"
           type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          top="50%"
+          label="Objects to style"
+          description="Connect the items you want to adjust on the canvas."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-      {nodeDefinition?.ports.outputs.map((port, idx) => (
-        <Handle
+
+      <NodeHeader
+        icon={<Palette size={14} />}
+        title={data?.identifier?.displayName ?? 'Canvas'}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+      />
+
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center justify-between">
+          <span>Opacity</span>
+          <span className="font-medium text-[var(--text-primary)]">{data.opacity ?? 1}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Fill color</span>
+          <span className="font-medium text-[var(--text-primary)]">
+            {data.fillColor ?? '#ffffff'}
+          </span>
+        </div>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Double-click to adjust transforms and layer order in the canvas panel.
+        </div>
+      </div>
+
+      {nodeDefinition?.ports.outputs.map((port) => (
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `${50 + idx * 16}%` }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Styled objects"
+          description="Outputs the objects with canvas styling applied."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-geometry)] text-[var(--text-primary)]">
-            <Palette size={12} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold text-[var(--text-primary)]">
-              {data?.identifier?.displayName ?? 'Canvas'}
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-0 text-xs text-[var(--text-secondary)]">
-        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
-          Double-click to edit in Canvas tab
-        </div>
-      </CardContent>
-    </Card>
+    </NodeCard>
   );
 }

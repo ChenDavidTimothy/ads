@@ -1,68 +1,74 @@
+// src/components/workspace/nodes/duplicate-node.tsx - Duplicate node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Copy } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { DuplicateNodeData } from '@/shared/types/nodes';
-import { Copy } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function DuplicateNode({ data, selected }: NodeProps<DuplicateNodeData>) {
   const nodeDefinition = getNodeDefinition('duplicate');
-  const handleClass = 'bg-[var(--node-logic)]';
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      {/* Input port */}
+    <NodeCard selected={selected}>
       {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
+          id={port.id}
+          side="left"
           type="target"
-          position={Position.Left}
-          id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          top="50%"
+          label="Source stream"
+          description="Connect the objects you want to copy."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-logic)] text-[var(--text-primary)]">
-            <Copy size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
+      <NodeHeader
+        icon={<Copy size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={<span className="text-xs text-[var(--text-secondary)]">{data.count} copies</span>}
+      />
 
-      <CardContent className="space-y-2 p-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Count:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)]">{data.count}</span>
-        </div>
-
-        <div className="text-xs text-[var(--success-500)]">
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)]">
           {data.count === 1
-            ? 'Pass-through mode'
-            : `Creating ${data.count - 1} duplicate${data.count > 2 ? 's' : ''}`}
+            ? 'Pass-through mode — no additional duplicates created.'
+            : `Creates ${data.count - 1} extra duplicate${data.count > 2 ? 's' : ''}.`}
         </div>
-
-        <div className="text-xs text-[var(--text-tertiary)] italic">
-          Generic duplication - works with any node type
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Each duplicate receives a unique ID so downstream nodes can treat them independently.
         </div>
-      </CardContent>
+      </div>
 
-      {/* Output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Duplicated stream"
+          description="Outputs the original plus any duplicates."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

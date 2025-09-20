@@ -1,14 +1,25 @@
-// src/components/workspace/nodes/frame-node.tsx
+// src/components/workspace/nodes/frame-node.tsx - Frame output node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Image as ImageIcon } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { FrameNodeData } from '@/shared/types/nodes';
-import { Image as ImageIcon } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
   const nodeDefinition = getNodeDefinition('frame');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const getResolutionLabel = (width: number, height: number) => {
     if (width === 1920 && height === 1080) return 'FHD';
@@ -18,74 +29,57 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
     return 'Custom';
   };
 
-  const handleClass = 'bg-[var(--node-output)]';
+  const resolutionLabel = getResolutionLabel(data.width || 1920, data.height || 1080);
+  const formatLabel = (data.format || 'png').toUpperCase();
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
+    <NodeCard selected={selected}>
       {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="target"
-          position={Position.Left}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          side="left"
+          type="target"
+          top="50%"
+          label="Image pipeline"
+          description="Connect the flow you want to export as images."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-output)] text-[var(--text-primary)]">
-            <ImageIcon size={12} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold text-[var(--text-primary)]">
-              {data.identifier.displayName}
-            </div>
-          </div>
-        </div>
-      </CardHeader>
+      <NodeHeader
+        icon={<ImageIcon size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={<span className="text-xs text-[var(--text-secondary)]">{formatLabel}</span>}
+      />
 
-      <CardContent className="space-y-[var(--space-2)] p-0 text-xs text-[var(--text-secondary)]">
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
         <div className="flex items-center justify-between">
-          <span>Resolution:</span>
+          <span>Resolution</span>
           <span className="font-medium text-[var(--text-primary)]">
-            {getResolutionLabel(data.width || 1920, data.height || 1080)} ({data.width || 1920}×
-            {data.height || 1080})
+            {resolutionLabel} ({data.width || 1920}×{data.height || 1080})
           </span>
         </div>
-
         <div className="flex items-center justify-between">
-          <span>Background:</span>
-          <div className="flex items-center gap-[var(--space-2)]">
-            <div
-              className="h-4 w-4 rounded border border-[var(--border-primary)]"
-              style={{ backgroundColor: data.backgroundColor || '#000000' }}
-            />
-            <span className="text-xs font-medium text-[var(--text-primary)]">
-              {data.backgroundColor?.toUpperCase() || '#000000'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span>Format:</span>
-          <span className="font-medium text-[var(--text-primary)] uppercase">
-            {data.format || 'png'}
+          <span>Background</span>
+          <span className="font-medium text-[var(--text-primary)]">
+            {(data.backgroundColor || '#000000').toUpperCase()}
           </span>
         </div>
-
-        {(data.format || 'png') === 'jpeg' && (
+        {formatLabel === 'JPEG' ? (
           <div className="flex items-center justify-between">
-            <span>Quality:</span>
-            <span className="font-medium text-[var(--text-primary)]">{data.quality || 90}</span>
+            <span>Quality</span>
+            <span className="font-medium text-[var(--text-primary)]">{data.quality ?? 90}</span>
           </div>
-        )}
-
-        <div className="mt-[var(--space-4)] border-t border-[var(--border-primary)] pt-[var(--space-3)] text-center text-xs text-[var(--text-tertiary)]">
-          Final Image Output
+        ) : null}
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Ideal for exporting still frames—connect downstream automation or download from the render
+          panel.
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </NodeCard>
   );
 }

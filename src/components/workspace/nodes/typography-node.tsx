@@ -1,10 +1,19 @@
+// src/components/workspace/nodes/typography-node.tsx - Typography node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Type, SlidersHorizontal } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { TypographyNodeData } from '@/shared/types/nodes';
-import { Type, Settings } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 interface TypographyNodeProps extends NodeProps<TypographyNodeData> {
   onOpenTypography?: () => void;
@@ -12,11 +21,15 @@ interface TypographyNodeProps extends NodeProps<TypographyNodeData> {
 
 export function TypographyNode({ data, selected, onOpenTypography }: TypographyNodeProps) {
   const nodeDefinition = getNodeDefinition('typography');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
   const handleDoubleClick = () => {
-    if (onOpenTypography) return onOpenTypography();
-
-    // Fallback URL navigation (follows AnimationNode pattern)
+    if (onOpenTypography) {
+      onOpenTypography();
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const ws = params.get('workspace');
     const url = new URL(window.location.href);
@@ -29,55 +42,63 @@ export function TypographyNode({ data, selected, onOpenTypography }: TypographyN
   const currentFont = `${data.fontFamily || 'Arial'} ${data.fontWeight || 'normal'}`;
 
   return (
-    <Card
-      selected={selected}
-      className="min-w-[var(--node-min-width)] cursor-pointer p-[var(--card-padding)] transition-all hover:bg-[var(--surface-interactive)]"
-      onDoubleClick={handleDoubleClick}
-    >
+    <NodeCard selected={selected} className="cursor-pointer" onDoubleClick={handleDoubleClick}>
       {nodeDefinition?.ports.inputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="target"
-          position={Position.Left}
           id={port.id}
-          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: '50%' }}
+          side="left"
+          type="target"
+          top="50%"
+          label="Text to style"
+          description="Feed in the text elements you want to format."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
 
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-animation)] text-[var(--text-primary)]">
-            <Type size={12} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold text-[var(--text-primary)]">
-              {data?.identifier?.displayName ?? 'Typography'}
-            </div>
-          </div>
-          <Settings size={12} className="text-[var(--text-tertiary)]" />
-        </div>
-      </CardHeader>
+      <NodeHeader
+        icon={<Type size={14} />}
+        title={data?.identifier?.displayName ?? 'Typography'}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={
+          <span className="flex items-center gap-[var(--space-1)] text-xs text-[var(--text-secondary)]">
+            <SlidersHorizontal size={12} />
+            {currentFont}
+          </span>
+        }
+      />
 
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div className="truncate">Font: {currentFont}</div>
-        <div>Align: {data.textAlign || 'center'}</div>
-        <div>Line Height: {data.lineHeight || 1.2}</div>
-        <div className="pt-1 text-[10px] text-[var(--text-tertiary)]">
-          Double-click to edit in Typography tab
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center justify-between">
+          <span>Alignment</span>
+          <span className="font-medium text-[var(--text-primary)]">
+            {data.textAlign || 'center'}
+          </span>
         </div>
-      </CardContent>
+        <div className="flex items-center justify-between">
+          <span>Line height</span>
+          <span className="font-medium text-[var(--text-primary)]">{data.lineHeight ?? 1.2}</span>
+        </div>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Double-click to fine tune fonts, spacing, and color in the typography panel.
+        </div>
+      </div>
 
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className="h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-animation)]"
-          style={{ top: '50%' }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Styled text"
+          description="Outputs the text with the configured typography applied."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

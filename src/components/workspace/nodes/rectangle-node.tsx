@@ -1,47 +1,66 @@
-// src/components/workspace/nodes/rectangle-node.tsx - Simplified single output port
+// src/components/workspace/nodes/rectangle-node.tsx - Rectangular geometry node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { NodeProps } from 'reactflow';
+import { Square as SquareIcon } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { RectangleNodeData } from '@/shared/types/nodes';
-import { Square as SquareIcon } from 'lucide-react';
+
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
 
 export function RectangleNode({ data, selected }: NodeProps<RectangleNodeData>) {
   const nodeDefinition = getNodeDefinition('rectangle');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
+  const width = data.width ?? (nodeDefinition?.defaults.width as number) ?? 100;
+  const height = data.height ?? (nodeDefinition?.defaults.height as number) ?? 60;
+  const aspectRatio = height === 0 ? '—' : `${Math.round((width / height) * 100) / 100}:1`;
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div
-            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-primary)]"
-            style={{ backgroundColor: '#4444ff' }} // Canvas default
-          >
-            <SquareIcon size={12} />
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
+    <NodeCard selected={selected}>
+      <NodeHeader
+        icon={<SquareIcon size={14} />}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={
+          <span className="text-xs text-[var(--text-secondary)]">
+            {width}px × {height}px
           </span>
+        }
+      />
+
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center justify-between">
+          <span>Aspect</span>
+          <span className="font-medium text-[var(--text-primary)]">{aspectRatio}</span>
         </div>
-      </CardHeader>
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Emits a clean rectangle—ideal for panels, masks, or layout primitives in later nodes.
+        </div>
+      </div>
 
-      <CardContent className="space-y-1 p-0 text-xs text-[var(--text-secondary)]">
-        <div>Width: {data.width || 100}px</div>
-        <div>Height: {data.height || 60}px</div>
-      </CardContent>
-
-      {/* Single output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 !border-2 !border-[var(--text-primary)] bg-[var(--node-geometry)]`}
-          style={{ top: `50%` }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Shape output"
+          description="Passes the rectangle onward for further styling."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }

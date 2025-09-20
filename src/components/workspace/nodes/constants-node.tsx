@@ -1,114 +1,110 @@
-// src/components/workspace/nodes/constants-node.tsx - Constants value output node
+// src/components/workspace/nodes/constants-node.tsx - Constants node UI
 'use client';
 
-import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import type { JSX } from 'react';
+import type { NodeProps } from 'reactflow';
+import { Palette, Hash, Quote, Check } from 'lucide-react';
+
 import { getNodeDefinition } from '@/shared/registry/registry-utils';
 import type { ConstantsNodeData } from '@/shared/types/nodes';
 
+import {
+  NodeCard,
+  NodeHeader,
+  NodePortIndicator,
+  getNodeCategoryLabel,
+  getNodeCategoryVisuals,
+} from './components/node-chrome';
+
+const TYPE_ICONS: Record<string, JSX.Element> = {
+  number: <Hash size={14} />,
+  string: <Quote size={14} />,
+  boolean: <Check size={14} />,
+  color: <Palette size={14} />,
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  number: 'Number value',
+  string: 'Text value',
+  boolean: 'Yes / No toggle',
+  color: 'Color swatch',
+};
+
 export function ConstantsNode({ data, selected }: NodeProps<ConstantsNodeData>) {
   const nodeDefinition = getNodeDefinition('constants');
+  const category = nodeDefinition?.execution.category;
+  const visuals = getNodeCategoryVisuals(category);
+  const categoryLabel = getNodeCategoryLabel(category);
 
-  // Get current value based on type
-  const getCurrentValue = () => {
+  const currentValue = (() => {
     switch (data.valueType) {
       case 'number':
-        return data.numberValue;
+        return data.numberValue ?? 0;
       case 'string':
-        return `"${data.stringValue}"`;
+        return data.stringValue ?? '';
       case 'boolean':
         return data.booleanValue === 'true' ? 'true' : 'false';
       case 'color':
-        return data.colorValue.toUpperCase();
+        return (data.colorValue ?? '#ffffff').toUpperCase();
       default:
-        return 'Unknown';
+        return '—';
     }
-  };
+  })();
 
-  const getValueDisplay = () => {
-    const value = getCurrentValue();
-    const maxLength = 12;
-    const valueStr = String(value);
-
-    if (valueStr.length > maxLength) {
-      return valueStr.substring(0, maxLength - 3) + '...';
+  const displayValue = (() => {
+    const asString = String(currentValue);
+    if (asString.length > 18) {
+      return `${asString.slice(0, 15)}…`;
     }
-    return valueStr;
-  };
+    return asString;
+  })();
 
-  const getTypeIcon = () => {
-    switch (data.valueType) {
-      case 'number':
-        return '🔢';
-      case 'string':
-        return '📝';
-      case 'boolean':
-        return '✓';
-      case 'color':
-        return '🎨';
-      default:
-        return '🔢';
-    }
-  };
-
-  const handleClass = 'bg-[var(--node-data)]';
+  const typeKey = data.valueType ?? 'number';
+  const icon = TYPE_ICONS[typeKey] ?? <Hash size={14} />;
+  const typeLabel = TYPE_LABELS[typeKey] ?? 'Value';
 
   return (
-    <Card selected={selected} className="min-w-[var(--node-min-width)] p-[var(--card-padding)]">
-      <CardHeader className="p-0 pb-[var(--space-3)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--node-data)] text-sm font-bold text-[var(--text-primary)]">
-            {getTypeIcon()}
-          </div>
-          <span className="font-semibold text-[var(--text-primary)]">
-            {data.identifier.displayName}
-          </span>
-        </div>
-      </CardHeader>
+    <NodeCard selected={selected}>
+      <NodeHeader
+        icon={icon}
+        title={data.identifier.displayName}
+        accentClassName={visuals.iconBg}
+        subtitle={categoryLabel}
+        meta={<span className="text-xs text-[var(--text-secondary)]">{typeLabel}</span>}
+      />
 
-      <CardContent className="space-y-[var(--space-2)] p-0">
+      <div className="space-y-[var(--space-2)] text-xs text-[var(--text-secondary)]">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--text-secondary)]">Type:</span>
-          <span className="text-xs font-medium text-[var(--text-primary)] capitalize">
-            {data.valueType}
-          </span>
+          <span>Current value</span>
+          <span className="font-medium text-[var(--text-primary)]">{displayValue}</span>
         </div>
-
-        <div className="rounded border border-[var(--border-primary)] bg-[var(--surface-2)] p-[var(--space-2)]">
-          <div className="mb-[var(--space-1)] text-xs text-[var(--text-tertiary)]">
-            Current Value:
-          </div>
-          <div className="font-mono text-sm text-[var(--text-primary)]">{getValueDisplay()}</div>
-        </div>
-
-        {data.valueType === 'color' && (
+        {data.valueType === 'color' ? (
           <div className="flex items-center gap-[var(--space-2)]">
-            <div
-              className="h-4 w-4 rounded border border-[var(--border-primary)]"
-              style={{ backgroundColor: data.colorValue }}
+            <span className="text-[11px] text-[var(--text-tertiary)]">Preview</span>
+            <span
+              className="h-4 w-10 rounded border border-[var(--border-primary)]"
+              style={{ backgroundColor: String(currentValue) }}
             />
-            <span className="text-xs text-[var(--text-secondary)]">Preview</span>
           </div>
-        )}
-
-        <div className="mt-[var(--space-3)] border-t border-[var(--border-primary)] pt-[var(--space-2)]">
-          <div className="text-center text-xs text-[var(--text-tertiary)]">
-            Constant Value Output
-          </div>
+        ) : null}
+        <div className="rounded border border-dashed border-[var(--border-primary)] px-[var(--space-3)] py-[var(--space-2)] text-[11px]">
+          Emits a constant value that can drive any downstream property or control flow.
         </div>
-      </CardContent>
+      </div>
 
-      {/* Single output port */}
       {nodeDefinition?.ports.outputs.map((port) => (
-        <Handle
+        <NodePortIndicator
           key={port.id}
-          type="source"
-          position={Position.Right}
           id={port.id}
-          className={`h-3 w-3 ${handleClass} !border-2 !border-[var(--text-primary)]`}
-          style={{ top: `50%` }}
+          side="right"
+          type="source"
+          top="50%"
+          label="Constant output"
+          description="Provides the configured value to connected nodes."
+          handleClassName={visuals.handle}
+          accent={category}
         />
       ))}
-    </Card>
+    </NodeCard>
   );
 }
