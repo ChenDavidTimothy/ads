@@ -14,6 +14,7 @@
   --surface-0: #000000;
   --surface-1: #050508;
   --surface-2: #0a0a0f;
+  --surface-3: #1a1a23;
   --surface-interactive: #12121a;
 
   /* PREMIUM GLASS LAYERS - enhanced but keeping names */
@@ -141,7 +142,11 @@
 
 /* PREMIUM GLASS COMPONENT BASE CLASSES - keeping existing names */
 .glass-panel {
+  /* Ensure no default backgrounds interfere */
+  background-color: transparent !important;
   background:
+    /* Premium deep solid base - moved to front to avoid conflicts */
+    var(--glass-bg),
     /* Premium subtle distant light gradient */
     linear-gradient(
       135deg,
@@ -151,8 +156,7 @@
       rgba(59, 130, 246, 0.02) 100%
     ),
     /* Enhanced glass frosting layer */
-      linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent),
-    /* Premium deep solid base */ var(--glass-bg);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow-lg);

@@ -165,6 +165,7 @@ export function NodeLayout({
 
   return (
     <Card
+      variant="glass"
       selected={selected}
       onDoubleClick={onDoubleClick}
       className={cn('min-w-[var(--node-min-width)] p-[var(--card-padding)]', className)}

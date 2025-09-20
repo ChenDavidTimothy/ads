@@ -18,8 +18,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           {
             // Premium glass variant with enhanced styling
             default: 'rounded-[var(--radius-sm)] border backdrop-blur-[20px]',
-            // Ultra-glass variant
-            glass: 'glass-panel rounded-[var(--radius-sm)]',
+            // Ultra-glass variant - ensure no conflicting backgrounds
+            glass: 'glass-panel rounded-[var(--radius-sm)] bg-transparent',
             // Minimal variant
             minimal:
               'rounded-[var(--radius-sharp)] border border-[var(--border-primary)] bg-transparent',
@@ -30,6 +30,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           className
         )}
         style={{
+          // Clear any default backgrounds for glass variant
+          ...(variant === 'glass' && { background: 'none' }),
           ...(variant === 'default' && {
             background: `
               linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, transparent 25%, transparent 75%, rgba(59, 130, 246, 0.02) 100%),
