@@ -66,28 +66,10 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
 
   const inputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.inputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'input_1',
-          label: 'Input 1',
-          tooltip: 'Numeric input',
-          handleClassName: 'bg-[var(--node-logic)]',
-          badge: '1',
-        },
-        {
-          id: 'input_2',
-          label: 'Input 2',
-          tooltip: 'Numeric input',
-          handleClassName: 'bg-[var(--node-logic)]',
-          badge: '2',
-        },
-      ];
-    }
-
+    // Dynamic ports - should always have definitions from generateMathPorts
     return definitions.map((port, index) => ({
       id: port.id,
-      label: `Input ${index + 1}`,
+      label: port.label || `Input ${index + 1}`,
       tooltip: 'Numeric input',
       handleClassName: 'bg-[var(--node-logic)]',
       badge: String(index + 1),
@@ -96,20 +78,10 @@ export function MathOpNode({ data, selected }: NodeProps<MathOpNodeData>) {
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Calculated value',
-          tooltip: 'Result of the math operation',
-          handleClassName: 'bg-[var(--node-logic)]',
-        },
-      ];
-    }
-
+    // Dynamic ports - should always have definitions from generateMathPorts
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Calculated value',
+      label: port.label || 'Calculated value',
       tooltip: 'Result of the math operation',
       handleClassName: 'bg-[var(--node-logic)]',
     }));

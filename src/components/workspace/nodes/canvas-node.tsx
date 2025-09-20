@@ -16,20 +16,9 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
 
   const inputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.inputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'input',
-          label: 'Objects to draw',
-          tooltip: 'Incoming objects placed on this canvas',
-          handleClassName: 'bg-[var(--node-geometry)]',
-        },
-      ];
-    }
-
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Objects to draw',
+      label: port.label || 'Objects to draw',
       tooltip: 'Incoming objects placed on this canvas',
       handleClassName: 'bg-[var(--node-geometry)]',
     }));
@@ -37,20 +26,9 @@ export function CanvasNode({ data, selected, onOpenCanvas }: CanvasNodeProps) {
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Canvas result',
-          tooltip: 'Emits the composed canvas for downstream nodes',
-          handleClassName: 'bg-[var(--node-geometry)]',
-        },
-      ];
-    }
-
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Canvas result',
+      label: port.label || 'Canvas result',
       tooltip: 'Emits the composed canvas for downstream nodes',
       handleClassName: 'bg-[var(--node-geometry)]',
     }));

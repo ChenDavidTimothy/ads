@@ -12,20 +12,9 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeData>) {
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Image stream',
-          tooltip: 'Provides image assets to downstream nodes',
-          handleClassName: 'bg-[var(--node-input)]',
-        },
-      ];
-    }
-
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Image stream',
+      label: port.label || 'Image stream',
       tooltip: 'Provides image assets to downstream nodes',
       handleClassName: 'bg-[var(--node-input)]',
     }));

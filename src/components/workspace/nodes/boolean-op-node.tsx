@@ -42,28 +42,10 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
 
   const inputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.inputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'input_1',
-          label: 'Input 1',
-          tooltip: 'Boolean input',
-          handleClassName: 'bg-[var(--node-logic)]',
-          badge: '1',
-        },
-        {
-          id: 'input_2',
-          label: 'Input 2',
-          tooltip: 'Boolean input',
-          handleClassName: 'bg-[var(--node-logic)]',
-          badge: '2',
-        },
-      ];
-    }
-
+    // Dynamic ports - should always have definitions from generateBooleanPorts
     return definitions.map((port, index) => ({
       id: port.id,
-      label: `Input ${index + 1}`,
+      label: port.label || `Input ${index + 1}`,
       tooltip: 'Boolean input',
       handleClassName: 'bg-[var(--node-logic)]',
       badge: String(index + 1),
@@ -72,20 +54,10 @@ export function BooleanOpNode({ data, selected }: NodeProps<BooleanOpNodeData>) 
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Boolean result',
-          tooltip: 'Result of the boolean operation',
-          handleClassName: 'bg-[var(--node-logic)]',
-        },
-      ];
-    }
-
+    // Dynamic ports - should always have definitions from generateBooleanPorts
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Boolean result',
+      label: port.label || 'Boolean result',
       tooltip: 'Result of the boolean operation',
       handleClassName: 'bg-[var(--node-logic)]',
     }));

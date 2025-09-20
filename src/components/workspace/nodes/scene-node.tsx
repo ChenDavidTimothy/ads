@@ -41,20 +41,9 @@ export function SceneNode({ data, selected }: NodeProps<SceneNodeData>) {
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Scene timeline',
-          tooltip: 'Emits the configured scene for downstream nodes',
-          handleClassName: 'bg-[var(--node-output)]',
-        },
-      ];
-    }
-
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Scene timeline',
+      label: port.label || 'Scene timeline',
       tooltip: 'Emits the configured scene for downstream nodes',
       handleClassName: 'bg-[var(--node-output)]',
     }));

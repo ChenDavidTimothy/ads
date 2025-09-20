@@ -41,20 +41,9 @@ export function FrameNode({ data, selected }: NodeProps<FrameNodeData>) {
 
   const outputs = useMemo<PortConfig[]>(() => {
     const definitions = nodeDefinition?.ports.outputs ?? [];
-    if (definitions.length === 0) {
-      return [
-        {
-          id: 'output',
-          label: 'Frame output',
-          tooltip: 'Emits rendered frames for downstream nodes',
-          handleClassName: 'bg-[var(--node-output)]',
-        },
-      ];
-    }
-
     return definitions.map((port) => ({
       id: port.id,
-      label: 'Frame output',
+      label: port.label || 'Frame output',
       tooltip: 'Emits rendered frames for downstream nodes',
       handleClassName: 'bg-[var(--node-output)]',
     }));
